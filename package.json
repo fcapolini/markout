@@ -1,0 +1,23 @@
+{
+  "name": "project5",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest --run",
+    "coverage": "vitest --run --coverage",
+    "build": "node scripts/build.js",
+    "start": "npm run build && node dist/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "description": "",
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@vitest/coverage-v8": "^2.1.8",
+    "esbuild": "^0.24.2",
+    "prettier": "3.4.2",
+    "vitest": "^2.1.8"
+  }
+}
