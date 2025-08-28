@@ -2,7 +2,11 @@ import { Scope } from "./scope";
 
 export type ValueExp<T> = () => T;
 export type ValueDep = () => Value<any>;
-export type ValueCallback<T> = (s: Scope, v: T | undefined) => void;
+export type ValueCallback<T> = (
+  s: Scope,
+  v: T | undefined,
+  old: T | undefined
+) => void;
 
 export interface ValueProps<T> {
   val?: T;
@@ -62,7 +66,7 @@ export class Value<T = any> {
     this.src.clear();
     this.value = value;
     if (old == null ? value != null : value !== old) {
-      this.cb && this.cb(this.scope, value);
+      this.cb && this.cb(this.scope, value, old);
       this.propagate();
     }
     return true;
@@ -76,7 +80,7 @@ export class Value<T = any> {
       console.error(err);
     }
     if (old == null ? this.value != null : this.value !== old) {
-      this.cb && this.cb(this.scope, this.value);
+      this.cb && this.cb(this.scope, this.value, old);
       this.dst.size && this.scope.context.refreshLevel < 1 && this.propagate();
     }
   }

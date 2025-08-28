@@ -14,7 +14,10 @@ export class Context {
   refreshLevel = 0;
   pushLevel = 0;
 
-  constructor(props: ContextProps, additionalValues?: { [key: string | symbol]: ValueProps<any> }) {
+  constructor(
+    props: ContextProps,
+    additionalValues?: { [key: string | symbol]: ValueProps<any> }
+  ) {
     this.props = props;
     this.global = new Global(this, additionalValues);
     this.root = new Scope(props.root, this, this.global);

@@ -189,3 +189,96 @@ it(`cannot see outer value if in closed scope`, () => {
   context.root.proxy.v0 = 43;
   assert.isUndefined(context.root.proxy.head.v1);
 });
+
+it(`should call value callback (1)`, () => {
+  let val = 0, old = 0;
+  const context = new Context({
+    root: { id: '0', values: { v1: { val: 42 } } },
+  });
+  context.root.values['v1'].cb = ((s, v, o) => {
+    val = v;
+    old = o;
+  });
+  context.root.proxy.v1++;
+  assert.equal(val, 43);
+  assert.equal(old, 42);
+  context.root.proxy.v1++;
+  assert.equal(val, 44);
+  assert.equal(old, 43);
+});
+
+it(`should call value callback (2)`, () => {
+  let val = 0, old = 0;
+  const context = new Context({
+    root: {
+      id: '0',
+      values: {
+        v0: { val: 42 },
+        v1: {
+          exp: function () {
+            // @ts-ignore
+            return this.v0;
+          },
+          deps: [
+            function () {
+              // @ts-ignore
+              return this.$value('v0');
+            },
+          ],
+        },
+      },
+    },
+  });
+  context.root.values['v1'].cb = ((s, v, o) => {
+    val = v;
+    old = o;
+  });
+  context.root.proxy.v0++;
+  assert.equal(val, 43);
+  assert.equal(old, 42);
+  context.root.proxy.v0++;
+  assert.equal(val, 44);
+  assert.equal(old, 43);
+});
+
+it(`should call value callback (2)`, () => {
+  let val = 0, old = 0;
+  const context = new Context({
+    root: {
+      id: '0',
+      values: {
+        v0: { val: 42 },
+      },
+      children: [
+        {
+          id: '1',
+          name: 'head',
+          values: {
+            v1: {
+              exp: function () {
+                // @ts-ignore
+                return this.v0;
+              },
+              deps: [
+                function () {
+                  // @ts-ignore
+                  return this.$value('v0');
+                },
+              ],
+            },
+          },
+        },
+      ],
+    },
+  });
+  context.root.children[0].values['v1'].cb = ((s, v, o) => {
+    val = v;
+    old = o;
+  });
+  context.root.proxy.v0++;
+  assert.equal(val, 43);
+  assert.equal(old, 42);
+  context.root.proxy.v0++;
+  assert.equal(val, 44);
+  assert.equal(old, 43);
+});

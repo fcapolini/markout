@@ -14,16 +14,16 @@ export class Scope {
   context: Context;
   parent?: Scope;
   children: Scope[];
-  values: { [key: string | symbol]: Value<any> };
   cache: Map<string | symbol, Value>;
+  values: { [key: string | symbol]: Value<any> };
   proxy: { [key: string | symbol]: any };
 
   constructor(props: ScopeProps, context: Context, parent?: Scope) {
     this.props = props;
     this.context = context;
     this.children = [];
-    this.values = {};
     this.cache = new Map();
+    this.values = {};
     this.proxy = new Proxy(this.values, {
       get: (_target, prop) => {
         const v = this.lookup(prop);
@@ -71,23 +71,18 @@ export class Scope {
   }
 
   linkValues(recur = true) {
-    Object.keys(this.values).forEach(
-      (key) => key.startsWith('__') || this.values[key].link()
-    );
+    Object.keys(this.values).forEach(key => this.values[key].link());
     recur && this.children.forEach((scope: Scope) => scope.linkValues());
   }
 
   unlinkValues(recur = true) {
-    Object.keys(this.values).forEach(
-      (key) => key.startsWith('__') || this.values[key].unlink()
-    );
+    this.cache.clear();
+    Object.keys(this.values).forEach(key => this.values[key].unlink());
     recur && this.children.forEach((scope: Scope) => scope.unlinkValues());
   }
 
   updateValues(recur = true) {
-    Object.keys(this.values).forEach(
-      (key) => key.startsWith('__') || this.values[key].get()
-    );
+    Object.keys(this.values).forEach(key => this.values[key].get());
     recur && this.children.forEach((scope: Scope) => scope.updateValues());
   }
 }
