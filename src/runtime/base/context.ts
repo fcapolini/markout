@@ -1,3 +1,4 @@
+import { initialize } from "esbuild";
 import { Global } from "./global";
 import { Scope, ScopeProps } from "./scope";
 import { ValueProps } from "./value";
@@ -16,11 +17,12 @@ export class Context {
 
   constructor(
     props: ContextProps,
-    additionalValues?: { [key: string | symbol]: ValueProps<any> }
+    addedGlobals?: { [key: string | symbol]: ValueProps<any> }
   ) {
     this.props = props;
-    this.global = new Global(this, additionalValues);
-    this.root = new Scope(props.root, this, this.global);
+    this.global = new Global(this, addedGlobals);
+    this.init();
+    this.root = this.newScope(props.root, this, this.global);
     this.refresh();
   }
 
@@ -36,5 +38,14 @@ export class Context {
       console.error('Context.refresh()', err);
     }
     this.refreshLevel--;
+  }
+
+  /**
+   * Called after Global is created but before scopes are.
+   */
+  init() {}
+
+  newScope(props: ScopeProps, context: Context, parent?: Scope): Scope {
+    return new Scope(props, context, parent);
   }
 }

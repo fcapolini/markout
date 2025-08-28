@@ -1,5 +1,5 @@
 import { assert, it } from 'vitest';
-import { Context } from '../../src/runtime/context';
+import { Context } from '../../src/runtime/base/context';
 
 it(`creates global scope`, () => {
   const context = new Context({ root: { id: '0' } });

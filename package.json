@@ -16,11 +16,15 @@
   "type": "commonjs",
   "description": "",
   "devDependencies": {
+    "@types/acorn": "4.0.6",
     "@types/node": "24.3.0",
     "@vitest/coverage-v8": "3.2.4",
     "esbuild": "0.25.9",
     "prettier": "3.6.2",
     "ts-node-dev": "^2.0.0",
     "vitest": "3.2.4"
+  },
+  "dependencies": {
+    "acorn": "8.15.0"
   }
 }

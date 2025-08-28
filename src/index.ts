@@ -10,6 +10,6 @@
 //   console.log("Server running at <http://localhost:3000/>");
 // });
 
-import { Context } from "./runtime/context";
+import { Context } from "./runtime/base/context";
 
 new Context({ root: { id: '0' } });

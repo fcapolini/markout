@@ -48,7 +48,7 @@ export class Scope {
       }
     }
     parent && this.link(parent);
-    props.children?.forEach(p => new Scope(p, context, this));
+    props.children?.forEach(p => context.newScope(p, context, this));
   }
 
   dispose() {

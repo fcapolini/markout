@@ -9,3 +9,8 @@ npm install --save-dev ts-node-dev
   "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
 }
 ```
+
+```
+npm i acorn --save-exact
+npm i -D @types/acorn --save-exact
+```

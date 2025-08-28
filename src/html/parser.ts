@@ -2,6 +2,8 @@ import * as acorn from 'acorn';
 import { NodeType } from './dom';
 import * as dom from './server-dom';
 
+//TODO: add support for single-word, unquoted attribute values for HTML compatibility
+
 export const SKIP_CONTENT_TAGS = new Set(['SCRIPT', 'CODE']);
 export const ATOMIC_TEXT_TAGS = new Set(['STYLE', 'TITLE']);
 // const NON_NORMALIZED_TAGS = { PRE: true, SCRIPT: true };
