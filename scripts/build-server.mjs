@@ -1,11 +1,11 @@
-const esbuild = require('esbuild');
+import { build } from 'esbuild';
 
-esbuild.build({
+build({
   entryPoints: ['./src/index.ts'],// Entry file
   outfile: './dist/index.js',// Output file
   bundle: true,// Bundle dependencies
   platform: 'node',// Target Node.js
-  target: 'node16',// Specify Node.js version
+  target: 'node18',// Specify Node.js version
   sourcemap: true,// Include sourcemaps
   minify: false,// Minify output for production
   loader: { '.ts': 'ts' },// Add loader for TS

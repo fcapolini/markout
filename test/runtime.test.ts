@@ -1,22 +1,191 @@
 import { assert, it } from 'vitest';
 import { Context } from '../src/runtime/context';
 
-it('creates global scope', () => {
+it(`creates global scope`, () => {
   const context = new Context({ root: { id: '0' } });
   assert.exists(context.global);
   assert.equal(context.global.props.name, 'window');
   assert.equal(context.global.proxy.console, console);
 });
 
-it('adds custom global value', () => {
+it(`adds custom global value`, () => {
   const context = new Context({ root: { id: '0' } }, { custom: { val: 42 } });
   assert.equal(context.global.proxy.custom, 42);
 });
 
-it('adds custom global function', () => {
+it(`adds custom global function`, () => {
   const context = new Context(
     { root: { id: '0' } },
     { custom: { val: (x: number) => x * 2 } }
   );
   assert.equal(context.global.proxy.custom(3), 6);
+});
+
+it(`adds a static value`, () => {
+  const context = new Context({
+    root: { id: '0', values: { v1: { val: 42 } } },
+  });
+  assert.equal(context.root.proxy.v1, 42);
+});
+
+it(`adds a dynamic value`, () => {
+  const context = new Context({
+    root: {
+      id: '0',
+      values: {
+        v1: {
+          exp: function () {
+            return 42;
+          },
+        },
+      },
+    },
+  });
+  assert.equal(context.root.proxy.v1, 42);
+  context.root.proxy.v1 = 43;
+  assert.equal(context.root.proxy.v1, 43);
+});
+
+it(`adds dependency (1)`, () => {
+  const context = new Context({
+    root: {
+      id: '0',
+      values: {
+        v0: { val: 42 },
+        v1: {
+          exp: function () {
+            // @ts-ignore
+            return this.v0;
+          },
+          deps: [
+            function () {
+              // @ts-ignore
+              return this.$value('v0');
+            },
+          ],
+        },
+      },
+    },
+  });
+  assert.equal(context.root.proxy.v1, 42);
+  context.root.proxy.v0 = 43;
+  assert.equal(context.root.proxy.v1, 43);
+});
+
+it(`adds dependency (2)`, () => {
+  const context = new Context({
+    root: {
+      id: '0',
+      values: {
+        v0: {
+          exp: function () {
+            return 42;
+          },
+        },
+        v1: {
+          exp: function () {
+            // @ts-ignore
+            return this.v0;
+          },
+          deps: [
+            function () {
+              // @ts-ignore
+              return this.$value('v0');
+            },
+          ],
+        },
+      },
+    },
+  });
+  assert.equal(context.root.proxy.v1, 42);
+  context.root.proxy.v0 = 43;
+  assert.equal(context.root.proxy.v1, 43);
+});
+
+it(`registers scope name`, () => {
+  const context = new Context({
+    root: {
+      id: '0',
+      children: [
+        {
+          id: '1',
+          name: 'head',
+          values: {
+            v1: { val: 42 },
+          },
+        }
+      ]
+    },
+  });
+  assert.exists(context.root.proxy.head);
+  assert.equal(context.root.proxy.head.v1, 42);
+});
+
+it(`can see outer value`, () => {
+  const context = new Context({
+    root: {
+      id: '0',
+      values: {
+        v0: { val: 42 },
+      },
+      children: [
+        {
+          id: '1',
+          name: 'head',
+          values: {
+            v1: {
+              exp: function () {
+                // @ts-ignore
+                return this.v0;
+              },
+              deps: [
+                function () {
+                  // @ts-ignore
+                  return this.$value('v0');
+                },
+              ],
+            },
+          },
+        },
+      ],
+    },
+  });
+  assert.equal(context.root.proxy.head.v1, 42);
+  context.root.proxy.v0 = 43;
+  assert.equal(context.root.proxy.head.v1, 43);
+});
+
+it(`cannot see outer value if in closed scope`, () => {
+  const context = new Context({
+    root: {
+      id: '0',
+      values: {
+        v0: { val: 42 },
+      },
+      children: [
+        {
+          id: '1',
+          name: 'head',
+          closed: true,
+          values: {
+            v1: {
+              exp: function () {
+                // @ts-ignore
+                return this.v0;
+              },
+              deps: [
+                function () {
+                  // @ts-ignore
+                  return this.$value('v0');
+                },
+              ],
+            },
+          },
+        },
+      ],
+    },
+  });
+  assert.isUndefined(context.root.proxy.head.v1);
+  context.root.proxy.v0 = 43;
+  assert.isUndefined(context.root.proxy.head.v1);
 });

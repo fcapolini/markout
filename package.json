@@ -1,17 +1,18 @@
 {
-  "name": "project5",
-  "version": "1.0.0",
+  "name": "markout",
+  "version": "0.1.0",
   "main": "index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "test": "vitest --run",
     "coverage": "vitest --run --coverage",
-    "build": "node scripts/build.js",
+    "build": "node scripts/build-server.mjs && node scripts/build-client.mjs",
+    "check": "tsc --noEmit",
     "start": "npm run build && node dist/index.js"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Fabrizio Capolini",
+  "license": "MIT",
   "type": "commonjs",
   "description": "",
   "devDependencies": {
