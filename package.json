@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "test": "vitest --run",
     "coverage": "vitest --run --coverage",
     "build": "node scripts/build.js",
@@ -14,10 +15,11 @@
   "type": "commonjs",
   "description": "",
   "devDependencies": {
-    "@types/node": "^22.10.5",
-    "@vitest/coverage-v8": "^2.1.8",
-    "esbuild": "^0.24.2",
-    "prettier": "3.4.2",
-    "vitest": "^2.1.8"
+    "@types/node": "24.3.0",
+    "@vitest/coverage-v8": "3.2.4",
+    "esbuild": "0.25.9",
+    "prettier": "3.6.2",
+    "ts-node-dev": "^2.0.0",
+    "vitest": "3.2.4"
   }
 }
