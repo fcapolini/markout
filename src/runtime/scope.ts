@@ -51,6 +51,19 @@ export class Scope {
     props.children?.forEach(p => new Scope(p, context, this));
   }
 
+  dispose() {
+    if (!this.parent) return;
+    this.unlinkValues();
+    const i = this.parent.children.indexOf(this);
+    i >= 0 && this.parent.children.splice(i, 1);
+    if (!this.props.name) return;
+    const value = this.parent.values[this.props.name];
+    if (!value) return;
+    value.unlink();
+    this.parent.cache.delete(this.props.name);
+    delete this.parent.values[this.props.name];
+  }
+
   link(parent: Scope) {
     this.parent = parent;
     parent.children.push(this);

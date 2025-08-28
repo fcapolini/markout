@@ -102,7 +102,7 @@ it(`adds dependency (2)`, () => {
   assert.equal(context.root.proxy.v1, 43);
 });
 
-it(`registers scope name`, () => {
+it(`registers and de-registers scope name`, () => {
   const context = new Context({
     root: {
       id: '0',
@@ -117,8 +117,11 @@ it(`registers scope name`, () => {
       ]
     },
   });
+  assert.equal(context.root.children.length, 1);
   assert.exists(context.root.proxy.head);
-  assert.equal(context.root.proxy.head.v1, 42);
+  context.root.children[0].dispose();
+  assert.equal(context.root.children.length, 0);
+  assert.notExists(context.root.proxy.head);
 });
 
 it(`can see outer value`, () => {

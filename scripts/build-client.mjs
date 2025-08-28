@@ -5,7 +5,7 @@ build({
   outfile: './dist/client.js',
   bundle: true,
   platform: 'browser',
-  // sourcemap: true,
+  sourcemap: true,
   minify: true,
   loader: { '.ts': 'ts' },
 }).then(() => {
