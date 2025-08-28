@@ -1,6 +1,8 @@
 import { Context } from './context';
 import { Value, ValueProps } from './value';
 
+//TODO: make sure compiler rejects logic values with $ in name
+
 export interface ScopeProps {
   id: string;
   name?: string;
@@ -38,13 +40,14 @@ export class Scope {
         return false;
       },
     });
+    this.init();
     if (props.values) {
       const vp = {
         ...props.values,
         $value: { val: (key: string) => this.lookup(key) },
       };
       for (const [key, valProps] of Object.entries(vp)) {
-        this.values[key] = new Value(valProps, this);
+        this.values[key] = this.newValue(key, valProps);
       }
     }
     parent && this.link(parent);
@@ -97,5 +100,11 @@ export class Scope {
   updateValues(recur = true) {
     Object.keys(this.values).forEach(key => this.values[key].get());
     recur && this.children.forEach((scope: Scope) => scope.updateValues());
+  }
+
+  init() {}
+
+  newValue(_key: string, props: ValueProps<any>) {
+    return new Value(props, this);
   }
 }

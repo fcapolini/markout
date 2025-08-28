@@ -35,6 +35,12 @@ export class Value<T = any> {
     this.value = props.val;
   }
 
+  setCB(cb: ValueCallback<T>): this {
+    this.cb = cb;
+    !this.exp && cb(this.scope, this.value, undefined);
+    return this;
+  }
+
   link() {
     this.props.deps?.forEach((dep) => {
       try {

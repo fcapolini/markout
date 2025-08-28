@@ -12,3 +12,14 @@ it('should link scope to element', () => {
   const root = context.root as WebScope;
   assert.equal(root.dom, source.doc.documentElement);
 });
+
+it('should update DOM attribute', () => {
+  const source = parse('<html data-markout="0"></html>', 'test');
+  const context = new WebContext({
+    doc: source.doc,
+    root: { id: '0', values: { attr$lang: { val: 'en' } } },
+  });
+  assert.equal(source.doc.documentElement?.getAttribute('lang'), 'en');
+  context.root.proxy['attr$lang'] = 'fr';
+  assert.equal(source.doc.documentElement?.getAttribute('lang'), 'fr');
+});
