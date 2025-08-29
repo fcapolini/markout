@@ -1,26 +1,26 @@
-import { Context } from './context';
-import { Value, ValueProps } from './value';
+import { BaseContext } from './base-context';
+import { BaseValue, BaseValueProps } from './base-value';
 
 //TODO: make sure compiler rejects logic values with $ in name
 
-export interface ScopeProps {
+export interface BaseScopeProps {
   id: string;
   name?: string;
   closed?: boolean;
-  children?: ScopeProps[];
-  values?: { [key: string]: ValueProps<any> };
+  children?: BaseScopeProps[];
+  values?: { [key: string]: BaseValueProps<any> };
 }
 
-export class Scope {
-  props: ScopeProps;
-  context: Context;
-  parent?: Scope;
-  children: Scope[];
-  cache: Map<string | symbol, Value>;
-  values: { [key: string | symbol]: Value<any> };
+export class BaseScope {
+  props: BaseScopeProps;
+  context: BaseContext;
+  parent?: BaseScope;
+  children: BaseScope[];
+  cache: Map<string | symbol, BaseValue>;
+  values: { [key: string | symbol]: BaseValue<any> };
   proxy: { [key: string | symbol]: any };
 
-  constructor(props: ScopeProps, context: Context, parent?: Scope) {
+  constructor(props: BaseScopeProps, context: BaseContext, parent?: BaseScope) {
     this.props = props;
     this.context = context;
     this.children = [];
@@ -67,16 +67,16 @@ export class Scope {
     delete this.parent.values[this.props.name];
   }
 
-  link(parent: Scope) {
+  link(parent: BaseScope) {
     this.parent = parent;
     parent.children.push(this);
     if (this.props.name) {
-      parent.values[this.props.name] = new Value({ val: this.proxy }, parent);
+      parent.values[this.props.name] = new BaseValue({ val: this.proxy }, parent);
     }
   }
 
-  lookup(prop: string | symbol): Value<any> | undefined {
-    let scope: Scope | undefined = this;
+  lookup(prop: string | symbol): BaseValue<any> | undefined {
+    let scope: BaseScope | undefined = this;
     let value = scope.cache.get(prop);
     while (scope && !value) {
       value = scope.values[prop];
@@ -88,23 +88,23 @@ export class Scope {
 
   linkValues(recur = true) {
     Object.keys(this.values).forEach(key => this.values[key].link());
-    recur && this.children.forEach((scope: Scope) => scope.linkValues());
+    recur && this.children.forEach((scope: BaseScope) => scope.linkValues());
   }
 
   unlinkValues(recur = true) {
     this.cache.clear();
     Object.keys(this.values).forEach(key => this.values[key].unlink());
-    recur && this.children.forEach((scope: Scope) => scope.unlinkValues());
+    recur && this.children.forEach((scope: BaseScope) => scope.unlinkValues());
   }
 
   updateValues(recur = true) {
     Object.keys(this.values).forEach(key => this.values[key].get());
-    recur && this.children.forEach((scope: Scope) => scope.updateValues());
+    recur && this.children.forEach((scope: BaseScope) => scope.updateValues());
   }
 
   init() {}
 
-  newValue(_key: string, props: ValueProps<any>) {
-    return new Value(props, this);
+  newValue(_key: string, props: BaseValueProps<any>) {
+    return new BaseValue(props, this);
   }
 }

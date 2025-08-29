@@ -1,16 +1,16 @@
-import { Context, ContextProps } from '../base/context';
-import { Scope, ScopeProps } from '../base/scope';
+import { BaseContext, BaseContextProps } from '../base/base-context';
+import { BaseScope, BaseScopeProps } from '../base/base-scope';
 import { WebScope } from './web-scope';
 import { Comment, Document, Element, NodeType, Text } from '../../html/dom';
 
 export const DOM_ID_ATTR = 'data-markout';
 export const DOM_TEXT_MARKER = '-t';
 
-export interface WebContextProps extends ContextProps {
+export interface WebContextProps extends BaseContextProps {
   doc: Document;
 }
 
-export class WebContext extends Context {
+export class WebContext extends BaseContext {
   scopeElements!: Map<string, Element>;
 
   constructor(props: WebContextProps) {
@@ -33,7 +33,7 @@ export class WebContext extends Context {
     docElement && f(docElement);
   }
 
-  override newScope(props: ScopeProps, ctx: Context, parent?: Scope): Scope {
+  override newScope(props: BaseScopeProps, ctx: BaseContext, parent?: BaseScope): BaseScope {
     return new WebScope(props, ctx as WebContext, parent);
   }
 }

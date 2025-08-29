@@ -1,20 +1,20 @@
 import { assert, it } from 'vitest';
-import { Context } from '../../src/runtime/base/context';
+import { BaseContext } from '../../src/runtime/base/base-context';
 
 it(`creates global scope`, () => {
-  const context = new Context({ root: { id: '0' } });
+  const context = new BaseContext({ root: { id: '0' } });
   assert.exists(context.global);
   assert.equal(context.global.props.name, 'window');
   assert.equal(context.global.proxy.console, console);
 });
 
 it(`adds custom global value`, () => {
-  const context = new Context({ root: { id: '0' } }, { custom: { val: 42 } });
+  const context = new BaseContext({ root: { id: '0' } }, { custom: { val: 42 } });
   assert.equal(context.global.proxy.custom, 42);
 });
 
 it(`adds custom global function`, () => {
-  const context = new Context(
+  const context = new BaseContext(
     { root: { id: '0' } },
     { custom: { val: (x: number) => x * 2 } }
   );
@@ -22,14 +22,14 @@ it(`adds custom global function`, () => {
 });
 
 it(`adds a static value`, () => {
-  const context = new Context({
+  const context = new BaseContext({
     root: { id: '0', values: { v1: { val: 42 } } },
   });
   assert.equal(context.root.proxy.v1, 42);
 });
 
 it(`adds a dynamic value`, () => {
-  const context = new Context({
+  const context = new BaseContext({
     root: {
       id: '0',
       values: {
@@ -47,7 +47,7 @@ it(`adds a dynamic value`, () => {
 });
 
 it(`adds dependency (1)`, () => {
-  const context = new Context({
+  const context = new BaseContext({
     root: {
       id: '0',
       values: {
@@ -73,7 +73,7 @@ it(`adds dependency (1)`, () => {
 });
 
 it(`adds dependency (2)`, () => {
-  const context = new Context({
+  const context = new BaseContext({
     root: {
       id: '0',
       values: {
@@ -103,7 +103,7 @@ it(`adds dependency (2)`, () => {
 });
 
 it(`registers and de-registers scope name`, () => {
-  const context = new Context({
+  const context = new BaseContext({
     root: {
       id: '0',
       children: [
@@ -125,7 +125,7 @@ it(`registers and de-registers scope name`, () => {
 });
 
 it(`can see outer value`, () => {
-  const context = new Context({
+  const context = new BaseContext({
     root: {
       id: '0',
       values: {
@@ -159,7 +159,7 @@ it(`can see outer value`, () => {
 });
 
 it(`cannot see outer value if in closed scope`, () => {
-  const context = new Context({
+  const context = new BaseContext({
     root: {
       id: '0',
       values: {
@@ -195,7 +195,7 @@ it(`cannot see outer value if in closed scope`, () => {
 
 it(`should call value callback (1)`, () => {
   let val = 0, old = 0;
-  const context = new Context({
+  const context = new BaseContext({
     root: { id: '0', values: { v1: { val: 42 } } },
   });
   context.root.values['v1'].cb = ((s, v, o) => {
@@ -212,7 +212,7 @@ it(`should call value callback (1)`, () => {
 
 it(`should call value callback (2)`, () => {
   let val = 0, old = 0;
-  const context = new Context({
+  const context = new BaseContext({
     root: {
       id: '0',
       values: {
@@ -246,7 +246,7 @@ it(`should call value callback (2)`, () => {
 
 it(`should call value callback (2)`, () => {
   let val = 0, old = 0;
-  const context = new Context({
+  const context = new BaseContext({
     root: {
       id: '0',
       values: {

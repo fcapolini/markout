@@ -1,6 +1,6 @@
 import { Comment, Element, NodeType, Text } from "../../html/dom";
-import { Scope, ScopeProps } from "../base/scope";
-import { ValueProps } from "../base/value";
+import { BaseScope, BaseScopeProps } from "../base/base-scope";
+import { BaseValueProps } from "../base/base-value";
 import { DOM_ID_ATTR, DOM_TEXT_MARKER, WebContext } from "./web-context";
 
 export const ATTR_VALUE_PREFIX = 'attr$';
@@ -8,11 +8,11 @@ export const CLASS_VALUE_PREFIX = 'class$';
 export const STYLE_VALUE_PREFIX = 'style$';
 export const TEXT_VALUE_PREFIX = 'text$';
 
-export class WebScope extends Scope {
+export class WebScope extends BaseScope {
   dom!: Element;
   texts!: Text[];
 
-  constructor(props: ScopeProps, context: WebContext, parent?: Scope) {
+  constructor(props: BaseScopeProps, context: WebContext, parent?: BaseScope) {
     super(props, context, parent);
   }
 
@@ -40,7 +40,7 @@ export class WebScope extends Scope {
     f(this.dom);
   }
 
-  override newValue(key: string, props: ValueProps<any>) {
+  override newValue(key: string, props: BaseValueProps<any>) {
     const ret = super.newValue(key, props);
     if (key.startsWith(ATTR_VALUE_PREFIX)) {
       const name = this.camelToDash(key.slice(ATTR_VALUE_PREFIX.length));

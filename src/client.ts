@@ -1,3 +1,3 @@
-import { Context } from "./runtime/base/context";
+import { BaseContext } from "./runtime/base/base-context";
 
-new Context({ root: { id: '0' } });
+new BaseContext({ root: { id: '0' } });

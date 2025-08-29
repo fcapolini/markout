@@ -1,30 +1,30 @@
-import { Scope } from "./scope";
+import { BaseScope } from "./base-scope";
 
 export type ValueExp<T> = () => T;
-export type ValueDep = () => Value<any>;
+export type ValueDep = () => BaseValue<any>;
 export type ValueCallback<T> = (
-  s: Scope,
+  s: BaseScope,
   v: T | undefined,
   old: T | undefined
 ) => void;
 
-export interface ValueProps<T> {
+export interface BaseValueProps<T> {
   val?: T;
   exp?: () => T;
   deps?: ValueDep[];
 }
 
-export class Value<T = any> {
-  props: ValueProps<T>;
-  scope: Scope;
+export class BaseValue<T = any> {
+  props: BaseValueProps<T>;
+  scope: BaseScope;
   cb?: ValueCallback<T>;
-  src: Set<Value>;
-  dst: Set<Value>;
+  src: Set<BaseValue>;
+  dst: Set<BaseValue>;
   cycle: number;
   exp?: ValueExp<T>;
   value: T | undefined;
 
-  constructor(props: ValueProps<T>, scope: Scope, cb?: ValueCallback<T>) {
+  constructor(props: BaseValueProps<T>, scope: BaseScope, cb?: ValueCallback<T>) {
     this.props = props;
     this.scope = scope;
     this.cb = cb;
