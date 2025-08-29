@@ -1,9 +1,10 @@
 import { Context, ContextProps } from '../base/context';
 import { Scope, ScopeProps } from '../base/scope';
 import { WebScope } from './web-scope';
-import { Document, Element, NodeType } from '../../html/dom';
+import { Comment, Document, Element, NodeType, Text } from '../../html/dom';
 
 export const DOM_ID_ATTR = 'data-markout';
+export const DOM_TEXT_MARKER = '-t';
 
 export interface WebContextProps extends ContextProps {
   doc: Document;
@@ -25,7 +26,7 @@ export class WebContext extends Context {
       if (id === null) return;
       this.scopeElements.set(id, e);
       e.childNodes.forEach(
-        (n) => n.nodeType === NodeType.ELEMENT && f(n as Element)
+        n => n.nodeType === NodeType.ELEMENT && f(n as Element)
       );
     }
     const docElement = (this.props as WebContextProps).doc.documentElement;

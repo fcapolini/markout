@@ -1,12 +1,16 @@
-import { Element } from "../../html/dom";
+import { Comment, Element, NodeType, Text } from "../../html/dom";
 import { Scope, ScopeProps } from "../base/scope";
 import { ValueProps } from "../base/value";
-import { WebContext } from "./web-context";
+import { DOM_ID_ATTR, DOM_TEXT_MARKER, WebContext } from "./web-context";
 
 export const ATTR_VALUE_PREFIX = 'attr$';
+export const CLASS_VALUE_PREFIX = 'class$';
+export const STYLE_VALUE_PREFIX = 'style$';
+export const TEXT_VALUE_PREFIX = 'text$';
 
 export class WebScope extends Scope {
-  dom?: Element;
+  dom!: Element;
+  texts!: Text[];
 
   constructor(props: ScopeProps, context: WebContext, parent?: Scope) {
     super(props, context, parent);
@@ -14,20 +18,65 @@ export class WebScope extends Scope {
 
   override init() {
     super.init();
-    this.dom = (this.context as WebContext).scopeElements.get(this.props.id);
+    this.dom = (this.context as WebContext).scopeElements.get(this.props.id)!;
+    this.texts = [];
+    const f = (e: Element) => {
+      const childNodes = [...e.childNodes];
+      childNodes.forEach((n, i) => {
+        if (
+          n.nodeType === NodeType.ELEMENT &&
+          (n as Element).getAttribute(DOM_ID_ATTR) === null
+        ) {
+          return f(n as Element);
+        }
+        if (
+          n.nodeType === NodeType.COMMENT &&
+          (n as Comment).textContent.startsWith(DOM_TEXT_MARKER)
+        ) {
+          this.texts.push(childNodes[i + 1] as Text);
+        }
+      });
+    }
+    f(this.dom);
   }
 
   override newValue(key: string, props: ValueProps<any>) {
     const ret = super.newValue(key, props);
     if (key.startsWith(ATTR_VALUE_PREFIX)) {
       const name = this.camelToDash(key.slice(ATTR_VALUE_PREFIX.length));
-      return ret.setCB((_, val) => {
+      ret.setCB((_, val) => {
         if (val == null) {
-          this.dom?.removeAttribute(name);
+          this.dom.removeAttribute(name);
         } else {
-          this.dom?.setAttribute(name, `${val}`);
+          this.dom.setAttribute(name, `${val}`);
         }
       });
+      return ret;
+    }
+    if (key.startsWith(CLASS_VALUE_PREFIX)) {
+      const name = this.camelToDash(key.slice(CLASS_VALUE_PREFIX.length));
+      ret.setCB((_, val) => {
+        if (val) {
+          this.dom.classList.add(name);
+        } else {
+          this.dom.classList.remove(name);
+        }
+      });
+      return ret;
+    }
+    if (key.startsWith(STYLE_VALUE_PREFIX)) {
+      const name = this.camelToDash(key.slice(STYLE_VALUE_PREFIX.length));
+      ret.setCB((_, val) => {
+        this.dom.style.setProperty(name, val);
+      });
+      return ret;
+    }
+    if (key.startsWith(TEXT_VALUE_PREFIX)) {
+      const t = this.texts[parseInt(key.slice(TEXT_VALUE_PREFIX.length))];
+      ret.setCB((_, val) => {
+        t.textContent = val == null ? '&#8203' : val;
+      });
+      return ret;
     }
     return ret;
   }

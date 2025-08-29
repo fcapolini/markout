@@ -35,10 +35,9 @@ export class Value<T = any> {
     this.value = props.val;
   }
 
-  setCB(cb: ValueCallback<T>): this {
+  setCB(cb: ValueCallback<T>) {
     this.cb = cb;
     !this.exp && cb(this.scope, this.value, undefined);
-    return this;
   }
 
   link() {
