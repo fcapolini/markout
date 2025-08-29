@@ -285,3 +285,16 @@ it(`should call value callback (2)`, () => {
   assert.equal(val, 44);
   assert.equal(old, 43);
 });
+
+// it(`should replicate scope`, () => {
+//   const context = new BaseContext({
+//     root: {
+//       id: '0',
+//       children: [
+//         {
+//           id: '1',
+//         },
+//       ],
+//     },
+//   });
+// });

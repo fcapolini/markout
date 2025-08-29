@@ -71,7 +71,10 @@ export class BaseScope {
     this.parent = parent;
     parent.children.push(this);
     if (this.props.name) {
-      parent.values[this.props.name] = new BaseValue({ val: this.proxy }, parent);
+      parent.values[this.props.name] = new BaseValue(
+        { val: this.proxy },
+        parent
+      );
     }
   }
 
@@ -88,18 +91,18 @@ export class BaseScope {
 
   linkValues(recur = true) {
     Object.keys(this.values).forEach(key => this.values[key].link());
-    recur && this.children.forEach((scope: BaseScope) => scope.linkValues());
+    recur && this.children.forEach(scope => scope.linkValues());
   }
 
   unlinkValues(recur = true) {
     this.cache.clear();
     Object.keys(this.values).forEach(key => this.values[key].unlink());
-    recur && this.children.forEach((scope: BaseScope) => scope.unlinkValues());
+    recur && this.children.forEach(scope => scope.unlinkValues());
   }
 
   updateValues(recur = true) {
     Object.keys(this.values).forEach(key => this.values[key].get());
-    recur && this.children.forEach((scope: BaseScope) => scope.updateValues());
+    recur && this.children.forEach(scope => scope.updateValues());
   }
 
   init() {}
