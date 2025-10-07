@@ -1,0 +1,27 @@
+{
+  "id": 0,
+  "children": [
+    {
+      "id": 1,
+      "name": { "val": "page" },
+      "children": [
+        {
+          "id": 2,
+          "name": { "val": "head" },
+          "children": []
+        },
+        {
+          "id": 3,
+          "name": { "val": "body" },
+          "children": [
+            {
+              "id": 4,
+              "name": { "val": "title" },
+              "children": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

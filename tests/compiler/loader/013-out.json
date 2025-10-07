@@ -1,0 +1,41 @@
+{
+  "id": 0,
+  "children": [
+    {
+      "id": 1,
+      "name": { "val": "page" },
+      "children": [
+        {
+          "id": 2,
+          "name": { "val": "head" },
+          "children": [
+            {
+              "id": 3,
+              "values": {
+                "text_3": {
+                  "val": {
+                    "type": "BinaryExpression",
+                    "operator": "+",
+                    "left": {
+                      "type": "BinaryExpression",
+                      "operator": "+",
+                      "left": { "type": "Literal", "value": "greeting: " },
+                      "right": { "type": "Literal", "value": "hi", "raw": "'hi'" }
+                    },
+                    "right": { "type": "Literal", "value": " :-)" }
+                  }
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "name": { "val": "body" },
+          "children": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "id": 0,
+  "children": [
+    {
+      "id": 1,
+      "name": { "val": "page" },
+      "children": [
+        {
+          "id": 2,
+          "name": { "val": "head" },
+          "children": [
+            {
+              "id": 3,
+              "values": {
+                "text_3": {
+                  "val": {
+                    "type": "BinaryExpression",
+                    "left": {
+                      "type": "Literal",
+                      "raw": "'hi'",
+                      "value": "hi"
+                    },
+                    "operator": "+",
+                    "right": {
+                      "type": "Literal",
+                      "value": " :-)"
+                    }
+                  }
+                }
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "name": { "val": "body" },
+          "children": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "id": 0,
+  "children": [
+    {
+      "id": 1,
+      "children": [
+        { "id": 2, "children": [], "name": { "val": "head" } },
+        {
+          "id": 3,
+          "children": [
+            {
+              "id": 4,
+              "type": "foreach",
+              "children": [
+                {
+                  "id": 5,
+                  "children": [],
+                  "values": {
+                    "data": { "val": "" },
+                    "text_5_0": {
+                      "val": {
+                        "type": "MemberExpression",
+                        "object": {
+                          "type": "ThisExpression",
+                          "range": [67, 71]
+                        },
+                        "property": { "type": "Identifier", "name": "data" },
+                        "computed": false,
+                        "optional": false,
+                        "range": [67, 71]
+                      },
+                      "refs": {}
+                    }
+                  }
+                }
+              ],
+              "values": {
+                "data": {
+                  "val": {
+                    "type": "ArrayExpression",
+                    "elements": [
+                      { "type": "Literal", "value": 1, "raw": "1" },
+                      { "type": "Literal", "value": 2, "raw": "2" }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "name": { "val": "body" }
+        }
+      ],
+      "name": { "val": "page" }
+    }
+  ]
+}

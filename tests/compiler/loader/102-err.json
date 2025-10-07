@@ -1,0 +1,19 @@
+[
+  {
+    "loc": {
+      "end": {
+        "column": 26,
+        "line": 1
+      },
+      "i1": 18,
+      "i2": 26,
+      "source": "/102-in.html",
+      "start": {
+        "column": 18,
+        "line": 1
+      }
+    },
+    "msg": "invalid name",
+    "type": "error"
+  }
+]

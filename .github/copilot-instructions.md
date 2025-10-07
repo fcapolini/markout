@@ -1,14 +1,57 @@
-# TypeScript Express.js Project
+# Markout - HTML-First Reactive Web Framework
 
-This is a TypeScript Node.js + Express.js project with nodemon for development and resilient production execution.
+This is Markout, an alternative HTML-based reactive web framework for Node.js and the browser. Tagline: "Revolutionary: we thought it out before we pushed it out" 🤯
+
+## Core Philosophy
+
+Markout is inspired by OpenLaszlo's elegant design principles and aims to be a "modern-day OpenLaszlo" - bringing back thoughtful, stable framework design. Key principles:
+
+- **HTML-first approach**: Build on HTML rather than trying to replace it with JavaScript
+- **Simplicity over complexity**: No ceremonies, boilerplate, or framework-specific rituals
+- **Polymorphic execution**: Server-side pre-rendering with client-side hydration by design
+- **Stability**: Thoughtful design from the start, not constant breaking changes
+- **Developer experience**: Make the simple things simple while keeping complex things possible
+
+## Markout Syntax
+
+Three simple additions to standard HTML:
+- **Directives**: `<:import>`, `<:define>` for modularity and components
+- **Logic values**: `:` prefixed attributes (`:count`, `:on-click`) for reactive state
+- **Reactive expressions**: `${...}` syntax for dynamic content
+
+Example - complete working counter:
+```html
+<html>
+<body>
+   <button :count=${0} :on-click=${() => count++}>
+      Clicks: ${count}
+   </button>
+</body>
+</html>
+```
+
+## Technical Architecture
+
+Built on TypeScript Node.js + Express.js foundation with:
+
+- **Reactive Runtime**: Pull-based reactive system with hierarchical scopes, proxy-based dependency tracking, and polymorphic DOM support (works with both browser DOM and server-side DOM)
+- **HTML Parser**: Sophisticated parser for "augmented HTML" with `:` attributes and `${...}` expressions
+- **Compiler**: Multi-phase compiler using Acorn for JavaScript AST analysis and escodegen for code generation
+  - **Load**: Parse HTML structure and extract scopes/values
+  - **Qualify**: Auto-transform expressions with `this.` qualification for lexical scoping
+  - **Resolve**: Build dependency graphs for reactive updates
+  - **Generate**: Output BaseScopeProps structure for runtime
+- **Server-side DOM**: Enables server-side pre-rendering with same reactive logic
 
 ## Project Structure
 
 - TypeScript source files in `src/` directory
+  - `src/runtime/` - Reactive runtime system (BaseValue, BaseScope, WebScope)
+  - `src/html/` - HTML parser, preprocessor, and DOM implementation
+  - `src/compiler/` - Multi-phase compiler with AST transformation and dependency analysis
 - Compiled JavaScript output in `dist/` directory
-- Express.js server with basic routes
-- Nodemon for auto-restart functionality
-- Test files in `tests/` directory with dual environment support
+- Express.js server foundation
+- Test files in `tests/` directory with comprehensive coverage
 
 ## Available Scripts
 
@@ -30,19 +73,23 @@ This is a TypeScript Node.js + Express.js project with nodemon for development a
 - `npm run format` - Format code with Prettier
 - `npm run format:check` - Check if code is formatted
 
+## Development Philosophy
+
+- **Stability over trends**: Focus on getting fundamentals right rather than chasing latest patterns
+- **Developer experience first**: Natural syntax that doesn't require learning framework-specific ceremonies
+- **Lexical scoping**: Variables work as developers expect - compiler auto-transforms for reactive system
+- **Ecosystem compatibility**: Bootstrap wrapper for familiar components, Web Components support (Shoelace, etc.)
+- **Thoughtful evolution**: Changes driven by real needs, not marketing pressure
+
 ## Development Guidelines
 
 - Use TypeScript for all source code
 - Follow Express.js best practices
-- Nodemon handles automatic restarts in development
-- PM2 handles production process management with clustering
-- Build before deploying to production
-- Use `npm run start:prod` for production deployment with PM2
-- Use `npm run reload` for zero-downtime deployments
+- Build and test thoroughly - stability is a core value
 - Write tests for new features using Vitest
-- Run tests before committing changes
 - Use Prettier for consistent code formatting
-- Run `npm run format` before committing
+- Focus on developer experience and API design
+- Consider long-term maintenance and stability in all decisions
 
 ## API Endpoints
 

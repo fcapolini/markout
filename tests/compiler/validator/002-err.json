@@ -1,0 +1,17 @@
+[
+  {
+    "loc": {
+      "end": {
+        "column": 43,
+        "line": 1
+      },
+      "source": "/002-in.html",
+      "start": {
+        "column": 30,
+        "line": 1
+      }
+    },
+    "msg": "only arrow functions allowed",
+    "type": "error"
+  }
+]
