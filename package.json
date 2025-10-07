@@ -4,6 +4,9 @@
   "description": "A TypeScript Node.js Express.js project",
   "main": "dist/index.js",
   "scripts": {
+    "dev": "nodemon --exec ts-node src/index.ts",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "build": "tsc",
     "start": "node dist/index.js",
     "start:prod": "pm2 start ecosystem.config.js --env production",
@@ -14,12 +17,9 @@
     "delete": "pm2 delete ecosystem.config.js",
     "logs": "pm2 logs",
     "monit": "pm2 monit",
-    "dev": "nodemon --exec ts-node src/index.ts",
     "watch": "tsc --watch",
     "clean": "rm -rf dist",
     "test": "vitest",
-    "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
