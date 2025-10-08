@@ -7,10 +7,10 @@ Markout is three things:
 * an HTML-based reactive language for web presentation logic
 * a CLI development tool.
 
-Compared to mainstream JS-based frameworks like React, Markout:
-* does away with ceremonies and boilerplate code
-* is more accessible to non developers
-* makes componentization and code reuse a breeze.
+Compared to mainstream JS-based frameworks like React:
+* it does away with ceremonies and boilerplate code
+* it's more accessible to non developers
+* it makes componentization and code reuse a breeze.
 
 This is the canonical "click counter" example which is a traditional "hello world" for reactive frameworks:
 
@@ -62,7 +62,7 @@ Then, what we think we can do about it:
 * reactivity lends itself to be used in a declarative context
 * HTML is already a widely used and well known *declarative language*
 * making *HTML itself* reactive makes a lot more sense than adding reactivity to JavaScript and then reinvent the markup syntax in some proprietary form
-* additions to HTML should be unobstrusive easy to spot.
+* additions to HTML should be unobstrusive and easy to spot.
 
 As a result we came up with exactly three syntactic additions to standard HTML:
 
@@ -80,21 +80,30 @@ TBD: conditionals, replication
 
 ## Logic values
 
-Logic values can be used to add presentation logic to any HTML tag. They're expressed as `:`-prefixed attributes to keep them apart from HTML's own tags. Compared to the latter, they don't appear in output pages: they are used to generate page-specific reactive code which is added as a script in the output.
+Logic values can be used to add presentation logic to any HTML tag. They're expressed as `:`-prefixed attributes to keep them apart from HTML's own tags. Compared to normal attributes, they don't appear in output pages: they are used to generate page-specific reactive code which is added as a script in the output.
 
-In our example above we have two logic values:
+```html
+<html>
+<body>
+   <button :count=${0} :on-click=${() => count++}>
+      Clicks: ${count}
+   </button>
+</body>
+</html>
+```
+
+In our click counter example we have two logic values:
 * `:count` which stores a number
 * `:on-click` which declares an event handler.
 
-Logic value names must be either valid JavaScript identifiers or `*-`-prefixed names. The latter have special meaning for the framework. You can use:
+Logic value names must be either valid JavaScript identifiers or `:*-`-prefixed names, which have special meaning for the framework. You can use:
 
 * `:on-` for [event handlers](#)
 * `:class-` for [conditional CSS classes](#)
 * `:style-` for [conditional CSS styles](#)
-* `:watch-` for (rarely needed) [value observers](#).
 * `:will-` and `:did-` for (rarely needed) [delegate methods](#).
 
-By adding logic values to an HTML tag you're effectively adding variables and methods to it. There's no need to use `<script>` tags here and there to define interactive presentation logic: it becomes an integral part of Markout's extended DOM model.
+By adding logic values to an HTML tag you're conceptually adding variables and methods to it. There's no need to use `<script>` tags here and there to define interactive presentation logic: it becomes an integral part of Markout's extended DOM model.
 
 To make this approach practical, tag attributes in Markout accept multiline values, can be commented out, and can have comments added to them:
 
@@ -116,14 +125,12 @@ To make this approach practical, tag attributes in Markout accept multiline valu
       :on-click=${() => count++}
 
       // highlight dangerous state
-      :class-danger=${count > 10}
+      :class-danger=${count > 3}
    >
       <!--- this is where the counter is added to button text -->
-      ${
-         count < 20
-            ? `Clicks: ${count}`
-            : `Look here: you clicked too much and broke the Web!`
-      }
+      ${count < 6
+         ? `Clicks: ${count}`
+         : `Oh my, you clicked too much and broke the Web!`}
    </button>
 </body>
 </html>
@@ -135,7 +142,17 @@ As you can see, inside a tag and between attributes you can use C-style comments
 
 Reactive expressions use the familiar `${...}` syntax. They can be used anywhere as attribute values and in HTML text. They can reference logic values and they're automatically re-evaluated when those change.
 
-In our example above we have three reactive expressions:
+```html
+<html>
+<body>
+   <button :count=${0} :on-click=${() => count++}>
+      Clicks: ${count}
+   </button>
+</body>
+</html>
+```
+
+In our click counter example we have three reactive expressions:
 * `${0}` used to initialize `count`
 * `${() => count++}` used to declare the event handler's function
 * `${count}` used to inject the value of `count` in button's text.
@@ -154,14 +171,57 @@ Well, not exactly: because Markout is a superset of HTML, whatever works with pl
 
 Let's take Bootstrap for example:
 
-```
-TBD
+```html
+<div class="modal fade" id="exampleModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Modal title</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Modal body text goes here.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  $('#exampleModal').modal('show');
+</script>
 ```
 
-Bootstrap, though, requires purpose-built markup for implementing its components: that's the perfect use case for Markout's `<:define>`:
+This is how you could use a Bootstrap modal in Markout:
 
+```html
+<:boot-modal :open=${true} :title="Greeting" :message="Hello world!" />
 ```
-TBD
+
+And this is what the component definition could look like:
+
+```html
+<:define
+   :tag="boot-modal"
+   :title=${'Modal title'}
+   :message=${'Modal body text goes here.'}
+   :open=${false}
+   class="modal fade"
+   tabindex="-1"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">${title}$</h5>
+        <button
+         type="button" class="btn-close" data-bs-dismiss="modal"
+         :on-click=${() => open = false}
+        ></button>
+      </div>
+      <div class="modal-body">
+        <p>${message}</p>
+      </div>
+    </div>
+  </div>
+</:define>
 ```
 
 Of course Web Component libraries are also valid in Markout because they are valid in HTML. Let's take Shoelace:
