@@ -67,7 +67,7 @@ Then, what we think we can do about it:
 As a result we came up with exactly three syntactic additions to standard HTML:
 
 * directives, expressed with `:`-prefixed tags
-* logic values, expressed with `:`-prifixed attributes
+* logic values, expressed with `:`-prefixed attributes
 * reactive expressions, expressed with the familiar `${...}` syntax.
 
 ## Directives
@@ -94,11 +94,11 @@ Logic value names must be either valid JavaScript identifiers or `*-`-prefixed n
 * `:watch-` for (rarely needed) [value observers](#).
 * `:will-` and `:did-` for (rarely needed) [delegate methods](#).
 
-By adding logic values to an HTML tag you're effectively adding variables and methods to it. There's no need to use `<script>` tags here and there to define interactive presentation logic: it becomes an integral part of Markouts's extended DOM model.
+By adding logic values to an HTML tag you're effectively adding variables and methods to it. There's no need to use `<script>` tags here and there to define interactive presentation logic: it becomes an integral part of Markout's extended DOM model.
 
-To make this approach practical, tag attributes in Markout accept multiline values, unescaped `<` and `>` characters, can be commented out, and can be added comments to:
+To make this approach practical, tag attributes in Markout accept multiline values, can be commented out, and can have comments added to them:
 
-```
+```html
 <html>
 <head>
    <style>
@@ -113,13 +113,10 @@ To make this approach practical, tag attributes in Markout accept multiline valu
       :count=${0}
 
       // at each click we increment the counter
-      :on-click=${
-         // no need to consider the received event in our case
-         () => count++
-      }
+      :on-click=${() => count++}
 
       // highlight dangerous state
-      :class-danger=${counter > 10}
+      :class-danger=${count > 10}
    >
       <!--- this is where the counter is added to button text -->
       ${
@@ -173,7 +170,7 @@ Of course Web Component libraries are also valid in Markout because they are val
 TBD
 ```
 
-By following Markout's simple conventions for page fragments, it's trivial to conflate the required plumbing in an importable library:
+By following Markout's simple conventions for page fragments, it's trivial to consolidate the required plumbing in an importable library:
 
 ```
 TBD
