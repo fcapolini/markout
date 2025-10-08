@@ -214,7 +214,7 @@ And this is what the component definition could look like:
         <button
          type="button" class="btn-close" data-bs-dismiss="modal"
          :on-click=${() => open = false}
-        ></button>
+        />
       </div>
       <div class="modal-body">
         <p>${message}</p>
@@ -223,6 +223,12 @@ And this is what the component definition could look like:
   </div>
 </:define>
 ```
+
+It can be noted that:
+* you can componentize a block by just turning its root tag into a `<:define>`
+* by default the base tag for a Markout component is a `<div>` which is OK here
+* in order to parametrize the component, you can add logic values to it...
+* ...and use them in the appropriate places inside its code
 
 Of course Web Component libraries are also valid in Markout because they are valid in HTML. Let's take Shoelace:
 
