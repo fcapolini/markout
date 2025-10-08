@@ -108,32 +108,21 @@ By adding logic values to an HTML tag you're conceptually adding variables and m
 To make this approach practical, tag attributes in Markout accept multiline values, can be commented out, and can have comments added to them:
 
 ```html
-<html>
-<head>
-   <style>
-      .danger {
-         color: red;
-      }
-   </style>
-</head>
-<body>
-   <button
-      // this is the counter, initialized to zero
-      :count=${0}
+<button
+   // this is the counter, initialized to zero
+   :count=${0}
 
-      // at each click we increment the counter
-      :on-click=${() => count++}
+   // at each click we increment the counter
+   :on-click=${() => count++}
 
-      // highlight dangerous state
-      :class-danger=${count > 3}
-   >
-      <!--- this is where the counter is added to button text -->
-      ${count < 6
-         ? `Clicks: ${count}`
-         : `Oh my, you clicked too much and broke the Web!`}
-   </button>
-</body>
-</html>
+   // highlight dangerous state
+   :class-danger=${count > 3}
+>
+   <!--- this is where the counter or error is added to button text -->
+   ${count < 6
+      ? `Clicks: ${count}`
+      : `Oh my, you clicked too much and broke the Web!`}
+</button>
 ```
 
 As you can see, inside a tag and between attributes you can use C-style comments (both single- and multi-line). In HTML text you can use the "triple dash" comments to have them removed from the output (or, of course, normal HTML comments to have them maintained).
