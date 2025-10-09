@@ -318,4 +318,4 @@ TBD
 
 # License
 
-Markout is released unde the [MIT License](LICENSE).
+Markout is released under the [MIT License](LICENSE).
