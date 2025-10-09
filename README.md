@@ -2,7 +2,7 @@
 
 **HTML-based** reactive web framework for Node.js and the browser — for devs who despise *needless complexity*.
 
-**Note**: Markout is still in development, described features are still being implemented!
+🚧 **Markout is currently in development and its features being implemented!**
 
 Markout is three things:
 
@@ -42,7 +42,7 @@ As you can see:
 * rather than a code snippet as is customary, this is a complete, self contained code example which doesn't need any hidden parts to actually work
 * Markout is *polymorphic* by design, meaning it runs page logic in the server by default before passing the ball to the browser (rather than having a retrofitted SSR feature like in JS-based frameworks).
 
-Make no mistake: Markout doesn't have a *simplistic design*, it actually has a *more sophisticated design* which, by making thoughtful choices and putting things in their right place, greatly simplifies its users' experience without sacrificing expressiveness and power.
+Make no mistake: Markout doesn't have a *simplistic design*, it actually has a *more sophisticated design* which, by making thoughtful choices and putting things in their right place, greatly simplifies developer experience without sacrificing expressiveness and power.
 
 With this approach to reactive code you get four big wins:
 
@@ -51,7 +51,16 @@ With this approach to reactive code you get four big wins:
 * ✅ Reactivity - Start with HTML, add presentation logic
 * ✅ Indexability - SEO-ready by default.
 
-**NOTE**: of course you can still have a full blown project setup when needed — just simpler than what JS-based frameworks require.
+In addition, Markout supports these different types of deployment:
+
+* Development (Markout CLI)
+* Production (Markout server or Express middleware)
+* Static (JAMstack/CDN)
+* PWA ([progressive web apps](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/What_is_a_progressive_web_app))
+* Desktop ([Electron](https://www.electronjs.org)/[Tauri](https://tauri.app)/[Wails](https://wails.io/))
+* Mobile (Tauri/[Capacitor](https://capacitorjs.com)/[Cordova](https://cordova.apache.org))
+
+**NOTE**: Of course you can still have a full blown project setup when needed — just simpler than what JS-based frameworks require.
 
 # Motivation
 
@@ -61,31 +70,29 @@ In our opinion, although they are clearly very useful, they obfuscate our code *
 
 Let's be clear: this constant state of radical change is not natural evolution, it's a consequence of rushed and ill considered design — coupled with hype-driven marketing. We can think of no other industry where this would be considered standard practice. This approach should be confined to bleeding edge projects, not *every single web project* no matter what.
 
-We all love to reinvent the wheel and show off, but as a matter of fact reactive UIs, even for the Web, are not new. For example in the mid 2000s the OpenLaszlo framework was already ahead, design wise, compared to what we have now. If only someone could revive and update that design, it would be *pretty good* and *pretty stable* too.
-
-That's how Markout was born. And in keeping with another of our industry's great ironies, here we are trying to simplify things by proposing *yet another solution*.
+Markout is an attempt to solve these problems, or to prove at least that alternative solutions can be found. And in keeping with another of our industry's great ironies, here we are trying to simplify things by proposing *yet another solution*.
 
 # Principles
 
 First, what I think is wrong with JS-based frameworks:
 
-* if you try to hide or replace HTML you get monsters like JSX
+* if you try to hide or replace HTML you get a Frankenstein monster like JSX
 * ditto if you try to add declarative reactive logic to JavaScript, which is mainly an imperative language
 * reactivity should work intuitively and automatically and it should actually *simplify application code*: `useState()` and `useEffect()`, for example, shouldn't exist
 * you should't need to learn the dark art of keeping the framework happy, the framework should work for you, not *the other way around*: `useContext()` and `useMemo()`, for example, shouldn't exist either.
 
 Then, what I think can be done about it:
 
-* reactivity lends itself to be used in a declarative context
-* HTML is already a widely used and well known *declarative language*
-* making *HTML itself* reactive makes a lot more sense than adding reactivity to JavaScript, and then having to reinvent the markup syntax in some proprietary form
-* additions to HTML should be unobstrusive and easy to spot.
+* **given** reactivity is best used in a *declarative context*
+* **and** HTML is already a widely used and well known *declarative language*
+* **clearly** making *HTML itself reactive* makes a lot more sense than adding reactivity to JavaScript (and then having to reinvent the markup syntax in some proprietary form)
+* **and** additions to HTML should be *unobstrusive and easy to spot* to keep things clear.
 
-As a result I came up with exactly four syntactic additions to standard HTML:
+As a result I came up with these additions to standard HTML:
 
-* logic values, expressed with `:`-prefixed attributes
-* reactive expressions, expressed with the familiar `${...}` syntax.
-* directives, expressed with `:`-prefixed tags, and augmented `<template>` tags.
+* **logic values**, expressed with `:`-prefixed attributes
+* **reactive expressions**, expressed with the familiar `${...}` syntax
+* **directives**, expressed with `:`-prefixed tags and augmented `<template>` tags.
 
 ## Logic values
 
@@ -308,3 +315,7 @@ TBD
 # CLI
 
 ...
+
+# License
+
+Markout is released unde the [MIT License](LICENSE).
