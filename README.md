@@ -12,7 +12,7 @@ Markout is three things:
 
 Compared to mainstream JS-based frameworks like [React](https://react.dev/):
 
-* is doesn't need complex project setup
+* it doesn't need a complex project setup
 * it does away with ceremonies and boilerplate code
 * it's more accessible to designers, testers, and non-technical roles
 * it makes componentization and code reuse a breeze
@@ -42,7 +42,7 @@ As you can see:
 
 * no complex project setup is needed
 * rather than a code snippet as is customary, this is a complete, self contained code example which doesn't need any hidden parts to actually work
-* it actually includes only what's actually needed and *zero boilerplate code*
+* it only includes what's actually needed and *zero boilerplate code*
 * Markout is *polymorphic* by design, meaning it runs page logic in the server by default before passing the ball to the browser (rather than having a retrofitted SSR feature like in JS-based frameworks).
 
 Make no mistake: Markout doesn't have a *simplistic design*, it actually has a *more sophisticated design* which, by making thoughtful choices and putting things in their right place, greatly simplifies developer experience without sacrificing expressiveness and power.
@@ -50,7 +50,7 @@ Make no mistake: Markout doesn't have a *simplistic design*, it actually has a *
 With this approach to reactive code you get four big wins:
 
 * ✅ Simplicity - No ceremonies, no boilerplate
-* ✅ Familiarity - It's still HTML, with added powers
+* ✅ Familiarity - It's still HTML, just with added powers
 * ✅ Reactivity - Start with HTML, add presentation logic
 * ✅ Indexability - SEO-ready by default.
 
@@ -163,7 +163,90 @@ The second is a function, which is also never re-evaluated by design.
 
 ##### `<:define>`
 
-TBD
+This directive lets you turn any HTML block into a reusable component. Say you have this user profile HTML that you're copy-pasting everywhere:
+
+```html
+<div class="user-profile">
+  <img src="john-avatar.jpg" class="avatar" />
+  <div class="info">
+    <h3>John Doe</h3>
+    <p class="role">Senior Developer</p>
+    <p class="bio">Loves building clean, maintainable code.</p>
+  </div>
+  <button
+    class="contact-btn"
+    :on-click=${() => window.location = `mailto:john@company.com`}
+  >
+    Contact
+  </button>
+</div>
+```
+
+With Markout, you can componentize it once:
+
+```html
+<:define
+  :tag="user-profile"
+  
+  // interface - declare parameters with defaults
+  :name="Unknown User"
+  :role="Team Member"
+  :avatar="default-avatar.jpg"
+  :email=""
+  
+  // implementation
+  class="user-profile"
+>
+  <img src="${avatar}" class="avatar" />
+  <div class="info">
+    <h3>${name}</h3>
+    <p class="role">${role}</p>
+    <div class="bio">
+      <slot name="bio">Default bio text goes here.</slot>
+    </div>
+    <div class="skills">
+      <slot name="skills" />
+    </div>
+  </div>
+  <button 
+    class="contact-btn" 
+    :on-click=${() => window.location = `mailto:${email}`}
+  >
+    Contact
+  </button>
+</:define>
+```
+
+Then use it everywhere like this:
+
+```html
+<:user-profile 
+  :name="John Doe" 
+  :role="Senior Developer"
+  :avatar="john-avatar.jpg"
+  :email="john@company.com"
+>
+  Loves building clean, maintainable code and mentoring junior developers.
+</:user-profile>
+
+<:user-profile 
+  :name="Jane Smith" 
+  :role="UX Designer"
+  :avatar="jane-avatar.jpg"
+  :email="jane@company.com"
+>
+  Passionate about user-centered design and accessibility.
+</:user-profile>
+```
+
+**NOTE**: Markout components support `<slot>` elements just like Web Components do, for more advanced content composition when needed.
+
+With this approach you get the same four wins as with other Markout features:
+
+* ✅ Simplicity - Complex HTML becomes one tag
+* ✅ Familiarity - Still regular HTML with logic values
+* ✅ Reactivity - Click handlers and dynamic content work naturally
+* ✅ Reusability - Define once, use everywhere with different data
 
 ##### `<:data>`
 
@@ -176,7 +259,7 @@ With these tags you can include *page fragments*. For example:
 ```html
 <html>
 <head>
-  <:import :src="lib/components.htm" />
+  <:import :src="lib/app-card.htm" />
 </head>
 <body>
   <:app-card>
@@ -186,11 +269,11 @@ With these tags you can include *page fragments*. For example:
 </html>
 ```
 
-Where this could be `lib/components.htm`'s content:
+Where this could be `lib/app-card.htm`'s content:
 
 ```html
 <lib>
-  <:import :src="common.htm" />
+  <:import :src="baseline.htm" />
 
   <style>
     .app-card {
@@ -202,17 +285,30 @@ Where this could be `lib/components.htm`'s content:
 </lib>
 ```
 
+And `lib/baseline.htm`'s content could be:
+
+```html
+<lib>
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+</lib>
+```
+
 It should be noted that:
 
 * page fragments should use the `.htm` rather than `.html` extension (so they won't be served as pages by mistake)
 * they can have an arbitrary root tag which is discarded (`<lib>` in this case)
-* it's a common pattern to `<:import>` them in page's head, so the styles they define fall naturally into place
-* since `<:define>` is removed from output markup (and included in generated JS code) it doesn't pollute the head
+* it's a common pattern to `<:import>` them in page's `<head>`, so the styles they define fall naturally into place
+* since `<:define>` is removed from output markup (and included in generated JS code) it doesn't pollute `<head>`'s content
 * page fragments can in turn import other fragments with either relative or absolute path (in the document root, not in the system!)
 * `<:import>` ensures each single fragment is imported only once in the whole page
-* even if two imported fragments import the same other fragment, only the first one will actually have it added to page head
+* even if two imported fragments import the same other fragment, only the first one will actually have it added to page `<head>`
+* at the same time, each component can simply import all its dependencies: you don't need to import `lib/baseline.htm` yourself, it will be included as soon as you import any of your library's components.
 
-What this behavior boils down to is: you can easily build your component libraries where each component includes its own dependencies (e.g. for base page styling) without conflicts and in the right order.
+What this behavior boils down to is: you can easily build your component libraries where each component includes its own dependencies (e.g. for baseline styling) without duplications and in the right order.
 
 One last note about the difference between `<:import>` and `<:include>`: as it's easy to guess, `<:include>` can be used to explicitly include a fragment multiple time in a single page or fragment.
 

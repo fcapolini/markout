@@ -29,6 +29,15 @@ Three simple additions to standard HTML:
 - Provides intuitive component customization without prop drilling
 - Refined through multiple PoC iterations for natural developer experience
 
+**Automatic Dependency Resolution for Component Libraries**: Critical for ecosystem adoption
+- Each fragment can import its own dependencies (base styles, other components)
+- Import deduplication ensures dependencies load only once per page
+- Enables zero-ceremony component libraries - just point to `.htm` files
+- Promotes actual code reuse within teams/organizations (private component libraries)
+- Design systems become simple HTML fragments instead of complex build processes
+- Same pattern works for third-party libraries (Bootstrap) and internal company libraries
+- Removes traditional barriers to component sharing between projects
+
 **Reactive Expressions in Special Tags**: 
 - `<style>`, `<title>`, and `<script>` tags support reactive expressions `${...}`
 - Enables reactive CSS, dynamic titles, and dynamic script generation
