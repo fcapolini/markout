@@ -62,7 +62,7 @@ In addition, Markout supports these different types of deployment:
 
 **NOTE**: Of course you can still have a full blown project setup when needed — just simpler than what JS-based frameworks require.
 
-# Motivation
+## Motivation
 
 Life as a web developer has become unduly complex. Even the simplest projects require a complex setup these days. And complexity extends to application code: modern reactive frameworks force us to pollute our code with obscure ceremonies (like `useState`, `useEffect` and so on) because of *their own implementation details*.
 
@@ -72,7 +72,7 @@ Let's be clear: this constant state of radical change is not natural evolution, 
 
 Markout is an attempt to solve these problems, or to prove at least that alternative solutions can be found. And in keeping with another of our industry's great ironies, here we are trying to simplify things by proposing *yet another solution*.
 
-# Principles
+## Principles
 
 First, what I think is wrong with JS-based frameworks:
 
@@ -94,7 +94,7 @@ As a result I came up with these additions to standard HTML:
 * **reactive expressions**, expressed with the familiar `${...}` syntax
 * **directives**, expressed with `:`-prefixed tags and augmented `<template>` tags.
 
-## Logic values
+### Logic values
 
 Logic values are the foundation of reactivity in Markout. They can be used to add presentation logic to any HTML tag. They're expressed as `:`-prefixed attributes to keep them apart from HTML's own attributes. Compared to normal attributes, they don't appear in output pages: they are used to generate page-specific reactive code which is added as a script in the output.
 
@@ -132,7 +132,7 @@ To make this approach practical, tag attributes in Markout accept multiline valu
 
 As you can see, inside a tag and between attributes you can use C-style comments (both single- and multi-line). In HTML text you can use the "triple dash" comments to have them removed from the output (or normal HTML comments to have them maintained).
 
-## Reactive expressions
+### Reactive expressions
 
 Reactive expressions are where logic values are consumed. They adopt the familiar `${...}` syntax, and can be used anywhere as attribute values and in HTML text. They're automatically re-evaluated when the logic values they reference get updated.
 
@@ -148,9 +148,9 @@ The first is a constant, so it doesn't depend on other values and thus it's neve
 
 The second is a function, which is also never re-evaluated by design.
 
-## Directives
+### Directives
 
-### `:`-prefixed tags
+#### `:`-prefixed tags
 
 `:`-prefixed tags add modularity, reusability, and data handling to HTML:
 
@@ -158,44 +158,44 @@ The second is a function, which is also never re-evaluated by design.
 * `<:define>` lets you declare reusable custom tags (aka components)
 * `<:data>` lets you interact with remote and local data
 
-#### `<:import>` and `<:include>`
+##### `<:import>` and `<:include>`
 
 TBD
 
-#### `<:define>`
+##### `<:define>`
 
 TBD
 
-#### `<:data>`
+##### `<:data>`
 
 TBD
 
-### Augmented `<template>` tags
+#### Augmented `<template>` tags
 
 Augmented `<template>` tags are used for conditionals and looping:
 
 * `<template :if=${}>` and `<template :elseif=${}>` for conditionals
 * `<template :foreach=${} :item="" index="">` for replication.
 
-#### `<template :if>` and `<template :elseif>`
+##### `<template :if>` and `<template :elseif>`
 
 TBD
 
-#### `<template :foreach :item :index>`
+##### `<template :foreach :item :index>`
 
 TBD
 
-# Data binding
+## Data binding
 
 TBD
 
-# Ecosystem
+## Ecosystem
 
 Most fellow devs might be thinking: "Yeah but a brand new framework means no component libraries!"
 
 Well, not exactly: because Markout is a superset of HTML, what works with plain HTML + JavaScript can also be easily adapted to Markout — and made reactive in the process.
 
-## Bootstrap
+### Bootstrap
 
 Let's take [Bootstrap](https://getbootstrap.com) for example:
 
@@ -276,7 +276,7 @@ With this approach to components you get four big wins:
 
 **NOTE**: I plan to release a Markout Bootstrap library soon — I want the fun part for myself 😉
 
-## Shoelace
+### Shoelace
 
 Markout is totally fine with Web Component libraries as well. Let's take [Shoelace](https://shoelace.style) as an example:
 
@@ -290,7 +290,7 @@ By following Markout's simple conventions for page fragments, it's easy to conso
 TBD
 ```
 
-## Project components
+### Project components
 
 Finally, what works for third-party libraries works just as well for your own stuff. Let's say you have a block you want to use multiple times: Markout makes it trivial to turn it into a reusable parametric component.
 
@@ -312,10 +312,10 @@ Your component definitions can just as easily be grouped in importable page frag
 TBD
 ```
 
-# CLI
+## CLI
 
 ...
 
-# License
+## License
 
 Markout is released under the [MIT License](LICENSE).
