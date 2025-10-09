@@ -82,7 +82,7 @@ First, what I think is wrong with JS-based frameworks:
 * if you try to hide or replace HTML you get a Frankenstein monster like JSX
 * ditto if you try to add declarative reactive logic to JavaScript, which is mainly an imperative language
 * reactivity should work intuitively and automatically and it should actually *simplify application code*: `useState()` and `useEffect()`, for example, shouldn't exist
-* you should't need to learn the dark art of keeping the framework happy; the framework should work for you, not *the other way around*: `useContext()` and `useMemo()`, for example, shouldn't exist either.
+* you should't need to learn the dark art of keeping the framework happy; *the framework should work for you*, not the other way around: `useContext()` and `useMemo()`, for example, shouldn't exist either.
 
 Then, what I think can be done about it:
 
@@ -99,7 +99,7 @@ As a result I came up with these additions to standard HTML:
 
 ### Logic values
 
-Logic values are the foundation of reactivity in Markout. They can be used to add presentation logic to any HTML tag. They're expressed as `:`-prefixed attributes to keep them apart from HTML's own attributes. Compared to normal attributes, they don't appear in output pages: they are used to generate page-specific reactive code which is added as a script in the output.
+Logic values are the foundation of reactivity in Markout. They can be used to add presentation logic to any HTML tag. They're expressed as `:`-prefixed attributes to keep them apart from HTML's own attributes. Compared to normal attributes, they don't appear in output pages: they are used to generate page-specific code which is added as a script in the output.
 
 In our click counter example we have two logic values:
 
@@ -133,7 +133,7 @@ To make this approach practical, tag attributes in Markout accept multiline valu
 </button>
 ```
 
-As you can see, inside a tag and between attributes you can use C-style comments (both single- and multi-line). In HTML text you can use the "triple dash" comments to have them removed from the output (or normal HTML comments to have them maintained). Finally, to simplify things any tag can be self closing — output pages always contain standard HTML regardless.
+As you can see, inside a tag and between attributes you can use C-style comments (both single- and multi-line). In HTML text you can use the "triple dash" comments to have them removed from the output (or normal HTML comments to have them maintained). Finally, to simplify things any tag can be self closing — and output pages always contain standard HTML regardless.
 
 ### Reactive expressions
 
@@ -157,13 +157,9 @@ The second is a function, which is also never re-evaluated by design.
 
 `:`-prefixed tags add modularity, reusability, and data handling to HTML:
 
-* `<:import>` and `<:include>` let you modularize source code
 * `<:define>` lets you declare reusable custom tags (aka components)
 * `<:data>` lets you interact with remote and local data
-
-##### `<:import>` and `<:include>`
-
-TBD
+* `<:import>` and `<:include>` let you modularize source code
 
 ##### `<:define>`
 
@@ -172,6 +168,53 @@ TBD
 ##### `<:data>`
 
 TBD
+
+##### `<:import>` and `<:include>`
+
+With these tags you can include *page fragments*. For example:
+
+```html
+<html>
+<head>
+  <:import :src="lib/components.htm" />
+</head>
+<body>
+  <:app-card>
+    Hello.
+  </:app-card>
+</body>
+</html>
+```
+
+Where this could be `lib/components.htm`'s content:
+
+```html
+<lib>
+  <:import :src="common.htm" />
+
+  <style>
+    .app-card {
+      border: 1px solid #ccc;
+    }
+  </style>
+
+  <:define :tag="app-card" class="app-card" />
+</lib>
+```
+
+It should be noted that:
+
+* page fragments should use the `.htm` rather than `.html` extension (so they won't be served as pages by mistake)
+* they can have an arbitrary root tag which is discarded (`<lib>` in this case)
+* it's a common pattern to `<:import>` them in page's head, so the styles they define fall naturally into place
+* since `<:define>` is removed from output markup (and included in generated JS code) it doesn't pollute the head
+* page fragments can in turn import other fragments with either relative or absolute path (in the document root, not in the system!)
+* `<:import>` ensures each single fragment is imported only once in the whole page
+* even if two imported fragments import the same other fragment, only the first one will actually have it added to page head
+
+What this behavior boils down to is: you can easily build your component libraries where each component includes its own dependencies (e.g. for base page styling) without conflicts and in the right order.
+
+One last note about the difference between `<:import>` and `<:include>`: as it's easy to guess, `<:include>` can be used to explicitly include a fragment multiple time in a single page or fragment.
 
 #### Augmented `<template>` tags
 

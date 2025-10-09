@@ -19,6 +19,32 @@ Three simple additions to standard HTML:
 - **Logic values**: `:` prefixed attributes (`:count`, `:on-click`) for reactive state
 - **Reactive expressions**: `${...}` syntax for dynamic content
 
+### Advanced Import Features (for reference docs)
+
+**Fragment Root Attribute Inheritance**: Sophisticated attribute override system:
+- Fragment root tag attributes are added to `<:import>` parent tag unless already present
+- Enables default/override pattern: fragment defines defaults, parent can override  
+- Parent scope overrides work through lexical scoping - component code remains unchanged
+- Works recursively across nested imports and sub-imports
+- Provides intuitive component customization without prop drilling
+- Refined through multiple PoC iterations for natural developer experience
+
+**Reactive Expressions in Special Tags**: 
+- `<style>`, `<title>`, and `<script>` tags support reactive expressions `${...}`
+- Enables reactive CSS, dynamic titles, and dynamic script generation
+- Special handling required - cannot use standard HTML comment placemarkers in these contexts
+- Allows component-scoped reactive styling without CSS-in-JS libraries
+- Makes themes, dynamic styling, and conditional scripts natural and performant
+
+**Runtime Components Architecture**: Current implementation focus
+- **Evolution**: Moving from compile-time macro expansion to runtime component instantiation
+- **Benefits**: Enables dynamic component type selection, shared component behavior, unified replication system
+- **Foundation**: Server-side DOM `<template>` implementation with nested light-weight document and clone method
+- **No Shadow DOM**: Clean debugging and styling while maintaining encapsulation through scoping system
+- **Component Flow**: Parse `<:define>` → Register template → Clone on instantiation → Activate reactive runtime
+- **Replication Integration**: `<template :foreach>` uses same component instantiation system
+- **Current Status**: Runtime component system needs completion before compiler integration
+
 Example - complete working counter:
 ```html
 <html>
