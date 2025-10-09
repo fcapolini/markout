@@ -2,6 +2,8 @@
 
 **HTML-based** reactive web framework for Node.js and the browser — for devs who despise *needless complexity*.
 
+**Note**: Markout is still in development, described features are still being implemented!
+
 Markout is three things:
 
 * an Express-based web server (and Express middleware)
