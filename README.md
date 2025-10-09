@@ -2,7 +2,7 @@
 
 **HTML-based** reactive web framework for Node.js and the browser — for devs who despise *needless complexity*.
 
-🚧 **Markout is currently in development and its features being implemented!**
+🚧 **Markout is currently in development and its features are being implemented!**
 
 Markout is three things:
 
@@ -12,9 +12,11 @@ Markout is three things:
 
 Compared to mainstream JS-based frameworks like [React](https://react.dev/):
 
+* is doesn't need complex project setup
 * it does away with ceremonies and boilerplate code
-* it's more accessible to non developers
-* it makes componentization and code reuse a breeze.
+* it's more accessible to designers, testers, and non-technical roles
+* it makes componentization and code reuse a breeze
+* it provides server side rendering by default.
 
 This is the canonical "click counter" example which is a traditional "hello world" for reactive frameworks:
 
@@ -40,6 +42,7 @@ As you can see:
 
 * no complex project setup is needed
 * rather than a code snippet as is customary, this is a complete, self contained code example which doesn't need any hidden parts to actually work
+* it actually includes only what's actually needed and *zero boilerplate code*
 * Markout is *polymorphic* by design, meaning it runs page logic in the server by default before passing the ball to the browser (rather than having a retrofitted SSR feature like in JS-based frameworks).
 
 Make no mistake: Markout doesn't have a *simplistic design*, it actually has a *more sophisticated design* which, by making thoughtful choices and putting things in their right place, greatly simplifies developer experience without sacrificing expressiveness and power.
@@ -66,11 +69,11 @@ In addition, Markout supports these different types of deployment:
 
 Life as a web developer has become unduly complex. Even the simplest projects require a complex setup these days. And complexity extends to application code: modern reactive frameworks force us to pollute our code with obscure ceremonies (like `useState`, `useEffect` and so on) because of *their own implementation details*.
 
-In our opinion, although they are clearly very useful, they obfuscate our code *for no good reason*: reactivity should make things simpler, not more complex. And, to make things worse, they keep changing! Even if you're perfectly fine with your code, you have to keep updating it just to keep them happy.
+In my opinion, although they are clearly very useful, they obfuscate our code *for no good reason*: reactivity should make things simpler, not more complex. And, to make things worse, they keep changing! Even if you're perfectly fine with your code, you have to keep updating it just to keep them happy.
 
-Let's be clear: this constant state of radical change is not natural evolution, it's a consequence of rushed and ill considered design — coupled with hype-driven marketing. We can think of no other industry where this would be considered standard practice. This approach should be confined to bleeding edge projects, not *every single web project* no matter what.
+Let's be clear: this constant state of radical change is not natural evolution, it's a consequence of rushed and ill considered design — coupled with hype-driven marketing. I can think of no other industry where this would be considered standard practice. This approach should be confined to bleeding edge projects, not *every single web project* no matter what.
 
-Markout is an attempt to solve these problems, or to prove at least that alternative solutions can be found. And in keeping with another of our industry's great ironies, here we are trying to simplify things by proposing *yet another solution*.
+Markout is an attempt to solve these problems, or at least to prove that solutions can be found. And in keeping with another of our industry's great ironies, here we are trying to simplify things by proposing *yet another solution*.
 
 ## Principles
 
@@ -79,14 +82,14 @@ First, what I think is wrong with JS-based frameworks:
 * if you try to hide or replace HTML you get a Frankenstein monster like JSX
 * ditto if you try to add declarative reactive logic to JavaScript, which is mainly an imperative language
 * reactivity should work intuitively and automatically and it should actually *simplify application code*: `useState()` and `useEffect()`, for example, shouldn't exist
-* you should't need to learn the dark art of keeping the framework happy, the framework should work for you, not *the other way around*: `useContext()` and `useMemo()`, for example, shouldn't exist either.
+* you should't need to learn the dark art of keeping the framework happy; the framework should work for you, not *the other way around*: `useContext()` and `useMemo()`, for example, shouldn't exist either.
 
 Then, what I think can be done about it:
 
-* **given** reactivity is best used in a *declarative context*
-* **and** HTML is already a widely used and well known *declarative language*
-* **clearly** making *HTML itself reactive* makes a lot more sense than adding reactivity to JavaScript (and then having to reinvent the markup syntax in some proprietary form)
-* **and** additions to HTML should be *unobstrusive and easy to spot* to keep things clear.
+* **given that** reactivity works best in a *declarative context*
+* **and that** HTML is already a widely used and well known *declarative language*
+* **it's clear that** making *HTML itself reactive* makes a lot more sense than adding reactivity to JavaScript (and then having to reinvent the markup syntax in some proprietary form)
+* **and that**, to keep it clean, additions to HTML should be *unobstrusive and easy to spot*.
 
 As a result I came up with these additions to standard HTML:
 
@@ -111,7 +114,7 @@ Logic value names must be either valid JavaScript identifiers or `*-`-prefixed n
 * `:watch-` for (rarely needed) [value watchers](#).
 * `:will-` and `:did-` for (rarely needed) [delegate methods](#).
 
-By adding logic values to an HTML tag you're conceptually adding variables and methods to it. There's no need to use `<script>` tags to define interactive presentation logic: it becomes an integral part of Markout's reactive DOM model.
+By adding logic values to HTML tags you're conceptually adding variables and methods to them. There's no need to use `<script>` tags to define interactive presentation logic: it becomes an integral part of Markout's reactive DOM model.
 
 To make this approach practical, tag attributes in Markout accept multiline values, can be commented out, and can have comments added to them. This makes it feel like you're defining a proper reactive visual object — because that's what you're actually doing:
 
@@ -130,7 +133,7 @@ To make this approach practical, tag attributes in Markout accept multiline valu
 </button>
 ```
 
-As you can see, inside a tag and between attributes you can use C-style comments (both single- and multi-line). In HTML text you can use the "triple dash" comments to have them removed from the output (or normal HTML comments to have them maintained).
+As you can see, inside a tag and between attributes you can use C-style comments (both single- and multi-line). In HTML text you can use the "triple dash" comments to have them removed from the output (or normal HTML comments to have them maintained). Finally, to simplify things any tag can be self closing — output pages always contain standard HTML regardless.
 
 ### Reactive expressions
 
@@ -181,7 +184,7 @@ Augmented `<template>` tags are used for conditionals and looping:
 
 TBD
 
-##### `<template :foreach :item :index>`
+##### `<template :foreach [:item] [:index]>`
 
 TBD
 
@@ -224,7 +227,7 @@ This code is confusing to say the least, and you have to duplicate it everywhere
 <:bs-modal :open=${true} :title="Greeting" :message="Hello world!" />
 ```
 
-That's much better! Although it's still HTML (with powers) you now have a proper component which clearly declares what it is (`bs-modal`) and only exposes what's meaningful for its use (`open` state, `title` and `message` texts).
+That's much better! Now you have a properly [encapsulated](https://en.wikipedia.org/wiki/Encapsulation_(computer_programming)) component which clearly declares what it is (`bs-modal`) and only exposes what's meaningful for its use (`open` state, `title` and `message` texts).
 
 For completeness, this is what the component definition could look like:
 
@@ -246,7 +249,7 @@ For completeness, this is what the component definition could look like:
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">${title}$</h5>
+        <h5 class="modal-title">${title}</h5>
         <button
           type="button" class="btn-close" data-bs-dismiss="modal"
           :on-click=${() => open = false}
@@ -260,12 +263,11 @@ For completeness, this is what the component definition could look like:
 </:define>
 ```
 
-It can be noted that:
+It should be noted that:
 
-* you can componentize a block by just turning its root tag into a `<:define>` and giving it its own tag name
-* by default the base tag for a Markout component is a `<div>` which is OK here
-* in order to parametrize the component, you can add logic values with their defaults, and use them in the appropriate places inside its code
-* any tag can be self closed in Markout HTML.
+* you can componentize a block by just turning its root tag into a `<:define>` and giving it a tag name
+* by default the base tag for a Markout component is a `<div>`, which is OK here
+* in order to parametrize the component, you can add logic values with their defaults, and use them in the appropriate places inside its code.
 
 With this approach to components you get four big wins:
 
@@ -278,7 +280,7 @@ With this approach to components you get four big wins:
 
 ### Shoelace
 
-Markout is totally fine with Web Component libraries as well. Let's take [Shoelace](https://shoelace.style) as an example:
+Markout is totally fine with Web Component libraries. Let's take [Shoelace](https://shoelace.style) as an example:
 
 ```
 TBD
