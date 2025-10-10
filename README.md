@@ -160,7 +160,7 @@ Markout directives are based on either `<template>` or custom `<:...>` tags:
 
 * `<template>`: conditionals and looping
 * `<:define>`: reusable components
-* `<:import>|<:include>`: source coude modules
+* `<:import>|<:include>`: source code modules
 * `<:data>`: data and services
 
 ### `<template :if | :else | :elseif>`
@@ -253,9 +253,11 @@ With this approach to modularity you get four big wins:
 * ✅ Configurability - Even CSS can be parameterized for themes and component variants
 * ✅ Reusability - Build component libraries where each component manages its own dependencies
 
-### `<:data>`
+## Data
 
-This directive lets you formally declare all data and service interactions, and define your own data generation and processing if needed.
+Technically speaking this should be a paragraph of [Directives](#Directives) dedicated to the `<:data>` tag. But it covers such a fundamental concern in web apps that it deserves its own section.
+
+The `<:data>` directive lets you formally declare all data and service interactions, and define your own data generation and processing if needed.
 
 For example, here is how you can connect to a REST endpoint:
 
@@ -316,7 +318,7 @@ In addition, again because `:json` is a logic attribute, you can locally generat
 }}>
 ```
 
-You get the idea. In the same way, you can concatenate `<:data>` directives to build data pipelines, simply making each *a function* of the one before, and you can cascade API calls just by making each dependend on the previous one's received data.
+You get the idea. In the same way, you can concatenate `<:data>` directives to build data pipelines, simply making each *a function* of the one before, and you can cascade API calls just by making each dependent on the previous one's data.
 
 By leveraging source code modularization with `<:import>`, you can of course properly organize the data layer in your code and import it where needed.
 
