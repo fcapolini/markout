@@ -539,9 +539,17 @@ Your component definitions can just as easily be grouped in a set of page fragme
 TBD
 ```
 
-## CLI
+## Tooling
 
-...
+TBD
+
+### CLI
+
+TBD
+
+### VSCode extension
+
+TBD
 
 ## License
 

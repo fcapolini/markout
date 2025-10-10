@@ -69,6 +69,21 @@ Three simple additions to standard HTML:
 - **Replication Integration**: `<template :foreach>` uses same component instantiation system
 - **Current Status**: Runtime component system needs completion before compiler integration
 
+**Tooling Ecosystem**: Complete developer experience
+- **CLI Tool**: Zero-setup development and deployment solution
+  - Development server with hot reload (`markout serve`)
+  - Project scaffolding and templates
+  - Build commands for production and static deployment
+  - Support for PWA, desktop (Electron/Tauri), and mobile (Capacitor/Cordova) targets
+- **VS Code Extension**: Advanced development support
+  - Syntax highlighting for `:` attributes and `${...}` expressions
+  - IntelliSense for components, data references, and fragment imports
+  - Dependency graph visualization for data pipelines and component relationships
+  - Error detection for circular dependencies, type mismatches, undefined references
+  - Live templates and snippets for common patterns
+  - Component preview and parameter interface documentation
+  - Fragment explorer for modular code organization
+
 Example - complete working counter:
 ```html
 <html>
