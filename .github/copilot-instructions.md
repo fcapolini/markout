@@ -57,6 +57,8 @@ Three simple additions to standard HTML:
 - Special handling required - cannot use standard HTML comment placemarkers in these contexts
 - Allows component-scoped reactive styling without CSS-in-JS libraries
 - Makes themes, dynamic styling, and conditional scripts natural and performant
+- Revolutionary: CSS becomes natively reactive - styles update automatically with state changes
+- Outstanding possibilities: theming, dark mode, adaptive styling, CSS utility functions
 
 **Runtime Components Architecture**: Current implementation focus
 - **Evolution**: Moving from compile-time macro expansion to runtime component instantiation

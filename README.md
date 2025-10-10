@@ -326,7 +326,16 @@ It should be noted that:
 
 What this behavior boils down to is: you can easily build your component libraries where each component includes its own dependencies (e.g. for baseline styling) without fearing duplications and with automatic dependency ordering.
 
-One last note about the difference between `<:import>` and `<:include>`: as it's easy to guess, `<:include>` can be used to explicitly include a fragment multiple time in a single page or fragment.
+One note about the difference between `<:import>` and `<:include>`: as it's easy to guess, `<:include>` can be used to explicitly include a fragment multiple time in a single page or fragment.
+
+And one last note about the `<style>` tags: since they're tags like all others, they can include `${...}` expressions! Think about this for a moment... reactive styling totally integrated in Markout's reactivity system. What about that? Theming, dark mode, adaptive styling, CSS-oriented utility functions you can define yourself... the possibilities are honestly *outstanding* here.
+
+With this approach to modularity you get four big wins:
+
+* ✅ Simplicity - Include fragments with a single tag, automatic dependency resolution
+* ✅ Familiarity - Still regular HTML files, just with `.htm` extension for fragments  
+* ✅ Reactivity - Even CSS becomes reactive with `${...}` expressions in `<style>` tags
+* ✅ Reusability - Build component libraries where each component manages its own dependencies
 
 ##### `<:data>`
 
