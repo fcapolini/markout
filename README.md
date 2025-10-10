@@ -190,7 +190,7 @@ This directive lets you turn any HTML block into a reusable component. You can:
 
 The component can then be used anywhere with a simple custom tag, passing different parameters each time.
 
-You can find a comprehensive demonstration of component creation and usage in the [Bootstrap](#Bootstrap) section below, where we show how to turn Bootstrap's verbose modal markup into a clean, reusable `<:bs-modal>` component.
+You can find a comprehensive demonstration of component creation and usage in the [Bootstrap](#Bootstrap) section below, where we show how to turn Bootstrap's verbose modal markup into a clean, reusable and reactive `<:bs-modal>` component.
 
 ##### `<:import>` and `<:include>`
 
@@ -252,7 +252,7 @@ What this behavior boils down to is: you can easily build your component librari
 
 One note about the difference between `<:import>` and `<:include>`: as it's easy to guess, `<:include>` can be used to explicitly include a fragment multiple time in a single page or fragment.
 
-And one last note about the `<style>` tags: since they're tags like all others, they can include `${...}` expressions! Think about this for a moment... reactive styling totally integrated in Markout's reactivity system. What about that? Theming, dark mode, adaptive styling, CSS-oriented utility functions you can define yourself... the possibilities are honestly *outstanding* here.
+And one last note about the `<style>` tags: since they're tags like all others, they can include `${...}` expressions! Think about this for a moment... reactive styling totally integrated in Markout's reactivity system: theming, dark mode, adaptive styling, CSS-oriented utility functions you can define yourself... the possibilities are honestly *outstanding* here.
 
 With this approach to modularity you get four big wins:
 
