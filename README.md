@@ -75,7 +75,7 @@ Let's be clear: this constant state of radical change is not natural evolution, 
 
 Markout is an attempt to solve these problems, or at least to prove that solutions can be found. And in keeping with another of our industry's great ironies, here we are trying to simplify things by proposing *yet another solution*.
 
-A final note about Markout's development process: this is the culmination of a long series of explorations, proofs of concept, and ~~failed attempts~~ learning experiences. In no other project I felt so clearly why indeed *simplicity is the ultimate sophistication*: keeping the framework out of the way of application code requires a lot of thinking, which most frameworks clearly don't bother to do. I think I can proudly say that, compared to frameworks which *move fast and break (other people's) stuff*, I actually *thought it out before I pushed it out*. Now, *that*'s a revolutionary idea! 🤯
+A final note about Markout's development process: this is the culmination of a long series of explorations, proofs of concept, and ~~failed attempts~~ learning experiences. In no other project I felt so clearly why indeed *simplicity is the ultimate sophistication*: keeping the framework out of the way of application code required a lot of consideration. I think I can proudly say that, compared to frameworks which *move fast and break (other people's) stuff*, I actually *thought it out before I pushed it out*.
 
 ## Principles
 
@@ -99,7 +99,7 @@ As a result I came up with these additions to standard HTML:
 * **reactive expressions**, added with the familiar `${...}` syntax
 * **directives**, added with `:`-prefixed tags and augmented `<template>` tags.
 
-### Logic values
+## Logic values
 
 Logic values are the foundation of reactivity in Markout. They can be used to add presentation logic to any HTML tag. They're expressed as `:`-prefixed attributes to keep them apart from HTML's own attributes. Compared to normal attributes, they don't appear in output pages: they are used to generate page-specific code which is added as a script to the output.
 
@@ -114,7 +114,7 @@ Logic value names must be either valid JavaScript identifiers or `*-`-prefixed n
 * `:class-` for [conditional CSS classes](#)
 * `:style-` for [conditional CSS styles](#)
 * `:watch-` for [value watchers](#) (rarely needed)
-* `:will-` and `:did-` for [delegate methods](#) (advanced use cases)
+* `:did-` and `:will-` for [delegate methods](#) (advanced use cases).
 
 By adding logic values to HTML tags you're conceptually adding variables and methods to them. There's no need to use `<script>` tags to define interactive presentation logic: it becomes an integral part of Markout's reactive DOM model.
 
@@ -137,7 +137,7 @@ To make this approach practical, tag attributes in Markout accept multiline valu
 
 As you can see, inside a tag and between attributes you can use C-style comments (both single- and multi-line). In HTML text you can use the "triple dash" comments to have them removed from the output, or normal HTML comments to have them maintained. Finally, to simplify things any tag can be self closing — output pages always contain standard HTML regardless.
 
-### Reactive expressions
+## Reactive expressions
 
 Reactive expressions are where logic values are consumed. They adopt the familiar `${...}` syntax, and can be used anywhere as attribute values and in HTML text. They're automatically re-evaluated when the logic values they reference get updated.
 
@@ -154,45 +154,37 @@ The first is a constant, so it doesn't depend on other values and thus it's neve
 
 The second is a function, which is also never re-evaluated by design.
 
-### Directives
+## Directives
 
-#### Augmented `<template>` tags
+Markout directives are based on either `<template>` or custom `<:...>` tags:
 
-Augmented `<template>` tags are used for conditionals and looping:
+* `<template>`: conditionals and looping
+* `<:define>`: reusable components
+* `<:import>|<:include>`: source coude modules
+* `<:data>`: data and services
 
-* `<template :if=${}>` and `<template :elseif=${}>` for conditionals
-* `<template :foreach=${} :item="" index="">` for replication.
-
-##### `<template :if>` and `<template :elseif>`
-
-TBD
-
-##### `<template :foreach [:item] [:index]>`
+### `<template :if | :else | :elseif | :endif>`
 
 TBD
 
-#### `:`-prefixed tags
+### `<template :foreach [:item] [:index]>`
 
-`:`-prefixed tags add reusability, modularity, and data handling to HTML:
+TBD
 
-* `<:define>` lets you declare reusable custom tags (aka components)
-* `<:import>` and `<:include>` let you modularize source code
-* `<:data>` lets you interact with remote and local data and services
-
-##### `<:define>`
+### `<:define>`
 
 This directive lets you turn any HTML block into a reusable component. You can:
 
 * **Declare parameters** with default values using logic values like `:name="Default Name"`
 * **Use reactive expressions** `${...}` to inject parameter values into the component HTML
 * **Support slots** just like Web Components for flexible content composition
-* **Add presentation logic** with event handlers, conditional styling, and reactive behavior
+* **Add presentation logic** with event handlers, conditional styling, and reactive behavior.
 
-The component can then be used anywhere with a simple custom tag, passing different parameters each time.
+The component can then be used anywhere as a simple custom tag, passing different parameters each time.
 
 You can find a comprehensive demonstration of component creation and usage in the [Bootstrap](#Bootstrap) section below, where we show how to turn Bootstrap's verbose modal markup into a clean, reusable and reactive `<:bs-modal>` component.
 
-##### `<:import>` and `<:include>`
+### `<:import>` and `<:include>`
 
 With these tags you can include *page fragments*. For example:
 
@@ -241,18 +233,18 @@ It should be noted that:
 
 * page fragments should use the `.htm` rather than `.html` extension (so they won't be served as pages by mistake)
 * they have an arbitrary root tag which is discarded (`<lib>` in this case)
-* it's a common pattern to `<:import>` them in page's `<head>`, so the styles they define fall naturally into place
+* they are normally imported in page's `<head>`, so their styles fall naturally into place
 * since `<:define>` is removed from output markup (and included in generated JS code) it doesn't pollute `<head>`'s content
 * page fragments can in turn import other fragments with either relative or absolute path in the document root
 * `<:import>` ensures each single fragment is imported only once in the whole page
 * if two imported fragments import the same other fragment, only the first one will actually have it added to page `<head>`
 * each component can simply import all its dependencies: you don't need to import `lib/baseline.htm` yourself, it will be included as soon as you import any of your library's components.
 
-What this behavior boils down to is: you can easily build your component libraries where each component includes its own dependencies (e.g. for baseline styling) without fearing duplications and with automatic dependency ordering.
+It all boils down to this: you can easily build your component libraries where each component includes its own dependencies (e.g. for baseline styling) without fearing duplications and with automatic dependency handling.
 
-One note about the difference between `<:import>` and `<:include>`: as it's easy to guess, `<:include>` can be used to explicitly include a fragment multiple time in a single page or fragment.
+The `<:include>` directive can be used to explicitly include a fragment multiple time in a single page or fragment.
 
-And one last note about the `<style>` tags: since they're tags like all others, they can include `${...}` expressions! Think about this for a moment... reactive styling totally integrated in Markout's reactivity system: theming, dark mode, adaptive styling, CSS-oriented utility functions you can define yourself... the possibilities are honestly *outstanding* here.
+One last note about the `<style>` tags: since they're tags like all others, they can include `${...}` expressions! Reactive styling is totally integrated in Markout's reactivity system: theming, dark mode, adaptive styling, CSS-oriented utility functions you can define yourself... the possibilities are honestly *outstanding* here.
 
 With this approach to modularity you get four big wins:
 
@@ -261,7 +253,7 @@ With this approach to modularity you get four big wins:
 * ✅ Reactivity - Even CSS becomes reactive with `${...}` expressions in `<style>` tags
 * ✅ Reusability - Build component libraries where each component manages its own dependencies
 
-##### `<:data>`
+### `<:data>`
 
 This directive lets you formally declare all data and service interactions, and define your own data generation and processing if needed.
 
@@ -292,7 +284,7 @@ The data can be local as well:
 }} />
 ```
 
-And, because local data participate in the reactive system — `:json` is a logic value after all —  it can automatically update too:
+And, because local data participate in the reactive system — `:json` is a logic value after all — it can automatically update too:
 
 ```html
 <:data :aka="locale" :json=${{
@@ -326,7 +318,7 @@ In addition, again because `:json` is a logic attribute, you can locally generat
 
 You get the idea. In the same way, you can concatenate `<:data>` directives to build data pipelines, simply making each *a function* of the one before.
 
-In the same way you can cascade API calls just by making each dependend on the previous one.
+In the same way you can cascade API calls just by making each dependend on the previous one's received data.
 
 By leveraging source code modularization with `<:import>`, you can of course properly organize the data layer in your code and import it where needed.
 
@@ -337,11 +329,13 @@ With this approach to data handling you get four big wins:
 * ✅ Reactivity - Data updates automatically flow through dependent components and pipelines
 * ✅ Composability - Chain data transformations naturally without complex state management
 
+### Advanced `<:data>` features
+
 There's still a lot to say about the deceptively simple `<:data>` directive: things like HTTP methods, caching, error handling, retries etc. but it takes its own chapter in the docs.
 
 One thing is important to clarify here though: `<:data>` is where `async` stuff lives. Markout reactivity is synchronous, but it can be triggered asynchronously by two things: events and data.
 
-So much so that `<:data>` can be used to formalize inter-process communication with [workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers), and can be adapted to any transport layer available in the browser by using its own delegate methods (with `:will-` and `:did-` logic values), but I'm getting ahead of myself again.
+So much so that `<:data>` can be used to formalize inter-process communication with [workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers), and can be adapted to any transport layer available in the browser by using its own delegate methods (with `:did-` and `:will-` logic values), but I'm getting ahead of myself again.
 
 This includes local DBs by the way... OK I stop.
 
@@ -349,7 +343,7 @@ This includes local DBs by the way... OK I stop.
 
 Most fellow devs might be thinking: "Yeah but a brand new framework means no component libraries!"
 
-Well, not exactly: because Markout is a superset of HTML, what works with plain HTML + JavaScript can also work with Markout — and made reactive too.
+Except, Markout is a superset of HTML, so what works with plain HTML + JavaScript can also work with Markout — and can be made reactive too.
 
 ### Bootstrap
 
