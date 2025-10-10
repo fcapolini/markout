@@ -113,8 +113,8 @@ Logic value names must be either valid JavaScript identifiers or `*-`-prefixed n
 * `:on-` for [event handlers](#)
 * `:class-` for [conditional CSS classes](#)
 * `:style-` for [conditional CSS styles](#)
-* `:watch-` for (rarely needed) [value watchers](#).
-* `:will-` and `:did-` for (rarely needed) [delegate methods](#).
+* `:watch-` for [value watchers](#) (rarely needed)
+* `:will-` and `:did-` for [delegate methods](#) (advanced use cases)
 
 By adding logic values to HTML tags you're conceptually adding variables and methods to them. There's no need to use `<script>` tags to define interactive presentation logic: it becomes an integral part of Markout's reactive DOM model.
 
@@ -263,7 +263,7 @@ With this approach to modularity you get four big wins:
 
 ##### `<:data>`
 
-This directive lets you formally declare all data service interactions, and define your own data generation and processing if needed.
+This directive lets you formally declare all data and service interactions, and define your own data generation and processing if needed.
 
 For example, here is how you can connect to a REST endpoint:
 
@@ -292,7 +292,7 @@ The data can be local as well:
 }} />
 ```
 
-And, because local data participate in the reactive system (`:json` is a logic value after all), it can automatically update too:
+And, because local data participate in the reactive system — `:json` is a logic value after all —  it can automatically update too:
 
 ```html
 <:data :aka="locale" :json=${{
@@ -326,7 +326,7 @@ In addition, again because `:json` is a logic attribute, you can locally generat
 
 You get the idea. In the same way, you can concatenate `<:data>` directives to build data pipelines, simply making each *a function* of the one before.
 
-In the same way you can cascade API calls, making each dependend on the previous one.
+In the same way you can cascade API calls just by making each dependend on the previous one.
 
 By leveraging source code modularization with `<:import>`, you can of course properly organize the data layer in your code and import it where needed.
 
@@ -339,7 +339,11 @@ With this approach to data handling you get four big wins:
 
 There's still a lot to say about the deceptively simple `<:data>` directive: things like HTTP methods, caching, error handling, retries etc. but it takes its own chapter in the docs.
 
-One thing is important to note here though: `<:data>` is where `async` stuff lives. Markout reactivity is synchronous, but it can be triggered asynchnously by two things: events and data. So much so that `<:data>` can be used for inter-process communication (with [workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers)), and can be adapted to any transport layer available in the browser by using its own delegate methods (with `:will-` and `:did-` logic values), but I'm getting ahead of myself again. This includes local DBs by the way... OK I stop.
+One thing is important to clarify here though: `<:data>` is where `async` stuff lives. Markout reactivity is synchronous, but it can be triggered asynchronously by two things: events and data.
+
+So much so that `<:data>` can be used to formalize inter-process communication with [workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers), and can be adapted to any transport layer available in the browser by using its own delegate methods (with `:will-` and `:did-` logic values), but I'm getting ahead of myself again.
+
+This includes local DBs by the way... OK I stop.
 
 ## Ecosystem
 
