@@ -69,7 +69,7 @@ In addition, Markout supports these different types of deployment:
 
 Life as a web developer has become unduly complex. Even the simplest projects require a complex setup these days. And complexity extends to application code: modern reactive frameworks force us to pollute our code with obscure ceremonies (like `useState`, `useEffect` and so on) because of *their own implementation details*.
 
-In my opinion, although they are clearly very useful, they obfuscate our code *for no good reason*: reactivity should make things simpler, not more complex. And, to make things worse, they keep changing! Even if you're perfectly fine with your code, you have to keep updating it just to keep them happy.
+In my opinion, although they are clearly very useful, they obfuscate our code *for no good reason*: reactivity should make things simpler, not more complex. And, to make things worse, they keep changing! Even if you're perfectly fine with your code, you have to keep updating just to keep them happy.
 
 Let's be clear: this constant state of radical change is not natural evolution, it's a consequence of rushed and ill considered design — coupled with hype-driven marketing. I can think of no other industry where this would be considered standard practice. This approach should be confined to bleeding edge projects, not *every single web project* no matter what.
 
@@ -155,11 +155,11 @@ The second is a function, which is also never re-evaluated by design.
 
 #### `:`-prefixed tags
 
-`:`-prefixed tags add modularity, reusability, and data handling to HTML:
+`:`-prefixed tags add reusability, modularity, and data handling to HTML:
 
 * `<:define>` lets you declare reusable custom tags (aka components)
-* `<:data>` lets you interact with remote and local data
 * `<:import>` and `<:include>` let you modularize source code
+* `<:data>` lets you interact with remote and local data
 
 ##### `<:define>`
 
@@ -248,10 +248,6 @@ With this approach you get the same four wins as with other Markout features:
 * ✅ Reactivity - Click handlers and dynamic content work naturally
 * ✅ Reusability - Define once, use everywhere with different data
 
-##### `<:data>`
-
-TBD
-
 ##### `<:import>` and `<:include>`
 
 With these tags you can include *page fragments*. For example:
@@ -303,14 +299,18 @@ It should be noted that:
 * they can have an arbitrary root tag which is discarded (`<lib>` in this case)
 * it's a common pattern to `<:import>` them in page's `<head>`, so the styles they define fall naturally into place
 * since `<:define>` is removed from output markup (and included in generated JS code) it doesn't pollute `<head>`'s content
-* page fragments can in turn import other fragments with either relative or absolute path (in the document root, not in the system!)
+* page fragments can in turn import other fragments with either relative or absolute path in the document root
 * `<:import>` ensures each single fragment is imported only once in the whole page
-* even if two imported fragments import the same other fragment, only the first one will actually have it added to page `<head>`
+* if two imported fragments import the same other fragment, only the first one will actually have it added to page `<head>`
 * at the same time, each component can simply import all its dependencies: you don't need to import `lib/baseline.htm` yourself, it will be included as soon as you import any of your library's components.
 
-What this behavior boils down to is: you can easily build your component libraries where each component includes its own dependencies (e.g. for baseline styling) without duplications and in the right order.
+What this behavior boils down to is: you can easily build your component libraries where each component includes its own dependencies (e.g. for baseline styling) without fearing duplications and with guarantee of proper ordering.
 
 One last note about the difference between `<:import>` and `<:include>`: as it's easy to guess, `<:include>` can be used to explicitly include a fragment multiple time in a single page or fragment.
+
+##### `<:data>`
+
+TBD
 
 #### Augmented `<template>` tags
 
@@ -335,7 +335,7 @@ TBD
 
 Most fellow devs might be thinking: "Yeah but a brand new framework means no component libraries!"
 
-Well, not exactly: because Markout is a superset of HTML, what works with plain HTML + JavaScript can also be easily adapted to Markout — and made reactive in the process.
+Well, not exactly: because Markout is a superset of HTML, what works with plain HTML + JavaScript can also work with Markout — and made reactive too.
 
 ### Bootstrap
 
@@ -447,7 +447,7 @@ And this is the componentized code:
 TBD
 ```
 
-Your component definitions can just as easily be grouped in importable page fragments reusable across pages as well as across different projects:
+Your component definitions can just as easily be grouped in a set of page fragments reusable across pages as well as across different projects:
 
 ```
 TBD
