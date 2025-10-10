@@ -54,7 +54,7 @@ With this approach to reactive code you get four big wins:
 * ✅ Reactivity - Start with HTML, add presentation logic
 * ✅ Indexability - SEO-ready by default.
 
-In addition, Markout supports these different types of deployment:
+In addition, Markout supports different types of deployment:
 
 * Development (Markout CLI)
 * Production (Markout server or Express middleware)
@@ -69,9 +69,9 @@ In addition, Markout supports these different types of deployment:
 
 Life as a web developer has become unduly complex. Even the simplest projects require a complex setup these days. And complexity extends to application code: modern reactive frameworks force us to pollute our code with obscure ceremonies (like `useState`, `useEffect` and so on) because of *their own implementation details*.
 
-In my opinion, although they are clearly very useful, they obfuscate our code *for no good reason*: reactivity should make things simpler, not more complex. And, to make things worse, they keep changing! Even if you're perfectly fine with your code, you have to keep updating just to keep them happy.
+In my opinion, although they are clearly very useful, they obfuscate our code *for no good reason*: reactivity should really make things simpler, not more complex. And, to make things worse, they keep changing! Even if you're perfectly fine with your code, you have to keep updating just to keep them happy.
 
-Let's be clear: this constant state of radical change is not natural evolution, it's a consequence of rushed and ill considered design — coupled with hype-driven marketing. I can think of no other industry where this would be considered standard practice. This approach should be confined to bleeding edge projects, not *every single web project* no matter what.
+Let's be clear: this constant state of radical change is not natural evolution, it's a consequence of rushed and ill considered design — coupled with hype-driven marketing. I can think of no other industry where this would be considered standard practice. This approach should be confined to bleeding edge projects, not used in *every single web project* no matter what.
 
 Markout is an attempt to solve these problems, or at least to prove that solutions can be found. And in keeping with another of our industry's great ironies, here we are trying to simplify things by proposing *yet another solution*.
 
@@ -163,7 +163,7 @@ Markout directives are based on either `<template>` or custom `<:...>` tags:
 * `<:import>|<:include>`: source coude modules
 * `<:data>`: data and services
 
-### `<template :if | :else | :elseif | :endif>`
+### `<template :if | :else | :elseif>`
 
 TBD
 
@@ -182,7 +182,7 @@ This directive lets you turn any HTML block into a reusable component. You can:
 
 The component can then be used anywhere as a simple custom tag, passing different parameters each time.
 
-You can find a comprehensive demonstration of component creation and usage in the [Bootstrap](#Bootstrap) section below, where we show how to turn Bootstrap's verbose modal markup into a clean, reusable and reactive `<:bs-modal>` component.
+You can find a comprehensive demonstration of component creation and usage in the [Bootstrap](#Bootstrap) section below, which shows how to turn Bootstrap's verbose modal markup into a clean, reusable and reactive `<:bs-modal>` component.
 
 ### `<:import>` and `<:include>`
 
@@ -331,9 +331,26 @@ With this approach to data handling you get four big wins:
 
 There's still a lot to say about the deceptively simple `<:data>` directive: things like HTTP methods, caching, error handling, retries etc. but it takes its own chapter in the docs.
 
-One thing is important to clarify here though: `<:data>` is where `async` stuff lives. Markout reactivity is synchronous, but it can be triggered asynchronously by two things: events and data.
+Two things are important to outline straight away though.
 
-So much so that `<:data>` can be used to formalize inter-process communication with [workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers), and can be adapted to any transport layer available in the browser by using its own delegate methods (with `:did-` and `:will-` logic values), but I'm getting ahead of myself again.
+For one, `<:data>` is where business logic should live: while presentation logic is more effectively scattered around in visual objects, business logic is better kept centralized in dedicated data-oriented objects. For example:
+
+```html
+<!--- Business logic: user validation, data processing -->
+<:data :aka="userService" :validate=${(user) => user.email && user.age >= 18} />
+
+<!--- Presentation logic: button states, form interactions -->
+<form :user=${{}}>
+  <input :value=${user.email} :on-change=${(e) => user.email = e.target.value} />
+  <button :disabled=${!userService.validate(user)}>Submit</button>
+</form>
+```
+
+Another thing which is important to clarify is: `<:data>` is where `async` stuff lives. Markout reactivity is synchronous, but it can be triggered asynchronously by two things: events and data.
+
+So much so that `<:data>` can be used to formalize inter-process communication with [workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers).
+
+Plus, it can be adapted to any transport layer available in the browser by using its own delegate methods (with `:did-` and `:will-` logic values), but I'm getting ahead of myself again.
 
 This includes local DBs by the way... OK I stop.
 

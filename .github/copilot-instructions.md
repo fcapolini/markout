@@ -48,6 +48,9 @@ Three simple additions to standard HTML:
 - Composable transformations: Build complex data flows without Redux-style complexity
 - Async boundary management: Synchronous reactivity triggered by async events and data
 - Extensible transport layer: Custom communication via `:will-` and `:did-` delegate methods
+- **Business Logic Architecture**: `<:data>` is where business logic should live (validation, processing, domain rules)
+- **Separation of Concerns**: Presentation logic scattered in visual objects, business logic centralized in data objects
+- **Example Pattern**: `<:data :aka="userService" :validate=${(user) => ...} />` for business rules, `:disabled=${!userService.validate(user)}` for presentation
 - Universal async interface: WebSockets, Workers, IndexedDB, WebRTC, Server-Sent Events
 - Future tooling needs: Dependency analysis, circular detection, type inference for VS Code extension
 
