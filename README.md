@@ -75,6 +75,8 @@ Let's be clear: this constant state of radical change is not natural evolution, 
 
 Markout is an attempt to solve these problems, or at least to prove that solutions can be found. And in keeping with another of our industry's great ironies, here we are trying to simplify things by proposing *yet another solution*.
 
+A final note about Markout's development process: this is the culmination of a long series of explorations, proofs of concept, and ~~failed attempts~~ learning experiences. In no other project I felt so clearly why indeed *simplicity is the ultimate sophistication*: keeping the framework out of the way of application code requires a lot of thinking, which most frameworks clearly don't bother to do. I think I can proudly say that, compared to frameworks which *move fast and break (other people's) stuff*, I actually *thought it out before I pushed it out*.
+
 ## Principles
 
 First, what I think is wrong with JS-based frameworks:
