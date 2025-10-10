@@ -181,92 +181,16 @@ TBD
 
 ##### `<:define>`
 
-This directive lets you turn any HTML block into a reusable component. Say you have this user profile HTML that you're copy-pasting everywhere:
+This directive lets you turn any HTML block into a reusable component. You can:
 
-```html
-<div class="user-profile">
-  <img src="john-avatar.jpg" class="avatar" />
-  <div class="info">
-    <h3>John Doe</h3>
-    <p class="role">Senior Developer</p>
-    <p class="bio">Loves building clean, maintainable code.</p>
-  </div>
-  <button
-    class="contact-btn"
-    :on-click=${() => window.location = `mailto:john@company.com`}
-  >
-    Contact
-  </button>
-</div>
-```
+* **Declare parameters** with default values using logic values like `:name="Default Name"`
+* **Use reactive expressions** `${...}` to inject parameter values into the component HTML
+* **Support slots** just like Web Components for flexible content composition
+* **Add presentation logic** with event handlers, conditional styling, and reactive behavior
 
-With Markout, you can componentize it once:
+The component can then be used anywhere with a simple custom tag, passing different parameters each time.
 
-```html
-<:define
-  :tag="user-profile"
-  
-  // interface - declare parameters with defaults
-  :name="Unknown User"
-  :role="Team Member"
-  :avatar="default-avatar.jpg"
-  :email=""
-  
-  // implementation
-  class="user-profile"
->
-  <img src="${avatar}" class="avatar" />
-  <div class="info">
-    <h3>${name}</h3>
-    <p class="role">${role}</p>
-    <div class="bio">
-      <slot name="bio">Default bio text goes here.</slot>
-    </div>
-    <div class="skills">
-      <slot name="skills" />
-    </div>
-  </div>
-  <button 
-    class="contact-btn" 
-    :on-click=${() => window.location = `mailto:${email}`}
-  >
-    Contact
-  </button>
-</:define>
-```
-
-Then use it everywhere like this:
-
-```html
-<:user-profile 
-  :name="John Doe" 
-  :role="Senior Developer"
-  :avatar="john-avatar.jpg"
-  :email="john@company.com"
->
-  Loves building clean, maintainable code and mentoring junior developers.
-</:user-profile>
-
-<:user-profile 
-  :name="Jane Smith" 
-  :role="UX Designer"
-  :avatar="jane-avatar.jpg"
-  :email="jane@company.com"
->
-  Passionate about user-centered design and accessibility.
-</:user-profile>
-```
-
-**NOTE**: Markout components support `<slot>` elements just like Web Components do, for more advanced content composition when needed.
-
-With this approach you get the same four wins as with other Markout features:
-
-* ✅ Simplicity - Complex HTML becomes one tag
-* ✅ Familiarity - Still regular HTML with logic values
-* ✅ Reactivity - Click handlers and dynamic content work naturally
-* ✅ Reusability - Define once, use everywhere with different parameters
-
-You can find an effective demonstration of this approach in the [Bootstrap](#Bootstrap) section down below.
+You can find a comprehensive demonstration of component creation and usage in the [Bootstrap](#Bootstrap) section below, where we show how to turn Bootstrap's verbose modal markup into a clean, reusable `<:bs-modal>` component.
 
 ##### `<:import>` and `<:include>`
 
