@@ -38,6 +38,19 @@ Three simple additions to standard HTML:
 - Same pattern works for third-party libraries (Bootstrap) and internal company libraries
 - Removes traditional barriers to component sharing between projects
 
+**Advanced Data Handling with `<:data>`**: Sophisticated reactive data system
+- REST endpoint integration: `<:data :aka="users" :src="/api/users" />`
+- Local reactive data: `<:data :aka="config" :json=${{...}} />`
+- Data pipelines: Chain `<:data>` directives where each is a function of previous ones
+- Automatic reactivity: Data updates flow through dependent components naturally
+- Localization example: Dynamic menu that updates when language changes
+- No separate data layers: Declare data needs directly in HTML
+- Composable transformations: Build complex data flows without Redux-style complexity
+- Async boundary management: Synchronous reactivity triggered by async events and data
+- Extensible transport layer: Custom communication via `:will-` and `:did-` delegate methods
+- Universal async interface: WebSockets, Workers, IndexedDB, WebRTC, Server-Sent Events
+- Future tooling needs: Dependency analysis, circular detection, type inference for VS Code extension
+
 **Reactive Expressions in Special Tags**: 
 - `<style>`, `<title>`, and `<script>` tags support reactive expressions `${...}`
 - Enables reactive CSS, dynamic titles, and dynamic script generation

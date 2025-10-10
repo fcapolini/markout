@@ -75,7 +75,7 @@ Let's be clear: this constant state of radical change is not natural evolution, 
 
 Markout is an attempt to solve these problems, or at least to prove that solutions can be found. And in keeping with another of our industry's great ironies, here we are trying to simplify things by proposing *yet another solution*.
 
-A final note about Markout's development process: this is the culmination of a long series of explorations, proofs of concept, and ~~failed attempts~~ learning experiences. In no other project I felt so clearly why indeed *simplicity is the ultimate sophistication*: keeping the framework out of the way of application code requires a lot of thinking, which most frameworks clearly don't bother to do. I think I can proudly say that, compared to frameworks which *move fast and break (other people's) stuff*, I actually *thought it out before I pushed it out*.
+A final note about Markout's development process: this is the culmination of a long series of explorations, proofs of concept, and ~~failed attempts~~ learning experiences. In no other project I felt so clearly why indeed *simplicity is the ultimate sophistication*: keeping the framework out of the way of application code requires a lot of thinking, which most frameworks clearly don't bother to do. I think I can proudly say that, compared to frameworks which *move fast and break (other people's) stuff*, I actually *thought it out before I pushed it out*. Now, *that*'s a revolutionary idea! 🤯
 
 ## Principles
 
@@ -84,7 +84,7 @@ First, what I think is wrong with JS-based frameworks:
 * if you try to hide or replace HTML you get a Frankenstein monster like JSX
 * ditto if you try to add declarative reactive logic to JavaScript, which is mainly an imperative language
 * reactivity should work intuitively and automatically and it should actually *simplify application code*: `useState()` and `useEffect()`, for example, shouldn't exist
-* you should't need to learn the dark art of keeping the framework happy; *the framework should work for you*, not the other way around: `useContext()` and `useMemo()`, for example, shouldn't exist either.
+* you should't need to learn the dark art of keeping the framework happy; the framework should work for you, *not the other way around*: `useContext()` and `useMemo()`, for example, shouldn't exist either.
 
 Then, what I think can be done about it:
 
@@ -95,13 +95,13 @@ Then, what I think can be done about it:
 
 As a result I came up with these additions to standard HTML:
 
-* **logic values**, expressed with `:`-prefixed attributes
-* **reactive expressions**, expressed with the familiar `${...}` syntax
-* **directives**, expressed with `:`-prefixed tags and augmented `<template>` tags.
+* **logic values**, added with `:`-prefixed attributes
+* **reactive expressions**, added with the familiar `${...}` syntax
+* **directives**, added with `:`-prefixed tags and augmented `<template>` tags.
 
 ### Logic values
 
-Logic values are the foundation of reactivity in Markout. They can be used to add presentation logic to any HTML tag. They're expressed as `:`-prefixed attributes to keep them apart from HTML's own attributes. Compared to normal attributes, they don't appear in output pages: they are used to generate page-specific code which is added as a script in the output.
+Logic values are the foundation of reactivity in Markout. They can be used to add presentation logic to any HTML tag. They're expressed as `:`-prefixed attributes to keep them apart from HTML's own attributes. Compared to normal attributes, they don't appear in output pages: they are used to generate page-specific code which is added as a script to the output.
 
 In our click counter example we have two logic values:
 
@@ -135,19 +135,20 @@ To make this approach practical, tag attributes in Markout accept multiline valu
 </button>
 ```
 
-As you can see, inside a tag and between attributes you can use C-style comments (both single- and multi-line). In HTML text you can use the "triple dash" comments to have them removed from the output (or normal HTML comments to have them maintained). Finally, to simplify things any tag can be self closing — and output pages always contain standard HTML regardless.
+As you can see, inside a tag and between attributes you can use C-style comments (both single- and multi-line). In HTML text you can use the "triple dash" comments to have them removed from the output, or normal HTML comments to have them maintained. Finally, to simplify things any tag can be self closing — output pages always contain standard HTML regardless.
 
 ### Reactive expressions
 
 Reactive expressions are where logic values are consumed. They adopt the familiar `${...}` syntax, and can be used anywhere as attribute values and in HTML text. They're automatically re-evaluated when the logic values they reference get updated.
 
-In our click counter example we have three reactive expressions:
+In our latest example we have four reactive expressions:
 
 * `${0}` used to initialize `count`
 * `${() => count++}` used to declare the event handler's function
-* `${count}` used to inject the value of `count` in button's text.
+* `${count > 3}` used to conditionally apply the `danger` class to the button
+* `${count < 6 ...}` used keep button's text updated.
 
-Of these, only the latter exhibits an actual reactive behavior: it updates page text whenever the value of `count` changes.
+Of these, only the last two exhibit an actual reactive behavior: they keep button's class and text updated when the value of `count` changes.
 
 The first is a constant, so it doesn't depend on other values and thus it's never re-evaluated.
 
@@ -155,13 +156,28 @@ The second is a function, which is also never re-evaluated by design.
 
 ### Directives
 
+#### Augmented `<template>` tags
+
+Augmented `<template>` tags are used for conditionals and looping:
+
+* `<template :if=${}>` and `<template :elseif=${}>` for conditionals
+* `<template :foreach=${} :item="" index="">` for replication.
+
+##### `<template :if>` and `<template :elseif>`
+
+TBD
+
+##### `<template :foreach [:item] [:index]>`
+
+TBD
+
 #### `:`-prefixed tags
 
 `:`-prefixed tags add reusability, modularity, and data handling to HTML:
 
 * `<:define>` lets you declare reusable custom tags (aka components)
 * `<:import>` and `<:include>` let you modularize source code
-* `<:data>` lets you interact with remote and local data
+* `<:data>` lets you interact with remote and local data and services
 
 ##### `<:define>`
 
@@ -248,7 +264,9 @@ With this approach you get the same four wins as with other Markout features:
 * ✅ Simplicity - Complex HTML becomes one tag
 * ✅ Familiarity - Still regular HTML with logic values
 * ✅ Reactivity - Click handlers and dynamic content work naturally
-* ✅ Reusability - Define once, use everywhere with different data
+* ✅ Reusability - Define once, use everywhere with different parameters
+
+You can find an effective demonstration of this approach in the [Bootstrap](#Bootstrap) section down below.
 
 ##### `<:import>` and `<:include>`
 
@@ -298,40 +316,97 @@ And `lib/baseline.htm`'s content could be:
 It should be noted that:
 
 * page fragments should use the `.htm` rather than `.html` extension (so they won't be served as pages by mistake)
-* they can have an arbitrary root tag which is discarded (`<lib>` in this case)
+* they have an arbitrary root tag which is discarded (`<lib>` in this case)
 * it's a common pattern to `<:import>` them in page's `<head>`, so the styles they define fall naturally into place
 * since `<:define>` is removed from output markup (and included in generated JS code) it doesn't pollute `<head>`'s content
 * page fragments can in turn import other fragments with either relative or absolute path in the document root
 * `<:import>` ensures each single fragment is imported only once in the whole page
 * if two imported fragments import the same other fragment, only the first one will actually have it added to page `<head>`
-* at the same time, each component can simply import all its dependencies: you don't need to import `lib/baseline.htm` yourself, it will be included as soon as you import any of your library's components.
+* each component can simply import all its dependencies: you don't need to import `lib/baseline.htm` yourself, it will be included as soon as you import any of your library's components.
 
-What this behavior boils down to is: you can easily build your component libraries where each component includes its own dependencies (e.g. for baseline styling) without fearing duplications and with guarantee of proper ordering.
+What this behavior boils down to is: you can easily build your component libraries where each component includes its own dependencies (e.g. for baseline styling) without fearing duplications and with automatic dependency ordering.
 
 One last note about the difference between `<:import>` and `<:include>`: as it's easy to guess, `<:include>` can be used to explicitly include a fragment multiple time in a single page or fragment.
 
 ##### `<:data>`
 
-TBD
+This directive lets you formally declare all data service interactions, and define your own data generation and processing if needed.
 
-#### Augmented `<template>` tags
+For example, here is how you can connect to a REST endpoint:
 
-Augmented `<template>` tags are used for conditionals and looping:
+```html
+<:data :aka="usersData" :src="/api/users" />
+```
 
-* `<template :if=${}>` and `<template :elseif=${}>` for conditionals
-* `<template :foreach=${} :item="" index="">` for replication.
+And here's how you may use the data:
 
-##### `<template :if>` and `<template :elseif>`
+```html
+<ul>
+  <template :foreach=${usersData.list} :item="user">
+    <li>${user.name}</li>
+  </template>
+</ul>
+```
 
-TBD
+The data can be local as well:
 
-##### `<template :foreach [:item] [:index]>`
+```html
+<:data :aka="navigationData" :json=${{
+  list: [
+    { id: 1, url: '/dashboard', title: 'Dashboard' },
+    { id: 2, url: '/activity', title: 'Activity' },
+  ]
+}} />
+```
 
-TBD
+And, because local data participate in the reactive system (`:json` is a logic value after all), it can automatically update too:
 
-## Data binding
+```html
+<:data :aka="locale" :json=${{
+  en: {
+    dashboard: 'Dashboard',
+    activity: 'Activity'
+  },
+  it: {
+    dashboard: 'Panoramica',
+    activity: 'Attività'
+  }
+}} />
 
-TBD
+<:data :aka="navigationData" :lang="en" :json=${{
+  list: [
+    { id: 1, url: '/dashboard', title: locale[lang].dashboard },
+    { id: 2, url: '/activity', title: locale[lang].activity },
+  ]
+}} />
+```
+
+Now you have a localized menu which seamlessly updates when users switch language!
+
+In addition, again because `:json` is a logic attribute, you can locally generate data:
+
+```html
+<:data :aka="totalsData" :json=${generate()} :generate=${() => {
+  return ...
+}}>
+```
+
+You get the idea. In the same way, you can concatenate `<:data>` directives to build data pipelines, simply making each *a function* of the one before.
+
+In the same way you can cascade API calls, making each dependend on the previous one.
+
+By leveraging source code modularization with `<:import>`, you can of course properly organize the data layer in your code and import it where needed.
+
+With this approach to data handling you get four big wins:
+
+* ✅ Simplicity - Declare data needs directly in HTML, no separate data layers
+* ✅ Familiarity - REST endpoints and JSON data work exactly as expected  
+* ✅ Reactivity - Data updates automatically flow through dependent components and pipelines
+* ✅ Composability - Chain data transformations naturally without complex state management
+
+There's still a lot to say about the deceptively simple `<:data>` directive: things like HTTP methods, caching, error handling, retries etc. but it takes its own chapter in the docs.
+
+One thing is important to note here though: `<:data>` is where `async` stuff lives. Markout reactivity is synchronous, but it can be triggered asynchnously by two things: events and data. So much so that `<:data>` can be used for inter-process communication (with [workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers)), and can be adapted to any transport layer available in the browser by using its own delegate methods (with `:will-` and `:did-` logic values), but I'm getting ahead of myself again. This includes local DBs by the way... OK I stop.
 
 ## Ecosystem
 
