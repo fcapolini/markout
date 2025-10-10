@@ -269,11 +269,13 @@ And here's how you may use the data:
 
 ```html
 <ul>
-  <template :foreach=${usersData.list} :item="user">
+  <template :foreach=${usersData.json.list} :item="user">
     <li>${user.name}</li>
   </template>
 </ul>
 ```
+
+Note that `<:data>`'s `json` value is always defined, at most it can be an empty object. Given that `:foreach` accepts `undefined` and `null` as synonyms of `[]`, no defensive checks are needed here.
 
 The data can be local as well:
 
@@ -286,7 +288,7 @@ The data can be local as well:
 }} />
 ```
 
-And, because local data participate in the reactive system — `:json` is a logic value after all — it can automatically update too:
+And, because local data participates in the reactive system — `:json` is a logic value after all — it can automatically update too:
 
 ```html
 <:data :aka="locale" :json=${{
@@ -302,8 +304,8 @@ And, because local data participate in the reactive system — `:json` is a logi
 
 <:data :aka="navigationData" :lang="en" :json=${{
   list: [
-    { id: 1, url: '/dashboard', title: locale[lang].dashboard },
-    { id: 2, url: '/activity', title: locale[lang].activity },
+    { id: 1, url: '/dashboard', title: locale.json[lang].dashboard },
+    { id: 2, url: '/activity', title: locale.json[lang].activity },
   ]
 }} />
 ```
@@ -331,7 +333,7 @@ With this approach to data handling you get four big wins:
 
 ### Advanced `<:data>` features
 
-There's still a lot to say about the deceptively simple `<:data>` directive: things like HTTP methods, caching, error handling, retries etc. but it takes its own chapter in the docs.
+There's still a lot to say about the deceptively simple `<:data>` directive: things like HTTP methods, authentication, caching, error handling, retries etc. but it takes its own chapter in the docs.
 
 Two things are important to outline straight away though.
 
@@ -348,7 +350,7 @@ For one, `<:data>` is where business logic should live: while presentation logic
 </form>
 ```
 
-Another thing which is important to clarify is: `<:data>` is where `async` stuff lives. Markout reactivity is synchronous, but it can be triggered asynchronously by two things: events and data.
+Another important thing to clarify is: `<:data>` is where `async` stuff lives. Markout reactivity is synchronous, but it can be triggered asynchronously by two sources: events and data.
 
 So much so that `<:data>` can be used to formalize inter-process communication with [workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers).
 

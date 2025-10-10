@@ -41,6 +41,8 @@ Three simple additions to standard HTML:
 **Advanced Data Handling with `<:data>`**: Sophisticated reactive data system
 - REST endpoint integration: `<:data :aka="users" :src="/api/users" />`
 - Local reactive data: `<:data :aka="config" :json=${{...}} />`
+- **Explicit Property Access**: Access data via logic value properties (e.g., `users.json.list`, `config.json.setting`) - no magic property promotion
+- **Reliable Data State**: `json` property always defined (at most empty object), `:foreach` handles undefined/null gracefully
 - Data pipelines: Chain `<:data>` directives where each is a function of previous ones
 - Automatic reactivity: Data updates flow through dependent components naturally
 - Localization example: Dynamic menu that updates when language changes
@@ -51,6 +53,7 @@ Three simple additions to standard HTML:
 - **Business Logic Architecture**: `<:data>` is where business logic should live (validation, processing, domain rules)
 - **Separation of Concerns**: Presentation logic scattered in visual objects, business logic centralized in data objects
 - **Example Pattern**: `<:data :aka="userService" :validate=${(user) => ...} />` for business rules, `:disabled=${!userService.validate(user)}` for presentation
+- **Advanced Features TBD**: HTTP methods, authentication, caching, error handling, retries for production readiness
 - Universal async interface: WebSockets, Workers, IndexedDB, WebRTC, Server-Sent Events
 - Future tooling needs: Dependency analysis, circular detection, type inference for VS Code extension
 
