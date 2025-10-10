@@ -244,13 +244,13 @@ It all boils down to this: you can easily build your component libraries where e
 
 The `<:include>` directive can be used to explicitly include a fragment multiple time in a single page or fragment.
 
-One last note about the `<style>` tags: since they're tags like all others, they can include `${...}` expressions! Reactive styling is totally integrated in Markout's reactivity system: theming, dark mode, adaptive styling, CSS-oriented utility functions you can define yourself... the possibilities are honestly *outstanding* here.
+One last note about the `<style>` tags: since they're tags like all others, they can include `${...}` expressions. This should be used sparingly — primarily for theming and configuration that changes infrequently (like at application launch). For dynamic styling that responds to user interactions, stick to the standard approaches: `:class-` logic values and `:style-` logic values on individual elements, which are optimized for frequent updates.
 
 With this approach to modularity you get four big wins:
 
 * ✅ Simplicity - Include fragments with a single tag, automatic dependency resolution
 * ✅ Familiarity - Still regular HTML files, just with `.htm` extension for fragments  
-* ✅ Reactivity - Even CSS becomes reactive with `${...}` expressions in `<style>` tags
+* ✅ Configurability - Even CSS can be parameterized for themes and component variants
 * ✅ Reusability - Build component libraries where each component manages its own dependencies
 
 ### `<:data>`
@@ -316,9 +316,7 @@ In addition, again because `:json` is a logic attribute, you can locally generat
 }}>
 ```
 
-You get the idea. In the same way, you can concatenate `<:data>` directives to build data pipelines, simply making each *a function* of the one before.
-
-In the same way you can cascade API calls just by making each dependend on the previous one's received data.
+You get the idea. In the same way, you can concatenate `<:data>` directives to build data pipelines, simply making each *a function* of the one before, and you can cascade API calls just by making each dependend on the previous one's received data.
 
 By leveraging source code modularization with `<:import>`, you can of course properly organize the data layer in your code and import it where needed.
 

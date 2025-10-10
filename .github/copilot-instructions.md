@@ -55,11 +55,11 @@ Three simple additions to standard HTML:
 - `<style>`, `<title>`, and `<script>` tags support reactive expressions `${...}`
 - Enables reactive CSS, dynamic titles, and dynamic script generation
 - Special handling required - cannot use standard HTML comment placemarkers in these contexts
-- Allows component-scoped reactive styling without CSS-in-JS libraries
-- Makes themes, dynamic styling, and conditional scripts natural and performant
-- Revolutionary: CSS becomes natively reactive - styles update automatically with state changes
-- Outstanding possibilities: theming, dark mode, adaptive styling, CSS utility functions
-- Performance optimization needed: Currently updates entire `<style>` tag content; should optimize to update individual CSS rules/properties only
+- **CSS Reactivity Guidelines**: Use sparingly for theming and configuration that changes infrequently (e.g., at application launch)
+- For dynamic styling, prefer `:class-` and `:style-` logic values on individual elements (browser-optimized)
+- Textual interpolation allows coordinated changes to multiple CSS properties/selectors
+- Use cases: themes, dark mode, component parameterization, CSS custom property values
+- Performance consideration: Updates entire `<style>` tag content; browsers not optimized for frequent CSS rule changes
 
 **Runtime Components Architecture**: Current implementation focus
 - **Evolution**: Moving from compile-time macro expansion to runtime component instantiation
