@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/index.ts",
-    "test:run": "vitest run",
+    "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "build": "tsc",
     "start": "node dist/index.js",
@@ -19,7 +19,7 @@
     "monit": "pm2 monit",
     "watch": "tsc --watch",
     "clean": "rm -rf dist",
-    "test": "vitest",
+    "test:watch": "vitest --watch",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
