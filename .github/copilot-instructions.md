@@ -64,8 +64,8 @@ Three simple additions to standard HTML:
 - Special handling required - cannot use standard HTML comment placemarkers in these contexts
 - **CSS Reactivity Guidelines**: Use sparingly for theming and configuration that changes infrequently (e.g., at application launch)
 - For dynamic styling, prefer `:class-` and `:style-` logic values on individual elements (browser-optimized)
-- Textual interpolation allows coordinated changes to multiple CSS properties/selectors
-- Use cases: themes, dark mode, component parameterization, CSS custom property values
+- **Reactive CSS Benefits**: Removes CSS preprocessing need, enables switchable themes, adaptive styling, eliminates CSS vs JS variable barrier, single source of truth for components
+- **Use Cases**: Themes, dark mode, responsive breakpoints, component parameterization, CSS custom property values, coordinated styling logic
 - Performance consideration: Updates entire `<style>` tag content; browsers not optimized for frequent CSS rule changes
 
 **Runtime Components Architecture**: Current implementation focus

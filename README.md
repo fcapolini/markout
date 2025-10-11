@@ -75,7 +75,9 @@ Let's be clear: this constant state of radical change is not natural evolution, 
 
 Markout is an attempt to solve these problems, or at least to prove that solutions can be found. And in keeping with another of our industry's great ironies, here we are trying to simplify things by proposing *yet another solution*.
 
-A final note about Markout's development process: this is the culmination of a long series of explorations, proofs of concept, and ~~failed attempts~~ learning experiences. In no other project I felt so clearly why indeed *simplicity is the ultimate sophistication*: keeping the framework out of the way of application code required a lot of consideration. I think I can proudly say that, compared to frameworks which *move fast and break (other people's) stuff*, I actually *thought it out before I pushed it out*.
+A final note about Markout's development process: this is the culmination of a long series of explorations, proofs of concept, and ~~failed attempts~~ learning experiences. In no other project I felt so clearly why indeed *simplicity is the ultimate sophistication*: keeping the framework out of the way of application code required a lot of consideration.
+
+I think I can proudly say that, compared to frameworks which *move fast and break (other people's) stuff*, I actually *thought it out before I pushed it out*.
 
 ## Principles
 
@@ -121,10 +123,7 @@ By adding logic values to HTML tags you're conceptually adding variables and met
 To make this approach practical, tag attributes in Markout accept multiline values, can be commented out, and can have comments added to them. This makes it feel like you're defining a proper reactive visual object — because that's what you're actually doing:
 
 ```html
-<button
-   :count=${0}
-   :on-click=${() => count++}
-
+<button :count=${0} :on-click=${() => count++}
    // highlight dangerous state
    :class-danger=${count > 3}
 >
@@ -135,7 +134,7 @@ To make this approach practical, tag attributes in Markout accept multiline valu
 </button>
 ```
 
-As you can see, inside a tag and between attributes you can use C-style comments (both single- and multi-line). In HTML text you can use the "triple dash" comments to have them removed from the output, or normal HTML comments to have them maintained. Finally, to simplify things any tag can be self closing — output pages always contain standard HTML regardless.
+As you can see, inside a tag and between attributes you can use C-style comments (both single- and multi-line). In HTML text you can use the "triple dash" `<!---` comments to have them removed from the output, or normal HTML comments to have them maintained. Finally, to simplify things any tag can be self closing — output pages always contain standard HTML regardless.
 
 ## Reactive expressions
 
@@ -240,11 +239,19 @@ It should be noted that:
 * if two imported fragments import the same other fragment, only the first one will actually have it added to page `<head>`
 * each component can simply import all its dependencies: you don't need to import `lib/baseline.htm` yourself, it will be included as soon as you import any of your library's components.
 
-It all boils down to this: you can easily build your component libraries where each component includes its own dependencies (e.g. for baseline styling) without fearing duplications and with automatic dependency handling.
+**It all boils down to this**: you can easily build your component libraries where each component includes its own dependencies (e.g. for baseline styling) without fearing duplications and with automatic dependency handling.
 
 The `<:include>` directive can be used to explicitly include a fragment multiple time in a single page or fragment.
 
-One last note about the `<style>` tags: since they're tags like all others, they can include `${...}` expressions. This should be used sparingly — primarily for theming and configuration that changes infrequently (like at application launch). For dynamic styling that responds to user interactions, stick to the standard approaches: `:class-` logic values and `:style-` logic values on individual elements, which are optimized for frequent updates.
+One note about the `<style>` tags: since they're tags like all others, they can include `${...}` expressions and be made reactive as well! This should be used sparingly though — primarily for theming and configuration that changes infrequently (like at application launch). For dynamic styling that responds to user interactions, stick to the standard approaches: `:class-` logic values and `:style-` logic values on individual elements, which are optimized for frequent updates.
+
+Even with a considered use, reactive `<style>` tags can be amazingly useful and:
+
+- can remove the need of CSS preprocessing
+- can let you implement switchable themes with ease
+- can help you implement **adaptive** styling e.g. for mobile
+- eliminates the CSS vs JS variable barrier
+- let component implementation and styling have a single source of truth.
 
 With this approach to modularity you get four big wins:
 
