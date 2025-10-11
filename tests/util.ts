@@ -9,6 +9,20 @@ import * as dom from '../src/html/dom';
 import { JSDOM } from 'jsdom';
 import { ServerDocument } from '../src/html/server-dom';
 
+/**
+ * Normalizes line endings to LF (\n) for cross-platform compatibility
+ */
+export function normalizeLineEndings(text: string): string {
+  return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
+
+/**
+ * Normalizes text for comparison by handling both whitespace and line endings
+ */
+export function normalizeTextForComparison(text: string): string {
+  return normalizeText(normalizeLineEndings(text)) || '';
+}
+
 export function cleanupScopes(scope: CompilerScope) {
   const cleanupExpression = (exp: acorn.Node) => {
     return estraverse.replace(exp as any, {

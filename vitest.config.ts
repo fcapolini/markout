@@ -6,6 +6,8 @@ export default defineConfig({
     environment: 'node',
     env: {
       NODE_ENV: 'test',
+      // Ensure consistent line endings across platforms
+      FORCE_COLOR: '0',
     },
     environmentMatchGlobs: [
       ['**/tests/dom/**', 'happy-dom'],

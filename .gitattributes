@@ -1,0 +1,44 @@
+# Set default behavior to automatically normalize line endings
+* text=auto
+
+# Force Unix LF line endings for source files
+*.ts text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.html text eol=lf
+*.htm text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Test fixture files should also use LF
+tests/**/*.html text eol=lf
+tests/**/*.htm text eol=lf
+tests/**/*.js text eol=lf
+tests/**/*.json text eol=lf
+
+# Configuration files
+.gitignore text eol=lf
+.gitattributes text eol=lf
+.npmignore text eol=lf
+tsconfig.json text eol=lf
+package.json text eol=lf
+package-lock.json text eol=lf
+vitest.config.ts text eol=lf
+nodemon.json text eol=lf
+ecosystem.config.js text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.eot binary

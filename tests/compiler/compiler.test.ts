@@ -5,7 +5,7 @@ import path from 'path';
 import { assert, describe, it } from 'vitest';
 import { Compiler } from '../../src/compiler/compiler';
 import { normalizeText } from '../../src/html/parser';
-import { cleanupScopes } from '../util';
+import { cleanupScopes, normalizeLineEndings, normalizeTextForComparison } from '../util';
 
 const docroot = __dirname;
 
@@ -47,7 +47,7 @@ fs.readdirSync(docroot).forEach(dir => {
             if (fs.existsSync(outpname)) {
               const actualHTML = source.doc!.toString() + '\n';
               const expectedHTML = await fs.promises.readFile(outpname, { encoding: 'utf8' });
-              assert.equal(normalizeText(actualHTML), normalizeText(expectedHTML));
+              assert.equal(normalizeTextForComparison(actualHTML), normalizeTextForComparison(expectedHTML));
             }
             // check compiler scopes
             const jsonpname = path.join(docroot, dir, file.replace('-in.html', '-out.json'));
@@ -61,10 +61,10 @@ fs.readdirSync(docroot).forEach(dir => {
             const jspname = path.join(docroot, dir, file.replace('-in.html', '-out.js'));
             if (fs.existsSync(jspname)) {
               const text = await fs.promises.readFile(jspname, { encoding: 'utf8' });
-              const ast = acorn.parse(text, { ecmaVersion: 'latest' });
+              const ast = acorn.parse(normalizeLineEndings(text), { ecmaVersion: 'latest' });
               const expected = generate(ast);
               const actual = generate(page.code);
-              assert.equal(actual, expected);
+              assert.equal(normalizeLineEndings(actual), normalizeLineEndings(expected));
             }
           });
 

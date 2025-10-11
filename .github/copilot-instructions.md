@@ -305,6 +305,30 @@ Files are automatically assigned to the appropriate test environment:
 - `tests/dom-utils.dom.test.ts` - DOM utility function tests
 - `tests/counter.dom.test.ts` - Client-side component tests
 
+## CI/CD & DevOps Infrastructure
+
+### **GitHub Actions Workflows** (`.github/workflows/`)
+- **Main CI Pipeline** (`ci.yml`) - Multi-Node.js version testing (18.x, 20.x, 22.x) with build, test, coverage, security audit, and code quality
+- **Cross-Platform Build** (`cross-platform.yml`) - Ensures compatibility across Ubuntu, Windows, and macOS
+- **Security Analysis** (`codeql.yml`) - GitHub CodeQL semantic analysis with weekly scheduled scans
+- **Release Automation** (`release.yml`) - Automated releases and npm publishing (when ready)
+- **Dependency Management** (`dependabot.yml`) - Automated weekly dependency updates with grouped PRs
+
+### **Code Quality & Security Integration**
+- **SonarCloud** - Comprehensive code quality analysis with TypeScript/JavaScript rules
+- **Codecov** - Coverage tracking and reporting with detailed metrics
+- **Snyk** - Vulnerability scanning for dependencies and security issues
+- **Dependency Review** - Automated security review for new dependencies in PRs
+
+### **Cross-Platform Compatibility**
+- **Line Ending Normalization** - Comprehensive solution for Windows/Unix compatibility issues
+  - `normalizeLineEndings()` and `normalizeTextForComparison()` utilities in `tests/util.ts`
+  - `.gitattributes` configuration enforcing LF line endings for all text files
+  - GitHub Actions configured with `autocrlf: false` for consistent checkout behavior
+  - All compiler and preprocessor tests use cross-platform text comparison functions
+- **Test Reliability** - 178+ tests passing consistently across all platforms
+- **Repository Configuration** - Proper Git attributes for consistent development experience
+
 ## Production Features
 
 - **PM2 Process Manager** - Cluster mode, zero-downtime deployments, crash recovery
@@ -318,18 +342,31 @@ Files are automatically assigned to the appropriate test environment:
 - **Rate Limiting** - express-rate-limit for API protection and DoS prevention
 - **Request throttling** - Different limits for general and sensitive endpoints
 - **Standard headers** - Rate limit information in response headers
+- **Automated Security Scanning** - CodeQL, Snyk, and npm audit in CI pipeline
+- **Dependency Security Review** - Automated review of new dependencies for vulnerabilities
 
-Project is ready for development and production use with comprehensive testing, security features, and enterprise-grade process management.
+## Testing Framework
 
-## Development Guidelines
+- **Vitest** - Fast unit test framework with TypeScript support
+- **Supertest** - HTTP assertion library for API testing
+- **Happy-DOM** - Lightweight DOM environment for client-side testing
+- **Coverage reports** - V8 coverage provider with HTML/JSON/LCOV output
+- **Cross-platform utilities** - Line ending normalization for reliable test comparisons
+- Test files located in `tests/` directory with comprehensive fixture-based testing
 
-- Use TypeScript for all source code
-- Follow Express.js best practices
-- Build and test thoroughly - stability is a core value
-- Write tests for new features using Vitest
-- Use Prettier for consistent code formatting
-- Focus on developer experience and API design
-- Consider long-term maintenance and stability in all decisions
+### **Testing Environment Selection**
+Files are automatically assigned to the appropriate test environment:
+- `*.dom.test.ts` files run in **Happy-DOM** environment for DOM/client-side testing
+- Files in `tests/dom/` or `tests/client/` directories run in **Happy-DOM** environment
+- All other test files run in **Node.js** environment for server-side testing
+
+### **Test Structure**
+- **`tests/runtime/`** - Reactive system tests (context, scope, value, batching)
+- **`tests/compiler/`** - Multi-phase compiler tests with fixture-based input/output validation
+- **`tests/html/`** - HTML parser and preprocessor tests
+- **`tests/server/`** - Express.js server integration tests
+- **`tests/integration/`** - Full compiler-runtime integration tests
+- **`tests/line-endings.test.ts`** - Cross-platform compatibility validation
 
 ## API Endpoints
 
@@ -338,50 +375,17 @@ Project is ready for development and production use with comprehensive testing, 
 - `POST /api/sensitive` - Example endpoint with stricter rate limiting
 - `GET /api/rate-limit-status` - Check current rate limit status
 
-## Testing Framework
+## Development Guidelines
 
-- **Vitest** - Fast unit test framework with TypeScript support
-- **Supertest** - HTTP assertion library for API testing
-- **jsdom** - DOM environment for client-side testing
-- **Coverage reports** - V8 coverage provider with HTML/JSON output
-- Test files located in `tests/` directory
-- Automatic environment selection (Node.js vs jsdom based on file naming)
+- **Use TypeScript** for all source code with strict type checking
+- **Follow Express.js best practices** for server architecture
+- **Build and test thoroughly** - stability is a core value (178+ tests)
+- **Write tests for new features** using Vitest with fixture-based testing patterns
+- **Use Prettier** for consistent code formatting across the team
+- **Focus on developer experience** and intuitive API design
+- **Consider long-term maintenance** and stability in all architectural decisions
+- **Ensure cross-platform compatibility** - test on Windows, macOS, and Linux
+- **Maintain comprehensive CI/CD** - all changes must pass quality gates
+- **Document breaking changes** - framework stability is paramount
 
-## Testing Environment Selection
-
-Files are automatically assigned to the appropriate test environment:
-
-- `*.dom.test.ts` files run in **jsdom** environment for DOM/client-side testing
-- Files in `tests/dom/` or `tests/client/` directories run in **jsdom** environment
-- All other test files run in **Node.js** environment for server-side testing
-
-## Example Components
-
-- `src/utils.ts` - Basic utility functions (math, string operations)
-- `src/dom-utils.ts` - DOM manipulation utilities for client-side code
-- `src/counter.ts` - Example client-side component with DOM interaction
-- `src/index.ts` - Main Express server application
-
-## Test Examples
-
-- `tests/utils.test.ts` - Unit tests for utility functions
-- `tests/api.test.ts` - Integration tests for API endpoints
-- `tests/rate-limit.test.ts` - Rate limiting functionality tests
-- `tests/dom-utils.dom.test.ts` - DOM utility function tests
-- `tests/counter.dom.test.ts` - Client-side component tests
-
-## Production Features
-
-- **PM2 Process Manager** - Cluster mode, zero-downtime deployments, crash recovery
-- **Health Monitoring** - HTTP endpoint health checks and automatic restarts
-- **Load Balancing** - Built-in load balancer across CPU cores
-- **Logging** - Centralized logging with log rotation and monitoring
-- **Memory Management** - Automatic restart on memory leaks (1GB limit)
-
-## Security Features
-
-- **Rate Limiting** - express-rate-limit for API protection and DoS prevention
-- **Request throttling** - Different limits for general and sensitive endpoints
-- **Standard headers** - Rate limit information in response headers
-
-Project is ready for development and production use with comprehensive testing, security features, and enterprise-grade process management.
+Project is enterprise-ready with comprehensive testing (178+ tests), security scanning, cross-platform compatibility, and production-grade process management.

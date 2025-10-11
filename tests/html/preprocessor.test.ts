@@ -3,6 +3,7 @@ import { assert, describe, it } from 'vitest';
 import path from 'path';
 import { Preprocessor } from '../../src/html/preprocessor';
 import { normalizeText } from '../../src/html/parser';
+import { normalizeTextForComparison } from '../util';
 
 const docroot = path.join(__dirname, 'preprocessor');
 
@@ -41,7 +42,7 @@ fs.readdirSync(docroot).forEach(dir => {
               const actualHTML = source.doc!.toString() + '\n';
               const pname = path.join(docroot, dir, file.replace('-in.', '-out.'));
               const expectedHTML = await fs.promises.readFile(pname, { encoding: 'utf8' });
-              assert.equal(normalizeText(actualHTML), normalizeText(expectedHTML));
+              assert.equal(normalizeTextForComparison(actualHTML), normalizeTextForComparison(expectedHTML));
             }
           });
 
