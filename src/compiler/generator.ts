@@ -6,16 +6,17 @@ import { CompilerScope, CompilerValue } from "./compiler";
 // https://astexplorer.net
 
 /**
- * @see ScopeProps
+ * @see BaseScopeProps
  */
-const ID_PROP = '__id';
-const TYPE_PROP = '__type';
-const DEFINES_PROP = '__defines';
-const EXTENDS_PROP = '__extends';
-const SLOTMAP_PROP = '__slotmap';
-const USES_PROP = '__uses';
-const NAME_PROP = '__name';
-const CHILDREN_PROP = '__children';
+const ID_PROP = 'id';
+const TYPE_PROP = 'type';
+const DEFINES_PROP = 'defines';
+const EXTENDS_PROP = 'extends';
+const SLOTMAP_PROP = 'slotmap';
+const USES_PROP = 'uses';
+const NAME_PROP = 'name';
+const CHILDREN_PROP = 'children';
+const VALUES_PROP = 'values';
 
 export function generate(root: CompilerScope): acorn.ExpressionStatement {
   return {
@@ -65,9 +66,13 @@ function genScopeProps(scope: CompilerScope): acorn.Property[] {
       NAME_PROP,
       genLiteral(scope.name.valLoc ?? scope.name.keyLoc, scope.name.val)
   ));
-  scope.values && Object.keys(scope.values).forEach(key => {
-    ret.push(genValue(scope.loc, key, scope.values![key]));
-  });
+  if (scope.values && Object.keys(scope.values).length > 0) {
+    const valueProps: acorn.Property[] = [];
+    Object.keys(scope.values).forEach(key => {
+      valueProps.push(genValue(scope.loc, key, scope.values![key]));
+    });
+    ret.push(genProperty(scope.loc, VALUES_PROP, genObject(scope.loc, valueProps)));
+  }
   ret.push(genProperty(scope.loc, CHILDREN_PROP, genArray(scope.loc, genScopeChildren(scope))));
   return ret;
 }
@@ -85,7 +90,7 @@ function genValueProps(value: CompilerValue): acorn.Property[] {
 
 function genValueExp(value: CompilerValue): acorn.Property {
   const loc = value.valLoc ?? value.keyLoc;
-  return genProperty(loc, 'e', genFunction(loc,
+  return genProperty(loc, 'exp', genFunction(loc,
     //TODO: check what null would mean and if it's valid/needed
     value.val === null || typeof value.val === 'string'
       ? genLiteral(loc, value.val)
@@ -95,7 +100,7 @@ function genValueExp(value: CompilerValue): acorn.Property {
 
 function genValueRefs(value: CompilerValue): acorn.Property {
   const loc = value.valLoc ?? value.keyLoc;
-  return genProperty(loc, 'r', genArray(loc, [...value.refs!].map(ref =>
+  return genProperty(loc, 'deps', genArray(loc, [...value.refs!].map(ref =>
     genFunction(loc, genValueRefCall(loc, ref))
   )));
 }

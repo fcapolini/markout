@@ -1,26 +1,28 @@
 ({
-  __id: 0,
-  __children: [
+  id: 0,
+  children: [
     {
-      __id: 1,
-      __name: 'page',
-      __children: [
+      id: 1,
+      name: 'page',
+      children: [
         {
-          __id: 2,
-          __name: 'head',
-          __children: []
+          id: 2,
+          name: 'head',
+          children: []
         },
         {
-          __id: 3,
-          __name: 'body',
-          __children: [
+          id: 3,
+          name: 'body',
+          children: [
             {
-              __id: 4,
-              __name: 'title',
-              v: {
-                e: function() { return null; }
+              id: 4,
+              name: 'title',
+              values: {
+                v: {
+                  exp: function() { return null; }
+                }
               },
-              __children: []
+              children: []
             }
           ]
         },

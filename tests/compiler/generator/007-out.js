@@ -1,33 +1,37 @@
 ({
-  __id: 0,
-  __children: [{
-    __id: 1,
-    __name: 'page',
-    __children: [
+  id: 0,
+  children: [{
+    id: 1,
+    name: 'page',
+    children: [
       {
-        __id: 2,
-        __name: 'head',
-        __children: []
+        id: 2,
+        name: 'head',
+        children: []
       },
       {
-        __id: 3,
-        __name: 'body',
-        __children: [{
-          __id: 4,
-          __type: 'foreach',
-          data: {
-            e: function () { return [1, 2]; }
-          },
-          __children: [{
-            __id: 5,
+        id: 3,
+        name: 'body',
+        children: [{
+          id: 4,
+          type: 'foreach',
+          values: {
             data: {
-              e: function () { return ''; }
+              exp: function () { return [1, 2]; }
+            }
+          },
+          children: [{
+            id: 5,
+            values: {
+              data: {
+                exp: function () { return ''; }
+              },
+              text$5_0: {
+                exp: function () { return this.data; },
+                deps: [function () { return this.$value('data'); }]
+              }
             },
-            text$5_0: {
-              e: function () { return this.data; },
-              r: [function () { return this.$value('data'); }]
-            },
-            __children: []
+            children: []
           }]
         }]
       }

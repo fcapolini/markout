@@ -1,36 +1,36 @@
 ({
-  __id: 0,
-  __children: [
+  id: 0,
+  children: [
     {
-      __id: 1,
-      __name: 'page',
-      __children: [
+      id: 1,
+      name: 'page',
+      children: [
         {
-          __id: 2,
-          __name: 'head',
-          __children: [
+          id: 2,
+          name: 'head',
+          children: [
             {
-              __id: 3,
-              __name: 'style1',
+              id: 3,
+              name: 'style1',
               y: {
-                e: function() { return 1; }
+                exp: function() { return 1; }
               },
-              __children: []
+              children: []
             }
           ]
         },
         {
-          __id: 4,
-          __name: 'body',
+          id: 4,
+          name: 'body',
           closed: true,
-          __children: [
+          children: [
             {
-              __id: 5,
+              id: 5,
               x: {
-                e: function() { return this.head.style1.y; },
-                r: [function() { return this.head.style1.$value('y'); }]
+                exp: function() { return this.head.style1.y; },
+                deps: [function() { return this.head.style1.$value('y'); }]
               },
-              __children: []
+              children: []
             }
           ]
         },

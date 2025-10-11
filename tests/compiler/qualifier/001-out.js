@@ -1,28 +1,30 @@
 ({
-  __id: 0,
-  __children: [
+  id: 0,
+  children: [
     {
-      __id: 1,
-      __name: 'page',
-      __children: [
+      id: 1,
+      name: 'page',
+      children: [
         {
-          __id: 2,
-          __name: 'head',
-          __children: []
+          id: 2,
+          name: 'head',
+          children: []
         },
         {
-          __id: 3,
-          __name: 'body',
-          x: {
-            e: function() { return this.y; },
-            r: [
-              function() { return this.$value('y'); },
-            ]
+          id: 3,
+          name: 'body',
+          values: {
+            x: {
+              exp: function() { return this.y; },
+              deps: [
+                function() { return this.$value('y'); },
+              ]
+            },
+            y: {
+              exp: function() { return 1; }
+            }
           },
-          y: {
-            e: function() { return 1; }
-          },
-          __children: []
+          children: []
         },
       ]
     }

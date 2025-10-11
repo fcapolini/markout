@@ -153,7 +153,17 @@ The first is a constant, so it doesn't depend on other values and thus it's neve
 
 The second is a function, which is also never re-evaluated by design.
 
-Although it's *completely transparent* for developers, it's worth to note that DOM updates caused by reactive expression updates are batched to prevent the so called "layout thrashing" in the browser. This means a set of changes caused by application state changes is applied as a whole at the same time and without duplicated DOM access. Given Markout's design where updates are applied chirurgically where needed, this results in better performance than the vaunted *Virtual DOM* adopted in other frameworks.
+### Optimizations
+
+Although it's *completely transparent* for developers, it's worth noting that DOM updates caused by reactive expression updates are batched to prevent the so called "layout thrashing" in the browser.
+
+This means a set of changes caused by an application state change is applied as a whole at the same time and without duplicated DOM access.
+
+Please note that only the DOM application of changes is batched: logic values themselves are always consistent with the latest changes, giving you the best of both worlds: performance optimization and programming model consistency.
+
+Given Markout's design where updates are surgically applied where needed, this results in better performance than the vaunted *Virtual DOM* adopted in other frameworks.
+
+### Reactivity implementation
 
 **No Virtual DOM, No Re-rendering Nightmare**: Unlike frameworks that re-render entire component trees and rely on diffing algorithms to figure out what changed, Markout knows *exactly* what needs updating because of its reactive dependency tracking. This eliminates the common performance pitfalls of Virtual DOM frameworks:
 
@@ -161,8 +171,6 @@ Although it's *completely transparent* for developers, it's worth to note that D
 * **No render cascade problems**: A change in one component doesn't trigger re-renders throughout the component tree
 * **No need for optimization ceremonies**: No `React.memo`, `useMemo`, `useCallback`, or similar workarounds to prevent wasteful re-renders
 * **Predictable performance**: Updates are surgical and proportional to actual changes, not component tree size
-
-Please note that only the DOM application of changes is batched: logic values themselves are always consistent with the latest changes, giving you the best of both worlds: performance optimization and programming model consistency.
 
 ## Directives
 

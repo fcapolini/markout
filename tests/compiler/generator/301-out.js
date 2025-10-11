@@ -1,27 +1,27 @@
 ({
-  __id: 0,
-  __children: [
+  id: 0,
+  children: [
     {
-      __id: 1,
-      __name: "page",
-      __children: [
+      id: 1,
+      name: "page",
+      children: [
         {
-          __id: 2,
-          __name: "head",
-          __children: [
+          id: 2,
+          name: "head",
+          children: [
             {
-              __id: 3,
-              __type: "define",
-              __defines: "app-card",
-              __slotmap: { "a": 4, "default": 5 },
-              __children: [
+              id: 3,
+              type: "define",
+              defines: "app-card",
+              slotmap: { "a": 4, "default": 5 },
+              children: [
                 {
-                  __id: 4,
-                  __children: [
+                  id: 4,
+                  children: [
                     {
-                      __id: 5,
-                      __name: "x",
-                      __children: [],
+                      id: 5,
+                      name: "x",
+                      children: [],
                     },
                   ],
                 },
@@ -30,9 +30,9 @@
           ],
         },
         {
-          __id: 6,
-          __name: "body",
-          __children: [],
+          id: 6,
+          name: "body",
+          children: [],
         },
       ],
     },
