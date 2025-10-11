@@ -1,0 +1,17 @@
+[
+  {
+    "loc": {
+      "end": {
+        "column": 43,
+        "line": 1
+      },
+      "source": "/013-in.html",
+      "start": {
+        "column": 35,
+        "line": 1
+      }
+    },
+    "msg": "dollar sign ($) is reserved for framework use and cannot be used in user-declared identifiers",
+    "type": "error"
+  }
+]

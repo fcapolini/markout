@@ -16,7 +16,7 @@
           x: {
             e: function() { return this.y; },
             r: [
-              function() { return this.__value('y'); },
+              function() { return this.$value('y'); },
             ]
           },
           y: {

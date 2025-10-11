@@ -17,7 +17,7 @@
             {
               __id: 4,
               __name: 'title',
-              attr_v: {
+              attr$v: {
                 e: function() { return 0; }
               },
               __children: []

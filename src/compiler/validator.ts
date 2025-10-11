@@ -29,8 +29,8 @@ function validateScope(source: Source, scope: CompilerScope) {
     validateValue(source, value);
   });
 
-  if (hasClassAttr && scope.values!['attr_class']) {
-    const attr = scope.values!['attr_class'];
+  if (hasClassAttr && scope.values!['attr$class']) {
+    const attr = scope.values!['attr$class'];
     addError(
       source,
       attr,
@@ -40,8 +40,8 @@ function validateScope(source: Source, scope: CompilerScope) {
     );
   }
 
-  if (hasStyleAttr && scope.values!['attr_style']) {
-    const attr = scope.values!['attr_style'];
+  if (hasStyleAttr && scope.values!['attr$style']) {
+    const attr = scope.values!['attr$style'];
     addError(
       source,
       attr,
@@ -59,12 +59,35 @@ function validateValue(source: Source, value: CompilerValue) {
     return;
   }
   estraverse.traverse(value.val as es.Node, {
-    enter: (node) => {
+    enter: (node, parent) => {
       if (
         node.type === 'FunctionDeclaration' ||
         node.type === 'FunctionExpression'
       ) {
         addError(source, value, 'only arrow functions allowed', node.loc!);
+      }
+      
+      // Check for dollar sign in declarations only, not access
+      if (node.type === 'Identifier' && node.name.includes('$')) {
+        const isDeclaration = (
+          // Variable declarations: const x$, let x$, var x$
+          (parent?.type === 'VariableDeclarator' && parent.id === node) ||
+          // Function parameters: function(x$) or (x$) =>
+          (parent?.type === 'FunctionDeclaration' && parent.params.includes(node)) ||
+          (parent?.type === 'ArrowFunctionExpression' && parent.params.includes(node)) ||
+          (parent?.type === 'FunctionExpression' && parent.params.includes(node)) ||
+          // Function names: function x$()
+          (parent?.type === 'FunctionDeclaration' && parent.id === node) ||
+          (parent?.type === 'FunctionExpression' && parent.id === node) ||
+          // Property definitions in object literals: {x$: ...}
+          (parent?.type === 'Property' && parent.key === node && !parent.computed) ||
+          // Assignment patterns in destructuring: {x$} = obj
+          (parent?.type === 'AssignmentPattern' && parent.left === node)
+        );
+        
+        if (isDeclaration) {
+          addError(source, value, 'dollar sign ($) is reserved for framework use and cannot be used in user-declared identifiers', node.loc!);
+        }
       }
     }
   });

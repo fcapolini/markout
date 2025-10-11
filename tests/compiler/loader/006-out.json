@@ -14,7 +14,7 @@
           "id": 3,
           "name": { "val": "body" },
           "values": {
-            "text_3_0": {
+            "text$3_0": {
               "val": {
                 "raw": "'hi'",
                 "type": "Literal",

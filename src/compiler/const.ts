@@ -10,9 +10,9 @@ export const DEF_SCOPE_NAMES: any = {
   'HEAD': 'head',
   'BODY': 'body',
 }
-export const CLASS_ATTR_PREFIX = 'class_';
-export const STYLE_ATTR_PREFIX = 'style_';
-export const EVENT_ATTR_PREFIX = 'on_';
+export const CLASS_ATTR_PREFIX = 'class$';
+export const STYLE_ATTR_PREFIX = 'style$';
+export const EVENT_ATTR_PREFIX = 'event$';
 export const SYS_ATTR_PREFIX = '';
 export const NAME_ATTR = SYS_ATTR_PREFIX + 'name';
 export const FOREACH_ATTR = SYS_ATTR_PREFIX + 'foreach';

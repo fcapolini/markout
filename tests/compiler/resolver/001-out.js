@@ -18,7 +18,7 @@
           __name: 'body',
           x: {
             e: function() { return this.head.y; },
-            r: [function() { return this.head.__value('y'); }]
+            r: [function() { return this.head.$value('y'); }]
           },
           __children: []
         },

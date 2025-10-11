@@ -19,6 +19,21 @@ Three simple additions to standard HTML:
 - **Logic values**: `:` prefixed attributes (`:count`, `:on-click`) for reactive state
 - **Reactive expressions**: `${...}` syntax for dynamic content
 
+## Reserved Namespace and Naming Conventions
+
+**Framework Reserved Identifiers**: Markout uses `$` as a reserved namespace to prevent conflicts with user code:
+- **Runtime methods**: `$value()`, `$parent` - framework-provided scope access methods that users can access
+- **Attribute prefixes**: `attr$`, `class$`, `style$`, `text$`, `event$` - internal runtime naming for reactive attributes
+- **Declaration prohibition**: `$` is forbidden in user-declared identifiers (variables, functions, parameters) but users can access framework-provided `$` identifiers
+- **Validation enforcement**: The validator prevents declaring new identifiers with `$` while allowing access to framework identifiers like `$parent` and `$value()`
+
+**Safe Markup Generation**: Framework uses triple-dash comments for conflict-free code generation:
+- **Triple-dash format**: `<!---...-->` instead of standard `<!--...-->` HTML comments
+- **Automatic removal**: These comments are removed from source code during processing
+- **Text markers**: Dynamic text insertion uses `<!---t{id}_{index}-->...<!---/-->` pattern
+- **Conflict prevention**: User HTML comments remain untouched while framework markers are safely processed
+- **Clean separation**: Framework can inject markup freely without fear of clashing with user content
+
 ### Advanced Import Features (for reference docs)
 
 **Fragment Root Attribute Inheritance**: Sophisticated attribute override system:

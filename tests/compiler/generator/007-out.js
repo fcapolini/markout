@@ -23,9 +23,9 @@
             data: {
               e: function () { return ''; }
             },
-            text_5_0: {
+            text$5_0: {
               e: function () { return this.data; },
-              r: [function () { return this.__value('data'); }]
+              r: [function () { return this.$value('data'); }]
             },
             __children: []
           }]

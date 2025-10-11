@@ -27,17 +27,17 @@
               __id: 6,
               __type: 'foreach',
               data: {
-                e: function () { return this.__parent.data; },
-                r: [function () { return this.__parent.__value('data'); }]
+                e: function () { return this.$parent.data; },
+                r: [function () { return this.$parent.$value('data'); }]
               },
               __children: [{
                 __id: 7,
                 data: {
                   e: function () { return ''; }
                 },
-                text_7_0: {
+                text$7_0: {
                   e: function () { return this.data; },
-                  r: [function () { return this.__value('data'); }]
+                  r: [function () { return this.$value('data'); }]
                 },
                 __children: []
               }]

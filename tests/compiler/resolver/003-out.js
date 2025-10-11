@@ -28,7 +28,7 @@
               __id: 5,
               x: {
                 e: function() { return this.head.style1.y; },
-                r: [function() { return this.head.style1.__value('y'); }]
+                r: [function() { return this.head.style1.$value('y'); }]
               },
               __children: []
             }

@@ -18,7 +18,7 @@
               "id": 4,
               "name": { "val": "title" },
               "values": {
-                "attr_v": {
+                "attr$v": {
                   "val": {
                     "raw": "1",
                     "type": "Literal",

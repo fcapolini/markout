@@ -17,7 +17,7 @@
                   "children": [],
                   "values": {
                     "data": { "val": "" },
-                    "text_5_0": {
+                    "text$5_0": {
                       "val": {
                         "type": "MemberExpression",
                         "object": {
