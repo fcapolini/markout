@@ -70,14 +70,13 @@ export interface Attribute extends Node {
   valueLoc?: unknown;
 }
 
-export interface Document {
-  childNodes: Node[];
+export interface Document extends Element {
   documentElement: Element | null;
   createTextNode(text: string): Text;
   createElement(tagName: string): Element;
 }
 
-export interface DocumentFragment extends Document {
-  cloneNode(deep: true): Node;
+export interface DocumentFragment extends Node {
+  childNodes: Node[];
   firstElementChild: Element | null;
 }

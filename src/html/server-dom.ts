@@ -78,7 +78,7 @@ export abstract class ServerNode implements Node {
   abstract toMarkup(ret: string[]): void;
   abstract clone(
     doc: ServerDocument | null,
-    parent: ServerElement | null
+    parent: ServerContainerNode | null
   ): ServerNode;
 
   cloneNode() {
@@ -112,7 +112,7 @@ export class ServerText extends ServerNode implements Text {
 
   override clone(
     doc: ServerDocument | null,
-    parent: ServerElement | null
+    parent: ServerContainerNode | null
   ): ServerText {
     const ret = new ServerText(doc, this.textContent, this.loc, this.escaping);
     parent?.appendChild(ret);
@@ -136,7 +136,7 @@ export class ServerComment extends ServerNode implements Comment {
 
   override clone(
     doc: ServerDocument | null,
-    parent: ServerElement | null
+    parent: ServerContainerNode | null
   ): ServerComment {
     const ret = new ServerComment(doc, this.textContent, this.loc);
     parent?.appendChild(ret);
@@ -181,11 +181,11 @@ export class ServerAttribute extends ServerNode implements Attribute {
 
   override clone(
     doc: ServerDocument | null,
-    parent: ServerElement | null
+    parent: ServerContainerNode | null
   ): ServerAttribute {
     const ret = new ServerAttribute(
       doc,
-      parent,
+      parent as ServerElement,
       this.name,
       this.value,
       this.loc
@@ -248,9 +248,48 @@ class ServerStyleProp implements StyleProp {
   }
 }
 
-export class ServerElement extends ServerNode implements Element {
-  tagName: string;
+// Base class for nodes that can contain children
+export abstract class ServerContainerNode extends ServerNode {
   childNodes: Node[];
+
+  constructor(doc: ServerDocument | null, type: number, loc: SourceLocation) {
+    super(doc, type, loc);
+    this.childNodes = [];
+  }
+
+  appendChild(n: Node): Node {
+    return this.insertBefore(n, null);
+  }
+
+  insertBefore(n: Node, ref: Node | null): Node {
+    if (n.nodeType === NodeType.DOCUMENT_FRAGMENT) {
+      (n as ServerContainerNode).childNodes.forEach(n => this.insertBefore(n, ref));
+      return n;
+    }
+    this.removeChild(n);
+    let i = ref ? this.childNodes.indexOf(ref) : -1;
+    i = i < 0 ? this.childNodes.length : i;
+    this.childNodes.splice(i, 0, n);
+    n.parentElement = this as any;
+    return n;
+  }
+
+  removeChild(n: Node): Node {
+    const i = this.childNodes.indexOf(n);
+    i >= 0 && this.childNodes.splice(i, 1);
+    n.parentElement = null;
+    return n;
+  }
+
+  protected cloneChildNodes(doc: ServerDocument | null, target: ServerContainerNode): void {
+    this.childNodes.forEach(n => {
+      (n as ServerNode).clone(doc, target);
+    });
+  }
+}
+
+export class ServerElement extends ServerContainerNode implements Element {
+  tagName: string;
   attributes: Attribute[];
   protected _classList?: ClassProp;
   protected _style?: StyleProp;
@@ -258,7 +297,6 @@ export class ServerElement extends ServerNode implements Element {
   constructor(doc: ServerDocument | null, name: string, loc: SourceLocation) {
     super(doc, NodeType.ELEMENT, loc);
     this.tagName = name.toUpperCase();
-    this.childNodes = [];
     this.attributes = [];
   }
 
@@ -282,29 +320,7 @@ export class ServerElement extends ServerNode implements Element {
     (this.style as ServerStyleProp).cssText = `${s}`;
   }
 
-  appendChild(n: Node): Node {
-    return this.insertBefore(n, null);
-  }
 
-  insertBefore(n: Node, ref: Node | null): Node {
-    if (n.nodeType === NodeType.DOCUMENT_FRAGMENT) {
-      (n as ServerElement).childNodes.forEach(n => this.insertBefore(n, ref));
-      return n;
-    }
-    this.removeChild(n);
-    let i = ref ? this.childNodes.indexOf(ref) : -1;
-    i = i < 0 ? this.childNodes.length : i;
-    this.childNodes.splice(i, 0, n);
-    n.parentElement = this;
-    return n;
-  }
-
-  removeChild(n: Node): Node {
-    const i = this.childNodes.indexOf(n);
-    i >= 0 && this.childNodes.splice(i, 1);
-    n.parentElement = null;
-    return n;
-  }
 
   getAttributeNames(): string[] {
     const ret: string[] = [];
@@ -437,7 +453,7 @@ export class ServerElement extends ServerNode implements Element {
 
   override clone(
     doc: ServerDocument | null,
-    parent: ServerElement | null
+    parent: ServerContainerNode | null
   ): ServerElement {
     const ret = new ServerElement(doc, this.tagName, this.loc);
     parent?.appendChild(ret);
@@ -479,13 +495,16 @@ export class ServerTemplateElement
 
   toMarkup(ret: string[]): void {
     super.toMarkup2(ret, () => {
-      this.content.toMarkup(ret);
+      // Render template content children directly without DocumentFragment wrapper
+      for (const n of this.content.childNodes) {
+        (n as ServerNode).toMarkup(ret);
+      }
     });
   }
 
   override clone(
     doc: ServerDocument | null,
-    parent: ServerElement | null
+    parent: ServerContainerNode | null
   ): ServerElement {
     const ret = new ServerTemplateElement(doc, this.loc);
     parent?.appendChild(ret);
@@ -517,7 +536,7 @@ export class ServerDocument extends ServerElement implements Document {
         : loc
     );
     this.ownerDocument = this;
-    this.nodeType = NodeType.DOCUMENT;
+    this.nodeType = NodeType.DOCUMENT;  // Override the nodeType after construction
   }
 
   createTextNode(text: string): ServerText {
@@ -578,30 +597,47 @@ export class ServerDocument extends ServerElement implements Document {
 
   override clone(
     doc: ServerDocument | null,
-    parent: ServerElement | null
-  ): ServerElement {
-    const ret = super.clone(doc, parent);
-    ret.nodeType = NodeType.DOCUMENT;
-    ret.tagName = '#DOCUMENT';
+    parent: ServerContainerNode | null
+  ): ServerDocument {
+    const ret = new ServerDocument(this.loc);
+    parent?.appendChild(ret);
+    this.cloneChildNodes(doc, ret);
     return ret;
   }
 }
 
 export class ServerDocumentFragment
-  extends ServerDocument
+  extends ServerContainerNode
   implements DocumentFragment
 {
   constructor(loc: string | SourceLocation) {
-    super(loc);
-    this.nodeType = NodeType.DOCUMENT_FRAGMENT;
-    this.tagName = '#DOCUMENT-FRAGMENT';
+    super(
+      null,
+      NodeType.DOCUMENT_FRAGMENT,
+      typeof loc === 'string'
+        ? {
+            source: loc,
+            start: { line: 1, column: 0 },
+            end: { line: 1, column: 0 },
+            i1: 0,
+            i2: 0,
+          }
+        : loc
+    );
   }
 
-  get firstElementChild() {
-    return this.documentElement;
+  get firstElementChild(): ServerElement | null {
+    for (const e of this.childNodes) {
+      if (e.nodeType === NodeType.ELEMENT) {
+        return e as ServerElement;
+      }
+    }
+    return null;
   }
 
   toMarkup(ret: string[]): void {
+    // DocumentFragment renders its children directly without wrapper tags
+    // as per DOM specification - it's a lightweight container
     for (const n of this.childNodes) {
       (n as ServerNode).toMarkup(ret);
     }
@@ -609,15 +645,11 @@ export class ServerDocumentFragment
 
   override clone(
     doc: ServerDocument | null,
-    parent: ServerElement | null
+    parent: ServerContainerNode | null
   ): ServerDocumentFragment {
     const ret = new ServerDocumentFragment(this.loc);
-    if (parent) {
-      parent.appendChild(ret);
-    }
-    this.childNodes.forEach(n => {
-      (n as ServerNode).clone(doc, ret);
-    });
+    parent?.appendChild(ret);
+    this.cloneChildNodes(doc, ret);
     return ret;
   }
 }

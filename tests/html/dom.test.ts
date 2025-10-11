@@ -1,5 +1,5 @@
 import { assert, describe, it } from 'vitest';
-import { ServerComment, ServerDocument, ServerElement, ServerNode, ServerTemplateElement, ServerText, SourceLocation } from '../../src/html/server-dom';
+import { ServerComment, ServerContainerNode, ServerDocument, ServerElement, ServerNode, ServerTemplateElement, ServerText, SourceLocation } from '../../src/html/server-dom';
 import { Element, Node, NodeType, TemplateElement, Text } from '../../src/html/dom';
 
 const LOC: SourceLocation = {
@@ -319,7 +319,7 @@ describe('template', () => {
     assert.isTrue(compareNode(tpl.content, cnt2));
     assert.equal(
       cnt2.toString(),
-      `<#document-fragment><p a="1">text<slot name="slot1"></slot></p></#document-fragment>`
+      `<p a="1">text<slot name="slot1"></slot></p>`
     );
 
     root.appendChild(cnt2);
@@ -350,7 +350,7 @@ describe('template', () => {
     assert.isTrue(compareNode(tpl.content, cnt2));
     assert.equal(
       cnt2.toString(),
-      `<#document-fragment><p class="a" style="color: red;">text<slot name="slot1"></slot></p></#document-fragment>`
+      `<p class="a" style="color: red;">text<slot name="slot1"></slot></p>`
     );
 
     root.appendChild(cnt2);
@@ -437,10 +437,8 @@ describe('template', () => {
     const clone1 = tpl1.content.cloneNode(true);
     assert.equal(
       clone1.toString(),
-      '<#document-fragment>'
-      + `<p a="1">text1<slot name="slot1"></slot></p>`
+      `<p a="1">text1<slot name="slot1"></slot></p>`
       + `<template id="tpl2"><p a="2">text2<slot name="slot2"></slot></p></template>`
-      + '</#document-fragment>'
     );
     root.appendChild(clone1);
     assert.equal(
@@ -462,9 +460,7 @@ describe('template', () => {
     const clone2 = tpl2b.content.cloneNode(true);
     assert.equal(
       clone2.toString(),
-      '<#document-fragment>'
-      + `<p a="2">text2<slot name="slot2"></slot></p>`
-      + '</#document-fragment>'
+      `<p a="2">text2<slot name="slot2"></slot></p>`
     );
     root.appendChild(clone2);
     assert.equal(
@@ -483,6 +479,17 @@ describe('template', () => {
 
 });
 
+function compareContainer(a: ServerContainerNode, b: ServerContainerNode) {
+  // containers only need to compare children (no attributes)
+  if (a.childNodes.length !== b.childNodes.length) return false;
+  for (let i = 0; i < a.childNodes.length; i++) {
+    const an = a.childNodes[i] as ServerNode;
+    const bn = b.childNodes[i] as ServerNode;
+    if (!compareNode(an, bn)) return false;
+  }
+  return true;
+}
+
 function compareNode(na: Node, nb: Node) {
   const a = na as unknown as ServerNode;
   const b = nb as unknown as ServerNode;
@@ -493,8 +500,9 @@ function compareNode(na: Node, nb: Node) {
   switch (a.nodeType) {
     case NodeType.ELEMENT:
     case NodeType.DOCUMENT:
-    case NodeType.DOCUMENT_FRAGMENT:
       return compareElement(a as ServerElement, b as ServerElement);
+    case NodeType.DOCUMENT_FRAGMENT:
+      return compareContainer(a as ServerContainerNode, b as ServerContainerNode);
     case NodeType.TEXT:
     case NodeType.COMMENT:
       return compareText(a as ServerText, b as ServerText);

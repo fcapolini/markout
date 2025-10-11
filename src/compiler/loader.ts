@@ -362,9 +362,8 @@ function lookupDynamicTexts(e: dom.Element) {
 function addSlotMap(definition: CompilerScope, template: dom.TemplateElement, source: Source) {
   const slots = new Array<dom.Element>();
   const map: { [key: string]: number } = {};
-  const e = template.content.documentElement!;
 
-  const lookupSlots = (p: dom.Element) => {
+  const lookupSlots = (p: dom.Element | dom.DocumentFragment) => {
     for (const n of p.childNodes) {
       if (n.nodeType !== dom.NodeType.ELEMENT) continue;
       if ((n as dom.Element).tagName === 'SLOT') {
@@ -376,16 +375,21 @@ function addSlotMap(definition: CompilerScope, template: dom.TemplateElement, so
   }
 
   const lookupSlotScopeId = (s: dom.Element) => {
-    while (s !== e) {
+    // Navigate up the DOM tree until we find a scope ID or reach the template content root
+    while (s && s.parentElement) {
       s = s.parentElement!;
       if (s.getAttribute(k.OUT_OBJ_ID_ATTR)) {
+        break;
+      }
+      // Stop if we've reached the template element itself
+      if (s === template) {
         break;
       }
     }
     return parseInt(s.getAttribute(k.OUT_OBJ_ID_ATTR) ?? '0');
   }
 
-  lookupSlots(e);
+  lookupSlots(template.content);
   slots.forEach(slot => {
     const name = slot.getAttribute('name');
     if (name && /^[\w_][\w0-9\-_]*$/.test(name)) {
