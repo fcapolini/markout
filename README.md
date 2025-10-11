@@ -143,7 +143,7 @@ Reactive expressions are where logic values are consumed. They adopt the familia
 In our latest example we have four reactive expressions:
 
 * `${0}` used to initialize `count`
-* `${() => count++}` used to declare the event handler's function
+* `${() => count++}` used to define the event handler's function
 * `${count > 3}` used to conditionally apply the `danger` class to the button
 * `${count < 6 ...}` used keep button's text updated.
 
@@ -298,7 +298,7 @@ The data can be local as well:
 And, because local data participates in the reactive system — `:json` is a logic value after all — it can automatically update too:
 
 ```html
-<:data :aka="locale" :json=${{
+<:data :aka="localeData" :json=${{
   en: {
     dashboard: 'Dashboard',
     activity: 'Activity'
@@ -309,10 +309,10 @@ And, because local data participates in the reactive system — `:json` is a log
   }
 }} />
 
-<:data :aka="navigationData" :lang="en" :json=${{
+<:data :aka="navigationData" :lang="en" :_locale=${localeData.json[lang]} :json=${{
   list: [
-    { id: 1, url: '/dashboard', title: locale.json[lang].dashboard },
-    { id: 2, url: '/activity', title: locale.json[lang].activity },
+    { id: 1, url: '/dashboard', title: _locale.dashboard },
+    { id: 2, url: '/activity', title: _locale.activity },
   ]
 }} />
 ```
