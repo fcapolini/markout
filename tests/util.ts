@@ -68,7 +68,7 @@ export async function runPage(client: boolean, html: string): Promise<WebContext
 export function getMarkup(doc: any, cleanup = true): string {
   let act = doc instanceof ServerDocument ? doc.toString() : doc.documentElement.outerHTML;
   if (cleanup) {
-    act = act.replace(/ data-domaze="\d+"/g, '');
+    act = act.replace(/ data-markout="\d+"/g, '');
     act = act.replace(/<!---.*?-->/g, '');
     act = normalizeText(act)!;
   }

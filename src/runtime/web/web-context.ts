@@ -20,7 +20,7 @@ export class WebContext extends BaseContext {
     });
   }
 
-  //TODO: revert to domaze's technique where each scope looks up DOM IDs
+  //TODO: revert to markout's technique where each scope looks up DOM IDs
   //locally, it's needed for replication as IDs won't be globally unique
   override init() {
     this.scopeElements = new Map();
