@@ -16,7 +16,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         # Ensure consistent line endings across platforms
         autocrlf: false
@@ -58,7 +58,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         # Ensure consistent line endings across platforms
         autocrlf: false
@@ -88,7 +88,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0  # Shallow clones should be disabled for better relevancy of analysis
         autocrlf: false  # Ensure consistent line endings across platforms
@@ -120,7 +120,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       
     - name: Dependency Review
       uses: actions/dependency-review-action@v4
