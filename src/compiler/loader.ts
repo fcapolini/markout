@@ -206,8 +206,30 @@ export function load(source: Source): CompilerScope {
           }
           // value attribute
           scope.values || (scope.values = {});
+          const attrValue = (attr as ServerAttribute).value;
+          let valueToStore;
+          
+          // If it's a reactive attribute with a string value, convert to JavaScript AST
+          if (typeof attrValue === 'string') {
+            try {
+              // Parse the string as a JavaScript string literal
+              const quotedValue = JSON.stringify(attrValue);
+              valueToStore = acorn.parseExpressionAt(quotedValue, 0, {
+                ecmaVersion: 'latest',
+                sourceType: 'script',
+                locations: false
+              });
+            } catch (err) {
+              // If parsing fails, treat as literal string (fallback)
+              valueToStore = attrValue;
+            }
+          } else {
+            // Already an AST object or other value
+            valueToStore = attrValue;
+          }
+          
           scope.values[name] = {
-            val: (attr as ServerAttribute).value,
+            val: valueToStore,
             keyLoc: (attr as ServerAttribute).loc,
             valLoc: (attr as ServerAttribute).valueLoc
           };
@@ -237,6 +259,9 @@ export function load(source: Source): CompilerScope {
           keyLoc: (text as ServerText).loc,
           valLoc: (text as ServerText).loc,
         };
+        // For atomic text, preserve the text node with placeholder content
+        const t = text as ServerText;
+        t.textContent = '&#8203;';
       } else {
         texts.forEach((text, index) => {
           scope.values || (scope.values = {});
@@ -251,9 +276,21 @@ export function load(source: Source): CompilerScope {
           const m2 = DOM_TEXT_MARKER2;
           const c1 = new ServerComment(e.ownerDocument, m1, t.loc);
           const c2 = new ServerComment(e.ownerDocument, m2, t.loc);
+          
+          // Insert first marker before the text node
           p.insertBefore(c1, t);
-          p.insertBefore(c2, t);
-          p.removeChild(t);
+          
+          // Find next sibling and insert second marker after the text node
+          const childIndex = p.childNodes.indexOf(t);
+          const nextSibling = childIndex + 1 < p.childNodes.length ? p.childNodes[childIndex + 1] : null;
+          if (nextSibling) {
+            p.insertBefore(c2, nextSibling);
+          } else {
+            p.appendChild(c2);
+          }
+          
+          // Replace text content with zero-width space placeholder (don't remove the node)
+          t.textContent = '&#8203;';
         });
       }
 
@@ -274,14 +311,19 @@ export function load(source: Source): CompilerScope {
     }
   }
 
-  const root = {
-    id: id++,
+  // Process the document element directly as the root scope
+  // Start with a temporary container to collect the root scope
+  const tempContainer = {
+    id: -1,
     type: undefined,
     children: [],
     loc: source.doc.loc,
   };
-  load(source.doc.documentElement!, root);
-  return root;
+  load(source.doc.documentElement!, tempContainer);
+  
+  // Return the first child as the root (the <html> element scope)
+  // If no scope was created, return the container
+  return tempContainer.children.length > 0 ? tempContainer.children[0] : tempContainer;
 }
 
 function handleTestAttr(scope: CompilerScope, name: string) {

@@ -54,7 +54,7 @@ it('should deliver client code', async () => {
 
 files.forEach(file => {
 
-  it.skip(file, async () => {
+  it(file, async () => {
     browser = new Browser({ settings: { disableJavaScriptFileLoading: true } });
     const page = browser.newPage();
 

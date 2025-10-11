@@ -30,11 +30,10 @@ describe('compiler-runtime integration', () => {
     expect(rootScope.children).toBeDefined();
     expect(rootScope.children.length).toBeGreaterThan(0);
     
-    // Find the body scope which should have our values
-    const pageScope = rootScope.children[0]; // page
-    expect(pageScope.props.name).toBe('page');
+    // Root scope is now the page scope directly
+    expect(rootScope.props.name).toBe('page');
     
-    const bodyScope = pageScope.children.find((child: any) => child.props.name === 'body');
+    const bodyScope = rootScope.children.find((child: any) => child.props.name === 'body');
     expect(bodyScope).toBeDefined();
     
     if (bodyScope) {
@@ -73,9 +72,8 @@ describe('compiler-runtime integration', () => {
     const context = new BaseContext({ root: scopeProps }, {});
     const rootScope = context.root;
     
-    // Navigate to the div scope
-    const pageScope = rootScope.children[0];
-    const bodyScope = pageScope.children.find((child: any) => child.props.name === 'body');
+    // Navigate to the div scope - root is now the page scope
+    const bodyScope = rootScope.children.find((child: any) => child.props.name === 'body');
     
     if (bodyScope) {
       const divScope = bodyScope.children[0];

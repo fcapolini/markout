@@ -90,15 +90,23 @@ Three simple additions to standard HTML:
 - **No Shadow DOM**: Clean debugging and styling while maintaining encapsulation through scoping system
 - **Component Flow**: Parse `<:define>` → Register template → Clone on instantiation → Activate reactive runtime
 - **Replication Integration**: `<template :foreach>` uses same component instantiation system
-- **Current Status**: Runtime component system needs completion before compiler integration
+- **Current Status**: Compiler generates BaseScopeProps structures that runtime instantiates as reactive scopes
+
+**Current Implementation Status**: Fully functional server with SSR/CSR support
+- **Server Infrastructure**: Complete Express.js server with middleware, rate limiting, compression, PM2 support
+- **Reactive Runtime**: Full BaseContext/BaseScope/BaseValue system with DOM update batching
+- **Compiler Pipeline**: Multi-phase compilation from HTML to reactive scope structures
+- **Client-Server Hydration**: Server renders with reactive logic, client takes over seamlessly
+- **Testing Coverage**: Comprehensive test suite covering runtime, compiler, integration, and server components
 
 **Tooling Ecosystem**: Complete developer experience
-- **CLI Tool**: Zero-setup development and deployment solution
-  - Development server with hot reload (`markout serve`)
-  - Project scaffolding and templates
-  - Build commands for production and static deployment
-  - Support for PWA, desktop (Electron/Tauri), and mobile (Capacitor/Cordova) targets
-- **VS Code Extension**: Advanced development support
+- **CLI Tool**: Production-ready development and deployment solution
+  - Development server with hot reload (`markout serve <docroot> --port 3000`)
+  - Built-in Express.js server with compression, rate limiting, static file serving
+  - Both SSR and CSR support with seamless client-side hydration
+  - PM2 process management for production deployments
+  - Graceful shutdown handling and error recovery
+- **VS Code Extension**: Advanced development support (planned)
   - Syntax highlighting for `:` attributes and `${...}` expressions
   - IntelliSense for components, data references, and fragment imports
   - Dependency graph visualization for data pipelines and component relationships
@@ -120,54 +128,125 @@ Example - complete working counter:
 
 ## Technical Architecture
 
-Built on TypeScript Node.js + Express.js foundation with:
+Built on TypeScript Node.js + Express.js foundation with complete full-stack reactive framework:
 
-- **Reactive Runtime**: Pull-based reactive system with hierarchical scopes, proxy-based dependency tracking, and polymorphic DOM support (works with both browser DOM and server-side DOM)
-- **DOM Update Batching**: High-performance batching system that prevents excessive DOM updates
-  - **Set-based Deduplication**: Automatically deduplicates multiple updates to the same value using Set data structure for O(1) performance
-  - **Automatic Batch Boundaries**: Batching integrated with reactive cycle boundaries - updates are automatically flushed when `pushLevel`/`refreshLevel` reaches 0
-  - **Transparent Operation**: Batching works seamlessly with existing reactive system without requiring code changes
-  - **Cross-scope Batching**: Updates from multiple scopes are batched together in a single context-wide pending Set
-  - **Propagation Integration**: Reactive propagation respects batching boundaries for optimal performance
-  - **Push and Pull Coverage**: Batches both push-side updates (via `value.set()`) and pull-side updates (via `context.refresh()` and `scope.updateValues()`)
-  - **Nested Operation Support**: Handles nested refresh cycles and propagation calls while maintaining single batching context
-- **HTML Parser**: Sophisticated parser for "augmented HTML" with `:` attributes and `${...}` expressions
-- **Compiler**: Multi-phase compiler using Acorn for JavaScript AST analysis and escodegen for code generation
-  - **Load**: Parse HTML structure and extract scopes/values
-  - **Qualify**: Auto-transform expressions with `this.` qualification for lexical scoping
-  - **Resolve**: Build dependency graphs for reactive updates
-  - **Generate**: Output BaseScopeProps structure for runtime
-- **Server-side DOM**: Enables server-side pre-rendering with same reactive logic
+### **Reactive Runtime System**
+- **Pull-based Reactive Engine**: Hierarchical scope system with proxy-based dependency tracking
+- **Polymorphic DOM Support**: Same reactive logic works on browser DOM and server-side DOM for SSR/CSR
+- **BaseContext**: Central coordinator with refresh cycles and batching system
+- **BaseScope**: Hierarchical scopes with lexical variable lookup and proxy-based access
+- **BaseValue**: Reactive values with expression evaluation, dependency tracking, and change propagation
+- **WebScope**: Browser-specific scope implementation with DOM binding (attributes, classes, styles, text, events)
+
+### **High-Performance DOM Update Batching**
+- **Set-based Deduplication**: Automatically deduplicates multiple updates to same value using Set data structure
+- **Automatic Batch Boundaries**: Batching integrated with reactive cycle boundaries - updates flushed when `refreshLevel` reaches 0
+- **Transparent Operation**: Batching works seamlessly without requiring code changes
+- **Cross-scope Batching**: Updates from multiple scopes batched in single context-wide pending Set
+- **Propagation Integration**: Reactive propagation respects batching boundaries for optimal performance
+- **Push and Pull Coverage**: Batches both `value.set()` updates and `context.refresh()`/`scope.updateValues()` calls
+- **Nested Operation Support**: Handles nested refresh cycles while maintaining single batching context
+
+### **Multi-Phase Compiler Pipeline**
+Advanced compiler using Acorn for JavaScript AST analysis and escodegen for code generation:
+- **Load Phase**: Parse HTML structure and extract scopes/values with location tracking
+- **Validate Phase**: Enforce framework naming rules (no `$` in user identifiers) and syntax validation
+- **Qualify Phase**: Auto-transform expressions with `this.` qualification for proper lexical scoping
+- **Resolve Phase**: Build dependency graphs for reactive value updates and reference tracking
+- **Comptime Phase**: Compile-time evaluation and optimization (future)
+- **Treeshake Phase**: Remove unused values and optimize scope hierarchy
+- **Generate Phase**: Output BaseScopeProps structure for runtime execution
+
+### **HTML Processing Pipeline**
+- **Sophisticated Parser**: Handles "augmented HTML" with `:` attributes and `${...}` expressions
+- **Preprocessor**: Module loading, fragment imports, and dependency resolution
+- **Server-side DOM**: Custom DOM implementation enabling server-side pre-rendering with reactive logic
 
 ## Project Structure
 
-- TypeScript source files in `src/` directory
-  - `src/runtime/` - Reactive runtime system (BaseValue, BaseScope, WebScope)
-  - `src/html/` - HTML parser, preprocessor, and DOM implementation
-  - `src/compiler/` - Multi-phase compiler with AST transformation and dependency analysis
-- Compiled JavaScript output in `dist/` directory
-- Express.js server foundation
-- Test files in `tests/` directory with comprehensive coverage
+### **Source Code Architecture** (`src/`)
+- **`src/index.ts`** - CLI entry point using Commander.js for `markout serve` command
+- **`src/client.ts`** - Browser-side entry point for client-side reactive runtime
+- **`src/constants.ts`** - Framework constants and global identifiers
+
+### **Server Infrastructure** (`src/server/`)
+- **`src/server/server.ts`** - Express.js server with compression, rate limiting, process management
+- **`src/server/middleware.ts`** - Core Markout middleware handling SSR/CSR, compilation, and page serving
+- **`src/server/logger.ts`** - Structured logging system with timestamps
+- **`src/server/exit-hook.ts`** - Graceful shutdown handling (PM2 compatible)
+
+### **Reactive Runtime System** (`src/runtime/`)
+- **`src/runtime/base/base-context.ts`** - Central reactive coordinator with refresh cycles and batching
+- **`src/runtime/base/base-scope.ts`** - Hierarchical scopes with proxy-based access and lexical lookup
+- **`src/runtime/base/base-value.ts`** - Reactive values with expression evaluation and dependency tracking
+- **`src/runtime/base/base-global.ts`** - Global scope with built-in functions (console, etc.)
+- **`src/runtime/web/web-context.ts`** - Browser-specific context with DOM element mapping
+- **`src/runtime/web/web-scope.ts`** - DOM-aware scope with attribute/style/text/event binding
+
+### **Compiler Pipeline** (`src/compiler/`)
+- **`src/compiler/compiler.ts`** - Main compiler orchestrating multi-phase compilation
+- **`src/compiler/loader.ts`** - Load phase: HTML structure parsing and scope extraction
+- **`src/compiler/validator.ts`** - Validate phase: Framework rules and syntax validation
+- **`src/compiler/qualifier.ts`** - Qualify phase: Expression transformation for lexical scoping
+- **`src/compiler/resolver.ts`** - Resolve phase: Dependency graph construction
+- **`src/compiler/comptime.ts`** - Comptime phase: Compile-time evaluation (future)
+- **`src/compiler/treeshaker.ts`** - Treeshake phase: Dead code elimination
+- **`src/compiler/generator.ts`** - Generate phase: AST to BaseScopeProps conversion
+- **`src/compiler/service.ts`** - Compiler service utilities
+
+### **HTML Processing** (`src/html/`)
+- **`src/html/parser.ts`** - HTML parser supporting `:` attributes and `${...}` expressions
+- **`src/html/preprocessor.ts`** - Module loading, imports, and dependency resolution
+- **`src/html/dom.ts`** - Cross-platform DOM abstraction (browser/server compatibility)
+- **`src/html/server-dom.ts`** - Server-side DOM implementation for SSR
+
+### **Build System**
+- **`dist/`** - Compiled JavaScript output (esbuild)
+- **`scripts/build-server.mjs`** - Server build configuration (Node.js target)
+- **`scripts/build-client.mjs`** - Client build configuration (browser target, minified)
+
+### **Comprehensive Testing** (`tests/`)
+- **`tests/runtime/`** - Runtime system tests (BaseContext, BaseScope, BaseValue, batching)
+- **`tests/compiler/`** - Compiler phase tests with input/output fixtures
+- **`tests/html/`** - HTML parser and preprocessor tests
+- **`tests/server/`** - Server integration tests
+- **`tests/integration/`** - Full compiler-runtime integration tests
+- Testing with Vitest, Happy-DOM, and comprehensive coverage reporting
 
 ## Available Scripts
 
-- `npm run dev` - Development server with hot reload (TypeScript)
-- `npm run build` - Build TypeScript to JavaScript
-- `npm start` - Production server (single run)
-- `npm run start:prod` - Production server with auto-restart on crashes
-- `npm run start:prod` - Production server with PM2 (cluster mode)
+### **Development**
+- `npm run dev` - Development server with hot reload using nodemon and ts-node
+- `npm run build` - Build both server and client using esbuild (fast TypeScript compilation)
+- `npm run watch` - Watch TypeScript files and rebuild continuously
+- `npm run clean` - Clean the dist directory
+
+### **Production Server Management**
+- `npm start` - Production server (single Node.js process)
+- `npm run start:prod` - Production server with PM2 cluster mode
+- `npm run start:dev` - Development server with PM2
 - `npm run stop` - Stop PM2 processes
 - `npm run restart` - Restart PM2 processes
 - `npm run reload` - Graceful reload PM2 processes (zero downtime)
+- `npm run delete` - Delete PM2 processes
 - `npm run logs` - View PM2 logs
 - `npm run monit` - Open PM2 monitoring dashboard
-- `npm run watch` - Watch TypeScript files and rebuild
-- `npm run clean` - Clean the dist directory
-- `npm test` - Run tests in watch mode
-- `npm run test:run` - Run tests once
-- `npm run test:coverage` - Run tests with coverage report
+
+### **Testing & Quality**
+- `npm test` - Run tests once (Vitest)
+- `npm run test:watch` - Run tests in watch mode
+- `npm run test:coverage` - Run tests with coverage report (V8 coverage)
 - `npm run format` - Format code with Prettier
-- `npm run format:check` - Check if code is formatted
+- `npm run format:check` - Check if code is formatted correctly
+
+### **CLI Usage**
+```bash
+# Serve a Markout project
+node dist/index.js serve <docroot> [--port 3000]
+
+# Example: serve current directory on port 8080
+node dist/index.js serve . --port 8080
+```
 
 ## Development Philosophy
 
@@ -176,6 +255,71 @@ Built on TypeScript Node.js + Express.js foundation with:
 - **Lexical scoping**: Variables work as developers expect - compiler auto-transforms for reactive system
 - **Ecosystem compatibility**: Bootstrap wrapper for familiar components, Web Components support (Shoelace, etc.)
 - **Thoughtful evolution**: Changes driven by real needs, not marketing pressure
+
+## Development Guidelines
+
+- Use TypeScript for all source code
+- Follow Express.js best practices
+- Build and test thoroughly - stability is a core value
+- Write tests for new features using Vitest
+- Use Prettier for consistent code formatting
+- Focus on developer experience and API design
+- Consider long-term maintenance and stability in all decisions
+
+## API Endpoints
+
+- `GET /` - Hello World message
+- `GET /health` - Health check endpoint
+- `POST /api/sensitive` - Example endpoint with stricter rate limiting
+- `GET /api/rate-limit-status` - Check current rate limit status
+
+## Testing Framework
+
+- **Vitest** - Fast unit test framework with TypeScript support
+- **Supertest** - HTTP assertion library for API testing
+- **jsdom** - DOM environment for client-side testing
+- **Coverage reports** - V8 coverage provider with HTML/JSON output
+- Test files located in `tests/` directory
+- Automatic environment selection (Node.js vs jsdom based on file naming)
+
+## Testing Environment Selection
+
+Files are automatically assigned to the appropriate test environment:
+
+- `*.dom.test.ts` files run in **jsdom** environment for DOM/client-side testing
+- Files in `tests/dom/` or `tests/client/` directories run in **jsdom** environment
+- All other test files run in **Node.js** environment for server-side testing
+
+## Example Components
+
+- `src/utils.ts` - Basic utility functions (math, string operations)
+- `src/dom-utils.ts` - DOM manipulation utilities for client-side code
+- `src/counter.ts` - Example client-side component with DOM interaction
+- `src/index.ts` - Main Express server application
+
+## Test Examples
+
+- `tests/utils.test.ts` - Unit tests for utility functions
+- `tests/api.test.ts` - Integration tests for API endpoints
+- `tests/rate-limit.test.ts` - Rate limiting functionality tests
+- `tests/dom-utils.dom.test.ts` - DOM utility function tests
+- `tests/counter.dom.test.ts` - Client-side component tests
+
+## Production Features
+
+- **PM2 Process Manager** - Cluster mode, zero-downtime deployments, crash recovery
+- **Health Monitoring** - HTTP endpoint health checks and automatic restarts
+- **Load Balancing** - Built-in load balancer across CPU cores
+- **Logging** - Centralized logging with log rotation and monitoring
+- **Memory Management** - Automatic restart on memory leaks (1GB limit)
+
+## Security Features
+
+- **Rate Limiting** - express-rate-limit for API protection and DoS prevention
+- **Request throttling** - Different limits for general and sensitive endpoints
+- **Standard headers** - Rate limit information in response headers
+
+Project is ready for development and production use with comprehensive testing, security features, and enterprise-grade process management.
 
 ## Development Guidelines
 

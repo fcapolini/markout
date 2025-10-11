@@ -1,19 +1,17 @@
 ({
   id: 0,
-  children: [{
-    id: 1,
-    name: 'page',
+  name: 'page',
     children: [
       {
-        id: 2,
+        id: 1,
         name: 'head',
         children: []
       },
       {
-        id: 3,
+        id: 2,
         name: 'body',
         children: [{
-          id: 4,
+          id: 3,
           type: 'foreach',
           values: {
             data: {
@@ -21,14 +19,14 @@
             }
           },
           children: [{
-            id: 5,
+            id: 4,
             values: {
               data: {
                 exp: function () { return ''; }
               }
             },
             children: [{
-              id: 6,
+              id: 5,
               type: 'foreach',
               values: {
                 data: {
@@ -37,12 +35,12 @@
                 }
               },
               children: [{
-                id: 7,
+                id: 6,
                 values: {
                   data: {
                     exp: function () { return ''; }
                   },
-                  text$7_0: {
+                  text$6_0: {
                     exp: function () { return this.data; },
                     deps: [function () { return this.$value('data'); }]
                   }
@@ -54,5 +52,4 @@
         }]
       }
     ]
-  }]
 });

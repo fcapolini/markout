@@ -1,21 +1,18 @@
 ({
   id: 0,
-  children: [
-    {
-      id: 1,
-      name: 'page',
+  name: 'page',
       children: [
         {
-          id: 2,
+          id: 1,
           name: 'head',
           children: []
         },
         {
-          id: 3,
+          id: 2,
           name: 'body',
           children: [
             {
-              id: 4,
+              id: 3,
               name: 'title',
               values: {
                 attr$v: {
@@ -27,6 +24,4 @@
           ]
         },
       ]
-    }
-  ]
-})
+});

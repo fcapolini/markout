@@ -77,9 +77,6 @@ export function markout(props: MarkoutProps) {
       // https://esbuild.github.io/content-types/#direct-eval
       const root = (0, eval)(propsJs);
       const e = doc.documentElement;
-      doc = new ServerDocument(doc.loc);
-      const docElement = e!.clone(doc, null);
-      doc.childNodes.push(docElement);
       const props: WebContextProps = { doc, root };
       new WebContext(props);
     }

@@ -1,52 +1,47 @@
 {
   "id": 0,
+  "name": {
+    "val": "page"
+  },
   "children": [
     {
       "id": 1,
       "name": {
-        "val": "page"
+        "val": "head"
       },
       "children": [
         {
           "id": 2,
-          "name": {
-            "val": "head"
+          "type": "define",
+          "defines": "app-card",
+          "xtends": "div",
+          "slotmap": {
+            "a": 3,
+            "default": 4
           },
           "children": [
             {
               "id": 3,
-              "type": "define",
-              "defines": "app-card",
-              "xtends": "div",
-              "slotmap": {
-                "a": 4,
-                "default": 5
-              },
               "children": [
                 {
                   "id": 4,
-                  "children": [
-                    {
-                      "id": 5,
-                      "name": {
-                        "val": "x"
-                      },
-                      "children": []
-                    }
-                  ]
+                  "name": {
+                    "val": "x"
+                  },
+                  "children": []
                 }
               ]
             }
           ]
-        },
-        {
-          "id": 6,
-          "name": {
-            "val": "body"
-          },
-          "children": []
         }
       ]
+    },
+    {
+      "id": 5,
+      "name": {
+        "val": "body"
+      },
+      "children": []
     }
   ]
 }

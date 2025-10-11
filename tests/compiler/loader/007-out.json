@@ -1,30 +1,31 @@
 {
   "id": 0,
+  "name": {
+    "val": "page"
+  },
   "children": [
     {
       "id": 1,
-      "name": { "val": "page" },
-      "children": [
-        {
-          "id": 2,
-          "name": { "val": "head" },
-          "children": []
-        },
-        {
-          "id": 3,
-          "name": { "val": "body" },
-          "values": {
-            "text$3_0": {
-              "val": {
-                "raw": "'hi'",
-                "type": "Literal",
-                "value": "hi"
-              }
-            }
-          },
-          "children": []
+      "name": {
+        "val": "head"
+      },
+      "children": []
+    },
+    {
+      "id": 2,
+      "name": {
+        "val": "body"
+      },
+      "values": {
+        "text$2_0": {
+          "val": {
+            "raw": "'hi'",
+            "type": "Literal",
+            "value": "hi"
+          }
         }
-      ]
+      },
+      "children": []
     }
   ]
 }

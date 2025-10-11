@@ -1,40 +1,35 @@
 ({
   id: 0,
+  name: "page",
   children: [
     {
       id: 1,
-      name: "page",
+      name: "head",
       children: [
         {
           id: 2,
-          name: "head",
+          type: "define",
+          defines: "app-card",
+          slotmap: { "a": 3, "default": 4 },
           children: [
             {
               id: 3,
-              type: "define",
-              defines: "app-card",
-              slotmap: { "a": 4, "default": 5 },
               children: [
                 {
                   id: 4,
-                  children: [
-                    {
-                      id: 5,
-                      name: "x",
-                      children: [],
-                    },
-                  ],
+                  name: "x",
+                  children: [],
                 },
               ],
             },
           ],
         },
-        {
-          id: 6,
-          name: "body",
-          children: [],
-        },
       ],
+    },
+    {
+      id: 5,
+      name: "body",
+      children: [],
     },
   ],
 });
