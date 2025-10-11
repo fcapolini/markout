@@ -55,7 +55,7 @@ export class BaseContext {
   }
 
   // ===========================================================================
-  // changes batching - override in subclass
+  // changes batching
   // ===========================================================================
   pending = new Set<BaseValue>();
 

@@ -31,18 +31,18 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "escodegen": "^2.1.0",
-    "estraverse": "^5.3.0",
+    "escodegen": "2.1.0",
+    "estraverse": "5.3.0",
     "express": "5.1.0",
     "express-rate-limit": "8.1.0",
     "pm2": "6.0.13"
   },
   "devDependencies": {
-    "@types/escodegen": "^0.0.10",
-    "@types/estraverse": "^5.1.7",
+    "@types/escodegen": "0.0.10",
+    "@types/estraverse": "5.1.7",
     "@types/express": "5.0.3",
     "@types/jsdom": "27.0.0",
-    "@types/node": "24.7.0",
+    "@types/node": "24.7.2",
     "@types/supertest": "6.0.3",
     "@vitest/coverage-v8": "3.2.4",
     "jsdom": "27.0.0",
