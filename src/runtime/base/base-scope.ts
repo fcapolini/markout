@@ -15,7 +15,7 @@ export interface BaseScopeProps {
 
 export class BaseScope {
   props: BaseScopeProps;
-  context: BaseContext;
+  ctx: BaseContext;
   parent?: BaseScope;
   children: BaseScope[];
   cache: Map<string | symbol, BaseValue>;
@@ -24,7 +24,7 @@ export class BaseScope {
 
   constructor(props: BaseScopeProps, context: BaseContext, parent?: BaseScope) {
     this.props = props;
-    this.context = context;
+    this.ctx = context;
     this.children = [];
     this.cache = new Map();
     this.values = {};

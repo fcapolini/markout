@@ -123,6 +123,14 @@ Example - complete working counter:
 Built on TypeScript Node.js + Express.js foundation with:
 
 - **Reactive Runtime**: Pull-based reactive system with hierarchical scopes, proxy-based dependency tracking, and polymorphic DOM support (works with both browser DOM and server-side DOM)
+- **DOM Update Batching**: High-performance batching system that prevents excessive DOM updates
+  - **Set-based Deduplication**: Automatically deduplicates multiple updates to the same value using Set data structure for O(1) performance
+  - **Automatic Batch Boundaries**: Batching integrated with reactive cycle boundaries - updates are automatically flushed when `pushLevel`/`refreshLevel` reaches 0
+  - **Transparent Operation**: Batching works seamlessly with existing reactive system without requiring code changes
+  - **Cross-scope Batching**: Updates from multiple scopes are batched together in a single context-wide pending Set
+  - **Propagation Integration**: Reactive propagation respects batching boundaries for optimal performance
+  - **Push and Pull Coverage**: Batches both push-side updates (via `value.set()`) and pull-side updates (via `context.refresh()` and `scope.updateValues()`)
+  - **Nested Operation Support**: Handles nested refresh cycles and propagation calls while maintaining single batching context
 - **HTML Parser**: Sophisticated parser for "augmented HTML" with `:` attributes and `${...}` expressions
 - **Compiler**: Multi-phase compiler using Acorn for JavaScript AST analysis and escodegen for code generation
   - **Load**: Parse HTML structure and extract scopes/values

@@ -159,24 +159,21 @@ it(`can see outer value`, () => {
 });
 
 it(`should call value callback (1)`, () => {
-  let val = 0, old = 0;
+  let val = 0;
   const context = new BaseContext({
     root: { id: '0', values: { v1: { val: 42 } } },
   });
-  context.root.values['v1'].cb = ((s, v, o) => {
+  context.root.values['v1'].cb = ((s, v) => {
     val = v;
-    old = o;
   });
   context.root.proxy.v1++;
   assert.equal(val, 43);
-  assert.equal(old, 42);
   context.root.proxy.v1++;
   assert.equal(val, 44);
-  assert.equal(old, 43);
 });
 
 it(`should call value callback (2)`, () => {
-  let val = 0, old = 0;
+  let val = 0;
   const context = new BaseContext({
     root: {
       id: '0',
@@ -197,20 +194,17 @@ it(`should call value callback (2)`, () => {
       },
     },
   });
-  context.root.values['v1'].cb = ((s, v, o) => {
+  context.root.values['v1'].cb = ((s, v) => {
     val = v;
-    old = o;
   });
   context.root.proxy.v0++;
   assert.equal(val, 43);
-  assert.equal(old, 42);
   context.root.proxy.v0++;
   assert.equal(val, 44);
-  assert.equal(old, 43);
 });
 
 it(`should call value callback (2)`, () => {
-  let val = 0, old = 0;
+  let val = 0;
   const context = new BaseContext({
     root: {
       id: '0',
@@ -239,16 +233,13 @@ it(`should call value callback (2)`, () => {
       ],
     },
   });
-  context.root.children[0].values['v1'].cb = ((s, v, o) => {
+  context.root.children[0].values['v1'].cb = ((s, v) => {
     val = v;
-    old = o;
   });
   context.root.proxy.v0++;
   assert.equal(val, 43);
-  assert.equal(old, 42);
   context.root.proxy.v0++;
   assert.equal(val, 44);
-  assert.equal(old, 43);
 });
 
 // it(`should replicate scope`, () => {

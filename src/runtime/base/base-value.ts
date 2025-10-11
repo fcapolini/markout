@@ -4,8 +4,7 @@ export type ValueExp<T> = () => T;
 export type ValueDep = () => BaseValue<any>;
 export type ValueCallback<T> = (
   s: BaseScope,
-  v: T | undefined,
-  old: T | undefined
+  v: T | undefined
 ) => void;
 
 export interface BaseValueProps<T> {
@@ -37,7 +36,8 @@ export class BaseValue<T = any> {
 
   setCB(cb: ValueCallback<T>) {
     this.cb = cb;
-    !this.exp && cb(this.scope, this.value, undefined);
+    // !this.exp && cb(this.scope, this.value);
+    !this.exp && this.scope.ctx.pending.add(this);
   }
 
   link() {
@@ -56,11 +56,11 @@ export class BaseValue<T = any> {
   }
 
   get(): T | undefined {
-    if (this.exp && this.cycle !== this.scope.context.cycle) {
+    if (this.exp && this.cycle !== this.scope.ctx.cycle) {
       if (!this.cycle || this.src.size) {
         this.update();
       }
-      this.cycle = this.scope.context.cycle;
+      this.cycle = this.scope.ctx.cycle;
     }
     return this.value;
   }
@@ -71,7 +71,8 @@ export class BaseValue<T = any> {
     this.src.clear();
     this.value = value;
     if (old == null ? value != null : value !== old) {
-      this.cb && this.cb(this.scope, value, old);
+      // this.cb && this.cb(this.scope, value);
+      this.cb && this.scope.ctx.pending.add(this);
       this.propagate();
     }
     return true;
@@ -85,13 +86,14 @@ export class BaseValue<T = any> {
       console.error(err);
     }
     if (old == null ? this.value != null : this.value !== old) {
-      this.cb && this.cb(this.scope, this.value, old);
-      this.dst.size && this.scope.context.refreshLevel < 1 && this.propagate();
+      // this.cb && this.cb(this.scope, this.value);
+      this.cb && this.scope.ctx.pending.add(this);
+      this.dst.size && this.scope.ctx.refreshLevel < 1 && this.propagate();
     }
   }
 
   protected propagate() {
-    const ctx = this.scope.context;
+    const ctx = this.scope.ctx;
     if (ctx.pushLevel < 1) {
       ctx.cycle++;
     }
@@ -99,6 +101,8 @@ export class BaseValue<T = any> {
     try {
       this.dst.forEach((v) => v.get());
     } catch (ignored) { }
-    ctx.pushLevel--;
+    if (--ctx.pushLevel < 1) {
+      ctx.applyPending();
+    }
   }
 }

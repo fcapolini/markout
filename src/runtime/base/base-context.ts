@@ -1,6 +1,6 @@
 import { BaseGlobal } from "./base-global";
 import { BaseScope, BaseScopeProps } from "./base-scope";
-import { BaseValueProps } from "./base-value";
+import { BaseValue, BaseValueProps } from "./base-value";
 
 export interface BaseContextProps {
   root: BaseScopeProps;
@@ -36,7 +36,9 @@ export class BaseContext {
     } catch (err) {
       console.error('Context.refresh()', err);
     }
-    this.refreshLevel--;
+    if (--this.refreshLevel < 1) {
+      this.applyPending();
+    }
   }
 
   /**
@@ -44,7 +46,23 @@ export class BaseContext {
    */
   init() {}
 
-  newScope(props: BaseScopeProps, context: BaseContext, parent?: BaseScope): BaseScope {
+  newScope(
+    props: BaseScopeProps,
+    context: BaseContext,
+    parent?: BaseScope
+  ): BaseScope {
     return new BaseScope(props, context, parent);
+  }
+
+  // ===========================================================================
+  // changes batching - override in subclass
+  // ===========================================================================
+  pending = new Set<BaseValue>();
+
+  applyPending() {
+    this.pending.forEach(v => {
+      v.cb!(v.scope, v.value);
+    });
+    this.pending.clear();
   }
 }
