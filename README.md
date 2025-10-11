@@ -75,9 +75,9 @@ Let's be clear: this constant state of radical change is not natural evolution, 
 
 Markout is an attempt to solve these problems, or at least to prove that solutions can be found. And in keeping with another of our industry's great ironies, here we are trying to simplify things by proposing *yet another solution*.
 
-A final note about Markout's development process: this is the culmination of a long series of explorations, proofs of concept, and ~~failed attempts~~ learning experiences. In no other project I felt so clearly why indeed *simplicity is the ultimate sophistication*: keeping the framework out of the way of application code required a lot of consideration.
+A final note about Markout's development process: this is the culmination of a long series of explorations, proofs of concept, and ~~failed attempts~~ learning experiences. In no other project I felt so clearly why indeed *simplicity is the ultimate sophistication*: keeping the framework out of the way of application code does in fact require a lot of consideration.
 
-I think I can proudly say that, compared to frameworks which *move fast and break (other people's) stuff*, I actually *thought it out before I pushed it out*.
+I think I can proudly say that, compared to frameworks which *move fast and break (other people's) stuff*, I actually *thought it out before I pushed it out*. There, *that*'s a revolutionary idea! 🤯
 
 ## Principles
 
@@ -322,7 +322,7 @@ Now you have a localized menu which seamlessly updates when users switch languag
 In addition, again because `:json` is a logic attribute, you can locally generate data:
 
 ```html
-<:data :aka="totalsData" :json=${generate()} :generate=${() => {
+<:data :aka="totalsData" :json=${_generate()} :_generate=${() => {
   return ...
 }}>
 ```

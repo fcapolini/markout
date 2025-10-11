@@ -2,7 +2,7 @@ import * as acorn from 'acorn';
 import estraverse from 'estraverse';
 import * as es from 'estree';
 import { Source } from "../html/parser";
-import { RT_PARENT_VAL_KEY } from '../runtime/const';
+import { RT_PARENT_VALUE_KEY } from '../runtime/base/base-scope';
 import { CompilerScope } from "./compiler";
 
 export function qualify(source: Source, root: CompilerScope): boolean {
@@ -34,7 +34,7 @@ function qualifyExpression(key: string, exp: acorn.Expression) {
             let object: unknown = { type: "ThisExpression", ...loc(node) };
             if (node.name === key && !inFunctionBody(stack)) {
               // reference to itself -> $parent.<itself>
-              const id = RT_PARENT_VAL_KEY;
+              const id = RT_PARENT_VALUE_KEY;
               object = {
                 type: "MemberExpression",
                 object,

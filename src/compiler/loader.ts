@@ -9,18 +9,10 @@ import {
   ServerText,
   SourceLocation,
 } from "../html/server-dom";
-import {
-  RT_ATTR_VAL_PREFIX,
-  RT_CLASS_VAL_PREFIX,
-  RT_EVENT_VAL_PREFIX,
-  RT_STYLE_VAL_PREFIX,
-  RT_TEXT_MARKER1_PREFIX,
-  RT_TEXT_MARKER2,
-  RT_TEXT_VAL_PREFIX,
-} from "../runtime/const";
+import { DOM_TEXT_MARKER1, DOM_TEXT_MARKER2 } from "../runtime/web/web-context";
+import { RT_ATTR_VALUE_PREFIX, RT_CLASS_VALUE_PREFIX, RT_EVENT_VALUE_PREFIX, RT_STYLE_VALUE_PREFIX, RT_TEXT_VALUE_PREFIX } from "../runtime/web/web-scope";
 import { CompilerScope, CompilerScopeType } from './compiler';
 import * as k from "./const";
-import { ScopeProps } from "../runtime/scope";
 
 export function load(source: Source): CompilerScope {
   let id = 0;
@@ -183,7 +175,7 @@ export function load(source: Source): CompilerScope {
           if (name.startsWith(k.CLASS_ATTR_PREFIX)) {
             const key = name.substring(k.CLASS_ATTR_PREFIX.length);
             scope.values || (scope.values = {});
-            scope.values[RT_CLASS_VAL_PREFIX + key] = {
+            scope.values[RT_CLASS_VALUE_PREFIX + key] = {
               val: (attr as ServerAttribute).value,
               keyLoc: (attr as ServerAttribute).loc,
               valLoc: (attr as ServerAttribute).valueLoc
@@ -194,7 +186,7 @@ export function load(source: Source): CompilerScope {
           if (name.startsWith(k.STYLE_ATTR_PREFIX)) {
             const key = name.substring(k.STYLE_ATTR_PREFIX.length);
             scope.values || (scope.values = {});
-            scope.values[RT_STYLE_VAL_PREFIX + key] = {
+            scope.values[RT_STYLE_VALUE_PREFIX + key] = {
               val: (attr as ServerAttribute).value,
               keyLoc: (attr as ServerAttribute).loc,
               valLoc: (attr as ServerAttribute).valueLoc
@@ -205,7 +197,7 @@ export function load(source: Source): CompilerScope {
           if (name.startsWith(k.EVENT_ATTR_PREFIX)) {
             const key = name.substring(k.EVENT_ATTR_PREFIX.length);
             scope.values || (scope.values = {});
-            scope.values[RT_EVENT_VAL_PREFIX + key] = {
+            scope.values[RT_EVENT_VALUE_PREFIX + key] = {
               val: (attr as ServerAttribute).value,
               keyLoc: (attr as ServerAttribute).loc,
               valLoc: (attr as ServerAttribute).valueLoc
@@ -223,7 +215,7 @@ export function load(source: Source): CompilerScope {
           // dynamic HTML attr
           e.removeAttribute(attr.name);
           scope.values || (scope.values = {});
-          scope.values[RT_ATTR_VAL_PREFIX + attr.name] = {
+          scope.values[RT_ATTR_VALUE_PREFIX + attr.name] = {
             val: (attr as ServerAttribute).value,
             keyLoc: (attr as ServerAttribute).loc,
             valLoc: (attr as ServerAttribute).valueLoc
@@ -240,7 +232,7 @@ export function load(source: Source): CompilerScope {
       ) {
         const text = texts[0];
         scope.values || (scope.values = {});
-        scope.values[RT_TEXT_VAL_PREFIX + scope.id] = {
+        scope.values[RT_TEXT_VALUE_PREFIX + scope.id] = {
           val: text.textContent as acorn.Expression,
           keyLoc: (text as ServerText).loc,
           valLoc: (text as ServerText).loc,
@@ -248,15 +240,15 @@ export function load(source: Source): CompilerScope {
       } else {
         texts.forEach((text, index) => {
           scope.values || (scope.values = {});
-          scope.values[RT_TEXT_VAL_PREFIX + scope.id + '_' + index] = {
+          scope.values[RT_TEXT_VALUE_PREFIX + scope.id + '_' + index] = {
             val: text.textContent as acorn.Expression,
             keyLoc: (text as ServerText).loc,
             valLoc: (text as ServerText).loc,
           };
           const t = text as ServerText;
           const p = t.parentElement!;
-          const m1 = `${RT_TEXT_MARKER1_PREFIX}${scope.id}_${index}`;
-          const m2 = RT_TEXT_MARKER2;
+          const m1 = `${DOM_TEXT_MARKER1}${scope.id}_${index}`;
+          const m2 = DOM_TEXT_MARKER2;
           const c1 = new ServerComment(e.ownerDocument, m1, t.loc);
           const c2 = new ServerComment(e.ownerDocument, m2, t.loc);
           p.insertBefore(c1, t);

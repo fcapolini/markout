@@ -1,6 +1,6 @@
 import * as acorn from 'acorn';
 import { SourceLocation } from '../html/server-dom';
-import { RT_VALUE_FN_KEY } from '../runtime/const';
+import { RT_VALUE_FN_KEY } from '../runtime/base/base-scope';
 import { CompilerScope, CompilerValue } from "./compiler";
 
 // https://astexplorer.net

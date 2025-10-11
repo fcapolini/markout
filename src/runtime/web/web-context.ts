@@ -4,7 +4,8 @@ import { WebScope } from './web-scope';
 import { Comment, Document, Element, NodeType, Text } from '../../html/dom';
 
 export const DOM_ID_ATTR = 'data-markout';
-export const DOM_TEXT_MARKER = '-t';
+export const DOM_TEXT_MARKER1 = '-t';
+export const DOM_TEXT_MARKER2 = '-/';
 
 export interface WebContextProps extends BaseContextProps {
   doc: Document;

@@ -3,6 +3,9 @@ import { BaseValue, BaseValueProps } from './base-value';
 
 //TODO: make sure compiler rejects logic values with $ in name
 
+export const RT_VALUE_FN_KEY = '$value';
+export const RT_PARENT_VALUE_KEY = '$parent';
+
 export interface BaseScopeProps {
   id: string;
   name?: string;

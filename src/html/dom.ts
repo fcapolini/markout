@@ -78,6 +78,6 @@ export interface Document {
 }
 
 export interface DocumentFragment extends Document {
-  // cloneNode(deep: true): Node;
+  cloneNode(deep: true): Node;
   firstElementChild: Element | null;
 }

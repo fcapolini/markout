@@ -610,10 +610,14 @@ export class ServerDocumentFragment
   override clone(
     doc: ServerDocument | null,
     parent: ServerElement | null
-  ): ServerElement {
-    const ret = super.clone(doc, parent);
-    ret.nodeType = NodeType.DOCUMENT_FRAGMENT;
-    ret.tagName = '#DOCUMENT-FRAGMENT';
+  ): ServerDocumentFragment {
+    const ret = new ServerDocumentFragment(this.loc);
+    if (parent) {
+      parent.appendChild(ret);
+    }
+    this.childNodes.forEach(n => {
+      (n as ServerNode).clone(doc, ret);
+    });
     return ret;
   }
 }

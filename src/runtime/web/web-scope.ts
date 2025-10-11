@@ -1,12 +1,13 @@
 import { Comment, Element, NodeType, Text } from "../../html/dom";
 import { BaseScope, BaseScopeProps } from "../base/base-scope";
 import { BaseValueProps } from "../base/base-value";
-import { DOM_ID_ATTR, DOM_TEXT_MARKER, WebContext } from "./web-context";
+import { DOM_ID_ATTR, DOM_TEXT_MARKER1, WebContext } from "./web-context";
 
-export const ATTR_VALUE_PREFIX = 'attr$';
-export const CLASS_VALUE_PREFIX = 'class$';
-export const STYLE_VALUE_PREFIX = 'style$';
-export const TEXT_VALUE_PREFIX = 'text$';
+export const RT_ATTR_VALUE_PREFIX = 'attr$';
+export const RT_CLASS_VALUE_PREFIX = 'class$';
+export const RT_STYLE_VALUE_PREFIX = 'style$';
+export const RT_TEXT_VALUE_PREFIX = 'text$';
+export const RT_EVENT_VALUE_PREFIX = 'event$';
 
 export class WebScope extends BaseScope {
   dom!: Element;
@@ -31,7 +32,7 @@ export class WebScope extends BaseScope {
         }
         if (
           n.nodeType === NodeType.COMMENT &&
-          (n as Comment).textContent.startsWith(DOM_TEXT_MARKER)
+          (n as Comment).textContent.startsWith(DOM_TEXT_MARKER1)
         ) {
           this.texts.push(childNodes[i + 1] as Text);
         }
@@ -42,8 +43,8 @@ export class WebScope extends BaseScope {
 
   override newValue(key: string, props: BaseValueProps<any>) {
     const ret = super.newValue(key, props);
-    if (key.startsWith(ATTR_VALUE_PREFIX)) {
-      const name = this.camelToDash(key.slice(ATTR_VALUE_PREFIX.length));
+    if (key.startsWith(RT_ATTR_VALUE_PREFIX)) {
+      const name = this.camelToDash(key.slice(RT_ATTR_VALUE_PREFIX.length));
       ret.setCB((_, val) => {
         if (val == null) {
           this.dom.removeAttribute(name);
@@ -53,8 +54,8 @@ export class WebScope extends BaseScope {
       });
       return ret;
     }
-    if (key.startsWith(CLASS_VALUE_PREFIX)) {
-      const name = this.camelToDash(key.slice(CLASS_VALUE_PREFIX.length));
+    if (key.startsWith(RT_CLASS_VALUE_PREFIX)) {
+      const name = this.camelToDash(key.slice(RT_CLASS_VALUE_PREFIX.length));
       ret.setCB((_, val) => {
         if (val) {
           this.dom.classList.add(name);
@@ -64,15 +65,15 @@ export class WebScope extends BaseScope {
       });
       return ret;
     }
-    if (key.startsWith(STYLE_VALUE_PREFIX)) {
-      const name = this.camelToDash(key.slice(STYLE_VALUE_PREFIX.length));
+    if (key.startsWith(RT_STYLE_VALUE_PREFIX)) {
+      const name = this.camelToDash(key.slice(RT_STYLE_VALUE_PREFIX.length));
       ret.setCB((_, val) => {
         this.dom.style.setProperty(name, val);
       });
       return ret;
     }
-    if (key.startsWith(TEXT_VALUE_PREFIX)) {
-      const t = this.texts[parseInt(key.slice(TEXT_VALUE_PREFIX.length))];
+    if (key.startsWith(RT_TEXT_VALUE_PREFIX)) {
+      const t = this.texts[parseInt(key.slice(RT_TEXT_VALUE_PREFIX.length))];
       ret.setCB((_, val) => {
         t.textContent = val == null ? '&#8203' : val;
       });
