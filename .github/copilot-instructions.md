@@ -48,7 +48,7 @@ Three simple additions to standard HTML:
 - Localization example: Dynamic menu that updates when language changes
 - No separate data layers: Declare data needs directly in HTML
 - Composable transformations: Build complex data flows without Redux-style complexity
-- Async boundary management: Synchronous reactivity triggered by async events and data
+- Async boundary management: Synchronous reactivity triggered by events, timers, and async data operations
 - Extensible transport layer: Custom communication via `:will-` and `:did-` delegate methods
 - **Business Logic Architecture**: `<:data>` is where business logic should live (validation, processing, domain rules)
 - **Separation of Concerns**: Presentation logic scattered in visual objects, business logic centralized in data objects
@@ -58,8 +58,9 @@ Three simple additions to standard HTML:
 - Future tooling needs: Dependency analysis, circular detection, type inference for VS Code extension
 
 **Reactive Expressions in Special Tags**: 
-- `<style>`, `<title>`, and `<script>` tags support reactive expressions `${...}`
-- Enables reactive CSS, dynamic titles, and dynamic script generation
+- `<style>` and `<title>` tags support reactive expressions `${...}`
+- `<script>` tags are excluded to avoid conflicts with user JavaScript template literals
+- Enables reactive CSS and dynamic titles
 - Special handling required - cannot use standard HTML comment placemarkers in these contexts
 - **CSS Reactivity Guidelines**: Use sparingly for theming and configuration that changes infrequently (e.g., at application launch)
 - For dynamic styling, prefer `:class-` and `:style-` logic values on individual elements (browser-optimized)

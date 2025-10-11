@@ -350,7 +350,7 @@ For one, `<:data>` is where business logic should live: while presentation logic
 </form>
 ```
 
-Another important thing to clarify is: `<:data>` is where `async` stuff lives. Markout reactivity is synchronous, but it can be triggered asynchronously by two sources: events and data.
+Another important thing to clarify is: `<:data>` is where `async/await` and promise-based code, if any, should live. Markout reactivity is synchronous, but it can be triggered by events, timers, and asynchronous data operations.
 
 So much so that `<:data>` can be used to formalize inter-process communication with [workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers).
 
