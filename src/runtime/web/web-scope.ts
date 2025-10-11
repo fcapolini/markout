@@ -19,7 +19,7 @@ export class WebScope extends BaseScope {
 
   override init() {
     super.init();
-    this.dom = (this.ctx as WebContext).scopeElements.get(this.props.id)!;
+    this.dom = (this.ctx as WebContext).scopeElements.get(`${this.props.id}`)!;
     this.texts = [];
     const f = (e: Element) => {
       const childNodes = [...e.childNodes];

@@ -8,10 +8,11 @@ export default defineConfig({
       NODE_ENV: 'test',
     },
     environmentMatchGlobs: [
-      ['**/tests/dom/**', 'jsdom'],
-      ['**/tests/client/**', 'jsdom'],
-      ['**/*.dom.test.ts', 'jsdom'],
-      ['**/*.client.test.ts', 'jsdom'],
+      ['**/tests/dom/**', 'happy-dom'],
+      ['**/tests/client/**', 'happy-dom'],
+      ['**/*.dom.test.ts', 'happy-dom'],
+      ['**/*.client.test.ts', 'happy-dom'],
+      ['**/*.browser.test.ts', 'happy-dom'],
     ],
     coverage: {
       provider: 'v8',

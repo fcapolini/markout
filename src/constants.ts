@@ -1,0 +1,1 @@
+export const PROPS_GLOBAL = '__MARKOUT_PROPS';
