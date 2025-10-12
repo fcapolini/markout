@@ -263,7 +263,9 @@ export abstract class ServerContainerNode extends ServerNode {
 
   insertBefore(n: Node, ref: Node | null): Node {
     if (n.nodeType === NodeType.DOCUMENT_FRAGMENT) {
-      (n as ServerContainerNode).childNodes.forEach(n => this.insertBefore(n, ref));
+      (n as ServerContainerNode).childNodes.forEach(n =>
+        this.insertBefore(n, ref)
+      );
       return n;
     }
     this.removeChild(n);
@@ -281,7 +283,10 @@ export abstract class ServerContainerNode extends ServerNode {
     return n;
   }
 
-  protected cloneChildNodes(doc: ServerDocument | null, target: ServerContainerNode): void {
+  protected cloneChildNodes(
+    doc: ServerDocument | null,
+    target: ServerContainerNode
+  ): void {
     this.childNodes.forEach(n => {
       (n as ServerNode).clone(doc, target);
     });
@@ -319,8 +324,6 @@ export class ServerElement extends ServerContainerNode implements Element {
   set style(s: any) {
     (this.style as ServerStyleProp).cssText = `${s}`;
   }
-
-
 
   getAttributeNames(): string[] {
     const ret: string[] = [];
@@ -536,7 +539,7 @@ export class ServerDocument extends ServerElement implements Document {
         : loc
     );
     this.ownerDocument = this;
-    this.nodeType = NodeType.DOCUMENT;  // Override the nodeType after construction
+    this.nodeType = NodeType.DOCUMENT; // Override the nodeType after construction
   }
 
   createTextNode(text: string): ServerText {

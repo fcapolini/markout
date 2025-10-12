@@ -4,17 +4,16 @@ import path from 'path';
 import { assert, describe, it } from 'vitest';
 import * as dom from '../../src/html/dom';
 import * as parser from '../../src/html/parser';
-import { ServerElement, ServerTemplateElement } from '../../src/html/server-dom';
+import {
+  ServerElement,
+  ServerTemplateElement,
+} from '../../src/html/server-dom';
 
 const docroot = path.join(__dirname, 'parser');
 
 fs.readdirSync(docroot).forEach(file => {
   const filePath = path.join(docroot, file);
-  if (
-    fs.statSync(filePath).isFile() &&
-    file.endsWith('-in.html')
-  ) {
-
+  if (fs.statSync(filePath).isFile() && file.endsWith('-in.html')) {
     it(file, async () => {
       const text = await fs.promises.readFile(filePath);
       const source = parser.parse(text.toString(), file);
@@ -33,17 +32,15 @@ fs.readdirSync(docroot).forEach(file => {
       } else {
         const actualHTML = source.doc!.toString() + '\n';
         const pname = path.join(docroot, file.replace('-in.', '-out.'));
-        const expectedHTML = await fs.promises.readFile(
-          pname,
-          { encoding: 'utf8' }
-        );
+        const expectedHTML = await fs.promises.readFile(pname, {
+          encoding: 'utf8',
+        });
         assert.equal(
           parser.normalizeText(actualHTML),
           parser.normalizeText(expectedHTML)
         );
       }
     });
-
   }
 });
 
@@ -122,17 +119,17 @@ it('pos() (4)', () => {
 it('loc() (1)', () => {
   const s = new parser.Source(
     /*  1 */ '<html :title=${"sample"}\n' +
-    /*  2 */ '      // attr comment\n' +
-    /*  3 */ '      lang="en">\n' +
-    /*  4 */ '  <head><style>\n' +
-    /*  5 */ '    body {\n' +
-    /*  6 */ '      color: ${"red"};\n' +
-    /*  7 */ '    }\n' +
-    /*  8 */ '  </style></head>\n' +
-    /*  9 */ '  <body>\n' +
-    /* 10 */ '    ${title}\n' +
-    /* 11 */ '  </body>\n' +
-    /* 12 */ '</html>\n',
+      /*  2 */ '      // attr comment\n' +
+      /*  3 */ '      lang="en">\n' +
+      /*  4 */ '  <head><style>\n' +
+      /*  5 */ '    body {\n' +
+      /*  6 */ '      color: ${"red"};\n' +
+      /*  7 */ '    }\n' +
+      /*  8 */ '  </style></head>\n' +
+      /*  9 */ '  <body>\n' +
+      /* 10 */ '    ${title}\n' +
+      /* 11 */ '  </body>\n' +
+      /* 12 */ '</html>\n',
     'inline'
   );
   const source = parser.parse(s.s, 'inline');
@@ -148,7 +145,8 @@ it('loc() (1)', () => {
     i2: 177,
   });
 
-  { // root attributes
+  {
+    // root attributes
     const a1 = (root as ServerElement).attributes[0] as dom.Attribute;
     assert.equal(a1.name, ':title');
     assert.deepEqual(a1.loc, {
@@ -202,7 +200,8 @@ it('loc() (1)', () => {
     i2: 137,
   });
 
-  { // head content
+  {
+    // head content
     const style = head.childNodes[0] as dom.Element;
     assert.equal(style.tagName, 'STYLE');
     assert.deepEqual(style.loc, {
@@ -246,7 +245,8 @@ it('loc() (1)', () => {
     i2: 169,
   });
 
-  { // body text
+  {
+    // body text
     const bodyText1 = body.childNodes[0] as dom.Text;
     assert.equal(bodyText1.nodeType, dom.NodeType.TEXT);
     assert.equal(typeof bodyText1.textContent, 'string');
@@ -292,7 +292,12 @@ it('loc() (1)', () => {
 });
 
 it('should parse template tags', () => {
-  const s = parser.parse('<template>content</template>', 'test', undefined, false);
+  const s = parser.parse(
+    '<template>content</template>',
+    'test',
+    undefined,
+    false
+  );
   const root = s.doc.documentElement;
   assert.instanceOf(root, ServerTemplateElement);
 });

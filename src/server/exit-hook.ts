@@ -3,18 +3,18 @@
 
 import process from 'node:process';
 
-const callbacks = new Set<()=>void>();
+const callbacks = new Set<() => void>();
 let isCalled = false;
 let isRegistered = false;
 
-function exit(shouldManuallyExit:boolean, signal:number) {
+function exit(shouldManuallyExit: boolean, signal: number) {
   if (isCalled) {
     return;
   }
 
   isCalled = true;
 
-  callbacks.forEach((callback) => {
+  callbacks.forEach(callback => {
     callback();
   });
 
@@ -23,7 +23,7 @@ function exit(shouldManuallyExit:boolean, signal:number) {
   }
 }
 
-export default function exitHook(onExit:()=>void) {
+export default function exitHook(onExit: () => void) {
   callbacks.add(onExit);
 
   if (!isRegistered) {

@@ -87,7 +87,7 @@ export class BaseScope {
       value = scope.values[prop];
       value && scope.cache.set(prop, value);
       scope = scope.parent;
-    };
+    }
     return value;
   }
 

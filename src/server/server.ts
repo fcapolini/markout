@@ -1,6 +1,6 @@
 import express, { Application } from 'express';
-import { defaultLogger, MarkoutLogger } from "./logger";
-import { markout, MarkoutProps } from "./middleware";
+import { defaultLogger, MarkoutLogger } from './logger';
+import { markout, MarkoutProps } from './middleware';
 import * as http from 'http';
 import { AddressInfo } from 'net';
 import compression from 'compression';
@@ -15,8 +15,8 @@ export interface ServerProps extends MarkoutProps {
 }
 
 export interface TrafficLimit {
-  windowMs: number,
-  maxRequests: number,
+  windowMs: number;
+  maxRequests: number;
 }
 
 export class Server {
@@ -30,7 +30,7 @@ export class Server {
     props.ssr !== undefined || (props.ssr = true);
     props.csr !== undefined || (props.csr = true);
     this.props = props;
-    this.logger = props.logger ?? props.mute ? () => {} : defaultLogger;
+    this.logger = (props.logger ?? props.mute) ? () => {} : defaultLogger;
   }
 
   async start(): Promise<this> {
@@ -38,7 +38,7 @@ export class Server {
       return this;
     }
     const config = this.props;
-    const app = this.app = express();
+    const app = (this.app = express());
     app.use(compression());
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
@@ -56,7 +56,7 @@ export class Server {
     this.logger('info', `[server] docroot ${config.docroot}`);
     this.logger('info', `[server] address http://127.0.0.1:${this.port}/`);
     exitHook(() => this.logger('info', '[server] will exit'));
-    process.on('uncaughtException', (err) => {
+    process.on('uncaughtException', err => {
       this.logger('error', err.stack ? err.stack : `${err}`);
     });
     return this;

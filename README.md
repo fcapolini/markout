@@ -4,106 +4,106 @@
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=fcapolini_markout&metric=coverage)](https://sonarcloud.io/summary/new_code?id=fcapolini_markout)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=fcapolini_markout&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=fcapolini_markout)
 
-**HTML-based** reactive web framework for Node.js and the browser — for devs who despise *needless complexity*.
+**HTML-based** reactive web framework for Node.js and the browser — for devs who despise _needless complexity_.
 
 🚧 **Markout is currently in development and its features are being implemented!**
 
 Markout is three things:
 
-* an Express-based web server (and Express middleware)
-* an HTML-based reactive language for web presentation logic
-* a CLI development tool.
+- an Express-based web server (and Express middleware)
+- an HTML-based reactive language for web presentation logic
+- a CLI development tool.
 
 Compared to mainstream JS-based frameworks like [React](https://react.dev/):
 
-* it doesn't need a complex project setup
-* it does away with ceremonies and boilerplate code
-* it's more accessible to designers, testers, and non-technical roles
-* it makes componentization and code reuse a breeze
-* it provides server side rendering by default.
+- it doesn't need a complex project setup
+- it does away with ceremonies and boilerplate code
+- it's more accessible to designers, testers, and non-technical roles
+- it makes componentization and code reuse a breeze
+- it provides server side rendering by default.
 
 This is the canonical "click counter" example which is a traditional "hello world" for reactive frameworks:
 
 ```html
 <html>
-<body>
-   <button :count=${0} :on-click=${() => count++}>
-      Clicks: ${count}
-   </button>
-</body>
+  <body>
+    <button :count="${0}" :on-click="${()" ="">
+      count++}> Clicks: ${count}
+    </button>
+  </body>
 </html>
 ```
 
 It must be noted that:
 
-* you can simply place this code in a `.html` file, install the CLI with `npm i -g @markout/cli`, and serve it as it is with `markout serve page.html`
-* at first request, the page will be (very quickly) compiled and executed in the server (on subsequent requests the compiled version will be reused)
-* the resulting page will be pre-rendered (meaning button's text will already contain "Clicks: 0") plus it will contain page-specific code to continue execution in the browser
-* the browser will instantly show the pre-rendered page and continue execution in the client-side (meaning it will increment the count when users click the button)
-* indexing engines which don't support JavaScript execution will get the actual page content anyway, which is perfect for SEO
+- you can simply place this code in a `.html` file, install the CLI with `npm i -g @markout/cli`, and serve it as it is with `markout serve page.html`
+- at first request, the page will be (very quickly) compiled and executed in the server (on subsequent requests the compiled version will be reused)
+- the resulting page will be pre-rendered (meaning button's text will already contain "Clicks: 0") plus it will contain page-specific code to continue execution in the browser
+- the browser will instantly show the pre-rendered page and continue execution in the client-side (meaning it will increment the count when users click the button)
+- indexing engines which don't support JavaScript execution will get the actual page content anyway, which is perfect for SEO
 
 As you can see:
 
-* no complex project setup is needed
-* rather than a code snippet as is customary, this is a complete, self contained code example which doesn't need any hidden parts to actually work
-* it only includes what's actually needed and *zero boilerplate code*
-* Markout is *polymorphic* by design, meaning it runs page logic in the server by default before passing the ball to the browser (rather than having a retrofitted SSR feature like in JS-based frameworks).
+- no complex project setup is needed
+- rather than a code snippet as is customary, this is a complete, self contained code example which doesn't need any hidden parts to actually work
+- it only includes what's actually needed and _zero boilerplate code_
+- Markout is _polymorphic_ by design, meaning it runs page logic in the server by default before passing the ball to the browser (rather than having a retrofitted SSR feature like in JS-based frameworks).
 
-Make no mistake: Markout doesn't have a *simplistic design*, it actually has a *more sophisticated design* which, by making thoughtful choices and putting things in their right place, greatly simplifies developer experience without sacrificing expressiveness and power.
+Make no mistake: Markout doesn't have a _simplistic design_, it actually has a _more sophisticated design_ which, by making thoughtful choices and putting things in their right place, greatly simplifies developer experience without sacrificing expressiveness and power.
 
 With this approach to reactive code you get four big wins:
 
-* ✅ Simplicity - No ceremonies, no boilerplate
-* ✅ Familiarity - It's still HTML, just with added powers
-* ✅ Reactivity - Start with HTML, add presentation logic
-* ✅ Indexability - SEO-ready by default.
+- ✅ Simplicity - No ceremonies, no boilerplate
+- ✅ Familiarity - It's still HTML, just with added powers
+- ✅ Reactivity - Start with HTML, add presentation logic
+- ✅ Indexability - SEO-ready by default.
 
 In addition, Markout supports different types of deployment:
 
-* Development (Markout CLI)
-* Production (Markout server or Express middleware)
-* Static (JAMstack/CDN)
-* PWA ([progressive web apps](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/What_is_a_progressive_web_app))
-* Desktop ([Electron](https://www.electronjs.org)/[Tauri](https://tauri.app)/[Wails](https://wails.io/))
-* Mobile (Tauri/[Capacitor](https://capacitorjs.com)/[Cordova](https://cordova.apache.org))
+- Development (Markout CLI)
+- Production (Markout server or Express middleware)
+- Static (JAMstack/CDN)
+- PWA ([progressive web apps](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/What_is_a_progressive_web_app))
+- Desktop ([Electron](https://www.electronjs.org)/[Tauri](https://tauri.app)/[Wails](https://wails.io/))
+- Mobile (Tauri/[Capacitor](https://capacitorjs.com)/[Cordova](https://cordova.apache.org))
 
 **NOTE**: Of course you can still have a full blown project setup when needed — just simpler than what JS-based frameworks require.
 
 ## Motivation
 
-Life as a web developer has become unduly complex. Even the simplest projects require a complex setup these days. And complexity extends to application code: modern reactive frameworks force us to pollute our code with obscure ceremonies (like `useState`, `useEffect` and so on) because of *their own implementation details*.
+Life as a web developer has become unduly complex. Even the simplest projects require a complex setup these days. And complexity extends to application code: modern reactive frameworks force us to pollute our code with obscure ceremonies (like `useState`, `useEffect` and so on) because of _their own implementation details_.
 
-In my opinion, although they are clearly very useful, they obfuscate our code *for no good reason*: reactivity should really make things simpler, not more complex. And, to make things worse, they keep changing! Even if you're perfectly fine with your code, you have to keep updating just to keep them happy.
+In my opinion, although they are clearly very useful, they obfuscate our code _for no good reason_: reactivity should really make things simpler, not more complex. And, to make things worse, they keep changing! Even if you're perfectly fine with your code, you have to keep updating just to keep them happy.
 
-Let's be clear: this constant state of radical change is not natural evolution, it's a consequence of rushed and ill considered design — coupled with hype-driven marketing. I can think of no other industry where this would be considered standard practice. This approach should be confined to bleeding edge projects, not used in *every single web project* no matter what.
+Let's be clear: this constant state of radical change is not natural evolution, it's a consequence of rushed and ill considered design — coupled with hype-driven marketing. I can think of no other industry where this would be considered standard practice. This approach should be confined to bleeding edge projects, not used in _every single web project_ no matter what.
 
-Markout is an attempt to solve these problems, or at least to prove that solutions can be found. And in keeping with another of our industry's great ironies, here we are trying to simplify things by proposing *yet another solution*.
+Markout is an attempt to solve these problems, or at least to prove that solutions can be found. And in keeping with another of our industry's great ironies, here we are trying to simplify things by proposing _yet another solution_.
 
-A final note about Markout's development process: this is the culmination of a long series of explorations, proofs of concept, and ~~failed attempts~~ learning experiences. In no other project I felt so clearly why indeed *simplicity is the ultimate sophistication*: keeping the framework out of the way of application code does in fact require a lot of consideration.
+A final note about Markout's development process: this is the culmination of a long series of explorations, proofs of concept, and ~~failed attempts~~ learning experiences. In no other project I felt so clearly why indeed _simplicity is the ultimate sophistication_: keeping the framework out of the way of application code does in fact require a lot of consideration.
 
-I think I can proudly say that, compared to frameworks which *move fast and break (other people's) stuff*, I actually *thought it out before I pushed it out*. There, *that*'s a revolutionary idea! 🤯
+I think I can proudly say that, compared to frameworks which _move fast and break (other people's) stuff_, I actually _thought it out before I pushed it out_. There, _that_'s a revolutionary idea! 🤯
 
 ## Principles
 
 First, what I think is wrong with JS-based frameworks:
 
-* if you try to hide or replace HTML you get a Frankenstein monster like JSX
-* ditto if you try to add declarative reactive logic to JavaScript, which is mainly an imperative language
-* reactivity should work intuitively and automatically and it should actually *simplify application code*: `useState()` and `useEffect()`, for example, shouldn't exist
-* you should't need to learn the dark art of keeping the framework happy; the framework should work for you, *not the other way around*: `useContext()` and `useMemo()`, for example, shouldn't exist either.
+- if you try to hide or replace HTML you get a Frankenstein monster like JSX
+- ditto if you try to add declarative reactive logic to JavaScript, which is mainly an imperative language
+- reactivity should work intuitively and automatically and it should actually _simplify application code_: `useState()` and `useEffect()`, for example, shouldn't exist
+- you should't need to learn the dark art of keeping the framework happy; the framework should work for you, _not the other way around_: `useContext()` and `useMemo()`, for example, shouldn't exist either.
 
 Then, what I think can be done about it:
 
-* **given that** reactivity works best in a *declarative context*
-* **and that** HTML is already a widely used and well known *declarative language*
-* **it's clear that** making *HTML itself reactive* makes a lot more sense than adding reactivity to JavaScript (and then having to reinvent the markup syntax in some proprietary form)
-* **and that**, to keep it clean, additions to HTML should be *unobstrusive and easy to spot*.
+- **given that** reactivity works best in a _declarative context_
+- **and that** HTML is already a widely used and well known _declarative language_
+- **it's clear that** making _HTML itself reactive_ makes a lot more sense than adding reactivity to JavaScript (and then having to reinvent the markup syntax in some proprietary form)
+- **and that**, to keep it clean, additions to HTML should be _unobstrusive and easy to spot_.
 
 As a result I came up with these additions to standard HTML:
 
-* **logic values**, added with `:`-prefixed attributes
-* **reactive expressions**, added with the familiar `${...}` syntax
-* **directives**, added with `:`-prefixed tags and augmented `<template>` tags.
+- **logic values**, added with `:`-prefixed attributes
+- **reactive expressions**, added with the familiar `${...}` syntax
+- **directives**, added with `:`-prefixed tags and augmented `<template>` tags.
 
 ## Logic values
 
@@ -111,30 +111,27 @@ Logic values are the foundation of reactivity in Markout. They can be used to ad
 
 In our click counter example we have two logic values:
 
-* `:count` which stores a number
-* `:on-click` which declares an event handler.
+- `:count` which stores a number
+- `:on-click` which declares an event handler.
 
 Logic value names must be either valid JavaScript identifiers or `*-`-prefixed names, which have special meaning for the framework. You can use:
 
-* `:on-` for [event handlers](#)
-* `:class-` for [conditional CSS classes](#)
-* `:style-` for [conditional CSS styles](#)
-* `:watch-` for [value watchers](#) (rarely needed)
-* `:did-` and `:will-` for [delegate methods](#) (advanced use cases).
+- `:on-` for [event handlers](#)
+- `:class-` for [conditional CSS classes](#)
+- `:style-` for [conditional CSS styles](#)
+- `:watch-` for [value watchers](#) (rarely needed)
+- `:did-` and `:will-` for [delegate methods](#) (advanced use cases).
 
 By adding logic values to HTML tags you're conceptually adding variables and methods to them. There's no need to use `<script>` tags to define interactive presentation logic: it becomes an integral part of Markout's reactive DOM model.
 
 To make this approach practical, tag attributes in Markout accept multiline values, can be commented out, and can have comments added to them. This makes it feel like you're defining a proper reactive visual object — because that's what you're actually doing:
 
 ```html
-<button :count=${0} :on-click=${() => count++}
-   // highlight dangerous state
-   :class-danger=${count > 3}
->
-   <!--- button text can display either the count or an error -->
-   ${count < 6
-      ? `Clicks: ${count}`
-      : `Oh my, you clicked too much and broke the Web!`}
+<button :count="${0}" :on-click="${()" ="">
+  count++} // highlight dangerous state :class-danger=${count > 3} >
+  <!--- button text can display either the count or an error -->
+  ${count < 6 ? `Clicks: ${count}` : `Oh my, you clicked too much and broke the
+  Web!`}
 </button>
 ```
 
@@ -146,10 +143,10 @@ Reactive expressions are where logic values are consumed. They adopt the familia
 
 In our latest example we have four reactive expressions:
 
-* `${0}` used to initialize `count`
-* `${() => count++}` used to define the event handler's function
-* `${count > 3}` used to conditionally apply the `danger` class to the button
-* `${count < 6 ...}` used keep button's text updated.
+- `${0}` used to initialize `count`
+- `${() => count++}` used to define the event handler's function
+- `${count > 3}` used to conditionally apply the `danger` class to the button
+- `${count < 6 ...}` used keep button's text updated.
 
 Of these, only the last two exhibit an actual reactive behavior: they keep button's class and text updated when the value of `count` changes.
 
@@ -159,31 +156,31 @@ The second is a function, which is also never re-evaluated by design.
 
 ### Optimizations
 
-Although it's *completely transparent* for developers, it's worth noting that DOM updates caused by reactive expression updates are batched to prevent the so called "layout thrashing" in the browser.
+Although it's _completely transparent_ for developers, it's worth noting that DOM updates caused by reactive expression updates are batched to prevent the so called "layout thrashing" in the browser.
 
 This means a set of changes caused by an application state change is applied as a whole at the same time and without duplicated DOM access.
 
 Please note that only the DOM application of changes is batched: logic values themselves are always consistent with the latest changes, giving you the best of both worlds: performance optimization and programming model consistency.
 
-Given Markout's design where updates are surgically applied where needed, this results in better performance than the vaunted *Virtual DOM* adopted in other frameworks.
+Given Markout's design where updates are surgically applied where needed, this results in better performance than the vaunted _Virtual DOM_ adopted in other frameworks.
 
 ### Reactivity implementation
 
-**No Virtual DOM, No Re-rendering Nightmare**: Unlike frameworks that re-render entire component trees and rely on diffing algorithms to figure out what changed, Markout knows *exactly* what needs updating because of its reactive dependency tracking. This eliminates the common performance pitfalls of Virtual DOM frameworks:
+**No Virtual DOM, No Re-rendering Nightmare**: Unlike frameworks that re-render entire component trees and rely on diffing algorithms to figure out what changed, Markout knows _exactly_ what needs updating because of its reactive dependency tracking. This eliminates the common performance pitfalls of Virtual DOM frameworks:
 
-* **No unnecessary re-renders**: Components don't re-execute when unrelated state changes
-* **No render cascade problems**: A change in one component doesn't trigger re-renders throughout the component tree
-* **No need for optimization ceremonies**: No `React.memo`, `useMemo`, `useCallback`, or similar workarounds to prevent wasteful re-renders
-* **Predictable performance**: Updates are surgical and proportional to actual changes, not component tree size
+- **No unnecessary re-renders**: Components don't re-execute when unrelated state changes
+- **No render cascade problems**: A change in one component doesn't trigger re-renders throughout the component tree
+- **No need for optimization ceremonies**: No `React.memo`, `useMemo`, `useCallback`, or similar workarounds to prevent wasteful re-renders
+- **Predictable performance**: Updates are surgical and proportional to actual changes, not component tree size
 
 ## Directives
 
 Markout directives are based on either `<template>` or custom `<:...>` tags:
 
-* `<template>`: conditionals and looping
-* `<:define>`: reusable components
-* `<:import>|<:include>`: source code modules
-* `<:data>`: data and services
+- `<template>`: conditionals and looping
+- `<:define>`: reusable components
+- `<:import>|<:include>`: source code modules
+- `<:data>`: data and services
 
 ### `<template :if | :else | :elseif>`
 
@@ -197,10 +194,10 @@ TBD
 
 This directive lets you turn any HTML block into a reusable component. You can:
 
-* **Declare parameters** with default values using logic values like `:name="Default Name"`
-* **Use reactive expressions** `${...}` to inject parameter values into the component HTML
-* **Support slots** just like Web Components for flexible content composition
-* **Add presentation logic** with event handlers, conditional styling, and reactive behavior.
+- **Declare parameters** with default values using logic values like `:name="Default Name"`
+- **Use reactive expressions** `${...}` to inject parameter values into the component HTML
+- **Support slots** just like Web Components for flexible content composition
+- **Add presentation logic** with event handlers, conditional styling, and reactive behavior.
 
 The component can then be used anywhere as a simple custom tag, passing different parameters each time.
 
@@ -208,7 +205,7 @@ You can find a comprehensive demonstration of component creation and usage in th
 
 ### `<:import>` and `<:include>`
 
-With these tags you can include *page fragments*. For example:
+With these tags you can include _page fragments_. For example:
 
 ```html
 <html>
@@ -253,14 +250,14 @@ And `lib/baseline.htm`'s content could be:
 
 It should be noted that:
 
-* page fragments should use the `.htm` rather than `.html` extension (so they won't be served as pages by mistake)
-* they have an arbitrary root tag which is discarded (`<lib>` in this case)
-* they are normally imported in page's `<head>`, so their styles fall naturally into place
-* since `<:define>` is removed from output markup (and included in generated JS code) it doesn't pollute `<head>`'s content
-* page fragments can in turn import other fragments with either relative or absolute path in the document root
-* `<:import>` ensures each single fragment is imported only once in the whole page
-* if two imported fragments import the same other fragment, only the first one will actually have it added to page `<head>`
-* each component can simply import all its dependencies: you don't need to import `lib/baseline.htm` yourself, it will be included as soon as you import any of your library's components.
+- page fragments should use the `.htm` rather than `.html` extension (so they won't be served as pages by mistake)
+- they have an arbitrary root tag which is discarded (`<lib>` in this case)
+- they are normally imported in page's `<head>`, so their styles fall naturally into place
+- since `<:define>` is removed from output markup (and included in generated JS code) it doesn't pollute `<head>`'s content
+- page fragments can in turn import other fragments with either relative or absolute path in the document root
+- `<:import>` ensures each single fragment is imported only once in the whole page
+- if two imported fragments import the same other fragment, only the first one will actually have it added to page `<head>`
+- each component can simply import all its dependencies: you don't need to import `lib/baseline.htm` yourself, it will be included as soon as you import any of your library's components.
 
 **It all boils down to this**: you can easily build your component libraries where each component includes its own dependencies (e.g. for baseline styling) without fearing duplications and with automatic dependency handling.
 
@@ -278,10 +275,10 @@ Even with a considered use, reactive `<style>` tags can be amazingly useful and:
 
 With this approach to modularity you get four big wins:
 
-* ✅ Simplicity - Include fragments with a single tag, automatic dependency resolution
-* ✅ Familiarity - Still regular HTML files, just with `.htm` extension for fragments  
-* ✅ Configurability - Even CSS can be parameterized for themes and component variants
-* ✅ Reusability - Build component libraries where each component manages its own dependencies
+- ✅ Simplicity - Include fragments with a single tag, automatic dependency resolution
+- ✅ Familiarity - Still regular HTML files, just with `.htm` extension for fragments
+- ✅ Configurability - Even CSS can be parameterized for themes and component variants
+- ✅ Reusability - Build component libraries where each component manages its own dependencies
 
 ## Data
 
@@ -299,7 +296,7 @@ And here's how you may use the data:
 
 ```html
 <ul>
-  <template :foreach=${usersData.json.list} :item="user">
+  <template :foreach="${usersData.json.list}" :item="user">
     <li>${user.name}</li>
   </template>
 </ul>
@@ -310,34 +307,18 @@ Note that `<:data>`'s `json` value is always defined, at most it can be an empty
 The data can be local as well:
 
 ```html
-<:data :aka="navigationData" :json=${{
-  list: [
-    { id: 1, url: '/dashboard', title: 'Dashboard' },
-    { id: 2, url: '/activity', title: 'Activity' },
-  ]
-}} />
+<:data :aka="navigationData" :json=${{ list: [ { id: 1, url: '/dashboard',
+title: 'Dashboard' }, { id: 2, url: '/activity', title: 'Activity' }, ] }} />
 ```
 
 And, because local data participates in the reactive system — `:json` is a logic value after all — it can automatically update too:
 
 ```html
-<:data :aka="localeData" :json=${{
-  en: {
-    dashboard: 'Dashboard',
-    activity: 'Activity'
-  },
-  it: {
-    dashboard: 'Panoramica',
-    activity: 'Attività'
-  }
-}} />
-
-<:data :aka="navigationData" :lang="en" :_locale=${localeData.json[lang]} :json=${{
-  list: [
-    { id: 1, url: '/dashboard', title: _locale.dashboard },
-    { id: 2, url: '/activity', title: _locale.activity },
-  ]
-}} />
+<:data :aka="localeData" :json=${{ en: { dashboard: 'Dashboard', activity:
+'Activity' }, it: { dashboard: 'Panoramica', activity: 'Attività' } }} /> <:data
+:aka="navigationData" :lang="en" :_locale=${localeData.json[lang]} :json=${{
+list: [ { id: 1, url: '/dashboard', title: _locale.dashboard }, { id: 2, url:
+'/activity', title: _locale.activity }, ] }} />
 ```
 
 Now you have a localized menu which seamlessly updates when users switch language!
@@ -345,21 +326,20 @@ Now you have a localized menu which seamlessly updates when users switch languag
 In addition, again because `:json` is a logic attribute, you can locally generate data:
 
 ```html
-<:data :aka="totalsData" :json=${_generate()} :_generate=${() => {
-  return ...
+<:data :aka="totalsData" :json=${_generate()} :_generate=${() => { return ...
 }}>
 ```
 
-You get the idea. In the same way, you can concatenate `<:data>` directives to build data pipelines, simply making each *a function* of the one before, and you can cascade API calls just by making each dependent on the previous one's data.
+You get the idea. In the same way, you can concatenate `<:data>` directives to build data pipelines, simply making each _a function_ of the one before, and you can cascade API calls just by making each dependent on the previous one's data.
 
 By leveraging source code modularization with `<:import>`, you can of course properly organize the data layer in your code and import it where needed.
 
 With this approach to data handling you get four big wins:
 
-* ✅ Simplicity - Declare data needs directly in HTML, no separate data layers
-* ✅ Familiarity - REST endpoints and JSON data work exactly as expected  
-* ✅ Reactivity - Data updates automatically flow through dependent components and pipelines
-* ✅ Composability - Chain data transformations naturally without complex state management
+- ✅ Simplicity - Declare data needs directly in HTML, no separate data layers
+- ✅ Familiarity - REST endpoints and JSON data work exactly as expected
+- ✅ Reactivity - Data updates automatically flow through dependent components and pipelines
+- ✅ Composability - Chain data transformations naturally without complex state management
 
 ### Advanced `<:data>` features
 
@@ -374,9 +354,10 @@ For one, `<:data>` is where business logic should live: while presentation logic
 <:data :aka="userService" :validate=${(user) => user.email && user.age >= 18} />
 
 <!--- Presentation logic: button states, form interactions -->
-<form :user=${{}}>
-  <input :value=${user.email} :on-change=${(e) => user.email = e.target.value} />
-  <button :disabled=${!userService.validate(user)}>Submit</button>
+<form :user="${{}}">
+  <input :value="${user.email}" :on-change="${(e)" ="" /> user.email =
+  e.target.value} />
+  <button :disabled="${!userService.validate(user)}">Submit</button>
 </form>
 ```
 
@@ -404,7 +385,11 @@ Let's take [Bootstrap](https://getbootstrap.com) for example:
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Modal title</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
       </div>
       <div class="modal-body">
         <p>Modal body text goes here.</p>
@@ -423,7 +408,7 @@ This code is confusing to say the least, and you have to duplicate it everywhere
 <:bs-modal :open=${true} :title="Greeting" :message="Hello world!" />
 ```
 
-That's much better! Now you have a properly [encapsulated](https://en.wikipedia.org/wiki/Encapsulation_(computer_programming)) component which clearly declares what it is (`bs-modal`) and only exposes what's meaningful for its use (`open` state, `title` and `message` texts).
+That's much better! Now you have a properly [encapsulated](<https://en.wikipedia.org/wiki/Encapsulation_(computer_programming)>) component which clearly declares what it is (`bs-modal`) and only exposes what's meaningful for its use (`open` state, `title` and `message` texts).
 
 For completeness, this is what the component definition could look like:
 
@@ -461,16 +446,16 @@ For completeness, this is what the component definition could look like:
 
 It should be noted that:
 
-* you can componentize a block by just turning its root tag into a `<:define>` and giving it a tag name
-* by default the base tag for a Markout component is a `<div>`, which is OK here
-* in order to parametrize the component, you can add logic values with their defaults, and use them in the appropriate places inside its code.
+- you can componentize a block by just turning its root tag into a `<:define>` and giving it a tag name
+- by default the base tag for a Markout component is a `<div>`, which is OK here
+- in order to parametrize the component, you can add logic values with their defaults, and use them in the appropriate places inside its code.
 
 With this approach to components you get four big wins:
 
-* ✅ Simplicity - Complex UI becomes one line
-* ✅ Familiarity - Still Bootstrap underneath
-* ✅ Reactivity - Turn imperative components into reactive ones
-* ✅ Reusability - Define once, use everywhere.
+- ✅ Simplicity - Complex UI becomes one line
+- ✅ Familiarity - Still Bootstrap underneath
+- ✅ Reactivity - Turn imperative components into reactive ones
+- ✅ Reusability - Define once, use everywhere.
 
 **NOTE**: I plan to release a Markout Bootstrap library soon — I want the fun part for myself 😉
 

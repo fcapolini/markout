@@ -8,6 +8,25 @@ build/
 # Coverage and test output
 coverage/
 
+# Test fixtures containing Markout-specific syntax
+# These files use non-standard HTML syntax that Prettier cannot parse
+tests/**/*-in.html
+tests/**/*-out.html
+tests/**/*.htm
+
+# Generated test output files
+tests/**/*-out.js
+tests/**/*-out.json
+tests/**/*-err.json
+
+# Test data files with intentionally malformed HTML for parsing tests
+tests/html/parser/
+tests/html/preprocessor/
+tests/compiler/
+
+# Files that might contain template literals or special syntax
+test-fragment-behavior.js
+
 # Logs
 logs/
 *.log

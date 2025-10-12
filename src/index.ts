@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import path from "path";
+import path from 'path';
 import { Server } from './server/server';
 
 const program = new Command();
@@ -11,7 +11,8 @@ program
   .description('Markout CLI - https://github.com/fcapolini/markout')
   .version('1.0.0');
 
-program.command('serve')
+program
+  .command('serve')
   .description('serve a Markout project')
   .argument('<pathname>', 'path to docroot')
   .option('-p, --port <number>', 'port number, default: 3000')

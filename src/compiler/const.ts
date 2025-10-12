@@ -1,5 +1,9 @@
-import { DIRECTIVE_TAG_PREFIX } from "../html/dom";
-import { RT_CLASS_VALUE_PREFIX, RT_EVENT_VALUE_PREFIX, RT_STYLE_VALUE_PREFIX } from "../runtime/web/web-scope";
+import { DIRECTIVE_TAG_PREFIX } from '../html/dom';
+import {
+  RT_CLASS_VALUE_PREFIX,
+  RT_EVENT_VALUE_PREFIX,
+  RT_STYLE_VALUE_PREFIX,
+} from '../runtime/web/web-scope';
 
 export const IN_VALUE_ATTR_PREFIX = ':';
 export const OUT_OBJ_ID_ATTR = 'data-markout';
@@ -7,10 +11,10 @@ export const ID_RE = /^_?[a-zA-Z0-9]\w*$/;
 export const TEST_ATTR = '__TEST_';
 export const TEST_CLOSED_ATTR = TEST_ATTR + 'CLOSED_SCOPE';
 export const DEF_SCOPE_NAMES: any = {
-  'HTML': 'page',
-  'HEAD': 'head',
-  'BODY': 'body',
-}
+  HTML: 'page',
+  HEAD: 'head',
+  BODY: 'body',
+};
 export const CLASS_ATTR_PREFIX = RT_CLASS_VALUE_PREFIX;
 export const STYLE_ATTR_PREFIX = RT_STYLE_VALUE_PREFIX;
 export const EVENT_ATTR_PREFIX = RT_EVENT_VALUE_PREFIX;

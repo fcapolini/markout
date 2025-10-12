@@ -1,6 +1,6 @@
-import { BaseGlobal } from "./base-global";
-import { BaseScope, BaseScopeProps } from "./base-scope";
-import { BaseValue, BaseValueProps } from "./base-value";
+import { BaseGlobal } from './base-global';
+import { BaseScope, BaseScopeProps } from './base-scope';
+import { BaseValue, BaseValueProps } from './base-value';
 
 export interface BaseContextProps {
   root: BaseScopeProps;
