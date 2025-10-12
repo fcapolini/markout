@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/fcapolini/markout2/actions/workflows/ci.yml/badge.svg)](https://github.com/fcapolini/markout2/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/fcapolini/markout2/actions/workflows/codeql.yml/badge.svg)](https://github.com/fcapolini/markout2/actions/workflows/codeql.yml)
-[![Node.js](https://img.shields.io/badge/node.js-18.x%20%7C%2020.x%20%7C%2022.x-brightgreen)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/node.js-18.x%20%7C%2020.x%20%7C%2022.x%20%7C%2024.x-brightgreen)](https://nodejs.org/)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=fcapolini_markout&metric=coverage)](https://sonarcloud.io/summary/new_code?id=fcapolini_markout)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=fcapolini_markout&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=fcapolini_markout)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -702,6 +702,15 @@ Your component definitions can just as easily be grouped in a set of page fragme
 </body>
 </html>
 ```
+
+Leveraging Markout support for page fragments which can include baseline and default component styling, it's easy to define and maintain **design systems** and **company-wide UI libraries**. Even better, their implementation is easily inspectable and terse enough to serve as guidance for their use, removing the need for detailed documentation which is chronically out of date.
+
+With this approach to project components you get four big wins:
+
+- ✅ **Simplicity** - Turn any HTML block into a reusable component with one tag change
+- ✅ **Familiarity** - Components are just HTML files that anyone can read and understand
+- ✅ **Self-Documentation** - Component implementations serve as their own usage guide
+- ✅ **Scale** - From individual components to enterprise design systems with the same pattern
 
 ## Tooling
 
