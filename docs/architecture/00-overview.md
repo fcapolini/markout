@@ -252,7 +252,7 @@ This approach removes traditional barriers to component sharing between projects
 - **Component Simplicity**: HTML fragments instead of special formats
 - **Development Speed**: No build step required for development
 - **Cross-Project Sharing**: Simple file sharing vs Svelte component compilation requirements
-- **Stability**: Stable HTML enhancement vs evolving compile-time transformations (SvelteKit changes)
+- **Stability**: Stable HTML enhancement vs evolving compile-time transformations (runes, SvelteKit changes)
 
 ## Stability-First Architecture
 
