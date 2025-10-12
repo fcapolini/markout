@@ -12,6 +12,14 @@ export const GROUP_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'GROUP';
 
 export const MAX_NESTING = 100;
 
+/**
+ * Normalizes path separators to forward slashes for cross-platform compatibility
+ * This ensures consistent path representation in source locations across Windows/Unix
+ */
+function normalizePathSeparators(filepath: string): string {
+  return filepath.replace(/\\/g, '/');
+}
+
 /*
   Adds support for:
   - <:include>
@@ -26,8 +34,9 @@ export class Preprocessor {
   }
 
   async load(fname: string): Promise<Source> {
-    const dummy = new Source('', fname);
-    const source = await this.loadSource(fname, '.', dummy, 0);
+    const normalizedFname = normalizePathSeparators(fname);
+    const dummy = new Source('', normalizedFname);
+    const source = await this.loadSource(normalizedFname, '.', dummy, 0);
     return source ?? dummy;
   }
 
@@ -105,11 +114,11 @@ export class Preprocessor {
     }
     const pname = path.normalize(path.join(this.docroot, currDir, fname));
     if (!pname.startsWith(this.docroot)) {
-      const s = path.relative(this.docroot, pname);
+      const s = normalizePathSeparators(path.relative(this.docroot, pname));
       main.addError('error', `Forbidden pathname "${s}"`, from?.loc);
       return;
     }
-    const relPath = pname.substring(this.docroot.length);
+    const relPath = normalizePathSeparators(pname.substring(this.docroot.length));
     if (main.files.indexOf(relPath) < 0) {
       main.files.push(relPath);
     } else if (once) {
