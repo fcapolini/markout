@@ -11,7 +11,6 @@ import { normalizeText, parse } from '../src/html/parser';
 import { generate } from 'escodegen';
 import { WebContext } from '../src/runtime/web/web-context';
 import * as dom from '../src/html/dom';
-import { JSDOM } from 'jsdom';
 import { ServerDocument } from '../src/html/server-dom';
 
 /**
@@ -59,32 +58,7 @@ export function dumpScopes(scope: WebScope, tab = '') {
   scope.children.forEach(child => dumpScopes(child as WebScope, tab + '\t'));
 }
 
-export async function runPage(
-  client: boolean,
-  html: string
-): Promise<WebContext> {
-  const page: CompilerPage = { source: parse(html, 'test') };
-  Compiler.compilePage(page);
-  if (page.source.errors.length) {
-    throw 'error: ' + page.source.errors[0].msg;
-  }
-  const code = eval(generate(page.code));
-  const ctx = new WebContext({
-    doc: page.source.doc,
-    root: code,
-  });
-  if (!client) {
-    return ctx;
-  }
-
-  const jsdom = new JSDOM(page.source.doc.toString());
-  const clientCtx = new WebContext({
-    doc: jsdom.window.document as unknown as dom.Document,
-    root: code,
-  });
-
-  return clientCtx;
-}
+// Note: runPage function moved to jsdom-util.ts to avoid loading JSDOM unless needed
 
 export function getMarkup(doc: any, cleanup = true): string {
   let act =
@@ -101,8 +75,8 @@ export function getMarkup(doc: any, cleanup = true): string {
 
 export function getDoc(html: string, client = false) {
   if (client) {
-    const jsdom = new JSDOM(html);
-    return jsdom.window.document as unknown as dom.Document;
+    // JSDOM functionality moved to jsdom-util.ts to avoid Node.js 18 compatibility issues
+    throw new Error('Client-side getDoc moved to jsdom-util.ts');
   }
   const source = parse(html, 'test');
   return source.doc;
