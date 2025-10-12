@@ -1,8 +1,8 @@
 # Markout
 
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=fcapolini_markout2&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=fcapolini_markout2)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=fcapolini_markout2&metric=coverage)](https://sonarcloud.io/summary/new_code?id=fcapolini_markout2)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=fcapolini_markout2&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=fcapolini_markout2)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=fcapolini_markout&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=fcapolini_markout)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=fcapolini_markout&metric=coverage)](https://sonarcloud.io/summary/new_code?id=fcapolini_markout)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=fcapolini_markout&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=fcapolini_markout)
 
 **HTML-based** reactive web framework for Node.js and the browser — for devs who despise *needless complexity*.
 
