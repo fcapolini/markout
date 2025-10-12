@@ -467,8 +467,7 @@ function addSlotMap(
   lookupSlots(template.content);
   slots.forEach(slot => {
     const name = slot.getAttribute('name');
-    //TODO: check regex
-    if (name && /^[\w_][\w0-9\-_]*$/.test(name)) {
+    if (name && /^[a-zA-Z][a-zA-Z0-9\-_]*$/.test(name)) {
       const scopeId = lookupSlotScopeId(slot);
       map[name] = scopeId;
     } else {
