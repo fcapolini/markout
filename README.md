@@ -71,6 +71,109 @@ In addition, Markout supports different types of deployment:
 
 **NOTE**: Of course you can still have a full blown project setup when needed — just simpler than what JS-based frameworks require.
 
+## Quick Start
+
+Want to try Markout right now? Here's the fastest way to get started:
+
+### 1. Install and Run
+
+```bash
+# Install Markout CLI globally
+npm install -g @markout-js/cli
+
+# Create a simple HTML file
+echo '<button :count="${0}" :on-click="${() => count++}">Clicks: ${count}</button>' > counter.html
+
+# Serve it immediately
+markout serve .
+```
+
+Open http://localhost:3000/counter.html and click the button - it works!
+
+### 2. Try More Features
+
+Create `app.html`:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Markout App</title>
+  <style>
+    .danger { background: red; color: white; }
+    .safe { background: green; color: white; }
+  </style>
+</head>
+<body>
+  <h1>Reactive Counter</h1>
+  
+  <button 
+    :count="${0}" 
+    :on-click="${() => count++}"
+    :class-danger="${count > 5}"
+    :class-safe="${count <= 5}">
+    Clicks: ${count}
+  </button>
+  
+  <p>
+    ${count === 0 ? 'Click the button!' : 
+      count <= 5 ? `Nice! You clicked ${count} times.` : 
+      'Whoa, slow down there!'}
+  </p>
+  
+  <button :on-click="${() => count = 0}">Reset</button>
+</body>
+</html>
+```
+
+### 3. Add Components
+
+Create `lib/greeting.htm`:
+
+```html
+<lib>
+  <:define 
+    :tag="greeting-card" 
+    :name="${'World'}" 
+    :mood="${'happy'}"
+    :style-color="${mood === 'happy' ? 'green' : 'red'}">
+    
+    <div style="padding: 1rem; border: 1px solid #ccc;">
+      <h2 style="color: ${mood === 'happy' ? 'green' : 'red'}">
+        Hello, ${name}!
+      </h2>
+      <p>I'm feeling ${mood} today.</p>
+    </div>
+  </:define>
+</lib>
+```
+
+Update your `app.html`:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <:import :src="lib/greeting.htm" />
+  <title>My Markout App</title>
+</head>
+<body>
+  <:greeting-card :name="Markout" :mood="excited" />
+  <!-- Your counter code here -->
+</body>
+</html>
+```
+
+### 4. What's Next?
+
+- **Learn the concepts**: Read the sections below for deep understanding
+- **Try the ecosystem**: Add Bootstrap or Shoelace components
+- **Build something real**: Markout scales from simple pages to complex apps
+- **⭐ Star the repo**: If Markout sparks joy, give us a star on GitHub - it really helps! 
+- **Join the community**: Check out the GitHub repo and contribute!
+
+**No build step needed** - Markout compiles on-the-fly during development and pre-renders for production automatically.
+
 ## Alpha Status & Limitations
 
 **Current Version: 0.1.0 (Alpha)**
@@ -113,7 +216,7 @@ A final note about Markout's development process: this is the culmination of a l
 
 I think I can proudly say that, compared to frameworks which _move fast and break (other people's) stuff_, I actually _thought it out before I pushed it out_. There, _that_'s a revolutionary idea! 🤯
 
-## Principles
+## Concepts
 
 First, what I think is wrong with JS-based frameworks:
 
@@ -741,26 +844,6 @@ With this approach to project components you get four big wins:
 
 ## Tooling
 
-### Development Workflow
-
-Markout includes automated code quality checks via Git hooks powered by [Husky](https://typicode.github.io/husky/):
-
-- **Pre-commit Hook**: Automatically runs before each commit to ensure:
-  - Code formatting follows Prettier standards (`npm run format:check`)
-  - All tests pass (`npm test`)
-
-You can manually run the same validation:
-
-```bash
-npm run precommit
-```
-
-For emergencies only, bypass the hook with:
-
-```bash
-git commit --no-verify -m "emergency commit"
-```
-
 ### CLI
 
 Markout includes a powerful CLI tool for development and deployment. 
@@ -873,9 +956,52 @@ markout analyze
 markout docs --output ./docs
 ```
 
-### VSCode extension
+### VS Code Extension
 
-TBD
+The Markout VS Code extension (planned) will provide comprehensive development support for Markout projects:
+
+#### **Syntax Highlighting**
+- Syntax highlighting for `:` prefixed logic attributes (`:count`, `:on-click`, `:class-active`)
+- Highlighting for reactive expressions `${...}` within HTML
+- Support for Markout directives (`<:import>`, `<:define>`, `<:data>`)
+- Color coding for framework reserved identifiers (`$parent`, `$value()`)
+
+#### **IntelliSense & Code Completion**
+- Auto-completion for component names and fragment imports
+- IntelliSense for data references and reactive expressions
+- Type hints for component parameters and data pipeline inputs
+- Smart suggestions for logic attribute names and values
+- Context-aware completion within `${...}` expressions
+
+#### **Error Detection & Validation**
+- Real-time validation of Markout syntax and framework rules
+- Detection of circular dependencies in data pipelines
+- Type mismatch warnings for reactive expressions
+- Undefined reference detection for variables and components
+- Framework naming rule enforcement (no `$` in user identifiers)
+
+#### **Development Tools**
+- **Dependency Graph Visualization**: Interactive view of data pipelines and component relationships
+- **Fragment Explorer**: Navigate modular code organization with import/export tracking
+- **Component Preview**: Live preview of components with parameter interfaces
+- **Architecture Diagrams**: Visualize component hierarchy and data flow
+
+#### **Live Templates & Snippets**
+- Code snippets for common Markout patterns
+- Live templates for reactive components, data definitions, and imports
+- Quick scaffolding for fragment structures and component definitions
+
+#### **Documentation Integration**
+- Hover documentation for framework methods and properties
+- Inline documentation for component parameters and data schema
+- Quick access to Markout API reference and examples
+
+#### **Project Management**
+- Project initialization templates for different use cases
+- Integration with Markout CLI commands
+- Build task integration and error reporting
+
+The extension will significantly enhance the developer experience by providing the same level of tooling support that developers expect from modern frameworks, while maintaining Markout's philosophy of simplicity and HTML-first development.
 
 ## Architecture
 
@@ -893,6 +1019,137 @@ Key architectural innovations:
 - **Reserved Namespace**: `$` prefix prevents framework/user code conflicts  
 - **Update Batching**: Set-based deduplication eliminates redundant DOM operations
 - **Hierarchical Scoping**: Lexical variable lookup with proxy-based reactive access
+
+## Development
+
+This section is for contributors to the Markout framework itself. If you're looking to use Markout in your projects, see the CLI and API documentation above.
+
+### Getting Started
+
+1. **Clone and Setup**:
+   ```bash
+   git clone https://github.com/fcapolini/markout2.git
+   cd markout2
+   npm install
+   ```
+
+2. **Build the Project**:
+   ```bash
+   npm run build    # Build both server and client
+   npm run watch    # Watch mode for development
+   ```
+
+3. **Run Tests**:
+   ```bash
+   npm test                # Run all tests
+   npm run test:watch      # Watch mode
+   npm run test:coverage   # Generate coverage report
+   ```
+
+4. **Start Development Server**:
+   ```bash
+   npm run dev     # Development server with hot reload
+   ```
+
+### Project Structure
+
+- **`src/`** - TypeScript source code
+  - **`compiler/`** - Multi-phase compilation pipeline
+  - **`runtime/`** - Reactive system (BaseContext, BaseScope, BaseValue)
+  - **`html/`** - HTML parser and preprocessor
+  - **`server/`** - Express.js server and middleware
+- **`tests/`** - Comprehensive test suite (178+ tests)
+- **`docs/`** - Architecture documentation
+- **`scripts/`** - Build configuration (esbuild)
+
+### Development Workflow
+
+Markout includes automated code quality checks via Git hooks powered by [Husky](https://typicode.github.io/husky/):
+
+- **Pre-commit Hook**: Automatically runs before each commit to ensure:
+  - Code formatting follows Prettier standards (`npm run format:check`)
+  - All tests pass (`npm test`)
+
+You can manually run the same validation:
+
+```bash
+npm run precommit
+```
+
+For emergencies only, bypass the hook with:
+
+```bash
+git commit --no-verify -m "emergency commit"
+```
+
+### Testing
+
+Markout has comprehensive test coverage across all components:
+
+- **Unit Tests**: Individual components (compiler phases, runtime classes)
+- **Integration Tests**: Compiler-runtime interaction, server middleware
+- **Cross-Platform**: Tests run on Windows, macOS, and Linux
+- **Coverage Reporting**: Detailed reports with V8 coverage provider
+
+```bash
+npm test                # Run all tests once
+npm run test:watch      # Interactive watch mode
+npm run test:coverage   # Generate coverage report (opens in browser)
+```
+
+Test files are organized to mirror the source structure:
+- `tests/compiler/` - Compiler phase tests with fixtures
+- `tests/runtime/` - Reactive system tests
+- `tests/integration/` - End-to-end compilation and execution
+- `tests/server/` - Express.js server tests
+
+### Architecture Guidelines
+
+- **Stability First**: Changes must not break existing functionality
+- **TypeScript**: All source code uses strict TypeScript
+- **Cross-Platform**: Support Windows, macOS, and Linux
+- **Performance**: Reactive updates use batching and deduplication
+- **Developer Experience**: Keep APIs intuitive and ceremony-free
+
+Key patterns:
+- **Reactive System**: Pull-based with hierarchical scopes
+- **Compilation**: Multi-phase pipeline with AST transformation
+- **DOM Updates**: Batched updates with Set-based deduplication
+- **Server-Client Hydration**: Same reactive logic on both sides
+
+### Contributing
+
+1. **Fork the Repository** and create a feature branch
+2. **Write Tests** for new functionality using Vitest
+3. **Follow Code Style** - Prettier will format automatically
+4. **Update Documentation** if adding user-facing features
+5. **Ensure Tests Pass** across all supported Node.js versions
+6. **Submit Pull Request** with clear description
+
+All contributions are welcome! See issues labeled "good first issue" for beginner-friendly tasks.
+
+### Development Scripts
+
+```bash
+# Build and Development
+npm run build           # Build both server and client
+npm run watch          # Watch TypeScript files
+npm run dev            # Development server with nodemon
+npm run clean          # Clean build directory
+
+# Testing and Quality
+npm test               # Run tests once
+npm run test:watch     # Run tests in watch mode
+npm run test:coverage  # Generate coverage report
+npm run format         # Format code with Prettier
+npm run format:check   # Check formatting
+
+# Production
+npm start              # Start production server
+npm run start:prod     # Start with PM2 cluster mode
+npm run logs           # View PM2 logs
+npm run monit          # Open PM2 monitoring
+```
 
 ## License
 
