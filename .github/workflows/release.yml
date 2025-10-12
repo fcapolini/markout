@@ -8,6 +8,9 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
 
     steps:
       - name: Checkout code
@@ -33,14 +36,105 @@ jobs:
         run: npm test
 
       - name: Create GitHub Release
-        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
+        run: |
+          # Extract version from tag (remove refs/tags/ prefix)
+          VERSION=${GITHUB_REF#refs/tags/}
+          
+          # Create release notes
+          cat > release_notes.md << 'EOF'
+          # Markout ${VERSION} - Alpha Release 🚧
+
+          First alpha release of Markout CLI published to npm as `@markout-js/cli`
+
+          ## 🎯 What is Markout?
+
+          HTML-first reactive web framework for Node.js and the browser — for devs who despise _needless complexity_.
+
+          ## 📦 Installation
+
+          ```bash
+          # Install globally via npm
+          npm install -g @markout-js/cli
+
+          # Or run directly with npx
+          npx @markout-js/cli serve . --port 3000
+          ```
+
+          ## ✨ Features
+
+          - **HTML-first approach**: Build on HTML rather than replacing it with JavaScript
+          - **Logic values**: `:count`, `:on-click`, `:class-`, `:style-` for reactive state  
+          - **Reactive expressions**: `${...}` syntax for dynamic content
+          - **Server-side rendering**: Pre-rendered pages with client-side hydration
+          - **CLI development server**: Hot reload and Express.js backend
+          - **Components**: `<:define>` with slots for reusable UI elements
+          - **Fragments**: `<:import>` for modular HTML organization
+          - **Looping**: `:foreach` attribute and `<template :foreach>`
+          - **Production ready**: PM2 process management and deployment support
+
+          ## 🚀 Quick Start
+
+          Create `hello.html`:
+          ```html
+          <html>
+            <body>
+              <button :count="${0}" :on-click="${() => count++}">
+                Clicks: ${count}
+              </button>
+            </body>
+          </html>
+          ```
+
+          Serve it:
+          ```bash
+          markout serve .
+          ```
+
+          Open `http://localhost:3000` - you have a working reactive app!
+
+          ## ⚠️ Alpha Status
+
+          **Core features working, some features still in development:**
+
+          - ✅ Logic values, reactive expressions, looping, components, fragments
+          - ✅ SSR/CSR, development server, production deployment  
+          - 🚧 Runtime component system improvements
+          - ❌ Conditionals (`<template :if>`), Data services (`<:data>`), VS Code extension
+
+          See [ROADMAP.md](ROADMAP.md) for complete development timeline.
+
+          ## 📚 Documentation
+
+          - [README.md](README.md) - Framework overview and examples
+          - [INSTALL.md](INSTALL.md) - Installation and quick start guide  
+          - [ROADMAP.md](ROADMAP.md) - Development timeline and feature status
+
+          ## 🐛 Known Issues
+
+          - Template literal compilation issue with falsy values (being debugged)
+          - API may change during alpha - migration guides provided for breaking changes
+
+          ## 💝 Feedback Welcome
+
+          This is an alpha release - your feedback helps shape the framework:
+          - 🐛 [Report bugs](https://github.com/fcapolini/markout/issues)
+          - 💡 [Request features](https://github.com/fcapolini/markout/issues)  
+          - 💬 [Join discussions](https://github.com/fcapolini/markout/discussions)
+
+          ---
+
+          **Package:** [@markout-js/cli](https://www.npmjs.com/package/@markout-js/cli)  
+          **Size:** 815KB (will be optimized in future releases)  
+          **Node.js:** 18+ required
+          EOF
+
+          # Create the release
+          gh release create $VERSION \
+            --title "Markout $VERSION - Alpha CLI Package" \
+            --notes-file release_notes.md \
+            --prerelease
 
     # Uncomment when ready to publish to npm
     # - name: Publish to npm
