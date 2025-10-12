@@ -4,7 +4,6 @@ import fs from 'fs';
 import path from 'path';
 import { assert, describe, it } from 'vitest';
 import { Compiler } from '../../src/compiler/compiler';
-import { normalizeText } from '../../src/html/parser';
 import { cleanupScopes, normalizeLineEndings, normalizeTextForComparison } from '../util';
 
 const docroot = __dirname;
@@ -45,7 +44,7 @@ fs.readdirSync(docroot).forEach(dir => {
             // check output markup
             const outpname = path.join(docroot, dir, file.replace('-in.', '-out.'));
             if (fs.existsSync(outpname)) {
-              const actualHTML = source.doc!.toString() + '\n';
+              const actualHTML = source.doc.toString() + '\n';
               const expectedHTML = await fs.promises.readFile(outpname, { encoding: 'utf8' });
               assert.equal(normalizeTextForComparison(actualHTML), normalizeTextForComparison(expectedHTML));
             }

@@ -16,7 +16,7 @@ export async function runPage(
   const page: CompilerPage = { source: parse(html, 'test') };
   Compiler.compilePage(page);
   if (page.source.errors.length) {
-    throw 'error: ' + page.source.errors[0].msg;
+    throw new Error('error: ' + page.source.errors[0].msg);
   }
   const code = eval(generate(page.code));
   const ctx = new WebContext({

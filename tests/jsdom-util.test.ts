@@ -71,7 +71,9 @@ describe('JSDOM Utilities', () => {
     const html = `
       <html>
         <body>
-          <div :invalid-syntax="">Bad syntax</div>
+          <div :onclick="${e => {
+            const invalid$ = 'test';
+          }}">Bad syntax</div>
         </body>
       </html>
     `;
@@ -80,7 +82,7 @@ describe('JSDOM Utilities', () => {
       await runPage(false, html);
       expect.fail('Should have thrown an error');
     } catch (error) {
-      expect(error).toContain('error:');
+      expect((error as Error).message).toContain('error:');
     }
   });
 
