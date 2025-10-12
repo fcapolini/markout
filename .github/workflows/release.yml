@@ -26,11 +26,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm test
-
       - name: Build project
         run: npm run build
+
+      - name: Run tests
+        run: npm test
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
