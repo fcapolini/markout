@@ -8,7 +8,7 @@
 
 **HTML-based** reactive web framework for Node.js and the browser — for devs who despise _needless complexity_.
 
-🚧 **Markout is currently in development and its features are being implemented!**
+🚧 **Alpha Release (v0.1.0)** - Core features working, some features still in development. See [ROADMAP.md](ROADMAP.md) for details.
 
 Markout is three things:
 
@@ -38,7 +38,7 @@ This is the canonical "click counter" example which is a traditional "hello worl
 
 It must be noted that:
 
-- you can simply place this code in a `.html` file, install the CLI with `npm i -g @markout/cli`, and serve it as it is with `markout serve page.html`
+- you can simply place this code in a `.html` file, build the project with `npm run build`, and serve it with `node dist/index.js serve page.html`
 - at first request, the page will be (very quickly) compiled and executed in the server (on subsequent requests the compiled version will be reused)
 - the resulting page will be pre-rendered (meaning button's text will already contain "Clicks: 0") plus it will contain page-specific code to continue execution in the browser
 - the browser will instantly show the pre-rendered page and continue execution in the client-side (meaning it will increment the count when users click the button)
@@ -70,6 +70,34 @@ In addition, Markout supports different types of deployment:
 - Mobile (Tauri/[Capacitor](https://capacitorjs.com)/[Cordova](https://cordova.apache.org))
 
 **NOTE**: Of course you can still have a full blown project setup when needed — just simpler than what JS-based frameworks require.
+
+## Alpha Status & Limitations
+
+**Current Version: 0.1.0 (Alpha)**
+
+Markout is currently in alpha development. While the core reactive system is functional and many features work well, some features are still being implemented:
+
+**✅ Working Features:**
+- Logic values (`:count`, `:on-click`, `:class-`, `:style-`, etc.)
+- Reactive expressions (`${...}`)
+- Looping (`:foreach` attribute and `<template :foreach>`)
+- Components (`<:define>` with slots)
+- Fragments (`<:import>` for modular HTML)
+- Server-side rendering with client-side hydration
+- Development server with hot reload
+
+**🚧 In Development:**
+- Runtime component system improvements
+- Advanced fragment features
+
+**❌ Not Yet Implemented:**
+- Conditionals (`<template :if>`, `:else`, `:elseif`)
+- Data services (`<:data>` directive)
+- VS Code extension
+
+See [ROADMAP.md](ROADMAP.md) for complete development timeline and feature status.
+
+**API Stability:** During alpha, APIs may change. We'll provide migration guides for any breaking changes.
 
 ## Motivation
 
@@ -735,10 +763,16 @@ git commit --no-verify -m "emergency commit"
 
 ### CLI
 
-Markout includes a powerful CLI tool for development and deployment. Install it globally to get started:
+Markout includes a powerful CLI tool for development and deployment. 
+
+**Alpha Note:** The CLI is not yet published to npm. To use it:
 
 ```bash
-npm install -g @markout/cli
+# Clone and build the project
+git clone https://github.com/fcapolini/markout2.git
+cd markout2
+npm install
+npm run build
 ```
 
 #### Development Server
@@ -747,16 +781,16 @@ Start a development server with hot reload:
 
 ```bash
 # Serve current directory on default port (3000)
-markout serve
+node dist/index.js serve .
 
 # Serve specific directory
-markout serve ./my-project
+node dist/index.js serve ./my-project
 
 # Serve on custom port
-markout serve --port 8080
+node dist/index.js serve . --port 8080
 
-# Serve with custom host (for network access)
-markout serve --host 0.0.0.0 --port 3000
+# Serve with custom host (for network access) 
+node dist/index.js serve . --host 0.0.0.0 --port 3000
 ```
 
 The development server includes:
@@ -772,13 +806,13 @@ Deploy your Markout application for production:
 
 ```bash
 # Start production server
-markout serve --production
+npm run start:prod
 
-# With PM2 process management
-markout serve --production --pm2
+# With PM2 process management (already included in start:prod)
+npm run start:prod
 
-# Custom configuration
-markout serve --production --port 80 --workers 4
+# Custom configuration (modify ecosystem.config.js)
+node dist/index.js serve . --port 80
 ```
 
 Production features:
@@ -806,19 +840,19 @@ markout create my-app --template minimal
 markout create my-components --template library
 ```
 
-#### Build and Optimization
+#### Static Site Generation
 
-Generate optimized static builds:
+**Alpha Note:** Static site generation features are planned for future releases. Currently available:
 
 ```bash
-# Build for static hosting (JAMstack)
-markout build --output ./dist
+# Build the project (server and client bundles)
+npm run build
 
-# Build with pre-rendering
-markout build --prerender --output ./dist
+# Start development server  
+npm run dev
 
-# Build Progressive Web App
-markout build --pwa --output ./dist
+# Production server with PM2
+npm run start:prod
 ```
 
 #### Development Tools

@@ -1,7 +1,7 @@
 {
   "name": "markout",
-  "version": "1.0.0",
-  "description": "A TypeScript Node.js Express.js project",
+  "version": "0.1.0",
+  "description": "HTML-First Reactive Web Framework - Alpha Release",
   "main": "dist/index.js",
   "scripts": {
     "test": "vitest run",
@@ -26,9 +26,14 @@
     "prepare": "husky"
   },
   "keywords": [
+    "web-framework",
+    "reactive",
+    "html-first",
     "typescript",
-    "node",
-    "express"
+    "server-side-rendering",
+    "client-side-hydration",
+    "component-framework",
+    "alpha"
   ],
   "author": "",
   "license": "MIT",
