@@ -35,12 +35,25 @@ classDiagram
         -dependents: Set~BaseValue~
         -cached: any
         -isDirty: boolean
+        -callback: ValueCallback | null
         +get(): any
         +set(value: any): void
         +invalidate(): void
         +evaluate(): any
         +addDependency(value): void
         +removeDependency(value): void
+        +setCallback(callback): void
+    }
+
+    class ValueCallback {
+        -target: Element | string
+        -updateType: string
+        +call(newValue, oldValue): void
+        +updateAttribute(element, name, value): void
+        +updateClass(element, name, value): void
+        +updateStyle(element, name, value): void
+        +updateText(element, value): void
+        +updateEvent(element, name, handler): void
     }
 
     class WebContext {
@@ -77,6 +90,7 @@ classDiagram
     BaseScope "1" --o "many" BaseValue : contains
     BaseScope "1" --o "1" BaseScope : parent-child
     BaseValue "many" --o "many" BaseValue : dependencies
+    BaseValue "1" --o "0..1" ValueCallback : callback
     
     WebContext --|> BaseContext : extends
     WebScope --|> BaseScope : extends
@@ -89,6 +103,7 @@ classDiagram
     BaseScope "many" --* "1" BaseContext : context
     BaseValue "many" --* "1" BaseScope : scope
     WebScope "many" --* "1" Element : element
+    ValueCallback "many" --* "1" WebScope : created by
 ```
 
 ## Core Class Responsibilities
@@ -133,6 +148,7 @@ classDiagram
 - **Change Propagation**: Notifies dependents when value changes
 - **Lazy Evaluation**: Only evaluates when value is actually needed
 - **Caching**: Caches results until dependencies change
+- **Callback Management**: Optionally holds ValueCallback for DOM updates
 
 **Critical Methods**:
 - `get()`: Returns current value, evaluating if dirty
@@ -140,6 +156,25 @@ classDiagram
 - `invalidate()`: Marks value as dirty, triggering re-evaluation
 - `evaluate()`: Executes expression and updates dependency relationships
 - `addDependency(value)`: Establishes bidirectional dependency relationship
+- `setCallback(callback)`: Attaches DOM update callback
+
+### ValueCallback - DOM Update Bridge
+**Purpose**: Bridges generic reactive values with specific DOM update operations
+
+**Key Responsibilities**:
+- **DOM Update Dispatch**: Routes value changes to appropriate DOM update methods
+- **Update Type Specialization**: Handles different types of DOM updates (attributes, classes, styles, text, events)
+- **Element Targeting**: Knows which DOM element and property to update
+- **Generic-to-Specific Bridge**: Allows BaseValue to remain generic while enabling DOM-specific updates
+- **WebScope Integration**: Created and managed by WebScope instances
+
+**Critical Methods**:
+- `call(newValue, oldValue)`: Main entry point called when BaseValue changes
+- `updateAttribute(element, name, value)`: Updates DOM attributes
+- `updateClass(element, name, value)`: Manages CSS class addition/removal
+- `updateStyle(element, name, value)`: Updates style properties
+- `updateText(element, value)`: Updates text content
+- `updateEvent(element, name, handler)`: Manages event handler registration
 
 ## Browser-Specific Extensions
 
@@ -221,6 +256,35 @@ class BaseValue {
     for (const dependent of this.dependents) {
       dependent.invalidate();
     }
+  }
+}
+```
+
+### ValueCallback Pattern - Generic to Specific Bridge
+```typescript
+// WebScope creates specialized callbacks for BaseValue instances
+class WebScope {
+  bindAttribute(name: string, value: BaseValue) {
+    const callback = new ValueCallback((newValue, oldValue) => {
+      this.element.setAttribute(name, newValue);
+    });
+    value.setCallback(callback);
+  }
+}
+
+// BaseValue remains generic but can trigger DOM updates
+class BaseValue {
+  set(newValue: any) {
+    const oldValue = this.cached;
+    this.cached = newValue;
+    
+    // Trigger DOM update if callback exists
+    if (this.callback) {
+      this.callback.call(newValue, oldValue);
+    }
+    
+    // Propagate to dependents
+    this.propagateChange();
   }
 }
 ```
