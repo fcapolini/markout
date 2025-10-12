@@ -1,0 +1,5 @@
+# Check code formatting
+npm run format:check
+
+# Run tests
+npm test
