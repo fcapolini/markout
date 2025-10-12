@@ -5,6 +5,7 @@
 [![Node.js](https://img.shields.io/badge/node.js-18.x%20%7C%2020.x%20%7C%2022.x-brightgreen)](https://nodejs.org/)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=fcapolini_markout&metric=coverage)](https://sonarcloud.io/summary/new_code?id=fcapolini_markout)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=fcapolini_markout&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=fcapolini_markout)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 **HTML-based** reactive web framework for Node.js and the browser — for devs who despise _needless complexity_.
 
