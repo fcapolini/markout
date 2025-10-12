@@ -73,22 +73,22 @@ classDiagram
     }
 
     %% Relationships
-    BaseContext ||--o{ BaseScope : manages
-    BaseScope ||--o{ BaseValue : contains
-    BaseScope ||--o| BaseScope : parent-child
-    BaseValue }o--o{ BaseValue : dependencies
+    BaseContext ||--o{ BaseScope : "manages"
+    BaseScope ||--o{ BaseValue : "contains"
+    BaseScope ||--o| BaseScope : "parent-child"
+    BaseValue }o--o{ BaseValue : "dependencies"
     
-    WebContext --|> BaseContext : extends
-    WebScope --|> BaseScope : extends
-    BaseGlobal --|> BaseScope : extends
+    WebContext --|> BaseContext : "extends"
+    WebScope --|> BaseScope : "extends"
+    BaseGlobal --|> BaseScope : "extends"
     
-    WebContext ||--o{ WebScope : element mapping
-    WebScope ||--o| Element : DOM binding
+    WebContext ||--o{ WebScope : "element mapping"
+    WebScope ||--o| Element : "DOM binding"
 
     %% Composition relationships
-    BaseScope --* BaseContext : context
-    BaseValue --* BaseScope : scope
-    WebScope --* Element : element
+    BaseScope --* BaseContext : "context"
+    BaseValue --* BaseScope : "scope"
+    WebScope --* Element : "element"
 ```
 
 ## Core Class Responsibilities
