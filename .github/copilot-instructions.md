@@ -314,7 +314,7 @@ node dist/index.js serve . --port 8080
 All tests currently run in **Node.js** environment for maximum Node.js 18+ compatibility:
 
 - Server-side testing with Node.js environment provides optimal performance and compatibility
-- JSDOM is available in `tests/util.ts` for DOM testing when needed via `runPage()` function
+- JSDOM is available in `tests/jsdom-util.ts` for DOM testing when needed via `runPage()` function
 - Future DOM-specific tests can be added with `.dom.test.ts` naming if needed
 
 ## Example Components
@@ -389,7 +389,7 @@ All tests currently run in **Node.js** environment for maximum Node.js 18+ compa
 All tests currently run in **Node.js** environment for maximum Node.js 18+ compatibility:
 
 - Server-side testing with Node.js environment provides optimal performance and compatibility
-- JSDOM is available in `tests/util.ts` for DOM testing when needed via `runPage()` function
+- JSDOM is available in `tests/jsdom-util.ts` for DOM testing when needed via `runPage()` function
 - Future DOM-specific tests can be added with `.dom.test.ts` naming if needed
 
 ### **Test Structure**
