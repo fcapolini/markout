@@ -41,10 +41,11 @@ jobs:
         run: |
           # Extract version from tag (remove refs/tags/ prefix)
           VERSION=${GITHUB_REF#refs/tags/}
+          echo "Creating release for version: $VERSION"
 
-          # Create release notes
-          cat > release_notes.md << EOF
-          # Markout ${VERSION} - Alpha Release 🚧
+          # Create release notes with proper escaping
+          cat > release_notes.md << 'RELEASE_NOTES'
+          # Markout VERSION_PLACEHOLDER - Alpha Release 🚧
 
           First alpha release of Markout CLI published to npm as `@markout-js/cli`
 
@@ -66,7 +67,7 @@ jobs:
 
           - **HTML-first approach**: Build on HTML rather than replacing it with JavaScript
           - **Logic values**: `:count`, `:on-click`, `:class-`, `:style-` for reactive state  
-          - **Reactive expressions**: `${...}` syntax for dynamic content
+          - **Reactive expressions**: `$${...}` syntax for dynamic content
           - **Server-side rendering**: Pre-rendered pages with client-side hydration
           - **CLI development server**: Hot reload and Express.js backend
           - **Components**: `<:define>` with slots for reusable UI elements
@@ -80,8 +81,8 @@ jobs:
           ```html
           <html>
             <body>
-              <button :count="${0}" :on-click="${() => count++}">
-                Clicks: ${count}
+              <button :count="$${0}" :on-click="$${() => count++}">
+                Clicks: $${count}
               </button>
             </body>
           </html>
@@ -128,7 +129,10 @@ jobs:
           **Package:** [@markout-js/cli](https://www.npmjs.com/package/@markout-js/cli)  
           **Size:** 815KB (will be optimized in future releases)  
           **Node.js:** 18+ required
-          EOF
+          RELEASE_NOTES
+
+          # Replace placeholder with actual version
+          sed -i "s/VERSION_PLACEHOLDER/$VERSION/g" release_notes.md
 
           # Create the release
           gh release create $VERSION \
