@@ -65,4 +65,4 @@ Thumbs.db
 vitest.config.mjs
 
 # Documentation files with custom formatting
-README.md
+*.md
