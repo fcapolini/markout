@@ -22,23 +22,23 @@ C4Container
     System_Ext(nodejs, "Node.js", "Runtime environment")
     ContainerDb(filesystem, "File System", "HTML, CSS, JS", "Source files and static assets")
 
-    Rel(developer, cli, "Uses", "markout serve, build commands")
-    Rel(developer, filesystem, "Creates", ".html files with Markout syntax")
+    Rel(developer, cli, "uses")
+    Rel(developer, filesystem, "creates")
     
-    Rel(enduser, browser, "Uses")
-    Rel(browser, server, "Requests pages", "HTTP/HTTPS")
+    Rel(enduser, browser, "uses")
+    Rel(browser, server, "requests")
     
-    Rel(cli, server, "Starts", "Development/production server")
-    Rel(server, compiler, "Compiles pages", "On-demand compilation")
-    Rel(server, runtime_server, "Executes", "Server-side rendering")
-    Rel(server, browser, "Serves", "Pre-rendered HTML + client runtime")
+    Rel(cli, server, "starts")
+    Rel(server, compiler, "compiles")
+    Rel(server, runtime_server, "executes")
+    Rel(server, browser, "serves")
     
-    Rel(compiler, preprocessor, "Uses", "Module resolution and imports")
-    Rel(compiler, filesystem, "Reads", "Source files")
-    Rel(preprocessor, filesystem, "Loads", "Fragment dependencies")
+    Rel(compiler, preprocessor, "uses")
+    Rel(compiler, filesystem, "reads")
+    Rel(preprocessor, filesystem, "loads")
     
-    Rel(runtime_server, runtime_client, "Hydrates", "State transfer")
-    Rel(browser, runtime_client, "Executes", "Client-side reactivity")
+    Rel(runtime_server, runtime_client, "hydrates")
+    Rel(browser, runtime_client, "executes")
     
     Rel_Back(server, nodejs, "Runs on")
     Rel_Back(cli, nodejs, "Runs on")

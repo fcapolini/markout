@@ -17,17 +17,17 @@ C4Context
     System_Ext(vscode, "VS Code", "Development environment with Markout syntax highlighting and IntelliSense")
     System_Ext(cicd, "CI/CD Pipeline", "Builds, tests, and deploys Markout applications")
     
-    Rel(developer, markout, "Develops applications using", "HTML with :attributes and ${expressions}")
-    Rel(developer, vscode, "Uses for development", "Syntax highlighting, IntelliSense")
-    Rel(developer, npm, "Installs packages", "CLI tools, framework")
+    Rel(developer, markout, "develops with")
+    Rel(developer, vscode, "uses")
+    Rel(developer, npm, "installs from")
     
-    Rel(enduser, browser, "Uses", "Web interface")
-    Rel(browser, markout, "Requests pages", "HTTP/HTTPS")
+    Rel(enduser, browser, "uses")
+    Rel(browser, markout, "requests")
     
-    Rel(markout, nodejs, "Runs on", "Server-side execution")
-    Rel(markout, browser, "Delivers to", "HTML, CSS, JS")
+    Rel(markout, nodejs, "runs on")
+    Rel(markout, browser, "serves")
     
-    Rel(cicd, markout, "Builds and deploys", "Automated testing and deployment")
+    Rel(cicd, markout, "deploys")
     
     UpdateElementStyle(markout, $fontColor="white", $bgColor="blue", $borderColor="darkblue")
     UpdateRelStyle(developer, markout, $textColor="blue", $lineColor="blue", $offsetX="5")

@@ -25,25 +25,25 @@ C4Component
     Container_Ext(browser_dom, "Browser DOM", "Native browser DOM APIs")
     Container_Ext(html_elements, "HTML Elements", "Target DOM elements")
 
-    Rel(compiler_output, base_context, "Instantiates", "Runtime scopes from compiled structures")
+    Rel(compiler_output, base_context, "instantiates")
     
-    Rel(base_context, base_scope, "Creates", "Scope hierarchy")
-    Rel(base_context, batching_system, "Coordinates", "Update batching cycles")
-    Rel(base_scope, base_value, "Contains", "Reactive values")
-    Rel(base_scope, dependency_tracker, "Uses", "Proxy-based access")
+    Rel(base_context, base_scope, "creates")
+    Rel(base_context, batching_system, "coordinates")
+    Rel(base_scope, base_value, "contains")
+    Rel(base_scope, dependency_tracker, "uses")
     
-    Rel(base_value, dependency_tracker, "Registers", "Value dependencies")
-    Rel(dependency_tracker, base_value, "Triggers", "Change propagation")
+    Rel(base_value, dependency_tracker, "registers")
+    Rel(dependency_tracker, base_value, "triggers")
     
-    Rel(web_context, base_context, "Extends", "Browser-specific functionality")
-    Rel(web_scope, base_scope, "Extends", "DOM binding capabilities")
-    Rel(web_scope, dom_updater, "Uses", "DOM manipulation")
+    Rel(web_context, base_context, "extends")
+    Rel(web_scope, base_scope, "extends")
+    Rel(web_scope, dom_updater, "uses")
     
-    Rel(base_global, base_scope, "Provides", "Global functions and utilities")
+    Rel(base_global, base_scope, "provides")
     
-    Rel(dom_updater, server_dom, "Updates", "Server-side rendering")
-    Rel(dom_updater, browser_dom, "Updates", "Client-side hydration")
-    Rel(browser_dom, html_elements, "Manipulates", "Attributes, classes, styles, text, events")
+    Rel(dom_updater, server_dom, "updates")
+    Rel(dom_updater, browser_dom, "updates")
+    Rel(browser_dom, html_elements, "manipulates")
 
     UpdateElementStyle(base_context, $fontColor="white", $bgColor="blue", $borderColor="darkblue")
     UpdateElementStyle(batching_system, $fontColor="white", $bgColor="orange", $borderColor="darkorange")
