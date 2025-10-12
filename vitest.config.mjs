@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node',
+    environment: 'node', // All tests run in Node.js environment for Node.js 18+ compatibility
     env: {
       NODE_ENV: 'test',
       // Ensure consistent line endings across platforms
@@ -35,32 +35,9 @@ export default defineConfig({
         'tests/**/*.htm',
       ],
     },
-  },
-  projects: [
-    {
-      test: {
-        include: ['tests/**/*.{test,spec}.ts'],
-        exclude: [
-          'tests/**/*.dom.test.ts',
-          'tests/**/*.client.test.ts', 
-          'tests/**/*.browser.test.ts',
-          'tests/dom/**/*.test.ts',
-          'tests/client/**/*.test.ts'
-        ],
-        environment: 'node'
-      }
-    },
-    {
-      test: {
-        include: [
-          'tests/**/*.dom.test.ts',
-          'tests/**/*.client.test.ts',
-          'tests/**/*.browser.test.ts',
-          'tests/dom/**/*.test.ts',
-          'tests/client/**/*.test.ts'
-        ],
-        environment: 'jsdom'
-      }
-    }
-  ]
+  }
+  
+  // Note: All tests currently run in Node.js environment for maximum Node.js 18+ compatibility.
+  // JSDOM is available in tests/util.ts for DOM testing when needed.
+  // Future DOM-specific tests can be added with projects configuration if needed.
 });
