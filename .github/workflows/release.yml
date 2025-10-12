@@ -43,7 +43,7 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/}
 
           # Create release notes
-          cat > release_notes.md << 'EOF'
+          cat > release_notes.md << EOF
           # Markout ${VERSION} - Alpha Release 🚧
 
           First alpha release of Markout CLI published to npm as `@markout-js/cli`
