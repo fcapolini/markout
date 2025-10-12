@@ -3,7 +3,7 @@
 [![CI](https://github.com/fcapolini/markout2/actions/workflows/ci.yml/badge.svg)](https://github.com/fcapolini/markout2/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/fcapolini/markout2/actions/workflows/codeql.yml/badge.svg)](https://github.com/fcapolini/markout2/actions/workflows/codeql.yml)
 [![Node.js](https://img.shields.io/badge/node.js-18.x%20%7C%2020.x%20%7C%2022.x%20%7C%2024.x-brightgreen)](https://nodejs.org/)
-[![codecov](https://codecov.io/gh/fcapolini/markout/graph/badge.svg?token=VENQIX1AWP)](https://codecov.io/gh/fcapolini/markout)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=fcapolini_markout&metric=coverage&branch=main)](https://sonarcloud.io/summary/overall?id=fcapolini_markout)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=fcapolini_markout&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=fcapolini_markout)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
