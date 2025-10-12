@@ -24,7 +24,7 @@ describe('compiler-runtime integration', () => {
     const scopeProps = eval(`(${jsCode})`);
 
     // Create a runtime context and instantiate the scope
-    const context = new BaseContext({ root: scopeProps }, {});
+    const context = new BaseContext({ root: scopeProps }, {}).refresh();
     const rootScope = context.root;
 
     // Verify the structure exists
@@ -75,7 +75,7 @@ describe('compiler-runtime integration', () => {
     const scopeProps = eval(`(${jsCode})`);
 
     // Create a runtime context and instantiate the scope
-    const context = new BaseContext({ root: scopeProps }, {});
+    const context = new BaseContext({ root: scopeProps }, {}).refresh();
     const rootScope = context.root;
 
     // Navigate to the div scope - root is now the page scope

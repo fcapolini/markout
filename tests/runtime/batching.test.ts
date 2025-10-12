@@ -10,7 +10,7 @@ describe('DOM Update Batching', () => {
   beforeEach(() => {
     context = new BaseContext({
       root: { values: {}, id: 'test' },
-    });
+    }).refresh();
     scope = context.root;
   });
 

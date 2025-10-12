@@ -22,10 +22,10 @@ export class BaseContext {
     this.global = new BaseGlobal(this, addedGlobals);
     this.init();
     this.root = this.newScope(props.root, this, this.global);
-    this.refresh();
+    // this.refresh();
   }
 
-  refresh(scope?: BaseScope, nextCycle = true) {
+  refresh(scope?: BaseScope, nextCycle = true): this {
     scope || (scope = this.root);
     this.refreshLevel++;
     try {
@@ -39,6 +39,7 @@ export class BaseContext {
     if (--this.refreshLevel < 1) {
       this.applyPending();
     }
+    return this;
   }
 
   /**

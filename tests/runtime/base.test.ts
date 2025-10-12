@@ -12,7 +12,7 @@ it(`adds custom global value`, () => {
   const context = new BaseContext(
     { root: { id: '0' } },
     { custom: { val: 42 } }
-  );
+  ).refresh();
   assert.equal(context.global.proxy.custom, 42);
 });
 
@@ -20,14 +20,14 @@ it(`adds custom global function`, () => {
   const context = new BaseContext(
     { root: { id: '0' } },
     { custom: { val: (x: number) => x * 2 } }
-  );
+  ).refresh();
   assert.equal(context.global.proxy.custom(3), 6);
 });
 
 it(`adds a static value`, () => {
   const context = new BaseContext({
     root: { id: '0', values: { v1: { val: 42 } } },
-  });
+  }).refresh();
   assert.equal(context.root.proxy.v1, 42);
 });
 
@@ -43,7 +43,7 @@ it(`adds a dynamic value`, () => {
         },
       },
     },
-  });
+  }).refresh();
   assert.equal(context.root.proxy.v1, 42);
   context.root.proxy.v1 = 43;
   assert.equal(context.root.proxy.v1, 43);
@@ -69,7 +69,7 @@ it(`adds dependency (1)`, () => {
         },
       },
     },
-  });
+  }).refresh();
   assert.equal(context.root.proxy.v1, 42);
   context.root.proxy.v0 = 43;
   assert.equal(context.root.proxy.v1, 43);
@@ -99,7 +99,7 @@ it(`adds dependency (2)`, () => {
         },
       },
     },
-  });
+  }).refresh();
   assert.equal(context.root.proxy.v1, 42);
   context.root.proxy.v0 = 43;
   assert.equal(context.root.proxy.v1, 43);
@@ -119,7 +119,7 @@ it(`registers and de-registers scope name`, () => {
         },
       ],
     },
-  });
+  }).refresh();
   assert.equal(context.root.children.length, 1);
   assert.exists(context.root.proxy.head);
   context.root.children[0].dispose();
@@ -155,7 +155,7 @@ it(`can see outer value`, () => {
         },
       ],
     },
-  });
+  }).refresh();
   assert.equal(context.root.proxy.head.v1, 42);
   context.root.proxy.v0 = 43;
   assert.equal(context.root.proxy.head.v1, 43);
@@ -165,7 +165,7 @@ it(`should call value callback (1)`, () => {
   let val = 0;
   const context = new BaseContext({
     root: { id: '0', values: { v1: { val: 42 } } },
-  });
+  }).refresh();
   context.root.values['v1'].cb = (s, v) => {
     val = v;
   };
@@ -196,7 +196,7 @@ it(`should call value callback (2)`, () => {
         },
       },
     },
-  });
+  }).refresh();
   context.root.values['v1'].cb = (s, v) => {
     val = v;
   };
@@ -235,7 +235,7 @@ it(`should call value callback (2)`, () => {
         },
       ],
     },
-  });
+  }).refresh();
   context.root.children[0].values['v1'].cb = (s, v) => {
     val = v;
   };

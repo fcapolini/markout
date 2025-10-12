@@ -92,12 +92,12 @@ export class WebScope extends BaseScope {
       let t: Text | undefined;
       if (underscoreIndex >= 0) {
         // Splittable text: text$scopeId_index
-        const textIndex = parseInt(suffix.slice(underscoreIndex + 1));
+        const textIndex = Number.parseInt(suffix.slice(underscoreIndex + 1));
         t = this.texts[textIndex];
       } else if (/^\d+$/.test(suffix)) {
         // Could be either legacy format (text$index) or atomic format (text$scopeId)
         // Try legacy format first - if we have texts array with this index, use it
-        const textIndex = parseInt(suffix);
+        const textIndex = Number.parseInt(suffix);
         if (this.texts && textIndex < this.texts.length) {
           t = this.texts[textIndex];
         } else {

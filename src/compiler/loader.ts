@@ -461,7 +461,7 @@ function addSlotMap(
         break;
       }
     }
-    return parseInt(s.getAttribute(k.OUT_OBJ_ID_ATTR) ?? '0');
+    return Number.parseInt(s.getAttribute(k.OUT_OBJ_ID_ATTR) ?? '0');
   };
 
   lookupSlots(template.content);

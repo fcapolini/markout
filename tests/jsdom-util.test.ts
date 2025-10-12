@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 // Check Node.js version for JSDOM compatibility
 // JSDOM has webidl-conversions dependency issues on Node.js 18
 // Tests will skip gracefully on Node.js 18 while running normally on Node.js 20+
-const nodeVersion = parseInt(process.version.split('.')[0].slice(1));
+const nodeVersion = Number.parseInt(process.version.split('.')[0].slice(1));
 const isNode18 = nodeVersion === 18;
 
 describe('JSDOM Utilities', () => {

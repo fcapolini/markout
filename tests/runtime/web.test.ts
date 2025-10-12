@@ -8,7 +8,7 @@ it('should link element to scope', () => {
   const context = new WebContext({
     doc: source.doc,
     root: { id: '0', values: {} },
-  });
+  }).refresh();
   const root = context.root as WebScope;
   assert.equal(root.dom, source.doc.documentElement);
 });
@@ -18,7 +18,7 @@ it('should update attribute', () => {
   const context = new WebContext({
     doc: source.doc,
     root: { id: '0', values: { attr$lang: { val: 'en' } } },
-  });
+  }).refresh();
   assert.equal(source.doc.documentElement?.getAttribute('lang'), 'en');
   context.root.proxy['attr$lang'] = 'it';
   assert.equal(source.doc.documentElement?.getAttribute('lang'), 'it');
@@ -35,7 +35,7 @@ it('should update class attribute', () => {
         class$y: { val: false },
       },
     },
-  });
+  }).refresh();
   const e = source.doc.documentElement!;
   e.removeAttribute('data-markout');
   assert.equal(
@@ -65,7 +65,7 @@ it('should update style attribute', () => {
         style$color: { val: 'red' },
       },
     },
-  });
+  }).refresh();
   const e = source.doc.documentElement!;
   e.removeAttribute('data-markout');
   assert.equal(
@@ -100,7 +100,7 @@ it('should update text', () => {
         text$1: { val: 'there' },
       },
     },
-  });
+  }).refresh();
   const e = source.doc.documentElement!;
   e.removeAttribute('data-markout');
   assert.equal(
