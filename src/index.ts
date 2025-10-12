@@ -9,7 +9,7 @@ const program = new Command();
 program
   .name('markout')
   .description('Markout CLI - https://github.com/fcapolini/markout')
-  .version('0.5.0');
+  .version('1.0.0');
 
 program.command('serve')
   .description('serve a Markout project')
