@@ -399,7 +399,7 @@ export class ServerElement extends ServerContainerNode implements Element {
       a.value = value;
       return;
     }
-    a = new ServerAttribute(this.ownerDocument, this, name, value, this.loc);
+    new ServerAttribute(this.ownerDocument, this, name, value, this.loc);
   }
 
   removeAttribute(name: string) {
