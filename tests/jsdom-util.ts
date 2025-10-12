@@ -1,9 +1,6 @@
 import { JSDOM } from 'jsdom';
 import { generate } from 'escodegen';
-import {
-  Compiler,
-  CompilerPage,
-} from '../src/compiler/compiler';
+import { Compiler, CompilerPage } from '../src/compiler/compiler';
 import { WebContext } from '../src/runtime/web/web-context';
 import { parse } from '../src/html/parser';
 import * as dom from '../src/html/dom';
@@ -12,7 +9,10 @@ import * as dom from '../src/html/dom';
  * Run a page with JSDOM for DOM testing
  * This function is separate from util.ts to avoid loading JSDOM unless needed
  */
-export async function runPage(client: boolean, html: string): Promise<WebContext> {
+export async function runPage(
+  client: boolean,
+  html: string
+): Promise<WebContext> {
   const page: CompilerPage = { source: parse(html, 'test') };
   Compiler.compilePage(page);
   if (page.source.errors.length) {
