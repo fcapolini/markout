@@ -77,6 +77,19 @@ Unlike frameworks that re-render entire component trees and rely on Virtual DOM 
 
 This eliminates the common performance pitfalls of Virtual DOM frameworks without requiring optimization ceremonies like `React.memo`, `useMemo`, or `useCallback`.
 
+### Integrated CSS Reactivity
+Markout uniquely provides reactive CSS capabilities that dramatically simplify the development ecosystem:
+
+- **Reactive `<style>` Tags**: CSS can include `${...}` expressions for dynamic styling
+- **Eliminates CSS Preprocessing**: No need for Sass, Less, or CSS-in-JS solutions
+- **Theme Switching**: Easy implementation of dark mode and switchable themes
+- **Adaptive Styling**: Responsive breakpoints and device-specific styles
+- **Single Source of Truth**: Component logic and styling unified with shared variables
+- **CSS Custom Properties**: Dynamic CSS variable values through reactive expressions
+- **No CSS-JS Barrier**: Seamless data flow between JavaScript logic and CSS styling
+
+This innovation removes entire categories of tooling complexity while providing capabilities that other frameworks require additional libraries and build steps to achieve.
+
 ### Pull-Based Reactive System
 Markout uses a pull-based reactive system with hierarchical scopes:
 
@@ -125,17 +138,43 @@ Framework uses `$` as reserved namespace to prevent conflicts:
 - **Natural Scoping**: Variables work as developers expect
 - **Instant Feedback**: Hot reload during development
 
-### Component System
-- **Fragment-Based**: `<:define>` creates reusable components
-- **Automatic Imports**: Dependencies resolved automatically
-- **Attribute Inheritance**: Parent overrides work intuitively
-- **Library Support**: Easy integration with Bootstrap, Shoelace, etc.
+### Effortless Modularization & Componentization
+- **Fragment-Based Components**: `<:define>` creates reusable components from any HTML block
+- **Automatic Dependency Resolution**: Components import their own dependencies without conflicts
+- **Zero-Ceremony Sharing**: Simple `.htm` files work as component libraries
+- **Attribute Inheritance**: Parent overrides work intuitively with lexical scoping
+- **Inter-Project Libraries**: Same component files work across different projects
+- **Company-Wide Design Systems**: Enterprise component libraries with automatic dependency management
+- **Self-Documenting**: Component implementations are readable and serve as usage guides
+- **No Build Complexity**: Component libraries require no complex build processes or bundling
+- **Library Support**: Easy integration with Bootstrap, Shoelace, and third-party libraries
+
+### Integrated Styling
+- **Reactive CSS**: `<style>` tags support `${...}` expressions for dynamic styling
+- **No Preprocessing**: Eliminates need for Sass, Less, or CSS-in-JS solutions
+- **Theme Implementation**: Easy dark mode and switchable themes
+- **Ecosystem Simplification**: Removes entire categories of styling tooling complexity
+- **Unified Variables**: Shared data between JavaScript logic and CSS styling
 
 ### Data Handling
 - **`<:data>` Directive**: Sophisticated reactive data system
 - **REST Integration**: `<:data :src="/api/users">` for endpoints
 - **Local State**: `<:data :json=${{...}}>` for reactive data
 - **Business Logic**: Centralized validation and processing
+
+### Enterprise Component Libraries & Design Systems
+Markout's modularization architecture provides unique advantages for large-scale development:
+
+- **Company-Wide Libraries**: Share components across teams and projects without complex build processes
+- **Design System Implementation**: Turn design systems into simple HTML fragments instead of complex component packages
+- **Automatic Dependency Management**: Each component manages its own styles and dependencies
+- **No Version Hell**: Components are self-contained `.htm` files that can be versioned independently
+- **Cross-Team Collaboration**: Designers and developers can work with the same readable HTML files
+- **Zero Setup Cost**: New projects can use component libraries instantly without build configuration
+- **Living Documentation**: Component implementations serve as their own usage examples
+- **Progressive Enhancement**: Existing HTML can be gradually componentized without rewrites
+
+This approach removes traditional barriers to component sharing between projects and enables true code reuse within organizations.
 
 ## Production Readiness
 
@@ -182,25 +221,46 @@ Framework uses `$` as reserved namespace to prevent conflicts:
 ### vs React
 - **No JSX**: Uses enhanced HTML instead of JavaScript syntax
 - **No Virtual DOM**: Surgical DOM updates vs diffing algorithms
+- **Integrated CSS Reactivity**: Built-in reactive styles vs CSS-in-JS libraries (styled-components, emotion)
+- **Effortless Modularization**: Simple `.htm` files vs complex component packages and build systems
 - **Server-First**: SSR by default, not afterthought
 - **Simpler State**: No hooks, context, or complex state management
 - **Better Performance**: No re-render cascades or optimization ceremonies
 - **Smaller Bundle**: ~5KB runtime vs much larger React bundle
 - **Better SEO**: Pre-rendered content works with all indexers
+- **Design System Friendly**: HTML fragments vs complex component libraries requiring toolchains
+- **Stability**: Built on stable HTML standard vs frequent breaking changes (class components → hooks → server components)
 
 ### vs Vue
 - **No Template Compilation**: Direct HTML enhancement
 - **No Virtual DOM**: Direct DOM updates with batching and deduplication
+- **Integrated CSS Reactivity**: Reactive `<style>` tags vs separate CSS preprocessing (Sass, scoped styles)
+- **Effortless Modularization**: Zero-ceremony component sharing vs Vue component ecosystem complexity
 - **Unified Runtime**: Same code runs on server and client
 - **Lexical Scoping**: Variables work naturally without special syntax
 - **Framework Independence**: No ceremony or boilerplate
 - **Smaller Footprint**: Compiled architecture keeps runtime lean
+- **Enterprise Libraries**: Simple inter-project sharing vs Vue component library build processes
+- **Stability**: HTML-based foundation vs migration challenges (Vue 2 → Vue 3 Composition API changes)
 
 ### vs Svelte
 - **Runtime Flexibility**: No compile-time lock-in
+- **Integrated CSS Reactivity**: Dynamic CSS expressions vs compile-time CSS transformations
+- **Effortless Modularization**: Self-contained HTML fragments vs Svelte's compile-time component system
 - **Smaller Runtime**: ~5KB vs Svelte's compiled output size
 - **Server Rendering**: Full SSR without separate build
 - **Component Simplicity**: HTML fragments instead of special formats
 - **Development Speed**: No build step required for development
+- **Cross-Project Sharing**: Simple file sharing vs Svelte component compilation requirements
+- **Stability**: Stable HTML enhancement vs evolving compile-time transformations (SvelteKit changes)
 
-The Markout architecture prioritizes developer experience, performance, and long-term stability over following the latest trends. Every architectural decision is made with these principles in mind, resulting in a framework that's both powerful and approachable.
+## Stability-First Architecture
+
+The Markout architecture prioritizes developer experience, performance, and **long-term stability** over following the latest trends. This stability advantage comes from:
+
+- **HTML Foundation**: Built on the stable HTML standard that has evolved gracefully for decades
+- **Extensive Validation**: Long series of proofs-of-concept validated architectural choices before implementation
+- **Stability Principle**: Framework stability is a core design principle, not an afterthought
+- **Thoughtful Evolution**: "Thought it out before pushing it out" approach prevents breaking changes
+
+Unlike other frameworks that frequently introduce breaking changes requiring costly migrations, Markout's HTML-first approach provides a stable foundation that evolves naturally with web standards. Every architectural decision is made with these principles in mind, resulting in a framework that's both powerful and approachable for the long term.
