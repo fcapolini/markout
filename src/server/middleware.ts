@@ -57,7 +57,12 @@ export function markout(props: MarkoutProps) {
     let pathname = i < 0 ? req.path : req.path.substring(0, i).toLowerCase();
     if (i < 0) {
       try {
-        const fullPath = path.join(docroot, pathname);
+        const fullPath = path.resolve(docroot, pathname);
+        // Ensure the resolved path is contained in docroot
+        if (!fullPath.startsWith(docroot)) {
+          res.sendStatus(404);
+          return;
+        }
         const stat = await fs.promises.stat(fullPath);
         if (stat.isDirectory()) {
           pathname = path.join(pathname, 'index');
