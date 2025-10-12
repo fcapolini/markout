@@ -59,7 +59,7 @@ export default defineConfig({
           'tests/dom/**/*.test.ts',
           'tests/client/**/*.test.ts'
         ],
-        environment: 'happy-dom'
+        environment: 'jsdom'
       }
     }
   ]

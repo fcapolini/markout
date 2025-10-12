@@ -234,7 +234,7 @@ Advanced compiler using Acorn for JavaScript AST analysis and escodegen for code
 - **`tests/html/`** - HTML parser and preprocessor tests
 - **`tests/server/`** - Server integration tests
 - **`tests/integration/`** - Full compiler-runtime integration tests
-- Testing with Vitest, Happy-DOM, and comprehensive coverage reporting
+- Testing with Vitest, JSDOM, and comprehensive coverage reporting
 
 ## Available Scripts
 
@@ -379,7 +379,7 @@ Files are automatically assigned to the appropriate test environment:
 
 - **Vitest** - Fast unit test framework with TypeScript support
 - **Supertest** - HTTP assertion library for API testing
-- **Happy-DOM** - Lightweight DOM environment for client-side testing
+- **JSDOM** - Full-featured DOM environment for client-side testing with Node.js 18+ compatibility
 - **Coverage reports** - V8 coverage provider with HTML/JSON/LCOV output
 - **Cross-platform utilities** - Line ending normalization for reliable test comparisons
 - Test files located in `tests/` directory with comprehensive fixture-based testing
@@ -388,8 +388,8 @@ Files are automatically assigned to the appropriate test environment:
 
 Files are automatically assigned to the appropriate test environment:
 
-- `*.dom.test.ts` files run in **Happy-DOM** environment for DOM/client-side testing
-- Files in `tests/dom/` or `tests/client/` directories run in **Happy-DOM** environment
+- `*.dom.test.ts` files run in **JSDOM** environment for DOM/client-side testing
+- Files in `tests/dom/` or `tests/client/` directories run in **JSDOM** environment
 - All other test files run in **Node.js** environment for server-side testing
 
 ### **Test Structure**
