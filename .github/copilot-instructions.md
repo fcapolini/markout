@@ -390,6 +390,7 @@ All tests currently run in **Node.js** environment for maximum Node.js 18+ compa
 
 - Server-side testing with Node.js environment provides optimal performance and compatibility
 - JSDOM is available in `tests/jsdom-util.ts` for DOM testing when needed via `runPage()` function
+- JSDOM tests automatically skip on Node.js 18 due to webidl-conversions compatibility issues
 - Future DOM-specific tests can be added with `.dom.test.ts` naming if needed
 
 ### **Test Structure**
