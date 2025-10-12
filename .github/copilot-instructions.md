@@ -422,4 +422,32 @@ All tests currently run in **Node.js** environment for maximum Node.js 18+ compa
 - **Maintain comprehensive CI/CD** - all changes must pass quality gates
 - **Document breaking changes** - framework stability is paramount
 
+## CLI and Tooling
+
+**Markout CLI**: Complete development and deployment solution
+
+- **Development server**: `markout serve` with hot reload, live compilation, and error reporting
+- **Production deployment**: PM2 integration, clustering, health checks, and monitoring
+- **Project scaffolding**: Templates for Bootstrap, Shoelace, minimal, and component library projects
+- **Build tools**: Static site generation, PWA builds, pre-rendering, and bundle analysis
+- **Development utilities**: Syntax validation, code formatting, and documentation generation
+
+**VS Code Extension** (planned): Advanced development support with syntax highlighting, IntelliSense, dependency visualization, and component preview.
+
+## Ecosystem Integration
+
+**Third-party Library Support**: Markout works seamlessly with existing web technologies:
+
+- **Bootstrap Integration**: Wrap verbose Bootstrap components into clean, reactive Markout components
+- **Web Components**: Shoelace and other Web Component libraries work natively with reactive logic values
+- **Component Libraries**: Build reusable component libraries using `.htm` fragments with automatic dependency resolution
+- **Legacy Code**: Existing HTML/CSS/JS can be progressively enhanced with Markout features
+
+**Component Library Patterns**:
+
+- Fragment-based components with `<:define>` for reusable UI elements
+- Automatic dependency resolution eliminates manual import management
+- CSS encapsulation through fragment imports without Shadow DOM complexity
+- Cross-project component sharing through standardized `.htm` fragment files
+
 Project is enterprise-ready with comprehensive testing (178+ tests), security scanning, cross-platform compatibility, and production-grade process management.
