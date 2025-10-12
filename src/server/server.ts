@@ -74,7 +74,14 @@ export class Server {
       legacyHeaders: false,
     });
     for (const path of paths) {
-      app.use(path, limiter);
+      // Convert wildcard patterns to valid Express paths
+      if (path === '*') {
+        app.use(limiter); // Apply to all routes
+      } else if (path === '*.html') {
+        app.use(/.*\.html$/, limiter); // Apply to HTML files using regex
+      } else {
+        app.use(path, limiter);
+      }
     }
   }
 }
