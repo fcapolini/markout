@@ -1,21 +1,22 @@
 import * as acorn from 'acorn';
 import estraverse from 'estraverse';
 import * as es from 'estree';
-import { Source } from "../html/parser";
+import { Source } from '../html/parser';
 import { RT_PARENT_VALUE_KEY } from '../runtime/base/base-scope';
-import { CompilerScope } from "./compiler";
+import { CompilerScope } from './compiler';
 
 export function qualify(source: Source, root: CompilerScope): boolean {
   const qualify = (scope: CompilerScope) => {
-    scope.values && Object.keys(scope.values).forEach(key => {
-      const value = scope.values![key];
-      if (value.val === null || typeof value.val === 'string') {
-        return;
-      }
-      value.val = qualifyExpression(key, value.val);
-    });
+    scope.values &&
+      Object.keys(scope.values).forEach(key => {
+        const value = scope.values![key];
+        if (value.val === null || typeof value.val === 'string') {
+          return;
+        }
+        value.val = qualifyExpression(key, value.val);
+      });
     scope.children.forEach(child => qualify(child));
-  }
+  };
   qualify(root);
   return source.errors.length === 0;
 }
@@ -25,27 +26,27 @@ function qualifyExpression(key: string, exp: acorn.Expression) {
   const ret = estraverse.replace(exp as es.Node, {
     enter: (node, parent) => {
       stack.push(node);
-      if (node.type === "Identifier") {
+      if (node.type === 'Identifier') {
         if (isInDeclaration(node, stack)) {
           // this ID is getting declared
         } else if (!isLocalAccess(node, stack)) {
           if (!isQualified(node, parent)) {
             // unqualified remote ID reference: prefix with `this.`
-            let object: unknown = { type: "ThisExpression", ...loc(node) };
+            let object: unknown = { type: 'ThisExpression', ...loc(node) };
             if (node.name === key && !inFunctionBody(stack)) {
               // reference to itself -> $parent.<itself>
               const id = RT_PARENT_VALUE_KEY;
               object = {
-                type: "MemberExpression",
+                type: 'MemberExpression',
                 object,
-                property: { type: "Identifier", name: id, ...loc(node) },
+                property: { type: 'Identifier', name: id, ...loc(node) },
                 computed: false,
                 optional: false,
                 ...loc(node),
               };
             }
             return {
-              type: "MemberExpression",
+              type: 'MemberExpression',
               object,
               property: node,
               computed: false,
@@ -68,7 +69,7 @@ function loc(node: es.Node) {
   const anode = node as acorn.Node;
   return {
     range: [anode.start, anode.end],
-    loc: node.loc
+    loc: node.loc,
   };
 }
 
@@ -81,11 +82,7 @@ function isInDeclaration(id: es.Identifier, stack: es.Node[]) {
     return false;
   }
   const parent = stack[stack.length - 2];
-  if ([
-    'VariableDeclarator',
-    'Property',
-    'CatchClause'
-  ].includes(parent.type)) {
+  if (['VariableDeclarator', 'Property', 'CatchClause'].includes(parent.type)) {
     return true;
   }
   if (
@@ -95,9 +92,7 @@ function isInDeclaration(id: es.Identifier, stack: es.Node[]) {
   ) {
     return parent.params.includes(id);
   }
-  if (
-    parent.type === 'AssignmentPattern'
-  ) {
+  if (parent.type === 'AssignmentPattern') {
     return parent.left === id;
   }
   return false;
@@ -115,9 +110,7 @@ function isLocalAccess(id: es.Identifier, stack: es.Node[]) {
         return true;
       }
     }
-    if (
-      parent.type === 'BlockStatement'
-    ) {
+    if (parent.type === 'BlockStatement') {
       if (isDeclaredInBlock(id.name, parent.body)) {
         return true;
       }
@@ -129,16 +122,16 @@ function isLocalAccess(id: es.Identifier, stack: es.Node[]) {
 function isFunctionParam(name: string, params: es.Pattern[]) {
   for (const p of params) {
     switch (p.type) {
-    case 'Identifier':
-      if (p.name === name) {
-        return true;
-      }
-      break;
-    case 'AssignmentPattern':
-      if (p.left.type === 'Identifier' && p.left.name === name) {
-        return true;
-      }
-      break;
+      case 'Identifier':
+        if (p.name === name) {
+          return true;
+        }
+        break;
+      case 'AssignmentPattern':
+        if (p.left.type === 'Identifier' && p.left.name === name) {
+          return true;
+        }
+        break;
     }
   }
   return false;
@@ -146,11 +139,13 @@ function isFunctionParam(name: string, params: es.Pattern[]) {
 
 function inFunctionBody(stack: es.Node[]) {
   for (let i = stack.length - 2; i >= 0; i--) {
-    if ([
-      'FunctionDeclaration',
-      'FunctionExpression',
-      'ArrowFunctionExpression'
-    ].includes(stack[i].type)) {
+    if (
+      [
+        'FunctionDeclaration',
+        'FunctionExpression',
+        'ArrowFunctionExpression',
+      ].includes(stack[i].type)
+    ) {
       return true;
     }
   }

@@ -1,9 +1,9 @@
 import * as acorn from 'acorn';
-import { Source } from "../html/parser";
-import { Preprocessor } from "../html/preprocessor";
+import { Source } from '../html/parser';
+import { Preprocessor } from '../html/preprocessor';
 import { SourceLocation } from '../html/server-dom';
 import { generate } from './generator';
-import { load } from "./loader";
+import { load } from './loader';
 import { qualify } from './qualifier';
 import { resolve } from './resolver';
 import { validate } from './validator';
@@ -35,7 +35,7 @@ export interface CompilerScope {
 }
 
 export interface CompilerValue {
-  val: string | acorn.Expression | null
+  val: string | acorn.Expression | null;
   keyLoc: SourceLocation;
   valLoc?: SourceLocation;
   refs?: Set<string>;
@@ -85,5 +85,4 @@ export class Compiler {
     page.code = generate(page.root);
     return page;
   }
-
 }

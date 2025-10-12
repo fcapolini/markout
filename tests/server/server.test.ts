@@ -25,7 +25,7 @@ const files = (() => {
         lookupIn(relPath);
       }
     });
-  }
+  };
   lookupIn('.');
   return ret.sort();
 })();
@@ -49,11 +49,10 @@ it('should deliver client code', async () => {
   assert.isTrue(res.ok);
   const text = await res.text();
   assert.isNotEmpty(text);
-  assert.isTrue(text.startsWith('"use strict";(()=>{'), "invalid client code");
+  assert.isTrue(text.startsWith('"use strict";(()=>{'), 'invalid client code');
 });
 
 files.forEach(file => {
-
   it(file, async () => {
     browser = new Browser({ settings: { disableJavaScriptFileLoading: true } });
     const page = browser.newPage();
@@ -62,20 +61,16 @@ files.forEach(file => {
     await page.goto(`http://127.0.0.1:${server.port}/${file}`);
     const actual = getActual(page);
     const expected = getExpected(file, '-out.html');
-    assert.equal(
-      normalizeText(actual),
-      normalizeText(expected)
-    );
+    assert.equal(normalizeText(actual), normalizeText(expected));
 
     // CSR
   });
-
 });
 
 function getActual(page: BrowserPage) {
   let ret = page.mainFrame.document.documentElement.outerHTML;
   // remove script tags
-  ret = ret.replace(/<script.*?>.*?<\/script>/sg, '');
+  ret = ret.replace(/<script.*?>.*?<\/script>/gs, '');
   // adapt line breaks
   ret = ret.replace('><head', '>\n<head');
   ret = ret.replace('></html>', '>\n</html>');

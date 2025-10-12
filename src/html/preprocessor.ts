@@ -118,7 +118,9 @@ export class Preprocessor {
       main.addError('error', `Forbidden pathname "${s}"`, from?.loc);
       return;
     }
-    const relPath = normalizePathSeparators(pname.substring(this.docroot.length));
+    const relPath = normalizePathSeparators(
+      pname.substring(this.docroot.length)
+    );
     if (main.files.indexOf(relPath) < 0) {
       main.files.push(relPath);
     } else if (once) {

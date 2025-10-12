@@ -1,8 +1,8 @@
 import estraverse from 'estraverse';
 import * as es from 'estree';
-import { PageError, Source } from "../html/parser";
+import { PageError, Source } from '../html/parser';
 import { RT_PARENT_VALUE_KEY } from '../runtime/base/base-scope';
-import { CompilerScope, CompilerValue } from "./compiler";
+import { CompilerScope, CompilerValue } from './compiler';
 
 //TODO: in order to support comptime:
 // * scope property 'comptime'
@@ -12,10 +12,11 @@ import { CompilerScope, CompilerValue } from "./compiler";
 
 export function resolve(source: Source, root: CompilerScope): boolean {
   const resolve = (scope: CompilerScope) => {
-    scope.values && Object.keys(scope.values).forEach(key => {
-      const value = scope.values![key];
-      addValueRefs(source, scope, value);
-    });
+    scope.values &&
+      Object.keys(scope.values).forEach(key => {
+        const value = scope.values![key];
+        addValueRefs(source, scope, value);
+      });
     scope.children.forEach(child => resolve(child));
   };
   resolve(root);
@@ -42,12 +43,12 @@ function addValueRefs(
       }
     }
     return false;
-  }
+  };
 
   estraverse.traverse(value.val as es.Node, {
     enter: (node, parent) => {
       stack.push(node);
-      if (node.type === "ThisExpression" && !inArrowFunctionexpression()) {
+      if (node.type === 'ThisExpression' && !inArrowFunctionexpression()) {
         addValueRef(source, scope, value, node, stack);
       }
     },
@@ -78,7 +79,7 @@ function addValueRef(
     if (p.type === 'Literal' && typeof p.value !== 'string') {
       break;
     }
-    const key = p.type === 'Literal' ? p.value as string : p.name;
+    const key = p.type === 'Literal' ? (p.value as string) : p.name;
     path.push(key);
   }
   validateValueRef(source, scope, value, path, node.loc!);
@@ -115,9 +116,9 @@ function validateValueRef(
 }
 
 type Target = {
-  scope: CompilerScope,
-  value?: CompilerValue,
-}
+  scope: CompilerScope;
+  value?: CompilerValue;
+};
 
 function lookup(scope: CompilerScope, name: string): Target | null {
   for (const key of Object.keys(scope.values ?? {})) {
@@ -132,7 +133,7 @@ function lookup(scope: CompilerScope, name: string): Target | null {
   }
   if (!scope.closed && scope.parent) {
     if (name === RT_PARENT_VALUE_KEY) {
-      return { scope: scope.parent }
+      return { scope: scope.parent };
     }
     return lookup(scope.parent, name);
   }

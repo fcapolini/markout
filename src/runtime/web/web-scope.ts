@@ -1,7 +1,7 @@
-import { Comment, Element, NodeType, Text } from "../../html/dom";
-import { BaseScope, BaseScopeProps } from "../base/base-scope";
-import { BaseValueProps } from "../base/base-value";
-import { DOM_ID_ATTR, DOM_TEXT_MARKER1, WebContext } from "./web-context";
+import { Comment, Element, NodeType, Text } from '../../html/dom';
+import { BaseScope, BaseScopeProps } from '../base/base-scope';
+import { BaseValueProps } from '../base/base-value';
+import { DOM_ID_ATTR, DOM_TEXT_MARKER1, WebContext } from './web-context';
 
 export const RT_ATTR_VALUE_PREFIX = 'attr$';
 export const RT_CLASS_VALUE_PREFIX = 'class$';
@@ -20,7 +20,9 @@ export class WebScope extends BaseScope {
   override init() {
     super.init();
     this.texts = [];
-    const domElement = (this.ctx as WebContext).scopeElements.get(`${this.props.id}`);
+    const domElement = (this.ctx as WebContext).scopeElements.get(
+      `${this.props.id}`
+    );
     if (!domElement) {
       // Root scope or other scopes without corresponding DOM elements
       // should not try to perform DOM operations
@@ -44,7 +46,7 @@ export class WebScope extends BaseScope {
             this.texts.push(childNodes[i + 1] as Text);
           }
         });
-      }
+      };
       f(this.dom);
     }
   }
@@ -86,7 +88,7 @@ export class WebScope extends BaseScope {
     if (key.startsWith(RT_TEXT_VALUE_PREFIX)) {
       const suffix = key.slice(RT_TEXT_VALUE_PREFIX.length); // Remove "text$"
       const underscoreIndex = suffix.lastIndexOf('_');
-      
+
       let t: Text | undefined;
       if (underscoreIndex >= 0) {
         // Splittable text: text$scopeId_index
@@ -113,7 +115,7 @@ export class WebScope extends BaseScope {
         // Non-numeric suffix - shouldn't happen in current implementation
         console.warn(`Unexpected text key format: ${key}`);
       }
-      
+
       ret.setCB((_, val) => {
         if (!t) return;
         t.textContent = val == null ? '&#8203' : val;
@@ -124,6 +126,6 @@ export class WebScope extends BaseScope {
   }
 
   camelToDash(s: string): string {
-    return s.replace(/([a-z][A-Z])/g, (g) => g[0] + '-' + g[1].toLowerCase());
+    return s.replace(/([a-z][A-Z])/g, g => g[0] + '-' + g[1].toLowerCase());
   }
 }

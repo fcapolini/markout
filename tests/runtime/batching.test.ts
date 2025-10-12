@@ -9,7 +9,7 @@ describe('DOM Update Batching', () => {
 
   beforeEach(() => {
     context = new BaseContext({
-      root: { values: {}, id: 'test' }
+      root: { values: {}, id: 'test' },
     });
     scope = context.root;
   });
@@ -113,7 +113,7 @@ describe('DOM Update Batching', () => {
 
     // First, add to pending manually
     value.set('updated');
-    
+
     // The set() call already triggers propagation automatically if no dst values
     // Since we want to test batching, just verify the callback was called
     expect(callback).toHaveBeenCalledWith(scope, 'updated');
@@ -158,13 +158,13 @@ describe('DOM Update Batching', () => {
     // Simulate nested refresh calls
     context.refreshLevel++;
     values[0].set(10);
-    
+
     context.refreshLevel++;
     values[1].set(11);
-    
+
     values[2].set(12);
     context.refreshLevel--; // Don't flush yet
-    
+
     context.refreshLevel--; // Now should flush
 
     // All callbacks should be called exactly once
@@ -194,8 +194,12 @@ describe('DOM Update Batching', () => {
 
   it('should batch updates across multiple scopes', () => {
     // Create child scope
-    const childScope = new BaseScope({ id: 'child', values: {} }, context, scope);
-    
+    const childScope = new BaseScope(
+      { id: 'child', values: {} },
+      context,
+      scope
+    );
+
     const parentCallback = vi.fn();
     const childCallback = vi.fn();
 
@@ -233,12 +237,22 @@ describe('DOM Update Batching', () => {
 
     // Create values with expressions that can change
     let externalState = 1;
-    const value1 = new BaseValue({ 
-      exp: function() { return externalState * 2; }
-    }, scope);
-    const value2 = new BaseValue({ 
-      exp: function() { return externalState * 3; }
-    }, scope);
+    const value1 = new BaseValue(
+      {
+        exp: function () {
+          return externalState * 2;
+        },
+      },
+      scope
+    );
+    const value2 = new BaseValue(
+      {
+        exp: function () {
+          return externalState * 3;
+        },
+      },
+      scope
+    );
 
     // Add values to scope so refresh can find them
     scope.values.value1 = value1;
@@ -271,11 +285,16 @@ describe('DOM Update Batching', () => {
   it('should batch nested refresh calls', () => {
     const callback = vi.fn();
     let externalState = 1;
-    
-    const value = new BaseValue({ 
-      exp: function() { return externalState * 10; }
-    }, scope);
-    
+
+    const value = new BaseValue(
+      {
+        exp: function () {
+          return externalState * 10;
+        },
+      },
+      scope
+    );
+
     // Add value to scope
     scope.values.testValue = value;
     value.setCB(callback);
@@ -287,20 +306,20 @@ describe('DOM Update Batching', () => {
     // Simulate nested refresh calls
     context.refreshLevel++; // Start outer refresh
     externalState = 2;
-    
-    context.refreshLevel++; // Start inner refresh  
+
+    context.refreshLevel++; // Start inner refresh
     externalState = 3;
     value.get(); // This should add to pending but not flush
-    
+
     expect(context.pending.size).toBe(1);
     expect(callback).not.toHaveBeenCalled();
-    
+
     context.refreshLevel--; // End inner refresh (don't flush yet)
     expect(callback).not.toHaveBeenCalled();
-    
+
     context.refreshLevel--; // End outer refresh (now flush)
     context.applyPending();
-    
+
     expect(callback).toHaveBeenCalledWith(scope, 30); // 3 * 10
     expect(callback).toHaveBeenCalledTimes(1);
   });

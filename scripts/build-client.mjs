@@ -8,6 +8,8 @@ build({
   sourcemap: true,
   minify: true,
   loader: { '.ts': 'ts' },
-}).then(() => {
-  console.log('Build completed!');
-}).catch(() => process.exit(1));
+})
+  .then(() => {
+    console.log('Build completed!');
+  })
+  .catch(() => process.exit(1));

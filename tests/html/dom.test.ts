@@ -1,24 +1,43 @@
 import { assert, describe, it } from 'vitest';
-import { ServerComment, ServerContainerNode, ServerDocument, ServerElement, ServerNode, ServerTemplateElement, ServerText, SourceLocation } from '../../src/html/server-dom';
-import { Element, Node, NodeType, TemplateElement, Text } from '../../src/html/dom';
+import {
+  ServerComment,
+  ServerContainerNode,
+  ServerDocument,
+  ServerElement,
+  ServerNode,
+  ServerTemplateElement,
+  ServerText,
+  SourceLocation,
+} from '../../src/html/server-dom';
+import {
+  Element,
+  Node,
+  NodeType,
+  TemplateElement,
+  Text,
+} from '../../src/html/dom';
 
 const LOC: SourceLocation = {
   start: { line: 0, column: 0 },
   end: { line: 0, column: 0 },
-  i1: 0, i2: 0
-}
+  i1: 0,
+  i2: 0,
+};
 
 describe('node', () => {
-
   it('should append a node', () => {
     const doc = new ServerDocument('test');
-    const root = doc.appendChild(new ServerElement(doc, 'html', LOC)) as Element;
+    const root = doc.appendChild(
+      new ServerElement(doc, 'html', LOC)
+    ) as Element;
     assert.equal(doc.toString(), `<html></html>`);
   });
 
   it('should append a node', () => {
     const doc = new ServerDocument('test');
-    const root = doc.appendChild(new ServerElement(doc, 'html', LOC)) as Element;
+    const root = doc.appendChild(
+      new ServerElement(doc, 'html', LOC)
+    ) as Element;
     const text = root.appendChild(new ServerText(doc, 'test', LOC)) as Text;
     assert.equal(doc.toString(), `<html>test</html>`);
     text.unlink();
@@ -27,14 +46,18 @@ describe('node', () => {
 
   it('should implement dummy addEventListener()', () => {
     const doc = new ServerDocument('test');
-    const root = doc.appendChild(new ServerElement(doc, 'html', LOC)) as Element;
+    const root = doc.appendChild(
+      new ServerElement(doc, 'html', LOC)
+    ) as Element;
     root.addEventListener('dummy', () => {});
   });
 
   it('should remove a child node', () => {
     const doc = new ServerDocument('test');
     assert.equal(doc.childNodes.length, 0);
-    const root = doc.appendChild(new ServerElement(doc, 'html', LOC)) as Element;
+    const root = doc.appendChild(
+      new ServerElement(doc, 'html', LOC)
+    ) as Element;
     assert.equal(doc.childNodes.length, 1);
     doc.removeChild(root);
     assert.equal(doc.childNodes.length, 0);
@@ -42,19 +65,27 @@ describe('node', () => {
 
   it('should implement dummy removeEventListener()', () => {
     const doc = new ServerDocument('test');
-    const root = doc.appendChild(new ServerElement(doc, 'html', LOC)) as Element;
+    const root = doc.appendChild(
+      new ServerElement(doc, 'html', LOC)
+    ) as Element;
     root.removeEventListener('dummy', () => {});
   });
 
   it('should clone a node', () => {
     const doc = new ServerDocument('test');
-    const root = doc.appendChild(new ServerElement(doc, 'html', LOC)) as ServerElement;
+    const root = doc.appendChild(
+      new ServerElement(doc, 'html', LOC)
+    ) as ServerElement;
     const t = root.appendChild(new ServerText(doc, 'test', LOC)) as ServerText;
-    const e = root.appendChild(new ServerElement(doc, 'div', LOC)) as ServerElement;
+    const e = root.appendChild(
+      new ServerElement(doc, 'div', LOC)
+    ) as ServerElement;
     e.setAttribute('class', 'a');
     e.appendChild(new ServerText(doc, 'text', LOC));
     e.appendChild(new ServerElement(doc, 'p', LOC));
-    const c = root.appendChild(new ServerComment(doc, 'test', LOC)) as ServerComment;
+    const c = root.appendChild(
+      new ServerComment(doc, 'test', LOC)
+    ) as ServerComment;
     assert.equal(
       doc.toString(),
       `<html>test<div class="a">text<p></p></div><!--test--></html>`
@@ -64,15 +95,13 @@ describe('node', () => {
     c.clone(doc, root);
     assert.equal(
       doc.toString(),
-      `<html>test<div class="a">text<p></p></div><!--test-->`
-      + `test<div class="a">text<p></p></div><!--test--></html>`
+      `<html>test<div class="a">text<p></p></div><!--test-->` +
+        `test<div class="a">text<p></p></div><!--test--></html>`
     );
   });
-
 });
 
 describe('document', () => {
-
   it('should implement documentElement property', () => {
     const doc = new ServerDocument('test');
     assert.isNull(doc.documentElement);
@@ -82,7 +111,9 @@ describe('document', () => {
 
   it('should implement head property', () => {
     const doc = new ServerDocument('test');
-    const root = doc.appendChild(new ServerElement(doc, 'html', LOC)) as Element;
+    const root = doc.appendChild(
+      new ServerElement(doc, 'html', LOC)
+    ) as Element;
     assert.isNull(doc.head);
     assert.equal(doc.toString(), `<html></html>`);
     const head = root.appendChild(new ServerElement(doc, 'head', LOC));
@@ -92,18 +123,18 @@ describe('document', () => {
 
   it('should implement body property', () => {
     const doc = new ServerDocument('test');
-    const root = doc.appendChild(new ServerElement(doc, 'html', LOC)) as Element;
+    const root = doc.appendChild(
+      new ServerElement(doc, 'html', LOC)
+    ) as Element;
     assert.isNull(doc.body);
     assert.equal(doc.toString(), `<html></html>`);
     const body = root.appendChild(new ServerElement(doc, 'body', LOC));
     assert.equal(doc.body, body);
     assert.equal(doc.toString(), `<html><body></body></html>`);
   });
-
 });
 
 describe('classList', () => {
-
   it('should set w/ className and read w/ classList', () => {
     const doc = new ServerDocument('test');
     const root = new ServerElement(doc, 'html', LOC);
@@ -114,10 +145,7 @@ describe('classList', () => {
     root.className = 'a b';
     assert.equal(root.classList.length, 2);
     assert.equal(root.classList.toString(), 'a b');
-    assert.equal(
-      root.toString(),
-      `<html class="a b"></html>`
-    );
+    assert.equal(root.toString(), `<html class="a b"></html>`);
   });
 
   it('should set w/ classList and read w/ className', () => {
@@ -139,10 +167,7 @@ describe('classList', () => {
     root.classList.remove('b');
     assert.equal(root.classList.length, 0);
     assert.equal(root.className, '');
-    assert.equal(
-      root.toString(),
-      `<html class=""></html>`
-    );
+    assert.equal(root.toString(), `<html class=""></html>`);
   });
 
   it('should set w/ className and read w/ getAttribute', () => {
@@ -198,11 +223,9 @@ describe('classList', () => {
     assert.equal(e.className, 'a');
     assert.equal(e.classList.length, 1);
   });
-
 });
 
 describe('style', () => {
-
   it('should set as string', () => {
     const doc = new ServerDocument('test');
     const root = new ServerElement(doc, 'html', LOC);
@@ -246,15 +269,17 @@ describe('style', () => {
     assert.isTrue(e.getAttributeNames().includes('style'));
     assert.equal(e.style.cssText, 'color: red;');
   });
-
 });
 
 describe('template', () => {
-
   it('should support cloning template tag (1)', () => {
     const doc = new ServerDocument('test');
-    const root = doc.appendChild(new ServerElement(doc, 'html', LOC)) as Element;
-    const tpl = root.appendChild(new ServerTemplateElement(doc, LOC)) as TemplateElement;
+    const root = doc.appendChild(
+      new ServerElement(doc, 'html', LOC)
+    ) as Element;
+    const tpl = root.appendChild(
+      new ServerTemplateElement(doc, LOC)
+    ) as TemplateElement;
     tpl.setAttribute('id', 'tpl');
     const p1 = tpl.appendChild(new ServerElement(doc, 'p', LOC)) as Element;
     p1.setAttribute('a', '1');
@@ -264,9 +289,9 @@ describe('template', () => {
 
     assert.equal(
       root.toString(),
-      `<html>`
-      + `<template id="tpl"><p a="1">text<slot name="slot1"></slot></p></template>`
-      + `</html>`
+      `<html>` +
+        `<template id="tpl"><p a="1">text<slot name="slot1"></slot></p></template>` +
+        `</html>`
     );
 
     const tpl2 = tpl.cloneNode(true);
@@ -279,8 +304,12 @@ describe('template', () => {
 
   it('should support cloning template tag (2)', () => {
     const doc = new ServerDocument('test');
-    const root = doc.appendChild(new ServerElement(doc, 'html', LOC)) as Element;
-    const tpl = root.appendChild(new ServerTemplateElement(doc, LOC)) as TemplateElement;
+    const root = doc.appendChild(
+      new ServerElement(doc, 'html', LOC)
+    ) as Element;
+    const tpl = root.appendChild(
+      new ServerTemplateElement(doc, LOC)
+    ) as TemplateElement;
     tpl.setAttribute('id', 'tpl');
     const p1 = tpl.appendChild(new ServerElement(doc, 'p', LOC)) as Element;
     p1.setAttribute('class', 'a');
@@ -291,9 +320,9 @@ describe('template', () => {
 
     assert.equal(
       root.toString(),
-      `<html>`
-      + `<template id="tpl"><p class="a" style="color: red;">text<slot name="slot1"></slot></p></template>`
-      + `</html>`
+      `<html>` +
+        `<template id="tpl"><p class="a" style="color: red;">text<slot name="slot1"></slot></p></template>` +
+        `</html>`
     );
 
     const tpl2 = tpl.cloneNode(true);
@@ -306,8 +335,12 @@ describe('template', () => {
 
   it('should support cloning template content (1)', () => {
     const doc = new ServerDocument('test');
-    const root = doc.appendChild(new ServerElement(doc, 'html', LOC)) as Element;
-    const tpl = root.appendChild(new ServerTemplateElement(doc, LOC)) as TemplateElement;
+    const root = doc.appendChild(
+      new ServerElement(doc, 'html', LOC)
+    ) as Element;
+    const tpl = root.appendChild(
+      new ServerTemplateElement(doc, LOC)
+    ) as TemplateElement;
     tpl.setAttribute('id', 'tpl');
     const p1 = tpl.appendChild(new ServerElement(doc, 'p', LOC)) as Element;
     p1.setAttribute('a', '1');
@@ -325,17 +358,21 @@ describe('template', () => {
     root.appendChild(cnt2);
     assert.equal(
       root.toString(),
-      `<html>`
-      + `<template id="tpl"><p a="1">text<slot name="slot1"></slot></p></template>`
-      + `<p a="1">text<slot name="slot1"></slot></p>`
-      + `</html>`
+      `<html>` +
+        `<template id="tpl"><p a="1">text<slot name="slot1"></slot></p></template>` +
+        `<p a="1">text<slot name="slot1"></slot></p>` +
+        `</html>`
     );
   });
 
   it('should support cloning template content (2)', () => {
     const doc = new ServerDocument('test');
-    const root = doc.appendChild(new ServerElement(doc, 'html', LOC)) as Element;
-    const tpl = root.appendChild(new ServerTemplateElement(doc, LOC)) as TemplateElement;
+    const root = doc.appendChild(
+      new ServerElement(doc, 'html', LOC)
+    ) as Element;
+    const tpl = root.appendChild(
+      new ServerTemplateElement(doc, LOC)
+    ) as TemplateElement;
     tpl.setAttribute('id', 'tpl');
     const p1 = tpl.appendChild(new ServerElement(doc, 'p', LOC)) as Element;
     // p1.setAttribute('class', 'a');
@@ -356,104 +393,125 @@ describe('template', () => {
     root.appendChild(cnt2);
     assert.equal(
       root.toString(),
-      `<html>`
-      + `<template id="tpl"><p class="a" style="color: red;">text<slot name="slot1"></slot></p></template>`
-      + `<p class="a" style="color: red;">text<slot name="slot1"></slot></p>`
-      + `</html>`
+      `<html>` +
+        `<template id="tpl"><p class="a" style="color: red;">text<slot name="slot1"></slot></p></template>` +
+        `<p class="a" style="color: red;">text<slot name="slot1"></slot></p>` +
+        `</html>`
     );
   });
 
   it('should support cloning nested template content', () => {
     const doc = new ServerDocument('test');
-    const root = doc.appendChild(new ServerElement(doc, 'html', LOC)) as Element;
+    const root = doc.appendChild(
+      new ServerElement(doc, 'html', LOC)
+    ) as Element;
 
-    const tpl1 = root.appendChild(new ServerTemplateElement(doc, LOC)) as TemplateElement;
+    const tpl1 = root.appendChild(
+      new ServerTemplateElement(doc, LOC)
+    ) as TemplateElement;
     tpl1.setAttribute('id', 'tpl1');
     const p1 = tpl1.appendChild(new ServerElement(doc, 'p', LOC)) as Element;
     p1.setAttribute('a', '1');
     p1.appendChild(new ServerText(doc, 'text1', LOC));
-    const slot1 = p1.appendChild(new ServerElement(doc, 'slot', LOC)) as Element;
+    const slot1 = p1.appendChild(
+      new ServerElement(doc, 'slot', LOC)
+    ) as Element;
     slot1.setAttribute('name', 'slot1');
 
-    const tpl2 = tpl1.appendChild(new ServerTemplateElement(doc, LOC)) as TemplateElement;
+    const tpl2 = tpl1.appendChild(
+      new ServerTemplateElement(doc, LOC)
+    ) as TemplateElement;
     tpl2.setAttribute('id', 'tpl2');
     const p2 = tpl2.appendChild(new ServerElement(doc, 'p', LOC)) as Element;
     p2.setAttribute('a', '2');
     p2.appendChild(new ServerText(doc, 'text2', LOC));
-    const slot2 = p2.appendChild(new ServerElement(doc, 'slot', LOC)) as Element;
+    const slot2 = p2.appendChild(
+      new ServerElement(doc, 'slot', LOC)
+    ) as Element;
     slot2.setAttribute('name', 'slot2');
 
     assert.equal(
       root.toString(),
-      `<html>`
-      + `<template id="tpl1">`
-      + `<p a="1">text1<slot name="slot1"></slot></p>`
-      + `<template id="tpl2"><p a="2">text2<slot name="slot2"></slot></p></template>`
-      + `</template>`
-      + `</html>`
+      `<html>` +
+        `<template id="tpl1">` +
+        `<p a="1">text1<slot name="slot1"></slot></p>` +
+        `<template id="tpl2"><p a="2">text2<slot name="slot2"></slot></p></template>` +
+        `</template>` +
+        `</html>`
     );
 
     const clone1 = tpl1.cloneNode(true);
     assert.isTrue(compareNode(tpl1, clone1));
     assert.equal(
       clone1.toString(),
-      `<template id="tpl1">`
-      + `<p a="1">text1<slot name="slot1"></slot></p>`
-      + `<template id="tpl2"><p a="2">text2<slot name="slot2"></slot></p></template>`
-      + `</template>`
+      `<template id="tpl1">` +
+        `<p a="1">text1<slot name="slot1"></slot></p>` +
+        `<template id="tpl2"><p a="2">text2<slot name="slot2"></slot></p></template>` +
+        `</template>`
     );
   });
 
   it('should support cloning nested template content', () => {
     const doc = new ServerDocument('test');
-    const root = doc.appendChild(new ServerElement(doc, 'html', LOC)) as Element;
+    const root = doc.appendChild(
+      new ServerElement(doc, 'html', LOC)
+    ) as Element;
 
-    const tpl1 = root.appendChild(new ServerTemplateElement(doc, LOC)) as TemplateElement;
+    const tpl1 = root.appendChild(
+      new ServerTemplateElement(doc, LOC)
+    ) as TemplateElement;
     tpl1.setAttribute('id', 'tpl1');
     const p1 = tpl1.appendChild(new ServerElement(doc, 'p', LOC)) as Element;
     p1.setAttribute('a', '1');
     p1.appendChild(new ServerText(doc, 'text1', LOC));
-    const slot1 = p1.appendChild(new ServerElement(doc, 'slot', LOC)) as Element;
+    const slot1 = p1.appendChild(
+      new ServerElement(doc, 'slot', LOC)
+    ) as Element;
     slot1.setAttribute('name', 'slot1');
 
-    const tpl2 = tpl1.appendChild(new ServerTemplateElement(doc, LOC)) as TemplateElement;
+    const tpl2 = tpl1.appendChild(
+      new ServerTemplateElement(doc, LOC)
+    ) as TemplateElement;
     tpl2.setAttribute('id', 'tpl2');
     const p2 = tpl2.appendChild(new ServerElement(doc, 'p', LOC)) as Element;
     p2.setAttribute('a', '2');
     p2.appendChild(new ServerText(doc, 'text2', LOC));
-    const slot2 = p2.appendChild(new ServerElement(doc, 'slot', LOC)) as Element;
+    const slot2 = p2.appendChild(
+      new ServerElement(doc, 'slot', LOC)
+    ) as Element;
     slot2.setAttribute('name', 'slot2');
 
     assert.equal(
       root.toString(),
-      `<html>`
-      + `<template id="tpl1">`
-      + `<p a="1">text1<slot name="slot1"></slot></p>`
-      + `<template id="tpl2"><p a="2">text2<slot name="slot2"></slot></p></template>`
-      + `</template>`
-      + `</html>`
+      `<html>` +
+        `<template id="tpl1">` +
+        `<p a="1">text1<slot name="slot1"></slot></p>` +
+        `<template id="tpl2"><p a="2">text2<slot name="slot2"></slot></p></template>` +
+        `</template>` +
+        `</html>`
     );
 
     const clone1 = tpl1.content.cloneNode(true);
     assert.equal(
       clone1.toString(),
-      `<p a="1">text1<slot name="slot1"></slot></p>`
-      + `<template id="tpl2"><p a="2">text2<slot name="slot2"></slot></p></template>`
+      `<p a="1">text1<slot name="slot1"></slot></p>` +
+        `<template id="tpl2"><p a="2">text2<slot name="slot2"></slot></p></template>`
     );
     root.appendChild(clone1);
     assert.equal(
       root.toString(),
-      `<html>`
-      + `<template id="tpl1">`
-      + `<p a="1">text1<slot name="slot1"></slot></p>`
-      + `<template id="tpl2"><p a="2">text2<slot name="slot2"></slot></p></template>`
-      + `</template>`
-      + `<p a="1">text1<slot name="slot1"></slot></p>`
-      + `<template id="tpl2"><p a="2">text2<slot name="slot2"></slot></p></template>`
-      + `</html>`
+      `<html>` +
+        `<template id="tpl1">` +
+        `<p a="1">text1<slot name="slot1"></slot></p>` +
+        `<template id="tpl2"><p a="2">text2<slot name="slot2"></slot></p></template>` +
+        `</template>` +
+        `<p a="1">text1<slot name="slot1"></slot></p>` +
+        `<template id="tpl2"><p a="2">text2<slot name="slot2"></slot></p></template>` +
+        `</html>`
     );
 
-    const tpl2b = root.childNodes.find(n =>
+    const tpl2b = root.childNodes.find(
+      n =>
         n.nodeType === NodeType.ELEMENT &&
         (n as Element).getAttribute('id') === 'tpl2'
     ) as TemplateElement;
@@ -465,18 +523,17 @@ describe('template', () => {
     root.appendChild(clone2);
     assert.equal(
       root.toString(),
-      `<html>`
-      + `<template id="tpl1">`
-      + `<p a="1">text1<slot name="slot1"></slot></p>`
-      + `<template id="tpl2"><p a="2">text2<slot name="slot2"></slot></p></template>`
-      + `</template>`
-      + `<p a="1">text1<slot name="slot1"></slot></p>`
-      + `<template id="tpl2"><p a="2">text2<slot name="slot2"></slot></p></template>`
-      + `<p a="2">text2<slot name="slot2"></slot></p>`
-      + `</html>`
+      `<html>` +
+        `<template id="tpl1">` +
+        `<p a="1">text1<slot name="slot1"></slot></p>` +
+        `<template id="tpl2"><p a="2">text2<slot name="slot2"></slot></p></template>` +
+        `</template>` +
+        `<p a="1">text1<slot name="slot1"></slot></p>` +
+        `<template id="tpl2"><p a="2">text2<slot name="slot2"></slot></p></template>` +
+        `<p a="2">text2<slot name="slot2"></slot></p>` +
+        `</html>`
     );
   });
-
 });
 
 function compareContainer(a: ServerContainerNode, b: ServerContainerNode) {
@@ -502,7 +559,10 @@ function compareNode(na: Node, nb: Node) {
     case NodeType.DOCUMENT:
       return compareElement(a as ServerElement, b as ServerElement);
     case NodeType.DOCUMENT_FRAGMENT:
-      return compareContainer(a as ServerContainerNode, b as ServerContainerNode);
+      return compareContainer(
+        a as ServerContainerNode,
+        b as ServerContainerNode
+      );
     case NodeType.TEXT:
     case NodeType.COMMENT:
       return compareText(a as ServerText, b as ServerText);

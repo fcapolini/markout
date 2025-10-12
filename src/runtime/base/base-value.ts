@@ -1,11 +1,8 @@
-import { BaseScope } from "./base-scope";
+import { BaseScope } from './base-scope';
 
 export type ValueExp<T> = () => T;
 export type ValueDep = () => BaseValue<any>;
-export type ValueCallback<T> = (
-  s: BaseScope,
-  v: T | undefined
-) => void;
+export type ValueCallback<T> = (s: BaseScope, v: T | undefined) => void;
 
 export interface BaseValueProps<T> {
   val?: T;
@@ -23,7 +20,11 @@ export class BaseValue<T = any> {
   exp?: ValueExp<T>;
   value: T | undefined;
 
-  constructor(props: BaseValueProps<T>, scope: BaseScope, cb?: ValueCallback<T>) {
+  constructor(
+    props: BaseValueProps<T>,
+    scope: BaseScope,
+    cb?: ValueCallback<T>
+  ) {
     this.props = props;
     this.scope = scope;
     this.cb = cb;
@@ -41,7 +42,7 @@ export class BaseValue<T = any> {
   }
 
   link() {
-    this.props.deps?.forEach((dep) => {
+    this.props.deps?.forEach(dep => {
       try {
         const o = dep.apply(this.scope.proxy);
         o.dst.add(this);
@@ -51,8 +52,8 @@ export class BaseValue<T = any> {
   }
 
   unlink() {
-    this.src.forEach((o) => o.dst.delete(this));
-    this.dst.forEach((o) => o.src.delete(this));
+    this.src.forEach(o => o.dst.delete(this));
+    this.dst.forEach(o => o.src.delete(this));
   }
 
   get(): T | undefined {
@@ -99,8 +100,8 @@ export class BaseValue<T = any> {
     }
     ctx.pushLevel++;
     try {
-      this.dst.forEach((v) => v.get());
-    } catch (ignored) { }
+      this.dst.forEach(v => v.get());
+    } catch (ignored) {}
     if (--ctx.pushLevel < 1) {
       ctx.applyPending();
     }

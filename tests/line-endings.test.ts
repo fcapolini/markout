@@ -27,12 +27,13 @@ describe('Cross-platform line ending normalization', () => {
   });
 
   it('should normalize text for comparison across platforms', () => {
-    const windowsText = '<html>\r\n  <body>\r\n    <p>Hello</p>\r\n  </body>\r\n</html>';
+    const windowsText =
+      '<html>\r\n  <body>\r\n    <p>Hello</p>\r\n  </body>\r\n</html>';
     const unixText = '<html>\n  <body>\n    <p>Hello</p>\n  </body>\n</html>';
-    
+
     const normalizedWindows = normalizeTextForComparison(windowsText);
     const normalizedUnix = normalizeTextForComparison(unixText);
-    
+
     assert.equal(normalizedWindows, normalizedUnix);
   });
 
@@ -41,7 +42,7 @@ describe('Cross-platform line ending normalization', () => {
     // For now, we'll verify the normalization function exists and works
     const windowsPath = 'src\\components\\button.html';
     const unixPath = 'src/components/button.html';
-    
+
     // The normalizePathSeparators function is internal to preprocessor
     // but the effect should be visible in source.fname when parsing files
     const normalized = windowsPath.replace(/\\/g, '/');

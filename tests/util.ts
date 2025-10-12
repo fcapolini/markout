@@ -1,6 +1,11 @@
 import * as acorn from 'acorn';
 import estraverse from 'estraverse';
-import { Compiler, CompilerPage, CompilerScope, CompilerValue } from '../src/compiler/compiler';
+import {
+  Compiler,
+  CompilerPage,
+  CompilerScope,
+  CompilerValue,
+} from '../src/compiler/compiler';
 import { WebScope } from '../src/runtime/web/web-scope';
 import { normalizeText, parse } from '../src/html/parser';
 import { generate } from 'escodegen';
@@ -26,36 +31,38 @@ export function normalizeTextForComparison(text: string): string {
 export function cleanupScopes(scope: CompilerScope) {
   const cleanupExpression = (exp: acorn.Node) => {
     return estraverse.replace(exp as any, {
-      enter: (node) => {
+      enter: node => {
         delete (node as any).start;
         delete (node as any).end;
         delete (node as any).loc;
-      }
+      },
     });
-  }
+  };
   const cleanupValue = (value: CompilerValue) => {
     delete (value as any).keyLoc;
     delete (value as any).valLoc;
     if (typeof value.val === 'object') {
       value.val = cleanupExpression(value.val as acorn.Node) as any;
     }
-  }
+  };
   scope.name && cleanupValue(scope.name);
-  scope.values && Object.keys(scope.values).forEach((v) =>
-    cleanupValue(scope.values![v])
-  );
+  scope.values &&
+    Object.keys(scope.values).forEach(v => cleanupValue(scope.values![v]));
   delete (scope as any).parent;
   delete (scope as any).loc;
   scope.children.forEach(s => cleanupScopes(s));
   return scope;
-};
+}
 
 export function dumpScopes(scope: WebScope, tab = '') {
   console.log(`${tab}${scope.props.id} ${scope.dom?.tagName}`);
   scope.children.forEach(child => dumpScopes(child as WebScope, tab + '\t'));
 }
 
-export async function runPage(client: boolean, html: string): Promise<WebContext> {
+export async function runPage(
+  client: boolean,
+  html: string
+): Promise<WebContext> {
   const page: CompilerPage = { source: parse(html, 'test') };
   Compiler.compilePage(page);
   if (page.source.errors.length) {
@@ -80,7 +87,10 @@ export async function runPage(client: boolean, html: string): Promise<WebContext
 }
 
 export function getMarkup(doc: any, cleanup = true): string {
-  let act = doc instanceof ServerDocument ? doc.toString() : doc.documentElement.outerHTML;
+  let act =
+    doc instanceof ServerDocument
+      ? doc.toString()
+      : doc.documentElement.outerHTML;
   if (cleanup) {
     act = act.replace(/ data-markout="\d+"/g, '');
     act = act.replace(/<!---.*?-->/g, '');

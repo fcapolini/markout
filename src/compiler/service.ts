@@ -1,4 +1,4 @@
-import { Compiler, CompilerProps } from "./compiler";
+import { Compiler, CompilerProps } from './compiler';
 
 export interface CompilerServiceProps {
   compilerProps: CompilerProps;

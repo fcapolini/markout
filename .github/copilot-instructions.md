@@ -15,6 +15,7 @@ Markout is inspired by OpenLaszlo's elegant design principles and aims to be a "
 ## Markout Syntax
 
 Three simple additions to standard HTML:
+
 - **Directives**: `<:import>`, `<:define>` for modularity and components
 - **Logic values**: `:` prefixed attributes (`:count`, `:on-click`) for reactive state
 - **Reactive expressions**: `${...}` syntax for dynamic content
@@ -22,12 +23,14 @@ Three simple additions to standard HTML:
 ## Reserved Namespace and Naming Conventions
 
 **Framework Reserved Identifiers**: Markout uses `$` as a reserved namespace to prevent conflicts with user code:
+
 - **Runtime methods**: `$value()`, `$parent` - framework-provided scope access methods that users can access
 - **Attribute prefixes**: `attr$`, `class$`, `style$`, `text$`, `event$` - internal runtime naming for reactive attributes
 - **Declaration prohibition**: `$` is forbidden in user-declared identifiers (variables, functions, parameters) but users can access framework-provided `$` identifiers
 - **Validation enforcement**: The validator prevents declaring new identifiers with `$` while allowing access to framework identifiers like `$parent` and `$value()`
 
 **Safe Markup Generation**: Framework uses triple-dash comments for conflict-free code generation:
+
 - **Triple-dash format**: `<!---...-->` instead of standard `<!--...-->` HTML comments
 - **Automatic removal**: These comments are removed from source code during processing
 - **Text markers**: Dynamic text insertion uses `<!---t{id}_{index}-->...<!---/-->` pattern
@@ -37,14 +40,16 @@ Three simple additions to standard HTML:
 ### Advanced Import Features (for reference docs)
 
 **Fragment Root Attribute Inheritance**: Sophisticated attribute override system:
+
 - Fragment root tag attributes are added to `<:import>` parent tag unless already present
-- Enables default/override pattern: fragment defines defaults, parent can override  
+- Enables default/override pattern: fragment defines defaults, parent can override
 - Parent scope overrides work through lexical scoping - component code remains unchanged
 - Works recursively across nested imports and sub-imports
 - Provides intuitive component customization without prop drilling
 - Refined through multiple PoC iterations for natural developer experience
 
 **Automatic Dependency Resolution for Component Libraries**: Critical for ecosystem adoption
+
 - Each fragment can import its own dependencies (base styles, other components)
 - Import deduplication ensures dependencies load only once per page
 - Enables zero-ceremony component libraries - just point to `.htm` files
@@ -54,6 +59,7 @@ Three simple additions to standard HTML:
 - Removes traditional barriers to component sharing between projects
 
 **Advanced Data Handling with `<:data>`**: Sophisticated reactive data system
+
 - REST endpoint integration: `<:data :aka="users" :src="/api/users" />`
 - Local reactive data: `<:data :aka="config" :json=${{...}} />`
 - **Explicit Property Access**: Access data via logic value properties (e.g., `users.json.list`, `config.json.setting`) - no magic property promotion
@@ -72,7 +78,8 @@ Three simple additions to standard HTML:
 - Universal async interface: WebSockets, Workers, IndexedDB, WebRTC, Server-Sent Events
 - Future tooling needs: Dependency analysis, circular detection, type inference for VS Code extension
 
-**Reactive Expressions in Special Tags**: 
+**Reactive Expressions in Special Tags**:
+
 - `<style>` and `<title>` tags support reactive expressions `${...}`
 - `<script>` tags are excluded to avoid conflicts with user JavaScript template literals
 - Enables reactive CSS and dynamic titles
@@ -84,6 +91,7 @@ Three simple additions to standard HTML:
 - Performance consideration: Updates entire `<style>` tag content; browsers not optimized for frequent CSS rule changes
 
 **Runtime Components Architecture**: Current implementation focus
+
 - **Evolution**: Moving from compile-time macro expansion to runtime component instantiation
 - **Benefits**: Enables dynamic component type selection, shared component behavior, unified replication system
 - **Foundation**: Server-side DOM `<template>` implementation with nested light-weight document and clone method
@@ -93,6 +101,7 @@ Three simple additions to standard HTML:
 - **Current Status**: Compiler generates BaseScopeProps structures that runtime instantiates as reactive scopes
 
 **Current Implementation Status**: Fully functional server with SSR/CSR support
+
 - **Server Infrastructure**: Complete Express.js server with middleware, rate limiting, compression, PM2 support
 - **Reactive Runtime**: Full BaseContext/BaseScope/BaseValue system with DOM update batching
 - **Compiler Pipeline**: Multi-phase compilation from HTML to reactive scope structures
@@ -100,6 +109,7 @@ Three simple additions to standard HTML:
 - **Testing Coverage**: Comprehensive test suite covering runtime, compiler, integration, and server components
 
 **Tooling Ecosystem**: Complete developer experience
+
 - **CLI Tool**: Production-ready development and deployment solution
   - Development server with hot reload (`markout serve <docroot> --port 3000`)
   - Built-in Express.js server with compression, rate limiting, static file serving
@@ -116,13 +126,14 @@ Three simple additions to standard HTML:
   - Fragment explorer for modular code organization
 
 Example - complete working counter:
+
 ```html
 <html>
-<body>
-   <button :count=${0} :on-click=${() => count++}>
-      Clicks: ${count}
-   </button>
-</body>
+  <body>
+    <button :count="${0}" :on-click="${()" ="">
+      count++}> Clicks: ${count}
+    </button>
+  </body>
 </html>
 ```
 
@@ -131,6 +142,7 @@ Example - complete working counter:
 Built on TypeScript Node.js + Express.js foundation with complete full-stack reactive framework:
 
 ### **Reactive Runtime System**
+
 - **Pull-based Reactive Engine**: Hierarchical scope system with proxy-based dependency tracking
 - **Polymorphic DOM Support**: Same reactive logic works on browser DOM and server-side DOM for SSR/CSR
 - **BaseContext**: Central coordinator with refresh cycles and batching system
@@ -139,6 +151,7 @@ Built on TypeScript Node.js + Express.js foundation with complete full-stack rea
 - **WebScope**: Browser-specific scope implementation with DOM binding (attributes, classes, styles, text, events)
 
 ### **High-Performance DOM Update Batching**
+
 - **Set-based Deduplication**: Automatically deduplicates multiple updates to same value using Set data structure
 - **Automatic Batch Boundaries**: Batching integrated with reactive cycle boundaries - updates flushed when `refreshLevel` reaches 0
 - **Transparent Operation**: Batching works seamlessly without requiring code changes
@@ -148,7 +161,9 @@ Built on TypeScript Node.js + Express.js foundation with complete full-stack rea
 - **Nested Operation Support**: Handles nested refresh cycles while maintaining single batching context
 
 ### **Multi-Phase Compiler Pipeline**
+
 Advanced compiler using Acorn for JavaScript AST analysis and escodegen for code generation:
+
 - **Load Phase**: Parse HTML structure and extract scopes/values with location tracking
 - **Validate Phase**: Enforce framework naming rules (no `$` in user identifiers) and syntax validation
 - **Qualify Phase**: Auto-transform expressions with `this.` qualification for proper lexical scoping
@@ -158,6 +173,7 @@ Advanced compiler using Acorn for JavaScript AST analysis and escodegen for code
 - **Generate Phase**: Output BaseScopeProps structure for runtime execution
 
 ### **HTML Processing Pipeline**
+
 - **Sophisticated Parser**: Handles "augmented HTML" with `:` attributes and `${...}` expressions
 - **Preprocessor**: Module loading, fragment imports, and dependency resolution
 - **Server-side DOM**: Custom DOM implementation enabling server-side pre-rendering with reactive logic
@@ -165,17 +181,20 @@ Advanced compiler using Acorn for JavaScript AST analysis and escodegen for code
 ## Project Structure
 
 ### **Source Code Architecture** (`src/`)
+
 - **`src/index.ts`** - CLI entry point using Commander.js for `markout serve` command
 - **`src/client.ts`** - Browser-side entry point for client-side reactive runtime
 - **`src/constants.ts`** - Framework constants and global identifiers
 
 ### **Server Infrastructure** (`src/server/`)
+
 - **`src/server/server.ts`** - Express.js server with compression, rate limiting, process management
 - **`src/server/middleware.ts`** - Core Markout middleware handling SSR/CSR, compilation, and page serving
 - **`src/server/logger.ts`** - Structured logging system with timestamps
 - **`src/server/exit-hook.ts`** - Graceful shutdown handling (PM2 compatible)
 
 ### **Reactive Runtime System** (`src/runtime/`)
+
 - **`src/runtime/base/base-context.ts`** - Central reactive coordinator with refresh cycles and batching
 - **`src/runtime/base/base-scope.ts`** - Hierarchical scopes with proxy-based access and lexical lookup
 - **`src/runtime/base/base-value.ts`** - Reactive values with expression evaluation and dependency tracking
@@ -184,6 +203,7 @@ Advanced compiler using Acorn for JavaScript AST analysis and escodegen for code
 - **`src/runtime/web/web-scope.ts`** - DOM-aware scope with attribute/style/text/event binding
 
 ### **Compiler Pipeline** (`src/compiler/`)
+
 - **`src/compiler/compiler.ts`** - Main compiler orchestrating multi-phase compilation
 - **`src/compiler/loader.ts`** - Load phase: HTML structure parsing and scope extraction
 - **`src/compiler/validator.ts`** - Validate phase: Framework rules and syntax validation
@@ -195,17 +215,20 @@ Advanced compiler using Acorn for JavaScript AST analysis and escodegen for code
 - **`src/compiler/service.ts`** - Compiler service utilities
 
 ### **HTML Processing** (`src/html/`)
+
 - **`src/html/parser.ts`** - HTML parser supporting `:` attributes and `${...}` expressions
 - **`src/html/preprocessor.ts`** - Module loading, imports, and dependency resolution
 - **`src/html/dom.ts`** - Cross-platform DOM abstraction (browser/server compatibility)
 - **`src/html/server-dom.ts`** - Server-side DOM implementation for SSR
 
 ### **Build System**
+
 - **`dist/`** - Compiled JavaScript output (esbuild)
 - **`scripts/build-server.mjs`** - Server build configuration (Node.js target)
 - **`scripts/build-client.mjs`** - Client build configuration (browser target, minified)
 
 ### **Comprehensive Testing** (`tests/`)
+
 - **`tests/runtime/`** - Runtime system tests (BaseContext, BaseScope, BaseValue, batching)
 - **`tests/compiler/`** - Compiler phase tests with input/output fixtures
 - **`tests/html/`** - HTML parser and preprocessor tests
@@ -216,12 +239,14 @@ Advanced compiler using Acorn for JavaScript AST analysis and escodegen for code
 ## Available Scripts
 
 ### **Development**
+
 - `npm run dev` - Development server with hot reload using nodemon and ts-node
 - `npm run build` - Build both server and client using esbuild (fast TypeScript compilation)
 - `npm run watch` - Watch TypeScript files and rebuild continuously
 - `npm run clean` - Clean the dist directory
 
 ### **Production Server Management**
+
 - `npm start` - Production server (single Node.js process)
 - `npm run start:prod` - Production server with PM2 cluster mode
 - `npm run start:dev` - Development server with PM2
@@ -233,6 +258,7 @@ Advanced compiler using Acorn for JavaScript AST analysis and escodegen for code
 - `npm run monit` - Open PM2 monitoring dashboard
 
 ### **Testing & Quality**
+
 - `npm test` - Run tests once (Vitest)
 - `npm run test:watch` - Run tests in watch mode
 - `npm run test:coverage` - Run tests with coverage report (V8 coverage)
@@ -240,6 +266,7 @@ Advanced compiler using Acorn for JavaScript AST analysis and escodegen for code
 - `npm run format:check` - Check if code is formatted correctly
 
 ### **CLI Usage**
+
 ```bash
 # Serve a Markout project
 node dist/index.js serve <docroot> [--port 3000]
@@ -308,6 +335,7 @@ Files are automatically assigned to the appropriate test environment:
 ## CI/CD & DevOps Infrastructure
 
 ### **GitHub Actions Workflows** (`.github/workflows/`)
+
 - **Main CI Pipeline** (`ci.yml`) - Multi-Node.js version testing (18.x, 20.x, 22.x) with build, test, coverage, security audit, and code quality
 - **Cross-Platform Build** (`cross-platform.yml`) - Ensures compatibility across Ubuntu, Windows, and macOS
 - **Security Analysis** (`codeql.yml`) - GitHub CodeQL semantic analysis with weekly scheduled scans
@@ -315,12 +343,14 @@ Files are automatically assigned to the appropriate test environment:
 - **Dependency Management** (`dependabot.yml`) - Automated weekly dependency updates with grouped PRs
 
 ### **Code Quality & Security Integration**
+
 - **SonarCloud** - Comprehensive code quality analysis with TypeScript/JavaScript rules
 - **Codecov** - Coverage tracking and reporting with detailed metrics
 - **Snyk** - Vulnerability scanning for dependencies and security issues
 - **Dependency Review** - Automated security review for new dependencies in PRs
 
 ### **Cross-Platform Compatibility**
+
 - **Line Ending Normalization** - Comprehensive solution for Windows/Unix compatibility issues
   - `normalizeLineEndings()` and `normalizeTextForComparison()` utilities in `tests/util.ts`
   - `.gitattributes` configuration enforcing LF line endings for all text files
@@ -355,12 +385,15 @@ Files are automatically assigned to the appropriate test environment:
 - Test files located in `tests/` directory with comprehensive fixture-based testing
 
 ### **Testing Environment Selection**
+
 Files are automatically assigned to the appropriate test environment:
+
 - `*.dom.test.ts` files run in **Happy-DOM** environment for DOM/client-side testing
 - Files in `tests/dom/` or `tests/client/` directories run in **Happy-DOM** environment
 - All other test files run in **Node.js** environment for server-side testing
 
 ### **Test Structure**
+
 - **`tests/runtime/`** - Reactive system tests (context, scope, value, batching)
 - **`tests/compiler/`** - Multi-phase compiler tests with fixture-based input/output validation
 - **`tests/html/`** - HTML parser and preprocessor tests

@@ -27,7 +27,7 @@ export default defineConfig({
         '**/*.config.*',
         // Test fixtures and generated output files
         'tests/**/generator/**/*.js',
-        'tests/**/qualifier/**/*.js', 
+        'tests/**/qualifier/**/*.js',
         'tests/**/resolver/**/*.js',
         'tests/**/includes/**/include.js',
         'test-fragment-behavior.js',

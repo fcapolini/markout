@@ -31,12 +31,16 @@ export class WebContext extends BaseContext {
       e.childNodes.forEach(
         n => n.nodeType === NodeType.ELEMENT && f(n as Element)
       );
-    }
+    };
     const docElement = (this.props as WebContextProps).doc.documentElement;
     docElement && f(docElement);
   }
 
-  override newScope(props: BaseScopeProps, ctx: BaseContext, parent?: BaseScope): BaseScope {
+  override newScope(
+    props: BaseScopeProps,
+    ctx: BaseContext,
+    parent?: BaseScope
+  ): BaseScope {
     return new WebScope(props, ctx as WebContext, parent);
   }
 }

@@ -9,11 +9,7 @@ const docroot = path.join(__dirname, 'preprocessor');
 
 fs.readdirSync(docroot).forEach(dir => {
   const dirPath = path.join(docroot, dir);
-  if (
-    fs.statSync(dirPath).isDirectory() &&
-    !dir.startsWith('.')
-  ) {
-
+  if (fs.statSync(dirPath).isDirectory() && !dir.startsWith('.')) {
     describe(dir, () => {
       const preprocessor = new Preprocessor(dirPath);
 
@@ -22,7 +18,6 @@ fs.readdirSync(docroot).forEach(dir => {
           fs.statSync(path.join(dirPath, file)).isFile() &&
           file.endsWith('-in.html')
         ) {
-
           it(file, async () => {
             const source = await preprocessor.load(file);
             if (source.errors.length) {
@@ -40,15 +35,22 @@ fs.readdirSync(docroot).forEach(dir => {
             } else {
               // const actualHTML = getMarkup(source.ast!) + '\n';
               const actualHTML = source.doc!.toString() + '\n';
-              const pname = path.join(docroot, dir, file.replace('-in.', '-out.'));
-              const expectedHTML = await fs.promises.readFile(pname, { encoding: 'utf8' });
-              assert.equal(normalizeTextForComparison(actualHTML), normalizeTextForComparison(expectedHTML));
+              const pname = path.join(
+                docroot,
+                dir,
+                file.replace('-in.', '-out.')
+              );
+              const expectedHTML = await fs.promises.readFile(pname, {
+                encoding: 'utf8',
+              });
+              assert.equal(
+                normalizeTextForComparison(actualHTML),
+                normalizeTextForComparison(expectedHTML)
+              );
             }
           });
-
         }
       });
     });
-
   }
 });

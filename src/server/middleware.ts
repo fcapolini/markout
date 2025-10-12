@@ -1,14 +1,14 @@
-import { generate } from "escodegen";
+import { generate } from 'escodegen';
 import { NextFunction, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
-import { PROPS_GLOBAL } from "../constants";
-import { Compiler } from "../compiler/compiler";
-import { Element, NodeType } from "../html/dom";
-import { PageError } from "../html/parser";
-import { ServerDocument } from "../html/server-dom";
-import { WebContext, WebContextProps } from "../runtime/web/web-context";
-import { MarkoutLogger } from "./logger";
+import { PROPS_GLOBAL } from '../constants';
+import { Compiler } from '../compiler/compiler';
+import { Element, NodeType } from '../html/dom';
+import { PageError } from '../html/parser';
+import { ServerDocument } from '../html/server-dom';
+import { WebContext, WebContextProps } from '../runtime/web/web-context';
+import { MarkoutLogger } from './logger';
 
 export const CLIENT_CODE_REQ = '/.markout.js';
 
@@ -35,7 +35,7 @@ export function markout(props: MarkoutProps) {
     ? fs.readFileSync(props.clientCodePath).toString()
     : '';
 
-  return async function(req: Request, res: Response, next: NextFunction) {
+  return async function (req: Request, res: Response, next: NextFunction) {
     const i = req.path.lastIndexOf('.');
     const extname = i < 0 ? '.html' : req.path.substring(i).toLowerCase();
 
@@ -62,7 +62,9 @@ export function markout(props: MarkoutProps) {
         if (stat.isDirectory()) {
           pathname = path.join(pathname, 'index');
         }
-      } catch (ignored) { /* nop */ }
+      } catch (ignored) {
+        /* nop */
+      }
     }
 
     const page = await compiler.compile(pathname + '.html');
@@ -88,7 +90,9 @@ export function markout(props: MarkoutProps) {
           (n as Element).tagName === 'BODY'
         ) {
           const script1 = doc.createElement('script');
-          script1.appendChild(doc.createTextNode(`${PROPS_GLOBAL} = ${propsJs}`));
+          script1.appendChild(
+            doc.createTextNode(`${PROPS_GLOBAL} = ${propsJs}`)
+          );
           (n as Element).appendChild(script1);
           const script2 = doc.createElement('script');
           script2.setAttribute('src', CLIENT_CODE_REQ);
@@ -102,7 +106,7 @@ export function markout(props: MarkoutProps) {
     const html = doc.toString();
     res.header('Content-Type', 'text/html;charset=UTF-8');
     res.send('<!doctype html>\n' + html);
-  }
+  };
 }
 
 function serveErrorPage(errors: PageError[], res: Response) {

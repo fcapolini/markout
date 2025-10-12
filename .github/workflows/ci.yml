@@ -2,128 +2,128 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
         node-version: [18.x, 20.x, 22.x]
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
-      with:
-        # Ensure consistent line endings across platforms
-        autocrlf: false
-      
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v5
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Run linting
-      run: npm run format:check
-      
-    - name: Build project
-      run: npm run build
-      
-    - name: Run tests
-      run: npm test
-      
-    - name: Run tests with coverage
-      run: npm run test:coverage
-      if: matrix.node-version == '20.x'
-      
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v5
-      if: matrix.node-version == '20.x'
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        directory: ./coverage
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          # Ensure consistent line endings across platforms
+          autocrlf: false
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run format:check
+
+      - name: Build project
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+        if: matrix.node-version == '20.x'
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        if: matrix.node-version == '20.x'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./coverage
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
 
   security-audit:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
-      with:
-        # Ensure consistent line endings across platforms
-        autocrlf: false
-      
-    - name: Use Node.js 20.x
-      uses: actions/setup-node@v5
-      with:
-        node-version: 20.x
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Run security audit
-      run: npm audit --audit-level moderate
-      
-    - name: Run vulnerability scan with Snyk
-      uses: snyk/actions/node@master
-      continue-on-error: true
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      with:
-        args: --severity-threshold=high
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          # Ensure consistent line endings across platforms
+          autocrlf: false
+
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security audit
+        run: npm audit --audit-level moderate
+
+      - name: Run vulnerability scan with Snyk
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
 
   code-quality:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
-      with:
-        fetch-depth: 0  # Shallow clones should be disabled for better relevancy of analysis
-        autocrlf: false  # Ensure consistent line endings across platforms
-        
-    - name: Use Node.js 20.x
-      uses: actions/setup-node@v5
-      with:
-        node-version: 20.x
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Build project
-      run: npm run build
-      
-    - name: Run tests with coverage
-      run: npm run test:coverage
-      
-    - name: SonarCloud Scan
-      uses: SonarSource/sonarcloud-github-action@master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # Shallow clones should be disabled for better relevancy of analysis
+          autocrlf: false # Ensure consistent line endings across platforms
+
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   dependency-review:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
-      
-    - name: Dependency Review
-      uses: actions/dependency-review-action@v4
-      with:
-        fail-on-severity: moderate
-        deny-licenses: GPL-2.0, GPL-3.0
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+          deny-licenses: GPL-2.0, GPL-3.0

@@ -87,8 +87,8 @@ it('should update style attribute', () => {
 it('should update text', () => {
   const source = parse(
     '<html data-markout="0"><body>' +
-    '<!---t0-->&#8203;<!---/--> <!---t1-->&#8203;<!---/-->!' +
-    '</body></html>',
+      '<!---t0-->&#8203;<!---/--> <!---t1-->&#8203;<!---/-->!' +
+      '</body></html>',
     'test'
   );
   const context = new WebContext({
@@ -106,21 +106,21 @@ it('should update text', () => {
   assert.equal(
     e.toString(),
     '<html><head></head><body>' +
-    '<!---t0-->hello<!---/--> <!---t1-->there<!---/-->!' +
-    '</body></html>'
+      '<!---t0-->hello<!---/--> <!---t1-->there<!---/-->!' +
+      '</body></html>'
   );
   context.root.proxy.text$0 = 'hi';
   assert.equal(
     e.toString(),
     '<html><head></head><body>' +
-    '<!---t0-->hi<!---/--> <!---t1-->there<!---/-->!' +
-    '</body></html>'
+      '<!---t0-->hi<!---/--> <!---t1-->there<!---/-->!' +
+      '</body></html>'
   );
   context.root.proxy.text$1 = 'folks';
   assert.equal(
     e.toString(),
     '<html><head></head><body>' +
-    '<!---t0-->hi<!---/--> <!---t1-->folks<!---/-->!' +
-    '</body></html>'
+      '<!---t0-->hi<!---/--> <!---t1-->folks<!---/-->!' +
+      '</body></html>'
   );
 });

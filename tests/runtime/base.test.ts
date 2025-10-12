@@ -9,7 +9,10 @@ it(`creates global scope`, () => {
 });
 
 it(`adds custom global value`, () => {
-  const context = new BaseContext({ root: { id: '0' } }, { custom: { val: 42 } });
+  const context = new BaseContext(
+    { root: { id: '0' } },
+    { custom: { val: 42 } }
+  );
   assert.equal(context.global.proxy.custom, 42);
 });
 
@@ -113,8 +116,8 @@ it(`registers and de-registers scope name`, () => {
           values: {
             v1: { val: 42 },
           },
-        }
-      ]
+        },
+      ],
     },
   });
   assert.equal(context.root.children.length, 1);
@@ -163,9 +166,9 @@ it(`should call value callback (1)`, () => {
   const context = new BaseContext({
     root: { id: '0', values: { v1: { val: 42 } } },
   });
-  context.root.values['v1'].cb = ((s, v) => {
+  context.root.values['v1'].cb = (s, v) => {
     val = v;
-  });
+  };
   context.root.proxy.v1++;
   assert.equal(val, 43);
   context.root.proxy.v1++;
@@ -194,9 +197,9 @@ it(`should call value callback (2)`, () => {
       },
     },
   });
-  context.root.values['v1'].cb = ((s, v) => {
+  context.root.values['v1'].cb = (s, v) => {
     val = v;
-  });
+  };
   context.root.proxy.v0++;
   assert.equal(val, 43);
   context.root.proxy.v0++;
@@ -233,9 +236,9 @@ it(`should call value callback (2)`, () => {
       ],
     },
   });
-  context.root.children[0].values['v1'].cb = ((s, v) => {
+  context.root.children[0].values['v1'].cb = (s, v) => {
     val = v;
-  });
+  };
   context.root.proxy.v0++;
   assert.equal(val, 43);
   context.root.proxy.v0++;

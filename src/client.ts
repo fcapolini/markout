@@ -1,5 +1,5 @@
-import { WebContext } from "./runtime/web/web-context";
-import { PROPS_GLOBAL } from "./constants";
+import { WebContext } from './runtime/web/web-context';
+import { PROPS_GLOBAL } from './constants';
 
 declare global {
   interface Window {
@@ -10,5 +10,8 @@ declare global {
 }
 
 const props = window[PROPS_GLOBAL] || {};
-window.__markout_context = new WebContext({ doc: document as any, root: props });
+window.__markout_context = new WebContext({
+  doc: document as any,
+  root: props,
+});
 window.markout = window.__markout_context.root;
