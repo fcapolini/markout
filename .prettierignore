@@ -63,3 +63,6 @@ Thumbs.db
 
 # Config files that should not be formatted
 vitest.config.mjs
+
+# Documentation files with custom formatting
+README.md

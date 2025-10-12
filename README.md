@@ -30,8 +30,8 @@ This is the canonical "click counter" example which is a traditional "hello worl
 ```html
 <html>
   <body>
-    <button :count="${0}" :on-click="${()" ="">
-      count++}> Clicks: ${count}
+    <button :count="${0}" :on-click="${() => count++}">
+      Clicks: ${count}
     </button>
   </body>
 </html>
@@ -130,11 +130,13 @@ By adding logic values to HTML tags you're conceptually adding variables and met
 To make this approach practical, tag attributes in Markout accept multiline values, can be commented out, and can have comments added to them. This makes it feel like you're defining a proper reactive visual object — because that's what you're actually doing:
 
 ```html
-<button :count="${0}" :on-click="${()" ="">
-  count++} // highlight dangerous state :class-danger=${count > 3} >
+<button 
+  :count="${0}" 
+  :on-click="${() => count++}" 
+  // highlight dangerous state
+  :class-danger="${count > 3}">
   <!--- button text can display either the count or an error -->
-  ${count < 6 ? `Clicks: ${count}` : `Oh my, you clicked too much and broke the
-  Web!`}
+  ${count < 6 ? `Clicks: ${count}` : `Oh my, you clicked too much and broke the Web!`}
 </button>
 ```
 
@@ -185,15 +187,57 @@ Markout directives are based on either `<template>` or custom `<:...>` tags:
 - `<:import>|<:include>`: source code modules
 - `<:data>`: data and services
 
-### `<template :if | :else | :elseif>`
+### Conditionals
 
-TBD
+Conditional rendering can be controlled with `<template :if | :else | :elseif>`.
 
-### `<template :foreach [:item] [:index]>`
+For example:
 
-TBD
+```html
+<template :if=${userType === 'buyer'}>
+  ...
+</template>
+<template :elseif=${userType === 'seller'}>
+  ...
+</template>
+<template :else>
+  ...
+</template>
+```
 
-### `<:define>`
+Of course conditionals can be nested:
+
+```html
+<template :if=${userType === 'buyer'}>
+  ...
+  <template :if=${catalog.length}>
+    ...
+  </template>
+  ...
+</template>
+```
+
+### Looping
+
+Replication can be expressed with `<template :foreach [:item] [:index]>`.
+
+For example:
+
+```html
+<template :foreach=${[1, 2, 3]} :item="n" :index="i">
+  Item ${n} has index ${i}
+</template>
+```
+
+The `:foreach` logic value is meant to receive an array, but it accepts `null`, `undefined` and non-array types as synonims of `[]`, so if it doesn't get something valid to replicate, it simply won't replicate anything.
+
+Note that both `:item` and `:index` are optional: if `:item` is missing, you won't have access to the current item, and in the same way if `:index` is missing you won't have access to its index.
+
+Keep in mind that the `<template>` element itself is kept in output markup, preceeded by its possible replicated clones. This is important to know in case you're using CSS pseudo-classes like `:last-child` for styling, in which case `:last-of-type` is advised.
+
+### Components
+
+Components can be declared with `<:define>`.
 
 This directive lets you turn any HTML block into a reusable component. You can:
 
@@ -206,7 +250,9 @@ The component can then be used anywhere as a simple custom tag, passing differen
 
 You can find a comprehensive demonstration of component creation and usage in the [Bootstrap](#Bootstrap) section below, which shows how to turn Bootstrap's verbose modal markup into a clean, reusable and reactive `<:bs-modal>` component.
 
-### `<:import>` and `<:include>`
+### Fragments
+
+Source modules can be included with `<:import>` and `<:include>`.
 
 With these tags you can include _page fragments_. For example:
 
@@ -344,7 +390,7 @@ With this approach to data handling you get four big wins:
 - ✅ Reactivity - Data updates automatically flow through dependent components and pipelines
 - ✅ Composability - Chain data transformations naturally without complex state management
 
-### Advanced `<:data>` features
+### Advanced features
 
 There's still a lot to say about the deceptively simple `<:data>` directive: things like HTTP methods, authentication, caching, error handling, retries etc. but it takes its own chapter in the docs.
 
@@ -376,7 +422,7 @@ This includes local DBs by the way... OK I stop.
 
 Most fellow devs might be thinking: "Yeah but a brand new framework means no component libraries!"
 
-Except, Markout is a superset of HTML, so what works with plain HTML + JavaScript can also work with Markout — and can be made reactive too.
+Except, Markout being a superset of HTML, what works with plain HTML + JavaScript can also work with Markout — and be made reactive too.
 
 ### Bootstrap
 
@@ -464,38 +510,197 @@ With this approach to components you get four big wins:
 
 ### Shoelace
 
-Markout is totally fine with Web Component libraries. Let's take [Shoelace](https://shoelace.style) as an example:
+Markout works seamlessly with Web Component libraries. Let's take [Shoelace](https://shoelace.style) as an example:
 
+```html
+<!-- Traditional Shoelace usage -->
+<sl-button variant="primary" size="large" disabled>
+  <sl-icon slot="prefix" name="gear"></sl-icon>
+  Settings
+</sl-button>
+
+<script type="module">
+  import '@shoelace-style/shoelace/dist/components/button/button.js';
+  import '@shoelace-style/shoelace/dist/components/icon/icon.js';
+  
+  const button = document.querySelector('sl-button');
+  button.addEventListener('sl-click', () => {
+    console.log('Button clicked!');
+  });
+</script>
 ```
-TBD
+
+In Markout, you can make Shoelace components reactive and eliminate the JavaScript ceremony:
+
+```html
+<!-- Reactive Shoelace in Markout -->
+<sl-button 
+  :variant="primary" 
+  :size="large" 
+  :disabled="${!user.canEditSettings}"
+  :on-sl-click="${() => openSettingsModal()}">
+  <sl-icon slot="prefix" name="gear"></sl-icon>
+  Settings
+</sl-button>
 ```
 
 By following Markout's simple conventions for page fragments, it's easy to consolidate the required plumbing in an importable library:
 
+```html
+<!-- lib/shoelace.htm -->
+<lib>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/themes/light.css" />
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/shoelace-autoloader.js"></script>
+  
+  <script>
+    // Set the base path for Shoelace assets
+    import { setBasePath } from 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/utilities/base-path.js';
+    setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/');
+  </script>
+</lib>
 ```
-TBD
+
+Now you can use Shoelace components reactively throughout your application by simply importing the library:
+
+```html
+<html>
+<head>
+  <:import :src="lib/shoelace.htm" />
+</head>
+<body>
+  <sl-button :loading="${isSubmitting}" :on-sl-click="${() => submitForm()}">
+    Submit Form
+  </sl-button>
+</body>
+</html>
 ```
 
 ### Project components
 
-Finally, what works for third-party libraries works just as well for your own stuff. Let's say you have a block you want to use multiple times: Markout makes it trivial to turn it into a reusable parametric component.
+Finally, what works for third-party libraries works just as well for your own stuff. Let's say you have a user profile card you want to use multiple times: Markout makes it trivial to turn it into a reusable parametric component.
 
 This is an example before componentization:
 
-```
-TBD
+```html
+<!-- Repeated across multiple pages -->
+<div class="profile-card">
+  <img src="/avatars/john-doe.jpg" alt="John Doe" class="avatar" />
+  <div class="profile-info">
+    <h3 class="name">John Doe</h3>
+    <p class="title">Senior Developer</p>
+    <p class="email">john.doe@company.com</p>
+    <button class="contact-btn" onclick="openChat('john-doe')">
+      Contact
+    </button>
+  </div>
+</div>
+
+<style>
+  .profile-card { /* ... styling ... */ }
+  .avatar { /* ... styling ... */ }
+  /* ... more CSS ... */
+</style>
 ```
 
 And this is the componentized code:
 
+```html
+<!-- lib/profile-card.htm -->
+<lib>
+  <style>
+    .profile-card {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: white;
+    }
+    .avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .profile-info h3 {
+      margin: 0;
+      color: #333;
+    }
+    .contact-btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
+
+  <:define 
+    :tag="profile-card"
+    :user="${{}}"
+    :show-contact="${true}"
+    class="profile-card">
+    
+    <img :src="${user.avatar || '/default-avatar.png'}" 
+         :alt="${user.name}" 
+         class="avatar" />
+    
+    <div class="profile-info">
+      <h3 class="name">${user.name}</h3>
+      <p class="title">${user.title}</p>
+      <p class="email">${user.email}</p>
+      
+      <template :if="${showContact}">
+        <button 
+          class="contact-btn" 
+          :on-click="${() => openChat(user.id)}">
+          Contact
+        </button>
+      </template>
+    </div>
+  </:define>
+</lib>
 ```
-TBD
+
+Now you can use it anywhere with just one line:
+
+```html
+<html>
+<head>
+  <:import :src="lib/profile-card.htm" />
+</head>
+<body>
+  <!-- Usage becomes simple and declarative -->
+  <:profile-card :user="${johnDoe}" />
+  <:profile-card :user="${janeDoe}" :show-contact="${false}" />
+</body>
+</html>
 ```
 
 Your component definitions can just as easily be grouped in a set of page fragments reusable across pages as well as across different projects:
 
+```html
+<!-- lib/ui-components.htm - Your component library -->
+<lib>
+  <:import :src="profile-card.htm" />
+  <:import :src="data-table.htm" />
+  <:import :src="modal-dialog.htm" />
+  <:import :src="notification-toast.htm" />
+</lib>
 ```
-TBD
+
+```html
+<!-- Any page in any project -->
+<html>
+<head>
+  <:import :src="lib/ui-components.htm" />
+</head>
+<body>
+  <:profile-card :user="${currentUser}" />
+  <:data-table :data="${users}" :columns="${userColumns}" />
+</body>
+</html>
 ```
 
 ## Tooling
@@ -522,7 +727,109 @@ git commit --no-verify -m "emergency commit"
 
 ### CLI
 
-TBD
+Markout includes a powerful CLI tool for development and deployment. Install it globally to get started:
+
+```bash
+npm install -g @markout/cli
+```
+
+#### Development Server
+
+Start a development server with hot reload:
+
+```bash
+# Serve current directory on default port (3000)
+markout serve
+
+# Serve specific directory
+markout serve ./my-project
+
+# Serve on custom port
+markout serve --port 8080
+
+# Serve with custom host (for network access)
+markout serve --host 0.0.0.0 --port 3000
+```
+
+The development server includes:
+- **Hot reload**: Automatically refreshes pages when files change
+- **Live compilation**: Markout pages are compiled on-the-fly
+- **Static file serving**: Serves CSS, JS, images, and other assets
+- **Error reporting**: Clear error messages with stack traces
+- **CORS support**: Configured for local development
+
+#### Production Deployment
+
+Deploy your Markout application for production:
+
+```bash
+# Start production server
+markout serve --production
+
+# With PM2 process management
+markout serve --production --pm2
+
+# Custom configuration
+markout serve --production --port 80 --workers 4
+```
+
+Production features:
+- **Process clustering**: Utilizes all CPU cores
+- **Automatic restarts**: Crash recovery and memory leak protection  
+- **Compression**: Gzip/Brotli compression for faster loading
+- **Rate limiting**: Built-in DoS protection
+- **Health checks**: Monitoring endpoints for load balancers
+- **Graceful shutdown**: Clean process termination
+
+#### Project Scaffolding
+
+Create new Markout projects with built-in templates:
+
+```bash
+# Create a new project
+markout create my-app
+
+# Create with specific template
+markout create my-app --template bootstrap
+markout create my-app --template shoelace
+markout create my-app --template minimal
+
+# Create component library
+markout create my-components --template library
+```
+
+#### Build and Optimization
+
+Generate optimized static builds:
+
+```bash
+# Build for static hosting (JAMstack)
+markout build --output ./dist
+
+# Build with pre-rendering
+markout build --prerender --output ./dist
+
+# Build Progressive Web App
+markout build --pwa --output ./dist
+```
+
+#### Development Tools
+
+Additional development utilities:
+
+```bash
+# Validate Markout syntax
+markout validate src/
+
+# Format Markout files
+markout format src/
+
+# Analyze bundle size
+markout analyze
+
+# Generate component documentation
+markout docs --output ./docs
+```
 
 ### VSCode extension
 
