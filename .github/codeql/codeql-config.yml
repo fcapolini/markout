@@ -1,0 +1,24 @@
+name: 'CodeQL Configuration'
+
+# Exclude test files and directories from analysis
+paths-ignore:
+  - 'tests/**'
+  - '**/*.test.ts'
+  - '**/*.test.js'
+  - '**/*.spec.ts'
+  - '**/*.spec.js'
+  - '**/test/**'
+  - '**/tests/**'
+  - '**/__tests__/**'
+  - 'coverage/**'
+  - 'dist/**'
+  - 'node_modules/**'
+
+# Include only source code paths
+paths:
+  - 'src/**'
+
+# Use security and quality queries
+queries:
+  - uses: security-extended
+  - uses: security-and-quality
