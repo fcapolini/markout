@@ -14,7 +14,7 @@ program
 program
   .command('serve')
   .description('serve a Markout project')
-  .argument('<pathname>', 'path to docroot')
+  .argument('<pathname>', 'path to directory containing HTML files (docroot)')
   .option('-p, --port <number>', 'port number, default: 3000')
   .action((pathname, options) => {
     const docroot = path.normalize(path.join(process.cwd(), pathname));

@@ -1,7 +1,7 @@
 {
-  "name": "markout",
+  "name": "@markout-js/cli",
   "version": "0.1.0",
-  "description": "HTML-First Reactive Web Framework - Alpha Release",
+  "description": "HTML-First Reactive Web Framework - CLI and Development Server",
   "main": "dist/index.js",
   "scripts": {
     "test": "vitest run",
@@ -35,8 +35,31 @@
     "component-framework",
     "alpha"
   ],
-  "author": "",
+  "author": "fcapolini",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fcapolini/markout.git"
+  },
+  "homepage": "https://github.com/fcapolini/markout#readme",
+  "bugs": {
+    "url": "https://github.com/fcapolini/markout/issues"
+  },
+  "bin": {
+    "markout": "./dist/index.js"
+  },
+  "files": [
+    "dist/index.js",
+    "dist/client.js",
+    "dist/src/",
+    "README.md",
+    "LICENSE",
+    "ROADMAP.md",
+    "INSTALL.md"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@types/compression": "^1.8.1",
     "commander": "^14.0.1",
