@@ -1,7 +1,7 @@
+import { Document, Element, NodeType } from '../../html/dom';
 import { BaseContext, BaseContextProps } from '../base/base-context';
 import { BaseScope, BaseScopeProps } from '../base/base-scope';
 import { WebScope } from './web-scope';
-import { Comment, Document, Element, NodeType, Text } from '../../html/dom';
 
 export const DOM_ID_ATTR = 'data-markout';
 export const DOM_TEXT_MARKER1 = '-t';

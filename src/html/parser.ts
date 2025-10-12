@@ -392,7 +392,7 @@ function parseAtomicText(
         end: j2,
         loc: src.loc(j1, j2),
       });
-      j1 = j2;
+      // j1 = j2;
     }
     j2 += LEXP.length;
     j1 = skipBlanks(s, j2);
@@ -471,7 +471,7 @@ function parseSplittableText(
           src.loc(j1, j2)
         )
       );
-      j1 = j2;
+      // j1 = j2;
     }
     const j0 = j2;
     j2 += LEXP.length;

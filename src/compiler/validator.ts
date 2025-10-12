@@ -2,11 +2,7 @@ import estraverse from 'estraverse';
 import * as es from 'estree';
 import { PageError, Source } from '../html/parser';
 import { CompilerScope, CompilerValue } from './compiler';
-import {
-  CLASS_ATTR_PREFIX,
-  EVENT_ATTR_PREFIX,
-  STYLE_ATTR_PREFIX,
-} from './const';
+import { EVENT_ATTR_PREFIX } from './const';
 
 export function validate(source: Source, root: CompilerScope): boolean {
   validateScope(source, root);
