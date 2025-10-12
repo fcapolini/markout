@@ -311,11 +311,11 @@ node dist/index.js serve . --port 8080
 
 ## Testing Environment Selection
 
-Files are automatically assigned to the appropriate test environment:
+All tests currently run in **Node.js** environment for maximum Node.js 18+ compatibility:
 
-- `*.dom.test.ts` files run in **jsdom** environment for DOM/client-side testing
-- Files in `tests/dom/` or `tests/client/` directories run in **jsdom** environment
-- All other test files run in **Node.js** environment for server-side testing
+- Server-side testing with Node.js environment provides optimal performance and compatibility
+- JSDOM is available in `tests/util.ts` for DOM testing when needed via `runPage()` function
+- Future DOM-specific tests can be added with `.dom.test.ts` naming if needed
 
 ## Example Components
 
@@ -386,11 +386,11 @@ Files are automatically assigned to the appropriate test environment:
 
 ### **Testing Environment Selection**
 
-Files are automatically assigned to the appropriate test environment:
+All tests currently run in **Node.js** environment for maximum Node.js 18+ compatibility:
 
-- `*.dom.test.ts` files run in **JSDOM** environment for DOM/client-side testing
-- Files in `tests/dom/` or `tests/client/` directories run in **JSDOM** environment
-- All other test files run in **Node.js** environment for server-side testing
+- Server-side testing with Node.js environment provides optimal performance and compatibility
+- JSDOM is available in `tests/util.ts` for DOM testing when needed via `runPage()` function
+- Future DOM-specific tests can be added with `.dom.test.ts` naming if needed
 
 ### **Test Structure**
 
