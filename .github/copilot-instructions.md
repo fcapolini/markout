@@ -344,7 +344,7 @@ All tests currently run in **Node.js** environment for maximum Node.js 18+ compa
 
 ### **Code Quality & Security Integration**
 
-- **SonarCloud** - Comprehensive code quality analysis with TypeScript/JavaScript rules
+- **ESLint/Prettier** - Code quality and formatting with TypeScript/JavaScript rules
 - **Codecov** - Coverage tracking and reporting with detailed metrics
 - **Snyk** - Vulnerability scanning for dependencies and security issues
 - **Dependency Review** - Automated security review for new dependencies in PRs
