@@ -39,9 +39,9 @@ Markout is currently in **alpha development**. The core reactive system is funct
 **Theme: Complete Core Directives**
 
 **Distribution:**
-- [ ] Publish to npm as `markout` (currently requires manual build)
+- [x] Publish to npm as `@markout-js/cli` ✅ **DONE in v0.1.0**
 - [ ] Set up automated releases via GitHub Actions
-- [ ] Create installation and quick start documentation
+- [x] Create installation and quick start documentation ✅ **DONE**
 
 **New Features:**
 - [ ] Implement conditional rendering (`<template :if>`, `:else`, `:elseif`)

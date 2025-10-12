@@ -1,6 +1,6 @@
 # Installing Markout (Alpha)
 
-Markout is currently in alpha development and not yet published to npm. Here's how to install and use it:
+Markout is currently in alpha development. Here's how to install and use it:
 
 ## Prerequisites
 
@@ -10,12 +10,25 @@ Markout is currently in alpha development and not yet published to npm. Here's h
 
 ## Installation
 
-### Option 1: Clone and Build (Recommended)
+### Option 1: Install from npm (Recommended)
+
+```bash
+# Install globally
+npm install -g @markout-js/cli
+
+# Test the installation
+markout --help
+
+# Or use without installing globally
+npx @markout-js/cli --help
+```
+
+### Option 2: Clone and Build (Development)
 
 ```bash
 # Clone the repository
-git clone https://github.com/fcapolini/markout2.git
-cd markout2
+git clone https://github.com/fcapolini/markout.git
+cd markout
 
 # Install dependencies
 npm install
@@ -26,10 +39,6 @@ npm run build
 # Test the installation
 node dist/index.js --help
 ```
-
-### Option 2: Download Release (When Available)
-
-Pre-built releases will be available once we reach v0.2.0.
 
 ## Quick Start
 
@@ -51,11 +60,11 @@ Create a file called `hello.html`:
 ### 2. Serve the Page
 
 ```bash
-# From the markout2 directory
-node dist/index.js serve hello.html
+# Serve the current directory (which contains hello.html)
+markout serve .
 
-# Or serve a directory
-node dist/index.js serve . --port 3000
+# Or serve on a different port
+markout serve . --port 3000
 ```
 
 ### 3. Open in Browser
@@ -85,10 +94,10 @@ npm run start:prod
 
 ## Alpha Limitations
 
-- **Not on npm yet**: Requires manual installation
 - **API may change**: Breaking changes possible until v1.0
 - **Some features missing**: See [ROADMAP.md](ROADMAP.md) for details
-- **Limited documentation**: More examples and guides coming
+- **Limited examples**: More tutorials and guides coming
+- **CLI package size**: 815KB (will be optimized in future releases)
 
 ## Getting Help
 

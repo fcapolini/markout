@@ -118,7 +118,7 @@ export class WebScope extends BaseScope {
 
       ret.setCB((_, val) => {
         if (!t) return;
-        t.textContent = val == null ? '&#8203' : val;
+        t.textContent = val == null ? '&#8203' : String(val);
       });
       return ret;
     }

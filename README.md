@@ -1,7 +1,7 @@
 # Markout
 
-[![CI](https://github.com/fcapolini/markout2/actions/workflows/ci.yml/badge.svg)](https://github.com/fcapolini/markout2/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/fcapolini/markout2/actions/workflows/codeql.yml/badge.svg)](https://github.com/fcapolini/markout2/actions/workflows/codeql.yml)
+[![CI](https://github.com/fcapolini/markout/actions/workflows/ci.yml/badge.svg)](https://github.com/fcapolini/markout/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/fcapolini/markout/actions/workflows/codeql.yml/badge.svg)](https://github.com/fcapolini/markout/actions/workflows/codeql.yml)
 [![Node.js](https://img.shields.io/badge/node.js-18.x%20%7C%2020.x%20%7C%2022.x%20%7C%2024.x-brightgreen)](https://nodejs.org/)
 [![codecov](https://codecov.io/gh/fcapolini/markout/graph/badge.svg?token=VENQIX1AWP)](https://codecov.io/gh/fcapolini/markout)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -38,7 +38,7 @@ This is the canonical "click counter" example which is a traditional "hello worl
 
 It must be noted that:
 
-- you can simply place this code in a `.html` file, build the project with `npm run build`, and serve it with `node dist/index.js serve page.html`
+- you can simply place this code in a `.html` file, install Markout with `npm install -g @markout-js/cli`, and serve it with `markout serve .` (serves the current directory)
 - at first request, the page will be (very quickly) compiled and executed in the server (on subsequent requests the compiled version will be reused)
 - the resulting page will be pre-rendered (meaning button's text will already contain "Clicks: 0") plus it will contain page-specific code to continue execution in the browser
 - the browser will instantly show the pre-rendered page and continue execution in the client-side (meaning it will increment the count when users click the button)
@@ -765,14 +765,14 @@ git commit --no-verify -m "emergency commit"
 
 Markout includes a powerful CLI tool for development and deployment. 
 
-**Alpha Note:** The CLI is not yet published to npm. To use it:
+**Installation:**
 
 ```bash
-# Clone and build the project
-git clone https://github.com/fcapolini/markout2.git
-cd markout2
-npm install
-npm run build
+# Install globally via npm
+npm install -g @markout-js/cli
+
+# Or run directly with npx (no installation needed)
+npx @markout-js/cli --help
 ```
 
 #### Development Server
@@ -781,16 +781,16 @@ Start a development server with hot reload:
 
 ```bash
 # Serve current directory on default port (3000)
-node dist/index.js serve .
+markout serve .
 
 # Serve specific directory
-node dist/index.js serve ./my-project
+markout serve ./my-project
 
 # Serve on custom port
-node dist/index.js serve . --port 8080
+markout serve . --port 8080
 
-# Serve with custom host (for network access) 
-node dist/index.js serve . --host 0.0.0.0 --port 3000
+# Or use with npx (no global install needed)
+npx @markout-js/cli serve . --port 8080
 ```
 
 The development server includes:
@@ -811,8 +811,8 @@ npm run start:prod
 # With PM2 process management (already included in start:prod)
 npm run start:prod
 
-# Custom configuration (modify ecosystem.config.js)
-node dist/index.js serve . --port 80
+# Custom configuration (modify ecosystem.config.js or use CLI directly)
+markout serve . --port 80
 ```
 
 Production features:
