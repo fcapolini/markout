@@ -18,7 +18,7 @@ program
   .option('-p, --port <number>', 'port number, default: 3000')
   .action((pathname, options) => {
     const docroot = path.normalize(path.join(process.cwd(), pathname));
-    const port = parseInt(options.port) || 3000;
+    const port = Number.parseInt(options.port) || 3000;
     new Server({ docroot, port }).start();
   });
 

@@ -22,7 +22,7 @@ export async function runPage(
   const ctx = new WebContext({
     doc: page.source.doc,
     root: code,
-  });
+  }).refresh();
   if (!client) {
     return ctx;
   }
@@ -31,7 +31,7 @@ export async function runPage(
   const clientCtx = new WebContext({
     doc: jsdom.window.document as unknown as dom.Document,
     root: code,
-  });
+  }).refresh();
 
   return clientCtx;
 }

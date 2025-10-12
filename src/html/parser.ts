@@ -107,7 +107,6 @@ function parseNodes(
           );
           throw Error();
         }
-        i1 = i2;
       } else {
         i1 = parseElement(p, src, i1, i2, errors);
       }

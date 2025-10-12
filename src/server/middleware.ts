@@ -80,7 +80,7 @@ export function markout(props: MarkoutProps) {
       const root = (0, eval)(propsJs);
       const e = doc.documentElement;
       const props: WebContextProps = { doc, root };
-      new WebContext(props);
+      new WebContext(props).refresh();
     }
 
     if (props.csr && doc && doc.documentElement) {
