@@ -9,16 +9,9 @@ export default defineConfig({
       // Ensure consistent line endings across platforms
       FORCE_COLOR: '0',
     },
-    environmentMatchGlobs: [
-      ['**/tests/dom/**', 'happy-dom'],
-      ['**/tests/client/**', 'happy-dom'],
-      ['**/*.dom.test.ts', 'happy-dom'],
-      ['**/*.client.test.ts', 'happy-dom'],
-      ['**/*.browser.test.ts', 'happy-dom'],
-    ],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'html', 'lcov'],
       exclude: [
         'node_modules/',
         'dist/',
@@ -43,4 +36,31 @@ export default defineConfig({
       ],
     },
   },
+  projects: [
+    {
+      test: {
+        include: ['tests/**/*.{test,spec}.ts'],
+        exclude: [
+          'tests/**/*.dom.test.ts',
+          'tests/**/*.client.test.ts', 
+          'tests/**/*.browser.test.ts',
+          'tests/dom/**/*.test.ts',
+          'tests/client/**/*.test.ts'
+        ],
+        environment: 'node'
+      }
+    },
+    {
+      test: {
+        include: [
+          'tests/**/*.dom.test.ts',
+          'tests/**/*.client.test.ts',
+          'tests/**/*.browser.test.ts',
+          'tests/dom/**/*.test.ts',
+          'tests/client/**/*.test.ts'
+        ],
+        environment: 'happy-dom'
+      }
+    }
+  ]
 });
