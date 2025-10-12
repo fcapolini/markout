@@ -2,11 +2,10 @@ import { generate } from 'escodegen';
 import { NextFunction, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
-import { PROPS_GLOBAL } from '../constants';
 import { Compiler } from '../compiler/compiler';
+import { PROPS_GLOBAL } from '../constants';
 import { Element, NodeType } from '../html/dom';
 import { PageError } from '../html/parser';
-import { ServerDocument } from '../html/server-dom';
 import { WebContext, WebContextProps } from '../runtime/web/web-context';
 import { MarkoutLogger } from './logger';
 
@@ -39,60 +38,31 @@ export function markout(props: MarkoutProps) {
     const i = req.path.lastIndexOf('.');
     const extname = i < 0 ? '.html' : req.path.substring(i).toLowerCase();
 
-    // handle non-page requests
-    if (req.path === CLIENT_CODE_REQ) {
-      res.header('Content-Type', 'text/javascript;charset=UTF-8');
-      res.send(clientCode);
+    if (handleNonPageRequests(req, res, i, extname, clientCode, next)) {
       return;
     }
-    if (req.path.startsWith('/.') || extname === '.htm') {
+
+    const pathname = await resolvePath(req, res, i, docroot);
+    if (!pathname) {
       res.sendStatus(404);
       return;
     }
-    if (extname !== '.html') {
-      return next();
-    }
-
-    // if path is a dir, access <dir>/index.html
-    let pathname = i < 0 ? req.path : req.path.substring(0, i).toLowerCase();
-    if (i < 0) {
-      try {
-        // Remove leading slash to ensure relative path resolution
-        const relativePath = pathname.startsWith('/')
-          ? pathname.slice(1)
-          : pathname;
-        const fullPath = path.resolve(docroot, relativePath);
-        // Ensure the resolved path is contained in docroot
-        if (!fullPath.startsWith(path.resolve(docroot))) {
-          res.sendStatus(404);
-          return;
-        }
-        const stat = await fs.promises.stat(fullPath);
-        if (stat.isDirectory()) {
-          pathname = path.join(pathname, 'index');
-        }
-      } catch (ignored) {
-        /* nop */
-      }
-    }
-
-    const page = await compiler.compile(pathname + '.html');
+    const page = await compiler.compile(pathname);
     if (page.source.errors.length) {
       return serveErrorPage(page.source.errors, res);
     }
 
-    let doc = page.source.doc!;
+    let doc = page.source.doc;
     const propsJs = props.ssr || props.csr ? generate(page.code) : '';
 
     if (props.ssr) {
       // https://esbuild.github.io/content-types/#direct-eval
       const root = (0, eval)(propsJs);
-      const e = doc.documentElement;
       const props: WebContextProps = { doc, root };
       new WebContext(props).refresh();
     }
 
-    if (props.csr && doc && doc.documentElement) {
+    if (props.csr && doc?.documentElement) {
       for (const n of doc.documentElement.childNodes) {
         if (
           n.nodeType === NodeType.ELEMENT &&
@@ -118,6 +88,62 @@ export function markout(props: MarkoutProps) {
   };
 }
 
+function handleNonPageRequests(
+  req: Request,
+  res: Response,
+  i: number,
+  extname: string,
+  clientCode: string,
+  next: NextFunction
+) {
+  if (req.path === CLIENT_CODE_REQ) {
+    res.header('Content-Type', 'text/javascript;charset=UTF-8');
+    res.send(clientCode);
+    return true;
+  }
+  if (req.path.startsWith('/.') || extname === '.htm') {
+    res.sendStatus(404);
+    return true;
+  }
+  if (extname !== '.html') {
+    next();
+    return true;
+  }
+  return false;
+}
+
+async function resolvePath(
+  req: Request,
+  res: Response,
+  i: number,
+  docroot: string
+) {
+  let pathname = i < 0 ? req.path : req.path.substring(0, i).toLowerCase();
+  if (i < 0) {
+    try {
+      // Remove leading slash to ensure relative path resolution
+      const relativePath = pathname.startsWith('/')
+        ? pathname.slice(1)
+        : pathname;
+      const fullPath = path.resolve(docroot, relativePath);
+      // Ensure the resolved path is contained in docroot
+      if (!fullPath.startsWith(path.resolve(docroot))) {
+        return;
+      }
+      const stat = await fs.promises.stat(fullPath);
+      if (stat.isDirectory()) {
+        // if path is a dir, access <dir>/index.html
+        pathname = path.join(pathname, 'index');
+      }
+    } catch (ignored) {
+      // Intentionally ignore file system errors (file not found, permission denied, etc.)
+      // Return undefined to let caller handle with 404 response
+      return;
+    }
+  }
+  return pathname + '.html';
+}
+
 function serveErrorPage(errors: PageError[], res: Response) {
   const p = new Array<string>();
   p.push(`<!doctype html><html><head>
@@ -133,6 +159,6 @@ function serveErrorPage(errors: PageError[], res: Response) {
   });
   p.push('</ul></body></html>');
   res.header('Content-Type', 'text/html;charset=UTF-8');
-  // res.sendStatus(500);
+  res.sendStatus(500);
   res.send(p.join(''));
 }

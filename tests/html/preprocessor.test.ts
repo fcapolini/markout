@@ -29,7 +29,9 @@ fs.readdirSync(docroot).forEach(dir => {
                 const etext = (await fs.promises.readFile(pname)).toString();
                 eerrs = JSON.parse(etext);
                 assert.deepEqual(aerrs, eerrs);
-              } catch (e) {
+              } catch (ignored) {
+                // File not found is expected in this test setup
+                // We're mainly testing that the normalization doesn't throw errors
                 assert.deepEqual(aerrs, eerrs);
               }
             } else {

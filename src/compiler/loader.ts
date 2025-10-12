@@ -451,7 +451,7 @@ function addSlotMap(
 
   const lookupSlotScopeId = (s: dom.Element) => {
     // Navigate up the DOM tree until we find a scope ID or reach the template content root
-    while (s && s.parentElement) {
+    while (s?.parentElement) {
       s = s.parentElement!;
       if (s.getAttribute(k.OUT_OBJ_ID_ATTR)) {
         break;
@@ -467,6 +467,7 @@ function addSlotMap(
   lookupSlots(template.content);
   slots.forEach(slot => {
     const name = slot.getAttribute('name');
+    //TODO: check regex
     if (name && /^[\w_][\w0-9\-_]*$/.test(name)) {
       const scopeId = lookupSlotScopeId(slot);
       map[name] = scopeId;

@@ -1,17 +1,9 @@
 import * as acorn from 'acorn';
 import estraverse from 'estraverse';
-import {
-  Compiler,
-  CompilerPage,
-  CompilerScope,
-  CompilerValue,
-} from '../src/compiler/compiler';
-import { WebScope } from '../src/runtime/web/web-scope';
+import { CompilerScope, CompilerValue } from '../src/compiler/compiler';
 import { normalizeText, parse } from '../src/html/parser';
-import { generate } from 'escodegen';
-import { WebContext } from '../src/runtime/web/web-context';
-import * as dom from '../src/html/dom';
 import { ServerDocument } from '../src/html/server-dom';
+import { WebScope } from '../src/runtime/web/web-scope';
 
 /**
  * Normalizes line endings to LF (\n) for cross-platform compatibility
