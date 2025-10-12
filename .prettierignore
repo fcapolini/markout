@@ -60,3 +60,6 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# Config files that should not be formatted
+vitest.config.mjs
