@@ -497,7 +497,25 @@ TBD
 
 ## Tooling
 
-TBD
+### Development Workflow
+
+Markout includes automated code quality checks via Git hooks powered by [Husky](https://typicode.github.io/husky/):
+
+- **Pre-commit Hook**: Automatically runs before each commit to ensure:
+  - Code formatting follows Prettier standards (`npm run format:check`)
+  - All tests pass (`npm test`)
+
+You can manually run the same validation:
+
+```bash
+npm run precommit
+```
+
+For emergencies only, bypass the hook with:
+
+```bash
+git commit --no-verify -m "emergency commit"
+```
 
 ### CLI
 
