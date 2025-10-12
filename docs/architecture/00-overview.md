@@ -244,15 +244,15 @@ This approach removes traditional barriers to component sharing between projects
 - **Stability**: HTML-based foundation vs migration challenges (Vue 2 → Vue 3 Composition API changes)
 
 ### vs Svelte
-- **Runtime Flexibility**: No compile-time lock-in
+- **Development Flexibility**: No build step required for development vs compilation requirement
 - **Integrated CSS Reactivity**: Dynamic CSS expressions vs compile-time CSS transformations
-- **Effortless Modularization**: Self-contained HTML fragments vs Svelte's compile-time component system
+- **Effortless Modularization**: Self-contained HTML fragments vs Svelte component system
 - **Smaller Runtime**: ~5KB vs Svelte's compiled output size
 - **Server Rendering**: Full SSR without separate build
 - **Component Simplicity**: HTML fragments instead of special formats
-- **Development Speed**: No build step required for development
-- **Cross-Project Sharing**: Simple file sharing vs Svelte component compilation requirements
-- **Stability**: Stable HTML enhancement vs evolving compile-time transformations (runes, SvelteKit changes)
+- **Progressive Enhancement**: Can enhance existing HTML vs component rewrite requirement
+- **Cross-Project Sharing**: Simple file sharing vs component compilation process
+- **Stability**: Stable HTML enhancement vs evolving compile-time transformations (SvelteKit changes)
 
 ## Stability-First Architecture
 
