@@ -107,6 +107,23 @@ As a result I came up with these additions to standard HTML:
 - **reactive expressions**, added with the familiar `${...}` syntax
 - **directives**, added with `:`-prefixed tags and augmented `<template>` tags.
 
+## Architecture
+
+Markout is built on a sophisticated multi-layered architecture designed for both developer experience and production reliability. The framework consists of several key components working together:
+
+- **CLI Tool & Server Infrastructure**: Express.js-based server with PM2 clustering, rate limiting, and graceful shutdown
+- **Multi-Phase Compiler Pipeline**: 7-phase compilation from HTML to executable reactive structures
+- **Reactive Runtime System**: Pull-based reactivity with hierarchical scoping and batched DOM updates
+- **HTML Preprocessor**: Module loading, fragment imports, and dependency resolution
+
+For detailed architectural documentation including C4 diagrams, system design principles, and component interactions, see the [Architecture Documentation](docs/architecture/).
+
+Key architectural innovations:
+- **Polymorphic Execution**: Same reactive logic runs on server and client
+- **Reserved Namespace**: `$` prefix prevents framework/user code conflicts  
+- **Update Batching**: Set-based deduplication eliminates redundant DOM operations
+- **Hierarchical Scoping**: Lexical variable lookup with proxy-based reactive access
+
 ## Logic values
 
 Logic values are the foundation of reactivity in Markout. They can be used to add presentation logic to any HTML tag. They're expressed as `:`-prefixed attributes to keep them apart from HTML's own attributes. Compared to normal attributes, they don't appear in output pages: they are used to generate page-specific code which is added as a script to the output.
