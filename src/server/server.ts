@@ -78,7 +78,13 @@ export class Server {
       if (path === '*') {
         app.use(limiter); // Apply to all routes
       } else if (path === '*.html') {
-        app.use(/.*\.html$/, limiter); // Apply to HTML files using regex
+        // Use a safer approach: check file extension in middleware
+        app.use((req, res, next) => {
+          if (req.path.endsWith('.html')) {
+            return limiter(req, res, next);
+          }
+          next();
+        });
       } else {
         app.use(path, limiter);
       }
