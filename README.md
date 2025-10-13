@@ -1,5 +1,6 @@
 # Markout
 
+[![npm version](https://img.shields.io/npm/v/@markout-js/cli.svg)](https://www.npmjs.com/package/@markout-js/cli)
 [![CI](https://github.com/fcapolini/markout/actions/workflows/ci.yml/badge.svg)](https://github.com/fcapolini/markout/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/fcapolini/markout/actions/workflows/codeql.yml/badge.svg)](https://github.com/fcapolini/markout/actions/workflows/codeql.yml)
 [![Node.js](https://img.shields.io/badge/node.js-18.x%20%7C%2020.x%20%7C%2022.x%20%7C%2024.x-brightgreen)](https://nodejs.org/)
@@ -1028,8 +1029,8 @@ This section is for contributors to the Markout framework itself. If you're look
 
 1. **Clone and Setup**:
    ```bash
-   git clone https://github.com/fcapolini/markout2.git
-   cd markout2
+   git clone https://github.com/fcapolini/markout.git
+   cd markout
    npm install
    ```
 
