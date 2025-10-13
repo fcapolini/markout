@@ -65,7 +65,7 @@ node dist/index.js serve . --port 8080
 ## Project Structure
 
 ```
-markout2/
+markout/
 ├── src/                    # TypeScript source code
 │   ├── compiler/          # Multi-phase compiler
 │   ├── runtime/           # Reactive runtime system
@@ -89,6 +89,6 @@ See the main [README.md](../README.md) for development guidelines. Key points:
 
 ## Links
 
-- **GitHub Repository**: [fcapolini/markout2](https://github.com/fcapolini/markout2)
-- **CI/CD Status**: [![CI](https://github.com/fcapolini/markout2/actions/workflows/ci.yml/badge.svg)](https://github.com/fcapolini/markout2/actions/workflows/ci.yml)
+- **GitHub Repository**: [fcapolini/markout](https://github.com/fcapolini/markout)
+- **CI/CD Status**: [![CI](https://github.com/fcapolini/markout/actions/workflows/ci.yml/badge.svg)](https://github.com/fcapolini/markout/actions/workflows/ci.yml)
 - **Test Coverage**: [![codecov](https://codecov.io/gh/fcapolini/markout/graph/badge.svg?token=VENQIX1AWP)](https://codecov.io/gh/fcapolini/markout)
