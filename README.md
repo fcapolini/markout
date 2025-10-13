@@ -9,7 +9,7 @@
 
 **HTML-based** reactive web framework for Node.js and the browser — for devs who despise _needless complexity_.
 
-🚧 **Alpha Release (v0.1.0)** - Core features working, some features still in development. See [ROADMAP.md](ROADMAP.md) for details.
+🚧 **Alpha Release (v0.1.1)** - Core features working, some features still in development. See [ROADMAP.md](ROADMAP.md) for details.
 
 Markout is three things:
 
@@ -487,18 +487,27 @@ Note that `<:data>`'s `json` value is always defined, at most it can be an empty
 The data can be local as well:
 
 ```html
-<:data :aka="navigationData" :json=${{ list: [ { id: 1, url: '/dashboard',
-title: 'Dashboard' }, { id: 2, url: '/activity', title: 'Activity' }, ] }} />
+<:data :aka="navigationData" :json=${{
+  list: [
+    { id: 1, url: '/dashboard', title: 'Dashboard' },
+    { id: 2, url: '/activity', title: 'Activity' },
+  ]
+}} />
 ```
 
 And, because local data participates in the reactive system — `:json` is a logic value after all — it can automatically update too:
 
 ```html
-<:data :aka="localeData" :json=${{ en: { dashboard: 'Dashboard', activity:
-'Activity' }, it: { dashboard: 'Panoramica', activity: 'Attività' } }} /> <:data
-:aka="navigationData" :lang="en" :_locale=${localeData.json[lang]} :json=${{
-list: [ { id: 1, url: '/dashboard', title: _locale.dashboard }, { id: 2, url:
-'/activity', title: _locale.activity }, ] }} />
+<:data :aka="localeData" :json=${{
+  en: { dashboard: 'Dashboard', activity: 'Activity' },
+  it: { dashboard: 'Panoramica', activity: 'Attività' }
+}} />
+<:data :aka="navigationData" :lang="en" :_locale=${localeData.json[lang]} :json=${{
+  list: [
+    { id: 1, url: '/dashboard', title: _locale.dashboard },
+    { id: 2, url: '/activity', title: _locale.activity },
+  ]
+}} />
 ```
 
 Now you have a localized menu which seamlessly updates when users switch language!

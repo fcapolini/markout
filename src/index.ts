@@ -2,14 +2,20 @@
 
 import { Command } from 'commander';
 import path from 'path';
+import { readFileSync } from 'fs';
 import { Server } from './server/server';
 
 const program = new Command();
 
+// Read version from package.json
+const packageJson = JSON.parse(
+  readFileSync(path.join(__dirname, '../package.json'), 'utf8')
+);
+
 program
   .name('markout')
   .description('Markout CLI - https://github.com/fcapolini/markout')
-  .version('1.0.0');
+  .version(packageJson.version);
 
 program
   .command('serve')

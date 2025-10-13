@@ -4,7 +4,7 @@ Markout is currently in alpha development. Here's how to install and use it:
 
 ## Prerequisites
 
-- Node.js 18+ (tested on 18.x, 20.x, 22.x)
+- Node.js 18+ (tested on 18.x, 20.x, 22.x, 24.x)
 - npm or yarn
 - Git
 
