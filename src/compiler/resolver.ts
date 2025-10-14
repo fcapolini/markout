@@ -3,6 +3,7 @@ import * as es from 'estree';
 import { PageError, Source } from '../html/parser';
 import { RT_PARENT_VALUE_KEY } from '../runtime/base/base-scope';
 import { CompilerScope, CompilerValue } from './compiler';
+import { BaseGlobal } from '../runtime/base/base-global';
 
 //TODO: in order to support comptime:
 // * scope property 'comptime'
@@ -10,7 +11,11 @@ import { CompilerScope, CompilerValue } from './compiler';
 // * a comptime scope makes all its neted scopes comptime too
 // * all traces of comptime stuff will be removed by the treeshaker
 
-export function resolve(source: Source, root: CompilerScope): boolean {
+export function resolve(
+  source: Source,
+  root: CompilerScope,
+  global: BaseGlobal
+): boolean {
   const resolve = (scope: CompilerScope) => {
     scope.values &&
       Object.keys(scope.values).forEach(key => {
@@ -19,7 +24,9 @@ export function resolve(source: Source, root: CompilerScope): boolean {
       });
     scope.children.forEach(child => resolve(child));
   };
+  root.parent = global as unknown as CompilerScope;
   resolve(root);
+  delete root.parent;
   return source.errors.length === 0;
 }
 
@@ -104,6 +111,10 @@ function validateValueRef(
       continue;
     }
     // we found a value
+    if (target.scope instanceof BaseGlobal) {
+      // don't add references to global values
+      return;
+    }
     path.length = i + 1;
     const s = `this.` + path.join('.');
     value.refs || (value.refs = new Set());

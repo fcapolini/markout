@@ -83,7 +83,7 @@ Want to try Markout right now? Here's the fastest way to get started:
 npm install -g @markout-js/cli
 
 # Create a simple HTML file
-echo '<button :count="${0}" :on-click="${() => count++}">Clicks: ${count}</button>' > counter.html
+echo '<html><body><button :count=${0} :on-click=${() => count++}>Clicks: ${count}</button></body></html>' > counter.html
 
 # Serve it immediately
 markout serve .

@@ -4,6 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import { assert, describe, it } from 'vitest';
 import { Compiler } from '../../src/compiler/compiler';
+import { BaseContext } from '../../src/runtime/base/base-context';
+import { BaseGlobal } from '../../src/runtime/base/base-global';
 import { cleanupScopes, normalizeLineEndings, normalizeTextForComparison } from '../util';
 
 const docroot = __dirname;
@@ -16,7 +18,8 @@ fs.readdirSync(docroot).forEach(dir => {
   ) {
 
     describe(dir, () => {
-      const compiler = new Compiler({ docroot: dirPath });
+      const global = new BaseGlobal(new BaseContext({ root: { id: '-' } }));
+      const compiler = new Compiler({ docroot: dirPath, global });
 
       fs.readdirSync(dirPath).forEach(file => {
         if (

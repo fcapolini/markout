@@ -6,6 +6,8 @@ import { Compiler } from '../compiler/compiler';
 import { PROPS_GLOBAL } from '../constants';
 import { Element, NodeType } from '../html/dom';
 import { PageError } from '../html/parser';
+import { BaseContext } from '../runtime/base/base-context';
+import { BaseGlobal } from '../runtime/base/base-global';
 import { WebContext, WebContextProps } from '../runtime/web/web-context';
 import { MarkoutLogger } from './logger';
 
@@ -17,6 +19,7 @@ export interface MarkoutProps {
   csr?: boolean;
   logger?: MarkoutLogger;
   clientCodePath?: string;
+  global?: BaseGlobal;
   // virtualFiles?: Array<VirtualFile>;
 }
 
@@ -29,7 +32,9 @@ export interface MarkoutProps {
 export function markout(props: MarkoutProps) {
   props.clientCodePath ??= path.join(__dirname, 'client.js');
   const docroot = props.docroot || process.cwd();
-  const compiler = new Compiler({ docroot });
+  const global =
+    props.global || new BaseGlobal(new BaseContext({ root: { id: '-' } }));
+  const compiler = new Compiler({ docroot, global });
   const clientCode = props.csr
     ? fs.readFileSync(props.clientCodePath).toString()
     : '';
@@ -159,6 +164,6 @@ function serveErrorPage(errors: PageError[], res: Response) {
   });
   p.push('</ul></body></html>');
   res.header('Content-Type', 'text/html;charset=UTF-8');
-  res.sendStatus(500);
-  res.send(p.join(''));
+  // res.sendStatus(500);
+  res.status(500).send(p.join(''));
 }

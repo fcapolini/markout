@@ -44,13 +44,15 @@ export class BaseScope {
     });
     this.init();
     if (props.values) {
-      const vp = {
-        ...props.values,
-        $value: { val: (key: string) => this.lookup(key) },
-      };
-      for (const [key, valProps] of Object.entries(vp)) {
+      for (const [key, valProps] of Object.entries(props.values)) {
         this.values[key] = this.newValue(key, valProps);
       }
+      this.values[RT_VALUE_FN_KEY] = this.newValue(RT_VALUE_FN_KEY, {
+        val: (key: string) => this.lookup(key),
+      });
+      this.values[RT_PARENT_VALUE_KEY] = this.newValue(RT_PARENT_VALUE_KEY, {
+        val: () => this.parent?.proxy,
+      });
     }
     parent && this.link(parent);
     props.children?.forEach(p => context.newScope(p, context, this));

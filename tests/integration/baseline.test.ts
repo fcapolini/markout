@@ -2,14 +2,11 @@ import * as acorn from 'acorn';
 import { generate } from 'escodegen';
 import fs from 'fs';
 import path from 'path';
-import { assert, describe, it, expect } from 'vitest';
+import { assert, describe, expect, it } from 'vitest';
 import { Compiler } from '../../src/compiler/compiler';
 import { BaseContext } from '../../src/runtime/base/base-context';
-import {
-  cleanupScopes,
-  normalizeLineEndings,
-  normalizeTextForComparison,
-} from '../util';
+import { BaseGlobal } from '../../src/runtime/base/base-global';
+import { normalizeTextForComparison } from '../util';
 
 const baselineDir = path.join(__dirname, 'baseline');
 
@@ -23,7 +20,8 @@ describe('baseline examples', () => {
     return;
   }
 
-  const compiler = new Compiler({ docroot: baselineDir });
+  const global = new BaseGlobal(new BaseContext({ root: { id: '-' } }));
+  const compiler = new Compiler({ docroot: baselineDir, global });
 
   fs.readdirSync(baselineDir).forEach(file => {
     if (

@@ -2,10 +2,15 @@ import * as acorn from 'acorn';
 import estraverse from 'estraverse';
 import * as es from 'estree';
 import { Source } from '../html/parser';
+import { BaseGlobal } from '../runtime/base/base-global';
 import { RT_PARENT_VALUE_KEY } from '../runtime/base/base-scope';
 import { CompilerScope } from './compiler';
 
-export function qualify(source: Source, root: CompilerScope): boolean {
+export function qualify(
+  source: Source,
+  root: CompilerScope,
+  global: BaseGlobal
+): boolean {
   const qualify = (scope: CompilerScope) => {
     scope.values &&
       Object.keys(scope.values).forEach(key => {
@@ -13,7 +18,7 @@ export function qualify(source: Source, root: CompilerScope): boolean {
         if (value.val === null || typeof value.val === 'string') {
           return;
         }
-        value.val = qualifyExpression(key, value.val);
+        value.val = qualifyExpression(key, value.val, global);
       });
     scope.children.forEach(child => qualify(child));
   };
@@ -21,7 +26,11 @@ export function qualify(source: Source, root: CompilerScope): boolean {
   return source.errors.length === 0;
 }
 
-function qualifyExpression(key: string, exp: acorn.Expression) {
+function qualifyExpression(
+  key: string,
+  exp: acorn.Expression,
+  global: BaseGlobal
+): acorn.Expression {
   const stack: es.Node[] = [];
   const ret = estraverse.replace(exp as es.Node, {
     enter: (node, parent) => {
@@ -29,8 +38,14 @@ function qualifyExpression(key: string, exp: acorn.Expression) {
       if (node.type === 'Identifier') {
         if (isInDeclaration(node, stack)) {
           // this ID is getting declared
-        } else if (!isLocalAccess(node, stack)) {
+          return;
+        }
+        if (!isLocalAccess(node, stack)) {
           if (!isQualified(node, parent)) {
+            if (global.values[node.name]) {
+              // don't qualify references to global values
+              return;
+            }
             // unqualified remote ID reference: prefix with `this.`
             let object: unknown = { type: 'ThisExpression', ...loc(node) };
             if (node.name === key && !inFunctionBody(stack)) {
