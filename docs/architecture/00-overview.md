@@ -99,10 +99,65 @@ Markout uses a pull-based reactive system with hierarchical scopes:
 - **Dependency Tracking**: Automatic detection via Proxy system
 - **Update Batching**: Set-based deduplication prevents redundant DOM updates
 
+### Two-Tier Component Architecture (Planned for 1.x)
+Markout will provide a sophisticated dual-component system that addresses different isolation and composition needs:
+
+**Islands = Web Components** (Heavy Isolation)
+- **Implementation**: `<markout-island src="/widgets/counter.htm">` creates isolated Web Component
+- **Isolation**: Complete Shadow DOM boundaries for CSS/DOM separation
+- **Context**: Independent Markout reactive contexts per island
+- **Communication**: Standard Web Component APIs (events, attributes, slots)
+- **Use Cases**: Third-party widgets, micro-frontends, cross-team components, legacy integration
+- **Mental Model**: "Mini applications with full isolation"
+
+**Components = Markup Scopes** (Light Composition)
+- **Implementation**: Existing `<:import>` and `<:define>` directives
+- **Isolation**: Lexical scoping for reactive values, shared styling context
+- **Context**: Shared reactive context with parent scopes
+- **Communication**: Direct scope access and reactive value sharing
+- **Use Cases**: UI patterns, layout components, data presentation within applications
+- **Mental Model**: "Template fragments with reactive logic"
+
+**Service-Oriented Island Communication**:
+
+Islands communicate through reactive services using the existing `<:data>` system:
+
+```html
+<!-- Service island providing cart functionality -->
+<:island src="/services/cart.htm" name="cartService">
+  <:data :aka="cartDB" :src="/api/cart/local" />
+  <:data :aka="cartService" :json="${{
+    async addItem(item) {
+      await cartDB.json.db.put('cartItems', item);
+      cartDB.json.items.push(item);
+      cartDB.refresh(); // Notify all consumers
+    },
+    get items() { return cartDB.json.items || []; },
+    get total() { return cartDB.json.total || 0; }
+  }}" />
+</:island>
+
+<!-- Consumer island using cart service -->
+<:island src="/widgets/product-list.htm">
+  <:data :aka="cart" :src="@cartService" />
+  <button :on-click="${() => cart.json.addItem(product)}">
+    Add to Cart (${cart.json.count})
+  </button>
+</:island>
+```
+
+This service model provides several key advantages:
+- **Async Transparency**: Services handle complex async operations (IndexedDB, API calls) internally
+- **Reactive Communication**: Consumers automatically update when service state changes
+- **Decoupled Architecture**: Islands don't need direct references to each other
+- **Type-Safe Contracts**: Services expose well-defined interfaces through `<:data>`
+
+This architecture provides optimal performance (isolation only where needed) while maintaining clear conceptual boundaries between "what needs isolation" vs "what can share context". Islands can contain regular Markout components internally and communicate through reactive services, creating a powerful composability system built on web standards and async-capable data flow.
+
 ### Reserved Namespace System
 Framework uses `$` as reserved namespace to prevent conflicts:
 
-- **User Code**: Cannot declare identifiers starting with `$`
+- **User Code**: Cannot declare identifiers which include `$`
 - **Framework Access**: Users can access `$parent`, `$value()` etc.
 - **Triple-Dash Comments**: `<!---...-->` for conflict-free code generation
 - **Clean Separation**: Framework and user code remain distinct

@@ -13,5 +13,5 @@ const props = window[PROPS_GLOBAL] || {};
 window.__markout_context = new WebContext({
   doc: document as any,
   root: props,
-}).refresh;
+}).refresh();
 window.markout = window.__markout_context.root;
