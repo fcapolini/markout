@@ -294,7 +294,7 @@ The second is a function, which is also never re-evaluated by design.
 
 ### Optimizations
 
-Although it's _completely transparent_ for developers, it's worth noting that DOM updates caused by reactive expression updates are batched to prevent the so called "layout thrashing" in the browser.
+Although it's completely transparent for developers, it's worth noting that DOM updates caused by reactive expression updates are batched to prevent the so called "layout thrashing" in the browser.
 
 This means a set of changes caused by an application state change is applied as a whole at the same time and without duplicated DOM access.
 
@@ -318,7 +318,7 @@ Markout's reactive system combined with lexical scoping enables elegant side eff
       // Side effect: update document theme when darkMode changes
       document.body.classList.toggle('dark-theme', head.darkMode);
       localStorage.setItem('theme', head.darkMode ? 'dark' : 'light');
-    })(head.darkMode)  // Dependency triggers re-execution
+    })(darkMode)  // Dependency triggers re-execution
   }">
     <h2>Content automatically themed</h2>
     <p>This entire section responds to theme changes.</p>
@@ -430,7 +430,7 @@ Markout 1.x will support an elegant dual-component system addressing different i
 
 - **Purpose**: Independent widgets requiring complete encapsulation
 - **Isolation**: Shadow DOM provides full CSS/DOM boundaries
-- **Communication**: Standard DOM events, attributes, and slots
+- **Communication**: Standard DOM events, attributes, slots and data services
 - **Use Cases**: Third-party widgets, micro-frontends, cross-team components
 
 **🧩 Components = Markup Scopes** (Light Composition)
@@ -459,7 +459,7 @@ Markout 1.x will support an elegant dual-component system addressing different i
 </:island>
 ```
 
-Islands communicate through reactive services using `<:data>`, enabling async operations (local DB, API calls) while maintaining reactive data flow. Services handle complex async operations internally while exposing simple reactive interfaces to consumers.
+Islands can expose services using `<:data>`, enabling async operations (local DB, API calls) while maintaining reactive data flow. Services handle complex async operations internally while exposing simple reactive interfaces to consumers.
 
 This provides optimal performance (isolation only where needed) while maintaining clear conceptual boundaries between "what needs isolation" (islands) vs "what can share context" (components).
 
@@ -1151,7 +1151,7 @@ This section is for contributors to the Markout framework itself. If you're look
   - **`runtime/`** - Reactive system (BaseContext, BaseScope, BaseValue)
   - **`html/`** - HTML parser and preprocessor
   - **`server/`** - Express.js server and middleware
-- **`tests/`** - Comprehensive test suite (178+ tests)
+- **`tests/`** - Comprehensive test suite (245+ tests)
 - **`docs/`** - Architecture documentation
 - **`scripts/`** - Build configuration (esbuild)
 
