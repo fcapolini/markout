@@ -12,6 +12,7 @@ export interface ServerProps extends MarkoutProps {
   trustProxy?: boolean;
   pageLimit?: TrafficLimit;
   mute?: boolean;
+  clientCodePath?: string;
 }
 
 export interface TrafficLimit {
@@ -47,6 +48,8 @@ export class Server {
     //TODO: will this limit all requests with any extension because of the '*'?
     config.pageLimit && this.setLimiter(config.pageLimit, ['*', '*.html'], app);
     config.docroot ||= process.cwd();
+    this.props.clientCodePath &&
+      (config.clientCodePath = this.props.clientCodePath);
 
     app.use(markout(config));
 

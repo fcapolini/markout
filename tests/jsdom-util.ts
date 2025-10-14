@@ -1,9 +1,11 @@
-import { JSDOM } from 'jsdom';
 import { generate } from 'escodegen';
+import { JSDOM } from 'jsdom';
 import { Compiler, CompilerPage } from '../src/compiler/compiler';
-import { WebContext } from '../src/runtime/web/web-context';
-import { parse } from '../src/html/parser';
 import * as dom from '../src/html/dom';
+import { parse } from '../src/html/parser';
+import { BaseContext } from '../src/runtime/base/base-context';
+import { BaseGlobal } from '../src/runtime/base/base-global';
+import { WebContext } from '../src/runtime/web/web-context';
 
 /**
  * Run a page with JSDOM for DOM testing
@@ -14,7 +16,8 @@ export async function runPage(
   html: string
 ): Promise<WebContext> {
   const page: CompilerPage = { source: parse(html, 'test') };
-  Compiler.compilePage(page);
+  const global = new BaseGlobal(new BaseContext({ root: { id: '-' } }));
+  Compiler.compilePage(page, global);
   if (page.source.errors.length) {
     throw new Error('error: ' + page.source.errors[0].msg);
   }

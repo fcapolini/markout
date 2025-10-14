@@ -22,10 +22,12 @@ program
   .description('serve a Markout project')
   .argument('<pathname>', 'path to directory containing HTML files (docroot)')
   .option('-p, --port <number>', 'port number, default: 3000')
+  .option('--client-bin <path>', 'optional path to client.js file')
   .action((pathname, options) => {
+    console.log(`Starting server for ${options.clientBin}...`);
     const docroot = path.normalize(path.join(process.cwd(), pathname));
     const port = Number.parseInt(options.port) || 3000;
-    new Server({ docroot, port }).start();
+    new Server({ docroot, port, clientCodePath: options.clientBin }).start();
   });
 
 program.parse();
