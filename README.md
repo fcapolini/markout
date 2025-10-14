@@ -197,6 +197,7 @@ Markout is currently in alpha development. While the core reactive system is fun
 **❌ Not Yet Implemented:**
 - Conditionals (`<template :if>`, `:else`, `:elseif`)
 - Data services (`<:data>` directive)
+- Islands (`<:island>` for isolated web components)
 - VS Code extension
 
 See [ROADMAP.md](ROADMAP.md) for complete development timeline and feature status.
@@ -265,7 +266,8 @@ To make this approach practical, tag attributes in Markout accept multiline valu
   :count="${0}" 
   :on-click="${() => count++}" 
   // highlight dangerous state
-  :class-danger="${count > 3}">
+  :class-danger="${count > 3}"
+>
   <!--- button text can display either the count or an error -->
   ${count < 6 ? `Clicks: ${count}` : `Oh my, you clicked too much and broke the Web!`}
 </button>
@@ -300,6 +302,39 @@ Please note that only the DOM application of changes is batched: logic values th
 
 Given Markout's design where updates are surgically applied where needed, this results in better performance than the vaunted _Virtual DOM_ adopted in other frameworks.
 
+### Cross-Scope Effects
+
+Markout's reactive system combined with lexical scoping enables elegant side effects that automatically respond to state changes. Here's how you can create an effect that applies dark mode across your application:
+
+```html
+<div :darkMode="${false}">
+  <button :on-click="${() => darkMode = !darkMode}">
+    Toggle Theme
+  </button>
+  
+  <!-- Component with effect that depends on parent's darkMode -->
+  <section :dummy="${
+    (() => {
+      // Side effect: update document theme when darkMode changes
+      document.body.classList.toggle('dark-theme', head.darkMode);
+      localStorage.setItem('theme', head.darkMode ? 'dark' : 'light');
+    })(head.darkMode)  // Dependency triggers re-execution
+  }">
+    <h2>Content automatically themed</h2>
+    <p>This entire section responds to theme changes.</p>
+  </section>
+</div>
+```
+
+This pattern demonstrates several powerful features:
+
+- **Automatic dependency tracking**: The effect runs whenever `head.darkMode` changes
+- **Cross-scope reactivity**: Child components can react to parent state through lexical scoping  
+- **No special effect syntax**: Effects leverage the existing reactive expression system
+- **Batched execution**: Multiple effects triggered by the same change are batched together
+
+This approach works for any side effects: analytics tracking, API synchronization, local storage updates, or DOM manipulation outside the component tree.
+
 ### Reactivity implementation
 
 **No Virtual DOM, No Re-rendering Nightmare**: Unlike frameworks that re-render entire component trees and rely on diffing algorithms to figure out what changed, Markout knows _exactly_ what needs updating because of its reactive dependency tracking. This eliminates the common performance pitfalls of Virtual DOM frameworks:
@@ -317,6 +352,7 @@ Markout directives are based on either `<template>` or custom `<:...>` tags:
 - `<:define>`: reusable components
 - `<:import>|<:include>`: source code modules
 - `<:data>`: data and services
+- `<:island>`: isolated web components (planned for 1.x)
 
 ### Conditionals
 
@@ -380,6 +416,52 @@ This directive lets you turn any HTML block into a reusable component. You can:
 The component can then be used anywhere as a simple custom tag, passing different parameters each time.
 
 You can find a comprehensive demonstration of component creation and usage in the [Bootstrap](#Bootstrap) section below, which shows how to turn Bootstrap's verbose modal markup into a clean, reusable and reactive `<:bs-modal>` component.
+
+#### Two-Tier Component Architecture (Planned for 1.x)
+
+Markout 1.x will support an elegant dual-component system addressing different isolation needs:
+
+**🏝️ Islands = Web Components** (Heavy Isolation)
+```html
+<!-- Independent, fully isolated widgets -->
+<:island src="/widgets/weather.htm"></:island>
+<:island src="/widgets/todo-list.htm"></:island>
+```
+
+- **Purpose**: Independent widgets requiring complete encapsulation
+- **Isolation**: Shadow DOM provides full CSS/DOM boundaries
+- **Communication**: Standard DOM events, attributes, and slots
+- **Use Cases**: Third-party widgets, micro-frontends, cross-team components
+
+**🧩 Components = Markup Scopes** (Light Composition)
+```html
+<!-- Logical organization within apps -->
+<:import href="/components/user-profile.htm" />
+<:import href="/components/notification-list.htm" />
+```
+
+- **Purpose**: Logical organization within islands or main applications  
+- **Isolation**: Lexical scoping for reactive values, shared styling context
+- **Communication**: Direct scope access, shared reactive context
+- **Use Cases**: UI patterns, layout components, data presentation
+
+**🔗 Service-Oriented Communication**
+```html
+<!-- Cart service island -->
+<:island src="/services/cart.htm" name="cartService"></:island>
+
+<!-- Product island consuming cart service -->
+<:island src="/widgets/products.htm">
+  <:data :aka="cart" :src="@cartService" />
+  <button :on-click="${() => cart.json.addItem(product)}">
+    Add to Cart (${cart.json.count})
+  </button>
+</:island>
+```
+
+Islands communicate through reactive services using `<:data>`, enabling async operations (local DB, API calls) while maintaining reactive data flow. Services handle complex async operations internally while exposing simple reactive interfaces to consumers.
+
+This provides optimal performance (isolation only where needed) while maintaining clear conceptual boundaries between "what needs isolation" (islands) vs "what can share context" (components).
 
 ### Fragments
 
@@ -1029,6 +1111,7 @@ Key architectural innovations:
 - **Reserved Namespace**: `$` prefix prevents framework/user code conflicts  
 - **Update Batching**: Set-based deduplication eliminates redundant DOM operations
 - **Hierarchical Scoping**: Lexical variable lookup with proxy-based reactive access
+- **Two-Tier Component System**: Islands (Web Components) for isolation + Components (markup scopes) for composition with service-oriented reactive communication
 
 ## Development
 
@@ -1160,6 +1243,18 @@ npm run start:prod     # Start with PM2 cluster mode
 npm run logs           # View PM2 logs
 npm run monit          # Open PM2 monitoring
 ```
+
+## Closing remarks
+
+In an industry obsessed with the next big disruption—whether it's "signals" as the latest reactive primitive or yet another framework promising to revolutionize everything, without actually challenging the mainstream model—Markout takes a different path.
+
+I believe in **thoughtful engineering over marketing hype**. While others chase trends and breaking changes, Markout focuses on solving real problems with minimal disruption. Markout's HTML-first approach builds on web standards that have proven their worth, enhanced with just three simple additions that make complex things possible without making simple things complicated.
+
+**Markout is for teams who value stability over novelty, productivity over ceremonies, and solutions over disruptions.** It's for developers who want to build great web applications without constantly relearning their tools or migrating their codebases.
+
+The upcoming island/component architecture exemplifies this philosophy: instead of inventing new abstractions, they'll leverage Web Components and extend Markout's existing `<:data>` system to enable service-oriented communication. Think of client-side microservices. Real-world benefits—like multiple independent functional modules on the same page—achieved through standards-based solutions that will still work in five years.
+
+Revolutionary? Nah, just careful engineering, as it should be.
 
 ## License
 

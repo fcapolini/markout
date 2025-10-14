@@ -150,6 +150,16 @@ Built on TypeScript Node.js + Express.js foundation with complete full-stack rea
 - **BaseValue**: Reactive values with expression evaluation, dependency tracking, and change propagation
 - **WebScope**: Browser-specific scope implementation with DOM binding (attributes, classes, styles, text, events)
 
+### **Advanced Reactive Capabilities (Already Built-In)**
+
+Markout's reactive system already includes many features that other frameworks add later:
+
+- **Computed Values**: `:count=${x + y}` automatically recalculates when dependencies change with built-in caching
+- **Effects**: Side effects using `:dummy=${(() => { /* effect code */ })(deps...)}` pattern with automatic dependency tracking
+- **Cross-Scope Reactivity**: Effects can depend on parent scope values via lexical scoping (e.g., `head.darkMode`)
+- **Fine-Grained Updates**: Expression-level dependency tracking ensures only affected DOM nodes update
+- **Isomorphic Execution**: Same reactive code runs on server (SSR) and client (hydration) without separate architectures
+
 ### **High-Performance DOM Update Batching**
 
 - **Set-based Deduplication**: Automatically deduplicates multiple updates to same value using Set data structure
@@ -436,7 +446,7 @@ All tests currently run in **Node.js** environment for maximum Node.js 18+ compa
 
 ## Ecosystem Integration
 
-**Third-party Library Support**: Markout works seamlessly with existing web technologies:
+**Ecosystem Integration**: Markout works seamlessly with existing web technologies:
 
 - **Bootstrap Integration**: Wrap verbose Bootstrap components into clean, reactive Markout components
 - **Web Components**: Shoelace and other Web Component libraries work natively with reactive logic values
@@ -449,5 +459,51 @@ All tests currently run in **Node.js** environment for maximum Node.js 18+ compa
 - Automatic dependency resolution eliminates manual import management
 - CSS encapsulation through fragment imports without Shadow DOM complexity
 - Cross-project component sharing through standardized `.htm` fragment files
+
+**Two-Tier Component Architecture** (Planned for 1.x):
+
+Markout will support a elegant dual-component system addressing different isolation needs:
+
+- **Islands = Web Components** (Heavy Isolation)
+  - Purpose: Independent, reusable widgets requiring full encapsulation
+  - Implementation: `<:island src="/widgets/counter.htm">` creates Web Component with Shadow DOM
+  - Isolation: Complete CSS/DOM boundaries, separate Markout contexts
+  - Communication: Service-oriented via `<:data :src="@serviceName">` and standard DOM events/attributes
+  - Use Cases: Third-party widgets, micro-frontends, cross-team components, legacy integration
+  - Mental Model: "Mini applications with full isolation"
+
+- **Components = Markup Scopes** (Light Composition)  
+  - Purpose: Logical organization within islands or main applications
+  - Implementation: Existing `<:import>` and `<:define>` directives
+  - Isolation: Lexical scoping for reactive values, shared styling context
+  - Communication: Direct scope access, shared reactive context
+  - Use Cases: UI patterns, layout components, data presentation within apps
+  - Mental Model: "Template fragments with reactive logic"
+
+**Service-Oriented Island Communication**:
+
+Islands can expose services through named registration, enabling reactive inter-island communication:
+
+```html
+<!-- Service island -->
+<:island src="/services/cart.htm" name="cartService">
+  <:data :aka="cartData" :src="/api/cart/local" />
+  <:data :aka="cartService" :json="${{
+    async addItem(item) { /* async operations */ },
+    get items() { return cartData.json.items; },
+    get total() { return cartData.json.total; }
+  }}" />
+</:island>
+
+<!-- Consumer island -->
+<:island src="/widgets/product-list.htm">
+  <:data :aka="cart" :src="@cartService" />
+  <button :on-click="${() => cart.json.addItem(product)}">
+    Add to Cart (${cart.json.count})
+  </button>
+</:island>
+```
+
+This approach provides optimal performance (isolation only where needed) while maintaining clear conceptual boundaries between "what needs isolation" (islands) vs "what can share context" (components). Islands can contain regular Markout components internally and communicate through reactive services, creating a powerful composability system built on web standards and async-capable data flow.
 
 Project is enterprise-ready with comprehensive testing (178+ tests), security scanning, cross-platform compatibility, and production-grade process management.
