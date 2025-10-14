@@ -167,12 +167,31 @@ Markout is currently in **alpha development**. The core reactive system is funct
 - [ ] Performance comparisons and benchmarks
 - [ ] Enterprise support and consulting services
 
+---
+
+### Milestone: v1.x (Feature Extensions)
+**Theme: Advanced Component Architecture**
+
+**Major Features:**
+- [ ] **Optional Dependencies**: `?` syntax for graceful handling of missing scope variables
+  - Syntax: `:x=${head.darkMode?}` returns `undefined` instead of compilation error
+  - Enables progressive enhancement and conditional features
+  - Full backward compatibility with existing code
+  - See: `docs/specifications/optional-dependencies.md`
+- [ ] **Two-Tier Component Architecture**: Islands (Web Components) + Components (Markup Scopes)
+  - Islands = `<:island src="/widgets/counter.htm">` with Shadow DOM isolation
+  - Components = Existing `<:import>` and `<:define>` for shared-context composition
+  - Service-oriented communication via `<:data :src="@serviceName">` for reactive inter-island data flow
+  - Async-capable services handle complex operations (local DB, APIs) while maintaining reactive interfaces
+  - Clear mental model: "Heavy isolation" vs "Light composition" with reactive service communication
+- [ ] **Component Library Ecosystem**: Official component libraries and marketplace
+- [ ] **Advanced Tooling**: Enhanced VS Code extension with component preview and dependency visualization
+
 ## Post-1.0 Vision
 
 ### Future Major Versions (v2.0+)
-- **Server Components**: React Server Components-style architecture
 - **Edge Computing**: Cloudflare Workers, Deno Deploy optimization
-- **Advanced Reactivity**: Fine-grained reactivity, computed values, effects
+- **Advanced Reactivity**: Object property tracking, array item reactivity
 - **Mobile Integration**: React Native-style mobile app development
 - **AI/ML Integration**: Template generation, accessibility enhancement
 
