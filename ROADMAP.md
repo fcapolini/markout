@@ -190,6 +190,13 @@ Markout is currently in **alpha development**. The core reactive system is funct
 ## Post-1.0 Vision
 
 ### Future Major Versions (v2.0+)
+- **TypeScript Compiler Integration**: Replace Acorn with TypeScript Compiler API for type-safe reactive expressions
+  - Full TypeScript support in reactive attributes (`:user="${null as User | null}"`)
+  - Static type checking and IntelliSense for component properties and data references
+  - Advanced language features: optional chaining, nullish coalescing, template literal types
+  - Type-aware data system: `<:data :aka="userService" :type="UserService" :src="/api/users" />`
+  - Enhanced VS Code integration with rich typing and autocomplete
+  - Incremental migration path: hybrid Acorn/TypeScript approach for backwards compatibility
 - **Edge Computing**: Cloudflare Workers, Deno Deploy optimization
 - **Advanced Reactivity**: Object property tracking, array item reactivity
 - **Mobile Integration**: React Native-style mobile app development

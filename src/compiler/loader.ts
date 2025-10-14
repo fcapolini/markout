@@ -185,6 +185,17 @@ export function load(source: Source): CompilerScope {
             };
             continue;
           }
+          // event attribute (handle :on-* before ID_RE check)
+          if (name.startsWith('on-')) {
+            const eventType = name.substring(3); // remove 'on-' prefix
+            scope.values || (scope.values = {});
+            scope.values[RT_EVENT_VALUE_PREFIX + eventType] = {
+              val: (attr as ServerAttribute).value,
+              keyLoc: (attr as ServerAttribute).loc,
+              valLoc: (attr as ServerAttribute).valueLoc,
+            };
+            continue;
+          }
           //TODO: special prefixes, e.g. 'on-'
           if (!k.ID_RE.test(name)) {
             error(attr.loc, 'invalid value name');
