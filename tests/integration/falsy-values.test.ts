@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { Compiler } from '../../src/compiler/compiler';
-import { BaseContext } from '../../src/runtime/base/base-context';
 import { generate } from 'escodegen';
+import { describe, expect, it } from 'vitest';
+import { Compiler } from '../../src/compiler/compiler';
 import { parse } from '../../src/html/parser';
+import { BaseContext } from '../../src/runtime/base/base-context';
+import { BaseGlobal } from '../../src/runtime/base/base-global';
 
 describe.skip('falsy values rendering', () => {
   it('should render the number 0', () => {
@@ -10,7 +11,8 @@ describe.skip('falsy values rendering', () => {
 
     // Parse and compile the HTML
     const source = parse(html, 'test.html');
-    const compiled = Compiler.compilePage({ source });
+    const global = new BaseGlobal(new BaseContext({ root: { id: '-' } }));
+    const compiled = Compiler.compilePage({ source }, global);
 
     if (!compiled.code) {
       throw new Error(
@@ -59,7 +61,8 @@ describe.skip('falsy values rendering', () => {
     const html = `<html><body><div :v=\${false}>Value: \${v}</div></body></html>`;
 
     const source = parse(html, 'test.html');
-    const compiled = Compiler.compilePage({ source });
+    const global = new BaseGlobal(new BaseContext({ root: { id: '-' } }));
+    const compiled = Compiler.compilePage({ source }, global);
 
     if (!compiled.code) {
       throw new Error(
@@ -94,7 +97,8 @@ describe.skip('falsy values rendering', () => {
     const html = `<html><body><div :v=\${'""'}>Value: '\${v}'</div></body></html>`;
 
     const source = parse(html, 'test.html');
-    const compiled = Compiler.compilePage({ source });
+    const global = new BaseGlobal(new BaseContext({ root: { id: '-' } }));
+    const compiled = Compiler.compilePage({ source }, global);
 
     if (!compiled.code) {
       throw new Error(
@@ -129,7 +133,8 @@ describe.skip('falsy values rendering', () => {
     const html = `<html><body><div :v=\${null}>Value: \${v}</div></body></html>`;
 
     const source = parse(html, 'test.html');
-    const compiled = Compiler.compilePage({ source });
+    const global = new BaseGlobal(new BaseContext({ root: { id: '-' } }));
+    const compiled = Compiler.compilePage({ source }, global);
 
     if (!compiled.code) {
       throw new Error(

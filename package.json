@@ -7,7 +7,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "build": "node scripts/build-server.mjs && node scripts/build-client.mjs",
-    "dev": "nodemon --exec ts-node src/index.ts",
+    "dev": "nodemon --exec ts-node src/index.ts -- serve ./www --client-bin ./dist/client.js",
     "start": "node dist/index.js",
     "start:prod": "pm2 start ecosystem.config.js --env production",
     "start:dev": "pm2 start ecosystem.config.js --env development",

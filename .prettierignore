@@ -66,3 +66,5 @@ vitest.config.mjs
 
 # Documentation files with custom formatting
 *.md
+
+www/
