@@ -26,6 +26,8 @@ export default defineConfig({
         'test-fragment-behavior.js',
         // Build scripts
         'scripts/**',
+        // Prototypes and experimental code
+        'prototypes/**',
         // All test fixture files
         'tests/**/*-in.html',
         'tests/**/*-out.html',
