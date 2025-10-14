@@ -1,0 +1,16 @@
+<!-- Test input for optional dependencies - PLACEHOLDER for future implementation -->
+<html>
+<head>
+  <style :name="theme" :mode="light"></style>
+</head>
+<body>
+  <!-- Required dependency - should work normally -->
+  <div :x=${theme.mode}></div>
+  
+  <!-- TODO: When optional dependencies are implemented, uncomment these:
+  <div :y=${theme.darkMode?}></div>
+  <div :z=${theme.darkMode? && theme.mode}></div>
+  <div :w=${user.preferences.theme?}></div>
+  -->
+</body>
+</html>
