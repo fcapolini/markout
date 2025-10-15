@@ -30,7 +30,7 @@ This is the canonical "click counter" example which is a traditional "hello worl
 ```html
 <html>
   <body>
-    <button :count="${0}" :on-click="${() => count++}">
+    <button :count=${0} :on-click=${() => count++}>
       Clicks: ${count}
     </button>
   </body>
@@ -177,7 +177,7 @@ Update your `app.html`:
 
 ## Alpha Status & Limitations
 
-**Current Version: 0.1.0 (Alpha)**
+**Current Version: 0.1.1 (Alpha)**
 
 Markout is currently in alpha development. While the core reactive system is functional and many features work well, some features are still being implemented:
 
