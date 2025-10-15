@@ -12,6 +12,7 @@ export const RT_EVENT_VALUE_PREFIX = 'event$';
 export class WebScope extends BaseScope {
   dom!: Element;
   texts!: Text[];
+  domListeners?: { name: string, listener: EventListener }[];
 
   constructor(props: BaseScopeProps, context: WebContext, parent?: BaseScope) {
     super(props, context, parent);
@@ -49,6 +50,14 @@ export class WebScope extends BaseScope {
       };
       f(this.dom);
     }
+  }
+
+  override dispose(): void {
+    this.domListeners?.forEach(({ name, listener }) => {
+      this.dom?.removeEventListener(name, listener);
+    });
+    this.domListeners = [];
+    super.dispose();
   }
 
   override newValue(key: string, props: BaseValueProps<any>) {
@@ -124,7 +133,12 @@ export class WebScope extends BaseScope {
     }
     if (key.startsWith(RT_EVENT_VALUE_PREFIX)) {
       const name = key.slice(RT_EVENT_VALUE_PREFIX.length);
-      //FIXME
+      if (typeof ret.exp?.() === 'function') {
+        const listener: EventListener = (e: Event) => this.proxy[key]?.(e);
+        this.domListeners ||= [];
+        this.domListeners.push({ name, listener });
+        this.dom?.addEventListener(name, listener);
+      }
       return ret;
     }
     return ret;
