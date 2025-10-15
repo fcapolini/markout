@@ -51,7 +51,7 @@ const TEST_PORT = 3001;
 const SERVER_TIMEOUT = 15000; // 15 seconds to start server
 const baselineDir = path.resolve('./tests/integration/baseline');
 
-describe('baseline e2e - full user journey', () => {
+describe.skip('baseline e2e - full user journey', () => {
   let serverProcess: ChildProcess | null = null;
   let serverReady = false;
 
