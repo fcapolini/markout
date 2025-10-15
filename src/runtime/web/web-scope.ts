@@ -122,6 +122,11 @@ export class WebScope extends BaseScope {
       });
       return ret;
     }
+    if (key.startsWith(RT_EVENT_VALUE_PREFIX)) {
+      const name = key.slice(RT_EVENT_VALUE_PREFIX.length);
+      //FIXME
+      return ret;
+    }
     return ret;
   }
 
