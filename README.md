@@ -9,7 +9,7 @@
 
 **HTML-based** reactive web framework for Node.js and the browser — for devs who despise _needless complexity_.
 
-🚧 **Alpha Release (v0.1.1)** - Core features working, some features still in development. See [ROADMAP.md](ROADMAP.md) for details.
+🚧 **Alpha Release (v0.1.2)** - Core features working, some features still in development. See [ROADMAP.md](ROADMAP.md) for details.
 
 Markout is three things:
 
@@ -177,7 +177,7 @@ Update your `app.html`:
 
 ## Alpha Status & Limitations
 
-**Current Version: 0.1.1 (Alpha)**
+**Current Version: 0.1.2 (Alpha)**
 
 Markout is currently in alpha development. While the core reactive system is functional and many features work well, some features are still being implemented:
 
