@@ -3,6 +3,7 @@ import { BaseContext } from './base-context';
 import { BaseScope } from './base-scope';
 import { BaseValueProps } from './base-value';
 
+//FIXME: server-side timer stuff should be no-ops
 export class BaseGlobal extends BaseScope {
   constructor(
     context: BaseContext,
