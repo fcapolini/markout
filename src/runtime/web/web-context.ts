@@ -15,9 +15,7 @@ export class WebContext extends BaseContext {
   scopeElements!: Map<string, Element>;
 
   constructor(props: WebContextProps) {
-    super(props, {
-      //TODO
-    });
+    super(props);
   }
 
   //TODO: revert to domaze's technique where each scope looks up DOM IDs
