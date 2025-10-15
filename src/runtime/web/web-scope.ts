@@ -12,7 +12,7 @@ export const RT_EVENT_VALUE_PREFIX = 'event$';
 export class WebScope extends BaseScope {
   dom!: Element;
   texts!: Text[];
-  domListeners?: { name: string, listener: EventListener }[];
+  domListeners?: { name: string; listener: EventListener }[];
 
   constructor(props: BaseScopeProps, context: WebContext, parent?: BaseScope) {
     super(props, context, parent);
