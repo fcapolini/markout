@@ -13,14 +13,7 @@ export class BaseGlobal extends BaseScope {
       {
         id: '-',
         name: 'window',
-        values: {
-          console: { val: console },
-          setTimeout: { val: setTimeout },
-          clearTimeout: { val: clearTimeout },
-          setInterval: { val: setInterval },
-          clearInterval: { val: clearInterval },
-          ...additionalValues,
-        },
+        values: additionalValues ?? {},
       },
       context
     );

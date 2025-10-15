@@ -63,7 +63,22 @@ export function markout(props: MarkoutProps) {
     if (props.ssr) {
       // https://esbuild.github.io/content-types/#direct-eval
       const root = (0, eval)(propsJs);
-      const props: WebContextProps = { doc, root };
+      const noop = function () {};
+      //TODO: functional setTimeout, setInterval for delay === 0
+      //TODO: functional requestAnimationFrame
+      const props: WebContextProps = {
+        doc,
+        root,
+        addedGlobals: {
+          console: { val: console },
+          setTimeout: { val: noop },
+          clearTimeout: { val: noop },
+          setInterval: { val: noop },
+          clearInterval: { val: noop },
+          requestAnimationFrame: { val: noop },
+          cancelAnimationFrame: { val: noop },
+        },
+      };
       new WebContext(props).refresh();
     }
 
