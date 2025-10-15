@@ -39,14 +39,14 @@ fs.readdirSync(docroot).forEach(dir => {
             const html = await res.text();
             doc.body.innerHTML = html;
             // Run your tests against the `doc` here
-            console.log(doc.body.innerHTML); //tempdebug
+            // console.log(doc.body.innerHTML); //tempdebug
             const outFile = file.replace('-in.html', '-out.html');
             const outPath = path.join(dirPath, outFile);
             if (fs.existsSync(outPath)) {
               const actualHtml = normalizeTextForComparison(
                 doc.documentElement.outerHTML.trim()
               );
-              console.log('Actual HTML:', actualHtml); //tempdebug
+              // console.log('Actual HTML:', actualHtml); //tempdebug
               const expectedHtml = normalizeTextForComparison(
                 fs.readFileSync(outPath, 'utf-8').trim()
               );
