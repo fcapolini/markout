@@ -2,25 +2,28 @@ import { assert, it } from 'vitest';
 import { BaseContext } from '../../src/runtime/base/base-context';
 
 it(`creates global scope`, () => {
-  const context = new BaseContext({ root: { id: '0' } });
+  const context = new BaseContext({
+    root: { id: '0' },
+    addedGlobals: { console: { val: console } },
+  }).refresh();
   assert.exists(context.global);
   assert.equal(context.global.props.name, 'window');
   assert.equal(context.global.proxy.console, console);
 });
 
 it(`adds custom global value`, () => {
-  const context = new BaseContext(
-    { root: { id: '0' } },
-    { custom: { val: 42 } }
-  ).refresh();
+  const context = new BaseContext({
+    root: { id: '0' },
+    addedGlobals: { custom: { val: 42 } },
+  }).refresh();
   assert.equal(context.global.proxy.custom, 42);
 });
 
 it(`adds custom global function`, () => {
-  const context = new BaseContext(
-    { root: { id: '0' } },
-    { custom: { val: (x: number) => x * 2 } }
-  ).refresh();
+  const context = new BaseContext({
+    root: { id: '0' },
+    addedGlobals: { custom: { val: (x: number) => x * 2 } },
+  }).refresh();
   assert.equal(context.global.proxy.custom(3), 6);
 });
 

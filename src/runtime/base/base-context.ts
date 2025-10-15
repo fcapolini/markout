@@ -4,6 +4,7 @@ import { BaseValue, BaseValueProps } from './base-value';
 
 export interface BaseContextProps {
   root: BaseScopeProps;
+  addedGlobals?: { [key: string | symbol]: BaseValueProps<any> };
 }
 
 export class BaseContext {
@@ -14,12 +15,9 @@ export class BaseContext {
   refreshLevel = 0;
   pushLevel = 0;
 
-  constructor(
-    props: BaseContextProps,
-    addedGlobals?: { [key: string | symbol]: BaseValueProps<any> }
-  ) {
+  constructor(props: BaseContextProps) {
     this.props = props;
-    this.global = new BaseGlobal(this, addedGlobals);
+    this.global = new BaseGlobal(this, props.addedGlobals);
     this.init();
     this.root = this.newScope(props.root, this, this.global);
     // this.refresh();
