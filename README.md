@@ -616,6 +616,112 @@ With this approach to data handling you get four big wins:
 
 There's still a lot to say about the deceptively simple `<:data>` directive: things like HTTP methods, authentication, caching, error handling, retries etc. but it takes its own chapter in the docs.
 
+#### GraphQL Integration
+
+GraphQL support is implemented as **reusable component libraries** using Markout's fragment system - no special runtime code needed:
+
+```html
+<!-- Import GraphQL query component -->
+<:import src="/lib/graphql/query.htm" 
+         :aka="users"
+         :endpoint="/graphql"
+         :query="${`
+           query GetUsers($limit: Int) {
+             users(limit: $limit) {
+               id name email
+               profile { avatar bio }
+             }
+           }
+         `}"
+         :variables="${{ limit: 10 }}" />
+
+<!-- Import GraphQL mutation component -->
+<:import src="/lib/graphql/mutation.htm"
+         :aka="userMutations"
+         :endpoint="/graphql" />
+
+<!-- Use exactly like any other data -->
+<template :foreach="${users.json.users}" :item="user">
+  <div>
+    ${user.name} - ${user.email}
+    <button :on-click="${() => userMutations.updateUser(user.id, updates)}">
+      Update
+    </button>
+  </div>
+</template>
+```
+
+**Key Benefits:**
+- **Zero Runtime Overhead**: GraphQL clients are pure component libraries
+- **Community Ecosystem**: Anyone can build and share GraphQL integration patterns
+- **Company Standards**: Teams can create standardized GraphQL fragments for consistent usage
+- **Selective Import**: Only import GraphQL capabilities when needed, keeping bundle size minimal
+
+#### WebSocket Real-time Communication
+
+WebSocket support is implemented as **reusable fragment libraries** using standard browser APIs and Markout's reactive system:
+
+```html
+<!-- Import WebSocket client component -->
+<:import src="/lib/websocket/client.htm"
+         :aka="chatSocket"
+         :url="ws://localhost:8080/chat"
+         :on-message="${(context, event) => {
+           const message = JSON.parse(event.data);
+           return {
+             ...context,
+             messages: [...context.messages, message]
+           };
+         }}" />
+
+<!-- Reactive UI updates automatically -->
+<div :if="${chatSocket.json.connecting}">Connecting...</div>
+<div :if="${chatSocket.json.connected}">
+  <template :foreach="${chatSocket.json.messages}" :item="message">
+    <div><strong>${message.user}:</strong> ${message.text}</div>
+  </template>
+  
+  <input :on-keydown="${(e) => {
+    if (e.key === 'Enter') {
+      chatSocket.send(JSON.stringify({
+        user: currentUser.name,
+        text: e.target.value
+      }));
+    }
+  }}" />
+</div>
+```
+
+**Key Benefits:**
+- **Pure Library Implementation**: Built using standard `<:data>` patterns and browser WebSocket API
+- **Reusable Components**: WebSocket connection management as importable fragments
+- **Custom Integrations**: Teams can build domain-specific WebSocket patterns (chat, notifications, collaboration)
+- **No Framework Bloat**: Core runtime stays minimal, WebSocket features added only when imported
+
+#### Universal Async Interface
+
+The same library-first pattern works for any async communication - all implemented as importable fragment libraries:
+
+```html
+<!-- Server-Sent Events -->
+<:import src="/lib/sse/client.htm" :aka="notifications" :url="/api/notifications/stream" />
+
+<!-- IndexedDB -->
+<:import src="/lib/indexeddb/client.htm" :aka="localDB" :database="userPreferences" />
+
+<!-- Web Workers -->
+<:import src="/lib/worker/client.htm" :aka="worker" :script="/js/data-processor.js" />
+
+<!-- WebRTC -->
+<:import src="/lib/webrtc/peer.htm" :aka="peer" :peerId="${peerId}" />
+```
+
+**Ecosystem Architecture:**
+- **Community Libraries**: Standard integration patterns shared as `.htm` fragment libraries
+- **Company Libraries**: Internal teams create reusable integration components for consistent patterns
+- **Zero Runtime Dependencies**: All integrations use existing `<:data>` capabilities and browser APIs
+- **Selective Enhancement**: Import only the async capabilities your application actually uses
+
 Two things are important to outline straight away though.
 
 For one, `<:data>` is where business logic should live: while presentation logic is more effectively scattered around in visual objects, business logic is better kept centralized in dedicated data-oriented objects. For example:
@@ -634,11 +740,7 @@ For one, `<:data>` is where business logic should live: while presentation logic
 
 Another important thing to clarify is: `<:data>` is where `async/await` and promise-based code, if any, should live. Markout reactivity is synchronous, but it can be triggered by events, timers, and asynchronous data operations.
 
-So much so that `<:data>` can be used to formalize inter-process communication with [workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers).
-
-Plus, it can be adapted to any transport layer available in the browser by using its own delegate methods (with `:did-` and `:will-` logic values), but I'm getting ahead of myself again.
-
-This includes local DBs by the way... OK I stop.
+The `<:data>` directive provides a universal async interface that works consistently across all transport layers - WebSockets, GraphQL subscriptions, Workers, IndexedDB, WebRTC, Server-Sent Events - using the same declarative patterns and reactive data flow.
 
 ## Ecosystem
 

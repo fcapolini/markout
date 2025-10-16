@@ -79,12 +79,23 @@ Markout is currently in **alpha development**. The core reactive system is funct
 ---
 
 ### Milestone: v0.4.0 (Alpha)
-**Theme: Advanced Features**
+**Theme: Advanced Data & Library Foundations**
 
 **New Features:**
-- [ ] Complete `<:data>` directive (REST endpoints, caching, error handling)
+- [ ] Complete `<:data>` directive (REST endpoints, caching, error handling, delegate methods)
+- [ ] **TypeScript Reactive Expressions**: Initial TypeScript support in reactive expressions
+  - [ ] Hybrid TypeScript/Acorn compiler pipeline for type-safe expressions
+  - [ ] Basic type checking for reactive values and component properties
+  - [ ] TypeScript-aware VS Code extension with IntelliSense
+  - [ ] Type-safe data access patterns: `<:data :aka="users" :type="User[]" />`
+  - [ ] Foundation for advanced library ecosystem type safety
+- [ ] **Reference Integration Libraries**: Community-ready library examples
+  - [ ] GraphQL integration library: `<:import src="/lib/graphql/query.htm" />` with reactive state management
+  - [ ] WebSocket integration library: `<:import src="/lib/websocket/client.htm" />` with lifecycle management
+  - [ ] Server-Sent Events, IndexedDB examples as proof-of-concept libraries
+  - [ ] **Zero Runtime Code**: Pure library implementation using existing `<:data>` and browser APIs
+  - [ ] **Library-First Architecture**: All integrations as importable components, zero framework bloat
 - [ ] Web Components integration and interoperability
-- [ ] Advanced component patterns (higher-order components, mixins)
 - [ ] Static site generation capabilities
 
 **Improvements:**
@@ -92,28 +103,42 @@ Markout is currently in **alpha development**. The core reactive system is funct
 - [ ] Security hardening and vulnerability assessment
 - [ ] Bundle size optimization and tree shaking
 - [ ] Advanced testing utilities and patterns
+- [ ] GraphQL schema validation and type safety tooling
+- [ ] Library documentation and usage patterns
+- [ ] Advanced component patterns (higher-order components, mixins)
 
 **Breaking Changes Expected:** Minor - focused on API consistency
 
 ---
 
 ### Milestone: v0.5.0 (Beta)
-**Theme: API Stabilization**
+**Theme: Islands Architecture & Full TypeScript Integration**
 
-**Goals:**
-- [ ] Feature freeze - no new major features
-- [ ] API stabilization - minimize breaking changes
-- [ ] Comprehensive testing of all feature combinations
-- [ ] Production readiness assessment
+**New Features:**
+- [ ] **Two-tier Island/Component Architecture**: Complete implementation
+  - [ ] `<:island src="/widgets/counter.htm">` with Shadow DOM isolation
+  - [ ] Service-oriented communication via `<:data :src="@serviceName">` for reactive inter-island data flow
+  - [ ] Async-capable services handle complex operations (local DB, APIs) while maintaining reactive interfaces
+  - [ ] Clear mental model: "Heavy isolation" vs "Light composition" with reactive service communication
+- [ ] **Enhanced TypeScript Support**: Full TypeScript integration for reactive expressions
+  - [ ] Replace Acorn with TypeScript Compiler API for complete type safety
+  - [ ] Advanced language features: optional chaining, nullish coalescing, template literal types
+  - [ ] Type-safe component interfaces and data contracts
+  - [ ] Rich VS Code integration with type-aware IntelliSense and error detection
+  - [ ] Type-safe library ecosystem foundation for GraphQL/WebSocket integrations
+- [ ] **Mature Library Ecosystem**: Production-ready integration libraries
+  - [ ] Complete GraphQL library suite (queries, mutations, subscriptions, fragments)
+  - [ ] Full WebSocket library ecosystem (chat, collaboration, real-time data)
+  - [ ] Universal async libraries (Server-Sent Events, IndexedDB, Web Workers, WebRTC)
+  - [ ] Community contribution guidelines and library standards
+- [ ] **Advanced Tooling**: Enhanced VS Code extension with component preview, dependency visualization, and TypeScript diagnostics
 
-**Focus Areas:**
-- [ ] API consistency review and final adjustments
-- [ ] Performance benchmarking against other frameworks
-- [ ] Security audit and penetration testing
-- [ ] Documentation completeness and accuracy
-- [ ] Community feedback integration
+**Improvements:**
+- [ ] Performance optimizations for Islands isolation
+- [ ] Library ecosystem documentation and examples
+- [ ] Advanced debugging tools for service-oriented communication
 
-**Breaking Changes Expected:** Final API cleanup only
+**Breaking Changes Expected:** Minor - Islands architecture addition only
 
 ---
 
@@ -170,7 +195,7 @@ Markout is currently in **alpha development**. The core reactive system is funct
 ---
 
 ### Milestone: v1.x (Feature Extensions)
-**Theme: Advanced Component Architecture**
+**Theme: Advanced Language Features**
 
 **Major Features:**
 - [ ] **Optional Dependencies**: `?` syntax for graceful handling of missing scope variables
@@ -178,25 +203,25 @@ Markout is currently in **alpha development**. The core reactive system is funct
   - Enables progressive enhancement and conditional features
   - Full backward compatibility with existing code
   - See: `docs/specifications/optional-dependencies.md`
-- [ ] **Two-Tier Component Architecture**: Islands (Web Components) + Components (Markup Scopes)
-  - Islands = `<:island src="/widgets/counter.htm">` with Shadow DOM isolation
-  - Components = Existing `<:import>` and `<:define>` for shared-context composition
-  - Service-oriented communication via `<:data :src="@serviceName">` for reactive inter-island data flow
-  - Async-capable services handle complex operations (local DB, APIs) while maintaining reactive interfaces
-  - Clear mental model: "Heavy isolation" vs "Light composition" with reactive service communication
-- [ ] **Component Library Ecosystem**: Official component libraries and marketplace
-- [ ] **Advanced Tooling**: Enhanced VS Code extension with component preview and dependency visualization
+- [ ] **Advanced Component Patterns**: Enhanced composition and reusability
+  - [ ] Higher-order components and component factories
+  - [ ] Mixins and component inheritance patterns
+  - [ ] Dynamic component type selection at runtime
+  - [ ] Component lifecycle optimization and caching
+- [ ] **Enterprise Features**: Production-scale capabilities
+  - [ ] Advanced monitoring and analytics integration
+  - [ ] Performance profiling and optimization tools
+  - [ ] Security compliance and audit capabilities
+  - [ ] Deployment automation and CI/CD integration
 
 ## Post-1.0 Vision
 
 ### Future Major Versions (v2.0+)
-- **TypeScript Compiler Integration**: Replace Acorn with TypeScript Compiler API for type-safe reactive expressions
-  - Full TypeScript support in reactive attributes (`:user="${null as User | null}"`)
-  - Static type checking and IntelliSense for component properties and data references
-  - Advanced language features: optional chaining, nullish coalescing, template literal types
-  - Type-aware data system: `<:data :aka="userService" :type="UserService" :src="/api/users" />`
-  - Enhanced VS Code integration with rich typing and autocomplete
-  - Incremental migration path: hybrid Acorn/TypeScript approach for backwards compatibility
+- **Advanced TypeScript Features**: Enhanced type system integration beyond v0.5.0 foundation
+  - Advanced type inference and flow analysis for reactive expressions
+  - Type-safe component composition with strict interface contracts
+  - Generic component types and advanced type constraints
+  - Integration with TypeScript language server for real-time diagnostics
 - **Edge Computing**: Cloudflare Workers, Deno Deploy optimization
 - **Advanced Reactivity**: Object property tracking, array item reactivity
 - **Mobile Integration**: React Native-style mobile app development

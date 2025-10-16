@@ -7,6 +7,77 @@ Markout's island architecture uses a service-oriented approach for inter-island 
 ### 🏝️ **Islands as Services**
 Islands can expose services by registering with a name, making their reactive data available to other islands.
 
+**GraphQL Service Example (Library-based):**
+```html
+<!-- GraphQL user service island using library components -->
+<:island src="/services/graphql-user.htm" name="userGraphQLService">
+  <!-- Import GraphQL client library -->
+  <:import src="/lib/graphql/client.htm" 
+           :aka="graphqlClient"
+           :endpoint="/graphql" />
+           
+  <:data :aka="userService" :json="${{
+    async getUser(id) {
+      return await graphqlClient.query(`
+        query GetUser($id: ID!) {
+          user(id: $id) {
+            id name email
+            profile { avatar bio }
+          }
+        }
+      `, { id });
+    },
+    
+    async updateUser(id, updates) {
+      const result = await graphqlClient.mutate(`
+        mutation UpdateUser($id: ID!, $updates: UserInput!) {
+          updateUser(id: $id, input: $updates) {
+            id name email
+            profile { avatar bio }
+          }
+        }
+      `, { id, updates });
+      
+      this.refresh(); // Notify all consumers
+      return result;
+    }
+  }}" />
+</:island>
+```
+
+**WebSocket Service Example (Library-based):**
+```html
+<!-- Real-time chat service island using library components -->
+<:island src="/services/chat.htm" name="chatService">
+  <!-- Import WebSocket client library -->
+  <:import src="/lib/websocket/client.htm"
+           :aka="chatSocket"
+           :url="wss://chat.example.com/rooms/general"
+           :on-message="${(context, event) => {
+             const message = JSON.parse(event.data);
+             return {
+               ...context,
+               messages: [...context.messages, message]
+             };
+           }}" />
+         
+  <:data :aka="chatService" :json="${{
+    sendMessage(text) {
+      const message = {
+        text,
+        user: currentUser.name,
+        timestamp: Date.now()
+      };
+      chatSocket.send(JSON.stringify(message));
+    },
+    
+    get messages() { return chatSocket.json.messages || []; },
+    get isConnected() { return chatSocket.json.connected; }
+  }}" />
+</:island>
+```
+
+**Traditional Data Service Example:**
 ```html
 <!-- Cart service island -->
 <:island src="/services/cart.htm" name="cartService">
@@ -52,6 +123,120 @@ Other islands consume services using `<:data :src="@serviceName">` syntax, enabl
 ```
 
 ## Async Service Patterns
+
+### **GraphQL Real-time Integration (Library-based)**
+GraphQL subscriptions implemented using fragment libraries and WebSocket components:
+
+```html
+<!-- GraphQL real-time service using library components -->
+<:island src="/services/live-data.htm" name="liveDataService">
+  <!-- Import GraphQL query library -->
+  <:import src="/lib/graphql/query.htm"
+           :aka="userData"
+           :endpoint="/graphql"
+           :query="${`query GetUser($id: ID!) { user(id: $id) { id name email } }`}"
+           :variables="${{ id: currentUserId }}" />
+         
+  <!-- Import GraphQL subscription library (built on WebSocket library) -->
+  <:import src="/lib/graphql/subscription.htm"
+           :aka="liveUpdates"
+           :endpoint="/graphql"
+           :subscription="${`
+             subscription OnUserUpdate($userId: ID!) {
+               userUpdated(userId: $userId) {
+                 id name email status
+               }
+             }
+           `}"
+           :variables="${{ userId: currentUserId }}"
+           :on-data="${(context, data) => {
+             // Merge subscription data with existing state
+             userData.json.user = { ...userData.json.user, ...data.userUpdated };
+             userData.refresh();
+             return context;
+           }}" />
+
+  <:data :aka="liveDataService" :json="${{
+    async updateUser(updates) {
+      return await userData.mutate(`
+        mutation UpdateUser($id: ID!, $updates: UserInput!) {
+          updateUser(id: $id, input: $updates) {
+            id name email status
+          }
+        }
+      `, { id: userData.json.user.id, updates });
+    },
+    
+    get user() { return userData.json.user; },
+    get isLive() { return liveUpdates.json.connected; }
+  }}" />
+</:island>
+```
+
+### **WebSocket Real-time Collaboration (Library-based)**
+Complex WebSocket features implemented using reusable fragment libraries:
+
+```html
+<!-- Collaborative document service using library components -->
+<:island src="/services/collaboration.htm" name="collaborationService">
+  <!-- Import collaborative WebSocket library -->
+  <:import src="/lib/websocket/collaboration.htm"
+           :aka="docSocket"
+           :url="wss://collab.example.com/doc/${documentId}"
+           :authentication="${userToken}"
+           :on-message="${(context, event) => {
+             const data = JSON.parse(event.data);
+             
+             switch(data.type) {
+               case 'user_cursor':
+                 return {
+                   ...context,
+                   cursors: { ...context.cursors, [data.userId]: data.position }
+                 };
+                 
+               case 'text_operation':
+                 return {
+                   ...context,
+                   operations: [...context.operations, data.operation]
+                 };
+                 
+               case 'user_joined':
+                 return {
+                   ...context,
+                   activeUsers: [...context.activeUsers, data.user]
+                 };
+             }
+           }}" />
+
+  <:data :aka="collaborationService" :json="${{
+    sendCursorUpdate(position) {
+      docSocket.send(JSON.stringify({
+        type: 'cursor_update',
+        position,
+        userId: currentUser.id
+      }));
+    },
+    
+    sendTextOperation(operation) {
+      docSocket.send(JSON.stringify({
+        type: 'text_operation',
+        operation,
+        userId: currentUser.id
+      }));
+    },
+    
+    get activeCursors() { return docSocket.json.cursors || {}; },
+    get isConnected() { return docSocket.json.connected; },
+    get activeUsers() { return docSocket.json.activeUsers || []; }
+  }}" />
+</:island>
+```
+
+**Library Architecture Benefits:**
+- **Reusable Components**: Collaboration patterns as importable `.htm` libraries
+- **Zero Runtime Bloat**: Advanced features only loaded when imported
+- **Community Ecosystem**: Teams can share domain-specific WebSocket patterns
+- **Company Standards**: Internal libraries for consistent real-time integration approaches
 
 ### **Local Database Integration**
 Services can handle complex async operations like IndexedDB while maintaining simple reactive interfaces.

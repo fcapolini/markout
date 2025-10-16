@@ -62,6 +62,21 @@ Three simple additions to standard HTML:
 
 - REST endpoint integration: `<:data :aka="users" :src="/api/users" />`
 - Local reactive data: `<:data :aka="config" :json=${{...}} />`
+- **GraphQL Integration**: Library-level GraphQL support implemented as reusable Markout components
+  - Implementation: GraphQL clients built as fragment libraries using `<:data>` and JavaScript APIs
+  - Query syntax: `<:import src="/lib/graphql/query.htm" :endpoint="/graphql" :query="${...}" />`
+  - Reactive mutations: Component libraries that wrap GraphQL clients with reactive state management
+  - Real-time subscriptions: WebSocket-based GraphQL subscriptions using standard `<:data>` patterns
+  - Fragment composition: Reusable GraphQL fragments distributed as importable `.htm` files
+  - **No Runtime Code**: Pure library implementation using existing `<:data>` capabilities and fragment imports
+- **WebSocket Real-time Communication**: Library-level WebSocket support via fragment components
+  - Implementation: WebSocket clients built as reusable fragment libraries using browser WebSocket API
+  - Connection syntax: `<:import src="/lib/websocket/client.htm" :url="ws://..." />`
+  - Message handling: Standard `<:data>` delegate methods (`:will-load`, `:did-load`) for connection lifecycle
+  - Connection lifecycle: Implemented in fragment libraries using browser events and reactive state
+  - Automatic reconnection: Retry logic implemented in reusable component libraries
+  - Service-oriented patterns: WebSocket services exposable via standard Island service registration
+  - **No Runtime Code**: Pure library implementation using existing reactive system and browser APIs
 - **Explicit Property Access**: Access data via logic value properties (e.g., `users.json.list`, `config.json.setting`) - no magic property promotion
 - **Reliable Data State**: `json` property always defined (at most empty object), `:foreach` handles undefined/null gracefully
 - Data pipelines: Chain `<:data>` directives where each is a function of previous ones
@@ -74,9 +89,19 @@ Three simple additions to standard HTML:
 - **Business Logic Architecture**: `<:data>` is where business logic should live (validation, processing, domain rules)
 - **Separation of Concerns**: Presentation logic scattered in visual objects, business logic centralized in data objects
 - **Example Pattern**: `<:data :aka="userService" :validate=${(user) => ...} />` for business rules, `:disabled=${!userService.validate(user)}` for presentation
-- **Advanced Features TBD**: HTTP methods, authentication, caching, error handling, retries for production readiness
-- Universal async interface: WebSockets, Workers, IndexedDB, WebRTC, Server-Sent Events
-- Future tooling needs: Dependency analysis, circular detection, type inference for VS Code extension
+- **Universal Async Interface**: Unified patterns for WebSockets, GraphQL subscriptions, Workers, IndexedDB, WebRTC, Server-Sent Events
+- **Library-First Architecture**: All advanced integrations implemented as importable fragment libraries, not runtime features
+  - GraphQL clients: `<:import src="/lib/graphql/" />` - zero runtime overhead, pure component libraries
+  - WebSocket handling: `<:import src="/lib/websockets/" />` - reusable connection components
+  - Database integration: `<:import src="/lib/indexeddb/" />` - local storage patterns
+  - **Ecosystem Benefits**: Community can build and share integration libraries without framework changes
+  - **Zero Bloat**: Core runtime remains minimal, features added via selective library imports
+  - **Company Libraries**: Internal teams can build standardized integration patterns as shared fragments
+- **TypeScript Integration Timeline**: Basic TypeScript support planned for v0.4.0, full integration in v0.5.0
+  - v0.4.0: Hybrid TypeScript/Acorn pipeline for type-safe expressions and basic IntelliSense
+  - v0.5.0: Complete TypeScript Compiler API integration with advanced language features
+  - Essential for GraphQL/WebSocket library ecosystem type safety and developer experience
+- Future tooling needs: Dependency analysis, circular detection, type inference, GraphQL schema validation for VS Code extension
 
 **Reactive Expressions in Special Tags**:
 

@@ -214,8 +214,12 @@ Framework uses `$` as reserved namespace to prevent conflicts:
 ### Data Handling
 - **`<:data>` Directive**: Sophisticated reactive data system
 - **REST Integration**: `<:data :src="/api/users">` for endpoints
+- **GraphQL Support**: Native queries, mutations, and subscriptions with `<:data :graphql="/graphql">`
+- **WebSocket Real-time**: First-class WebSocket support with `<:data :websocket="ws://...">`
+- **Universal Async Interface**: Unified patterns for Server-Sent Events, IndexedDB, Workers, WebRTC
 - **Local State**: `<:data :json=${{...}}>` for reactive data
 - **Business Logic**: Centralized validation and processing
+- **Service-Oriented Architecture**: WebSocket and GraphQL services exposable across Islands
 
 ### Enterprise Component Libraries & Design Systems
 Markout's modularization architecture provides unique advantages for large-scale development:
