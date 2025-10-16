@@ -199,7 +199,7 @@ Markout is currently in **alpha development**. The core reactive system is funct
 
 **Major Features:**
 - [ ] **Optional Dependencies**: `?` syntax for graceful handling of missing scope variables
-  - Syntax: `:x=${head.darkMode?}` returns `undefined` instead of compilation error
+  - Syntax: `:x="${head.darkMode?}"` returns `undefined` instead of compilation error
   - Enables progressive enhancement and conditional features
   - Full backward compatibility with existing code
   - See: `docs/specifications/optional-dependencies.md`
