@@ -29,6 +29,17 @@ Three simple additions to standard HTML:
 - **Declaration prohibition**: `$` is forbidden in user-declared identifiers (variables, functions, parameters) but users can access framework-provided `$` identifiers
 - **Validation enforcement**: The validator prevents declaring new identifiers with `$` while allowing access to framework identifiers like `$parent` and `$value()`
 
+**Quoted Reactive Attribute Syntax**: Markout uses natural HTML-style quoted attributes with predictable, no-magic parsing:
+
+- **HTML-native syntax**: `:count="${0}"`, `:on-click="${() => count++}"` - feels natural to HTML developers
+- **Template interpolation**: `:title="Welcome ${user.name}, you have ${count} items"` - powerful string templates with embedded expressions
+- **No magic parsing**: Quoted content without `${}` is always literal strings - no type conversion or interpretation
+- **Predictable behavior**: `:name="John"` is string "John", `:count="${0}"` is number 0 - what you write is what you get
+- **Universal syntax highlighting**: Works perfectly in VS Code, Vim, Sublime, and any generic HTML highlighter
+- **Never looks broken**: Code appears as valid HTML in all editors, no syntax highlighting glitches
+- **Copy-paste friendly**: Natural HTML-style syntax works seamlessly with existing HTML knowledge
+- **Tooling simplicity**: VS Code extension implementation becomes straightforward without custom parsing edge cases
+
 **Safe Markup Generation**: Framework uses triple-dash comments for conflict-free code generation:
 
 - **Triple-dash format**: `<!---...-->` instead of standard `<!--...-->` HTML comments
@@ -61,7 +72,7 @@ Three simple additions to standard HTML:
 **Advanced Data Handling with `<:data>`**: Sophisticated reactive data system
 
 - REST endpoint integration: `<:data :aka="users" :src="/api/users" />`
-- Local reactive data: `<:data :aka="config" :json=${{...}} />`
+- Local reactive data: `<:data :aka="config" :json="${{...}}" />`
 - **GraphQL Integration**: Library-level GraphQL support implemented as reusable Markout components
   - Implementation: GraphQL clients built as fragment libraries using `<:data>` and JavaScript APIs
   - Query syntax: `<:import src="/lib/graphql/query.htm" :endpoint="/graphql" :query="${...}" />`
@@ -88,7 +99,7 @@ Three simple additions to standard HTML:
 - Extensible transport layer: Custom communication via `:will-` and `:did-` delegate methods
 - **Business Logic Architecture**: `<:data>` is where business logic should live (validation, processing, domain rules)
 - **Separation of Concerns**: Presentation logic scattered in visual objects, business logic centralized in data objects
-- **Example Pattern**: `<:data :aka="userService" :validate=${(user) => ...} />` for business rules, `:disabled=${!userService.validate(user)}` for presentation
+- **Example Pattern**: `<:data :aka="userService" :validate="${(user) => ...}" />` for business rules, `:disabled="${!userService.validate(user)}"` for presentation
 - **Universal Async Interface**: Unified patterns for WebSockets, GraphQL subscriptions, Workers, IndexedDB, WebRTC, Server-Sent Events
 - **Library-First Architecture**: All advanced integrations implemented as importable fragment libraries, not runtime features
   - GraphQL clients: `<:import src="/lib/graphql/" />` - zero runtime overhead, pure component libraries
@@ -153,13 +164,17 @@ Three simple additions to standard HTML:
 Example - complete working counter:
 
 ```html
+This is the canonical "click counter" example which is a traditional "hello world" for reactive frameworks:
+
+```html
 <html>
   <body>
-    <button :count="${0}" :on-click="${()" ="">
-      count++}> Clicks: ${count}
+    <button :count="${0}" :on-click="${() => count++}">
+      Clicks: ${count}
     </button>
   </body>
 </html>
+```
 ```
 
 ## Technical Architecture
@@ -179,8 +194,8 @@ Built on TypeScript Node.js + Express.js foundation with complete full-stack rea
 
 Markout's reactive system already includes many features that other frameworks add later:
 
-- **Computed Values**: `:count=${x + y}` automatically recalculates when dependencies change with built-in caching
-- **Effects**: Side effects using `:dummy=${(() => { /* effect code */ })(deps...)}` pattern with automatic dependency tracking
+- **Computed Values**: `:count="${x + y}"` automatically recalculates when dependencies change with built-in caching
+- **Effects**: Side effects using `:dummy="${(() => { /* effect code */ })(deps...)}"` pattern with automatic dependency tracking
 - **Cross-Scope Reactivity**: Effects can depend on parent scope values via lexical scoping (e.g., `head.darkMode`)
 - **Fine-Grained Updates**: Expression-level dependency tracking ensures only affected DOM nodes update
 - **Isomorphic Execution**: Same reactive code runs on server (SSR) and client (hydration) without separate architectures

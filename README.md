@@ -30,7 +30,7 @@ This is the canonical "click counter" example which is a traditional "hello worl
 ```html
 <html>
   <body>
-    <button :count=${0} :on-click=${() => count++}>
+    <button :count="${0}" :on-click="${() => count++}">
       Clicks: ${count}
     </button>
   </body>
@@ -83,7 +83,7 @@ Want to try Markout right now? Here's the fastest way to get started:
 npm install -g @markout-js/cli
 
 # Create a simple HTML file
-echo '<html><body><button :count=${0} :on-click=${() => count++}>Clicks: ${count}</button></body></html>' > counter.html
+echo '<html><body><button :count="${0}" :on-click="${() => count++}">Clicks: ${count}</button></body></html>' > counter.html
 
 # Serve it immediately
 markout serve .
@@ -275,6 +275,37 @@ To make this approach practical, tag attributes in Markout accept multiline valu
 
 As you can see, inside a tag and between attributes you can use C-style comments (both single- and multi-line). In HTML text you can use the "triple dash" `<!---` comments to have them removed from the output, or normal HTML comments to have them maintained. Finally, to simplify things any tag can be self closing — output pages always contain standard HTML regardless.
 
+### Reactive Attribute Syntax
+
+Markout uses natural HTML-style quoted attributes with predictable, no-magic parsing:
+
+```html
+<button :count="${0}" :on-click="${() => count++}">Clicks: ${count}</button>
+```
+
+**Simple and predictable rules:**
+- **Quoted content without `${}`** is always a literal string: `:name="John"` → string "John"
+- **Content with `${}`** is always a JavaScript expression: `:count="${0}"` → number 0
+
+**Perfect syntax highlighting and editor support:**
+- **Works in any editor** - VS Code, Vim, Sublime, generic HTML highlighters all work perfectly
+- **No broken syntax** - Code never looks malformed in syntax highlighters
+- **Familiar to developers** - Standard HTML attribute quoting that every developer understands
+- **Copy-paste friendly** - Examples work seamlessly across documentation, Stack Overflow, blogs
+
+**Powerful text interpolation with embedded expressions:**
+
+```html
+<!-- Natural string templates within quotes -->
+<div :title="Welcome ${user.name}, you have ${notifications.count} messages"
+     :class="btn btn-${variant} ${isActive ? 'active' : ''}"
+     :style="color: ${theme.primary}; font-size: ${size}px">
+  ${content}
+</div>
+```
+
+This flexibility means you can use whichever syntax feels more natural for your use case, and copy-paste examples will work regardless of quote style.
+
 ## Reactive expressions
 
 Reactive expressions are where logic values are consumed. They adopt the familiar `${...}` syntax, and can be used anywhere as attribute values and in HTML text. They're automatically re-evaluated when the logic values they reference get updated.
@@ -361,10 +392,10 @@ Conditional rendering can be controlled with `<template :if | :else | :elseif>`.
 For example:
 
 ```html
-<template :if=${userType === 'buyer'}>
+<template :if="${userType === 'buyer'}">
   ...
 </template>
-<template :elseif=${userType === 'seller'}>
+<template :elseif="${userType === 'seller'}">
   ...
 </template>
 <template :else>
@@ -375,9 +406,9 @@ For example:
 Of course conditionals can be nested:
 
 ```html
-<template :if=${userType === 'buyer'}>
+<template :if="${userType === 'buyer'}">
   ...
-  <template :if=${catalog.length}>
+  <template :if="${catalog.length}">
     ...
   </template>
   ...
@@ -391,7 +422,7 @@ Replication can be expressed with `<template :foreach [:item] [:index]>`.
 For example:
 
 ```html
-<template :foreach=${[1, 2, 3]} :item="n" :index="i">
+<template :foreach="${[1, 2, 3]}" :item="n" :index="i">
   Item ${n} has index ${i}
 </template>
 ```
@@ -569,27 +600,27 @@ Note that `<:data>`'s `json` value is always defined, at most it can be an empty
 The data can be local as well:
 
 ```html
-<:data :aka="navigationData" :json=${{
+<:data :aka="navigationData" :json="${{
   list: [
     { id: 1, url: '/dashboard', title: 'Dashboard' },
     { id: 2, url: '/activity', title: 'Activity' },
   ]
-}} />
+}}" />
 ```
 
 And, because local data participates in the reactive system — `:json` is a logic value after all — it can automatically update too:
 
 ```html
-<:data :aka="localeData" :json=${{
+<:data :aka="localeData" :json="${{
   en: { dashboard: 'Dashboard', activity: 'Activity' },
   it: { dashboard: 'Panoramica', activity: 'Attività' }
-}} />
-<:data :aka="navigationData" :lang="en" :_locale=${localeData.json[lang]} :json=${{
+}}" />
+<:data :aka="navigationData" :lang="en" :_locale="${localeData.json[lang]}" :json="${{
   list: [
     { id: 1, url: '/dashboard', title: _locale.dashboard },
     { id: 2, url: '/activity', title: _locale.activity },
   ]
-}} />
+}}" />
 ```
 
 Now you have a localized menu which seamlessly updates when users switch language!
@@ -597,8 +628,8 @@ Now you have a localized menu which seamlessly updates when users switch languag
 In addition, again because `:json` is a logic attribute, you can locally generate data:
 
 ```html
-<:data :aka="totalsData" :json=${_generate()} :_generate=${() => { return ...
-}}>
+<:data :aka="totalsData" :json="${_generate()}" :_generate="${() => { return ...
+}}">
 ```
 
 You get the idea. In the same way, you can concatenate `<:data>` directives to build data pipelines, simply making each _a function_ of the one before, and you can cascade API calls just by making each dependent on the previous one's data.
@@ -728,12 +759,11 @@ For one, `<:data>` is where business logic should live: while presentation logic
 
 ```html
 <!--- Business logic: user validation, data processing -->
-<:data :aka="userService" :validate=${(user) => user.email && user.age >= 18} />
+<:data :aka="userService" :validate="${(user) => user.email && user.age >= 18}" />
 
 <!--- Presentation logic: button states, form interactions -->
-<form :user="${{}}">
-  <input :value="${user.email}" :on-change="${(e)" ="" /> user.email =
-  e.target.value} />
+<form :user="${{}}"  >
+  <input :value="${user.email}" :on-change="${(e) => user.email = e.target.value}" />
   <button :disabled="${!userService.validate(user)}">Submit</button>
 </form>
 ```
@@ -778,7 +808,7 @@ Let's take [Bootstrap](https://getbootstrap.com) for example:
 This code is confusing to say the least, and you have to duplicate it everywhere you need a modal. In Markout, though, you can just define it once, and use it like this everywhere you need it:
 
 ```html
-<:bs-modal :open=${true} :title="Greeting" :message="Hello world!" />
+<:bs-modal :open="${true}" :title="Greeting" :message="Hello world!" />
 ```
 
 That's much better! Now you have a properly [encapsulated](<https://en.wikipedia.org/wiki/Encapsulation_(computer_programming)>) component which clearly declares what it is (`bs-modal`) and only exposes what's meaningful for its use (`open` state, `title` and `message` texts).
@@ -790,15 +820,15 @@ For completeness, this is what the component definition could look like:
    :tag="bs-modal"
 
    // interface:
-   :open=${false}
-   :title=${'Modal title'}
-   :message=${'Modal body text goes here.'}
+   :open="${false}"
+   :title="Modal title"
+   :message="Modal body text goes here."
 
    // implementation:
    class="modal fade"
    tabindex="-1"
-   :watch-open=${() => open ? _modal.show() : _modal.hide()}
-   :_modal=${new bootstrap.Modal(this.$dom)}
+   :watch-open="${() => open ? _modal.show() : _modal.hide()}"
+   :_modal="${new bootstrap.Modal(this.$dom)}"
 >
   <div class="modal-dialog">
     <div class="modal-content">
@@ -806,7 +836,7 @@ For completeness, this is what the component definition could look like:
         <h5 class="modal-title">${title}</h5>
         <button
           type="button" class="btn-close" data-bs-dismiss="modal"
-          :on-click=${() => open = false}
+          :on-click="${() => open = false}"
         />
       </div>
       <div class="modal-body">

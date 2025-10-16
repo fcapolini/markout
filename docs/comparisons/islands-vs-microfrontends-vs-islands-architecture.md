@@ -230,7 +230,7 @@ Markout islands embody a **client-side microservices** approach that's unique in
 <!-- Consumer islands - use the service -->
 <:island src="/widgets/notification-badge.htm">
   <:data :aka="notifications" :src="@notificationService" />
-  <div class="badge" :class-hidden="${notifications.unreadCount === 0}">
+  <div class="badge" :class-hidden=${notifications.unreadCount === 0}>
     ${notifications.unreadCount}
   </div>
 </:island>
