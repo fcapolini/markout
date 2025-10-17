@@ -13,7 +13,6 @@ const GT = '>'.charCodeAt(0);
 const EQ = '='.charCodeAt(0);
 const QUOT = '"'.charCodeAt(0);
 const APOS = "'".charCodeAt(0);
-const DOLLAR = '$'.charCodeAt(0);
 const LEXP = '${';
 const REXP = '}'.charCodeAt(0);
 
@@ -234,8 +233,6 @@ function parseAttributes(
           String.fromCharCode(quote),
           errors
         );
-      } else if (a && s.startsWith(LEXP, i1)) {
-        i1 = parseValue(e, a, src, i1 + LEXP.length, quote, '}', errors);
       } else {
         // we don't support unquoted attribute values
         errors.push(
@@ -270,11 +267,11 @@ function parseValue(
   term: string,
   errors: PageError[]
 ) {
-  if (quote !== DOLLAR) {
-    return parseLiteralValue(p, a, src, i1, quote, term, errors);
-  } else {
-    return parseExpressionValue(p, a, src, i1, errors);
+  const ret = parseLiteralValue(p, a, src, i1, quote, term, errors);
+  if (typeof a.value === 'string' && a.value.includes(LEXP)) {
+    parseValueExpression(p, a, src, errors);
   }
+  return ret;
 }
 
 function parseLiteralValue(
@@ -310,6 +307,58 @@ function parseLiteralValue(
   return i1;
 }
 
+/**
+ * Given a parsed attribute with a string value that contains
+ * interpolated expressions, parse the value into an expression.
+ */
+function parseValueExpression(
+  p: dom.ServerElement,
+  a: dom.ServerAttribute,
+  src: Source,
+  errors: PageError[]
+) {
+  const i1 = a.valueLoc!.i1 + 1; // skip opening quote
+  const i2 = a.valueLoc!.i2 - 1; // skip closing quote
+  const s = src.s;
+  const literals = new Array<string>();
+  const expressions = new Array<acorn.Expression>();
+  for (let j1 = i1; j1 < i2; ) {
+    // look up next expression
+    let j2 = s.indexOf(LEXP, j1);
+    if (j2 < 0 || j2 >= i2) {
+      // trailing literal
+      literals.push(dom.unescapeText(s.substring(j1, i2)));
+      break;
+    }
+    literals.push(dom.unescapeText(s.substring(j1, j2)));
+    j1 = skipBlanks(s, j2 + LEXP.length);
+    const exp = parseExpression(p, src, j1, errors, i2);
+    j2 = skipBlanks(s, exp.end);
+    if (s.charCodeAt(j2) !== REXP) {
+      errors.push(
+        new PageError(
+          'error',
+          'Unterminated attribute expression',
+          src.loc(j1, j1)
+        )
+      );
+      // abort parsing
+      throw new Error();
+    }
+    expressions.push(exp);
+    j1 = j2 + 1;
+  }
+  literals.length === expressions.length && literals.push('');
+  // console.log('--------> parseValueExpression', { literals, expressions });
+  if (expressions.length === 1 && literals[0] === '' && literals[1] === '') {
+    // single expression
+    a.value = expressions[0];
+    return;
+  }
+  //TODO: concatenate literals and expressions
+}
+
+//TODO: support interpolated expressions in attribute values
 function parseExpressionValue(
   p: dom.ServerElement,
   a: dom.ServerAttribute,
@@ -328,6 +377,14 @@ function parseExpressionValue(
         'Unterminated attribute expression',
         src.loc(i1, i1)
       )
+    );
+    // abort parsing
+    throw new Error();
+  }
+  i2 = skipBlanks(s, i2);
+  if (i2 >= s.length || s.charCodeAt(i2) !== a.quote!.charCodeAt(0)) {
+    errors.push(
+      new PageError('error', 'Unterminated attribute value', src.loc(i1, i1))
     );
     // abort parsing
     throw new Error();
@@ -496,9 +553,11 @@ function parseExpression(
   p: dom.ServerElement,
   src: Source,
   i1: number,
-  errors: PageError[]
+  errors: PageError[],
+  len?: number
 ) {
-  const s = src.s;
+  let s = src.s;
+  len && (s = s.substring(0, len));
   try {
     const exp = acorn.parseExpressionAt(s, i1, {
       ecmaVersion: 'latest',

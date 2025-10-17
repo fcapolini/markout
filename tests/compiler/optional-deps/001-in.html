@@ -5,12 +5,12 @@
 </head>
 <body>
   <!-- Required dependency - should work normally -->
-  <div :x=${theme.mode}></div>
+  <div :x="${theme.mode}"></div>
   
   <!-- TODO: When optional dependencies are implemented, uncomment these:
-  <div :y=${theme.darkMode?}></div>
-  <div :z=${theme.darkMode? && theme.mode}></div>
-  <div :w=${user.preferences.theme?}></div>
+  <div :y="${theme.darkMode?}"></div>
+  <div :z="${theme.darkMode? && theme.mode}"></div>
+  <div :w="${user.preferences.theme?}"></div>
   -->
 </body>
 </html>

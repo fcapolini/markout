@@ -32,8 +32,8 @@
                     "object": {
                       "type": "ThisExpression",
                       "range": [
-                        67,
-                        71
+                        69,
+                        73
                       ]
                     },
                     "property": {
@@ -43,8 +43,8 @@
                     "computed": false,
                     "optional": false,
                     "range": [
-                      67,
-                      71
+                      69,
+                      73
                     ]
                   },
                   "refs": {}
