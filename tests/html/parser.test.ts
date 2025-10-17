@@ -118,7 +118,7 @@ it('pos() (4)', () => {
 
 it('loc() (1)', () => {
   const s = new parser.Source(
-    /*  1 */ '<html :title=${"sample"}\n' +
+    /*  1 */ '<html :title="${\'sample\'}"\n' +
       /*  2 */ '      // attr comment\n' +
       /*  3 */ '      lang="en">\n' +
       /*  4 */ '  <head><style>\n' +
@@ -142,7 +142,7 @@ it('loc() (1)', () => {
     start: { line: 1, column: 0 },
     end: { line: 12, column: 7 },
     i1: 0,
-    i2: 177,
+    i2: 179,
   });
 
   {
@@ -152,22 +152,22 @@ it('loc() (1)', () => {
     assert.deepEqual(a1.loc, {
       source: 'inline',
       start: { line: 1, column: 6 },
-      end: { line: 1, column: 24 },
+      end: { line: 1, column: 26 },
       i1: 6,
-      i2: 24,
+      i2: 26,
     });
     assert.deepEqual(a1.valueLoc, {
       source: 'inline',
       start: { line: 1, column: 13 },
-      end: { line: 1, column: 24 },
+      end: { line: 1, column: 26 },
       i1: 13,
-      i2: 24,
+      i2: 26,
     });
     const exp1 = a1.value as acorn.Expression;
     assert.deepEqual(JSON.parse(JSON.stringify(exp1.loc)), {
       source: 'inline',
-      start: { line: 1, column: 15 },
-      end: { line: 1, column: 23 },
+      start: { line: 1, column: 16 },
+      end: { line: 1, column: 24 },
     });
     const a2 = (root as ServerElement).attributes[1] as dom.Attribute;
     assert.equal(a2.name, 'lang');
@@ -175,8 +175,8 @@ it('loc() (1)', () => {
       source: 'inline',
       start: { line: 3, column: 6 },
       end: { line: 3, column: 15 },
-      i1: 53,
-      i2: 62,
+      i1: 55,
+      i2: 64,
     });
   }
 
@@ -186,8 +186,8 @@ it('loc() (1)', () => {
     source: 'inline',
     start: { line: 3, column: 16 },
     end: { line: 4, column: 2 },
-    i1: 63,
-    i2: 66,
+    i1: 65,
+    i2: 68,
   });
 
   const head = root.childNodes[1] as dom.Element;
@@ -196,8 +196,8 @@ it('loc() (1)', () => {
     source: 'inline',
     start: { line: 4, column: 2 },
     end: { line: 8, column: 17 },
-    i1: 66,
-    i2: 137,
+    i1: 68,
+    i2: 139,
   });
 
   {
@@ -208,8 +208,8 @@ it('loc() (1)', () => {
       source: 'inline',
       start: { line: 4, column: 8 },
       end: { line: 8, column: 10 },
-      i1: 72,
-      i2: 130,
+      i1: 74,
+      i2: 132,
     });
     // style text is atomic
     assert.equal(style.childNodes.length, 1);
@@ -220,8 +220,8 @@ it('loc() (1)', () => {
       source: 'inline',
       start: { line: 4, column: 15 },
       end: { line: 8, column: 2 },
-      i1: 79,
-      i2: 122,
+      i1: 81,
+      i2: 124,
     });
   }
 
@@ -231,8 +231,8 @@ it('loc() (1)', () => {
     source: 'inline',
     start: { line: 8, column: 17 },
     end: { line: 9, column: 2 },
-    i1: 137,
-    i2: 140,
+    i1: 139,
+    i2: 142,
   });
 
   const body = root.childNodes[3] as dom.Element;
@@ -241,8 +241,8 @@ it('loc() (1)', () => {
     source: 'inline',
     start: { line: 9, column: 2 },
     end: { line: 11, column: 9 },
-    i1: 140,
-    i2: 169,
+    i1: 142,
+    i2: 171,
   });
 
   {
@@ -254,8 +254,8 @@ it('loc() (1)', () => {
       source: 'inline',
       start: { line: 9, column: 8 },
       end: { line: 10, column: 4 },
-      i1: 146,
-      i2: 151,
+      i1: 148,
+      i2: 153,
     });
 
     const bodyText2 = body.childNodes[1] as dom.Text;
@@ -265,8 +265,8 @@ it('loc() (1)', () => {
       source: 'inline',
       start: { line: 10, column: 4 },
       end: { line: 10, column: 12 },
-      i1: 151,
-      i2: 159,
+      i1: 153,
+      i2: 161,
     });
 
     const bodyText3 = body.childNodes[2] as dom.Text;
@@ -275,8 +275,8 @@ it('loc() (1)', () => {
       source: 'inline',
       start: { line: 10, column: 12 },
       end: { line: 11, column: 2 },
-      i1: 159,
-      i2: 162,
+      i1: 161,
+      i2: 164,
     });
   }
 
@@ -286,8 +286,8 @@ it('loc() (1)', () => {
     source: 'inline',
     start: { line: 11, column: 9 },
     end: { line: 12, column: 0 },
-    i1: 169,
-    i2: 170,
+    i1: 171,
+    i2: 172,
   });
 });
 

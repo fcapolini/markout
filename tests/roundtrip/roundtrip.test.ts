@@ -15,7 +15,6 @@ beforeAll(async () => {
     clientCodePath: `dist/client.js`,
   }).start();
   port = server.port!;
-  console.log('==========> server port', port); //tempdebug
 });
 
 afterAll(async () => {
