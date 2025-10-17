@@ -4,10 +4,13 @@
 **Target Version**: v0.4.0  
 **Status**: Specification  
 **Type**: Enhancement  
+**Part of**: [Template Transitions System](template-transitions.md)
 
 ## Overview
 
-Declarative animation transitions for dynamic list items using `:transition-in` and `:transition-out` attributes on `<template :foreach>` elements. Provides elegant, framework-integrated animations for adding and removing items with parametric control over timing and effects.
+Declarative animation transitions for dynamic list items using `:transition-in` and `:transition-out` attributes on `<template :foreach>` elements. This specification focuses on the foreach-specific aspects of Markout's unified template transition system, which provides consistent animation capabilities across all `<template>` blocks.
+
+**Note**: For the complete transition system design covering both `:foreach` and `:if` conditionals, see [Template Transitions Specification](template-transitions.md).
 
 ## Motivation
 
@@ -437,12 +440,14 @@ Resolution: Ensure key expressions produce unique values
 ## Implementation Priority
 
 **Phase 1** (v0.4.0):
+- **Unified transition runtime**: Shared animation system for all template blocks
 - Basic fade and slide animations
 - Core parametric syntax
 - CSS transition generation
 - Key attribute validation and reconciliation
 
 **Phase 2** (v0.5.0):
+- **Conditional transitions**: Extend unified system to `<template :if>` blocks
 - Full animation library
 - Custom timing functions
 - Performance optimizations
@@ -461,6 +466,7 @@ Resolution: Ensure key expressions produce unique values
 3. **Maintainability**: Single-file implementation vs multi-file React setup
 4. **Flexibility**: Parametric control with reactive expressions
 5. **Accessibility**: Built-in reduced-motion support
+6. **Consistency**: Same transition API across `:foreach` and `:if` templates (see [Template Transitions](template-transitions.md))
 6. **No Dependencies**: Framework-integrated, no external libraries required
 
 This specification ensures Markout maintains its core principle of making complex things simple while providing powerful animation capabilities for dynamic content.

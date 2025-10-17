@@ -415,6 +415,31 @@ Of course conditionals can be nested:
 </template>
 ```
 
+#### Conditional Transitions
+
+Like looping with `:foreach`, conditionals support smooth appearance and disappearance animations using the same transition attributes:
+
+```html
+<template :if="${showWelcomeMessage}" 
+  :transition-in="${fadeInUp({ ms: 300, dy: 20 })}"
+  :transition-out="${fadeOutUp({ ms: 200, dy: -20 })}">
+  <div class="welcome-banner">
+    <h2>Welcome to our platform!</h2>
+    <p>Get started with these quick actions...</p>
+  </div>
+</template>
+
+<template :if="${user.hasNotifications}"
+  :transition-in="${slideInDown({ ms: 250, dy: -30 })}"
+  :transition-out="${slideOutUp({ ms: 200, dy: -30 })}">
+  <div class="notification-panel">
+    You have ${user.notifications.length} new notifications
+  </div>
+</template>
+```
+
+This provides consistent animation behavior across all `<template>` blocks, whether controlled by data changes (`:foreach`) or boolean conditions (`:if`/:else`).
+
 ### Looping
 
 Replication can be expressed with `<template :foreach [:item] [:index]>`.
