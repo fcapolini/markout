@@ -9,7 +9,7 @@
 
 **HTML-based** reactive web framework for Node.js and the browser — for devs who despise _needless complexity_.
 
-🚧 **Alpha Release (v0.1.3)** - Core features working, some features still in development. See [ROADMAP.md](ROADMAP.md) for details.
+🚧 **Alpha Release (v0.1.4)** - Core features working, some features still in development. See [ROADMAP.md](ROADMAP.md) for details.
 
 Markout is three things:
 
