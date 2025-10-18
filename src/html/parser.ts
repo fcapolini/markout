@@ -13,6 +13,7 @@ const GT = '>'.charCodeAt(0);
 const EQ = '='.charCodeAt(0);
 const QUOT = '"'.charCodeAt(0);
 const APOS = "'".charCodeAt(0);
+const DOLLAR = '$'.charCodeAt(0);
 const LEXP = '${';
 const REXP = '}'.charCodeAt(0);
 
@@ -233,6 +234,8 @@ function parseAttributes(
           String.fromCharCode(quote),
           errors
         );
+      } else if (a && s.startsWith(LEXP, i1)) {
+        i1 = parseValue(e, a, src, i1 + LEXP.length, quote, '}', errors);
       } else {
         // we don't support unquoted attribute values
         errors.push(
@@ -267,6 +270,9 @@ function parseValue(
   term: string,
   errors: PageError[]
 ) {
+  if (quote === DOLLAR) {
+    return parseUnquotedExpressionValue(p, a, src, i1, errors);
+  }
   const ret = parseLiteralValue(p, a, src, i1, quote, term, errors);
   if (typeof a.value === 'string' && a.value.includes(LEXP)) {
     parseQuotedValueExpression(p, a, src, errors);
@@ -412,44 +418,44 @@ function makeTextInterpolation(
   a.value = exp;
 }
 
-// function parseExpressionValue(
-//   p: dom.ServerElement,
-//   a: dom.ServerAttribute,
-//   src: Source,
-//   i1: number,
-//   errors: PageError[]
-// ) {
-//   const s = src.s;
-//   const exp = parseExpression(p, src, i1, errors);
-//   let i2 = exp.end;
-//   i2 = skipBlanks(s, i2);
-//   if (i2 >= s.length || s.charCodeAt(i2) !== REXP) {
-//     errors.push(
-//       new PageError(
-//         'error',
-//         'Unterminated attribute expression',
-//         src.loc(i1, i1)
-//       )
-//     );
-//     // abort parsing
-//     throw new Error();
-//   }
-//   i2 = skipBlanks(s, i2);
-//   if (i2 >= s.length || s.charCodeAt(i2) !== a.quote!.charCodeAt(0)) {
-//     errors.push(
-//       new PageError('error', 'Unterminated attribute value', src.loc(i1, i1))
-//     );
-//     // abort parsing
-//     throw new Error();
-//   }
-//   i2++;
-//   a.value = exp;
-//   a.loc.end = src.pos(i2);
-//   a.loc.i2 = i2;
-//   a.valueLoc!.end = src.pos(i2);
-//   a.valueLoc!.i2 = i2;
-//   return i2;
-// }
+function parseUnquotedExpressionValue(
+  p: dom.ServerElement,
+  a: dom.ServerAttribute,
+  src: Source,
+  i1: number,
+  errors: PageError[]
+) {
+  const s = src.s;
+  const exp = parseExpression(p, src, i1, errors);
+  let i2 = exp.end;
+  i2 = skipBlanks(s, i2);
+  if (i2 >= s.length || s.charCodeAt(i2) !== REXP) {
+    errors.push(
+      new PageError(
+        'error',
+        'Unterminated attribute expression',
+        src.loc(i1, i1)
+      )
+    );
+    // abort parsing
+    throw new Error();
+  }
+  i2 = skipBlanks(s, i2);
+  if (i2 >= s.length || s.charCodeAt(i2) !== REXP) {
+    errors.push(
+      new PageError('error', 'Unterminated attribute value', src.loc(i1, i1))
+    );
+    // abort parsing
+    throw new Error();
+  }
+  i2++;
+  a.value = exp;
+  a.loc.end = src.pos(i2);
+  a.loc.i2 = i2;
+  a.valueLoc!.end = src.pos(i2);
+  a.valueLoc!.i2 = i2;
+  return i2;
+}
 
 function parseText(
   p: dom.ServerElement,

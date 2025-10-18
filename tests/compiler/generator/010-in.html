@@ -1,0 +1,16 @@
+<html>
+<head></head>
+<body>
+  <div :count=${42} 
+       :flag=${true} 
+       :text=${'test'}
+       :obj=${{ name: 'John' }}
+       :arr=${[1, 2, 3]}>
+    <span>${typeof count}</span>
+    <span>${typeof flag}</span>
+    <span>${typeof text}</span>
+    <span>${typeof obj}</span>
+    <span>${typeof arr}</span>
+  </div>
+</body>
+</html>

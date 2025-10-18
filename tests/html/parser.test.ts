@@ -1,11 +1,14 @@
 import * as acorn from 'acorn';
+import { generate } from 'escodegen';
 import fs from 'fs';
 import path from 'path';
 import { assert, describe, it } from 'vitest';
 import * as dom from '../../src/html/dom';
 import * as parser from '../../src/html/parser';
 import {
+  ServerDocument,
   ServerElement,
+  ServerNode,
   ServerTemplateElement,
 } from '../../src/html/server-dom';
 
@@ -39,6 +42,39 @@ fs.readdirSync(docroot).forEach(file => {
           parser.normalizeText(actualHTML),
           parser.normalizeText(expectedHTML)
         );
+
+        const pname2 = path.join(
+          docroot,
+          file.replace('-in.html', '-out.json')
+        );
+        if (fs.existsSync(pname2)) {
+          const expectedJSON = await fs.promises.readFile(pname2, {
+            encoding: 'utf8',
+          });
+          const cleanup = (n: ServerNode) => {
+            delete (n as any).parentElement;
+            delete (n as any).ownerDocument;
+            if (n.nodeType === dom.NodeType.DOCUMENT) {
+              cleanup((n as ServerDocument).documentElement as ServerNode);
+            } else if (n.nodeType === dom.NodeType.ELEMENT) {
+              (n as ServerElement).attributes.forEach(a =>
+                cleanup(a as any as ServerNode)
+              );
+              (n as ServerElement).childNodes.forEach(c =>
+                cleanup(c as ServerNode)
+              );
+            } else if (n.nodeType === dom.NodeType.ATTRIBUTE) {
+              if ((n as any).value && typeof (n as any).value === 'object') {
+                (n as any).value = generate((n as any).value);
+              }
+            }
+          };
+          cleanup(source.doc);
+          const actualJSON = JSON.stringify(source.doc, null, 2);
+          const actual = JSON.parse(actualJSON);
+          const expected = JSON.parse(expectedJSON);
+          assert.deepEqual(actual, expected);
+        }
       }
     });
   }

@@ -1,0 +1,12 @@
+<html>
+<head></head>
+<body>
+  <!-- Test single expression preserves type -->
+  <div :count="${42}" :flag="${true}" :text="${'hello'}">
+    <!-- Test interpolated expressions become strings -->
+    <span :msg="Count is ${count}" :info="Flag: ${flag}" :greeting="Hello ${text}!">
+      Content
+    </span>
+  </div>
+</body>
+</html>
