@@ -17,8 +17,10 @@ Markout is inspired by OpenLaszlo's elegant design principles and aims to be a "
 Three simple additions to standard HTML:
 
 - **Directives**: `<:import>`, `<:define>` for modularity and components
-- **Logic values**: `:` prefixed attributes (`:count`, `:on-click`) for reactive state
-- **Reactive expressions**: `${...}` syntax for dynamic content
+- **Logic values**: `:` prefixed attributes with dual syntax support
+  - **Quoted**: `:count="${42}"` or `:message="Hello ${name}!"` (HTML-style with interpolation)
+  - **Unquoted**: `:count=${42}` or `:config=${{ theme: "dark" }}` (direct JavaScript)
+- **Reactive expressions**: `${...}` syntax for dynamic content in text and special tags
 
 ## Reserved Namespace and Naming Conventions
 
@@ -29,16 +31,39 @@ Three simple additions to standard HTML:
 - **Declaration prohibition**: `$` is forbidden in user-declared identifiers (variables, functions, parameters) but users can access framework-provided `$` identifiers
 - **Validation enforcement**: The validator prevents declaring new identifiers with `$` while allowing access to framework identifiers like `$parent` and `$value()`
 
-**Quoted Reactive Attribute Syntax**: Markout uses natural HTML-style quoted attributes with predictable, no-magic parsing:
+**Dual Reactive Attribute Syntax**: Markout supports both quoted and unquoted expressions for maximum flexibility:
 
-- **HTML-native syntax**: `:count="${0}"`, `:on-click="${() => count++}"` - feels natural to HTML developers
-- **Template interpolation**: `:title="Welcome ${user.name}, you have ${count} items"` - powerful string templates with embedded expressions
-- **No magic parsing**: Quoted content without `${}` is always literal strings - no type conversion or interpretation
-- **Predictable behavior**: `:name="John"` is string "John", `:count="${0}"` is number 0 - what you write is what you get
+**Quoted Expressions** - HTML-native syntax with interpolation support:
+- **Single expressions**: `:count="${42}"`, `:flag="${true}"` - preserve original JavaScript types
+- **String interpolation**: `:title="Welcome ${user.name}, you have ${count} items"` - powerful template strings
+- **Mixed interpolation**: `:message="User ${user.name} is ${user.age} years old"` - multiple variables in one string
+- **Type behavior**: Single expressions preserve types, interpolated expressions become strings
 - **Universal syntax highlighting**: Works perfectly in VS Code, Vim, Sublime, and any generic HTML highlighter
-- **Never looks broken**: Code appears as valid HTML in all editors, no syntax highlighting glitches
 - **Copy-paste friendly**: Natural HTML-style syntax works seamlessly with existing HTML knowledge
-- **Tooling simplicity**: VS Code extension implementation becomes straightforward without custom parsing edge cases
+
+**Unquoted Expressions** - Direct JavaScript syntax for complex expressions:
+- **Clean syntax**: `:count=${42}`, `:flag=${true}` - no quote escaping needed
+- **Mixed quotes**: `:message=${'String with "double" quotes'}` - use both quote types freely
+- **Template literals**: `:greeting=${`Hello, ${name}! Welcome to "Markout".`}` - natural template literal support
+- **Complex objects**: `:config=${{ theme: "dark", locale: "en-US" }}` - clean object notation
+- **Type preservation**: All unquoted expressions preserve their original JavaScript types
+- **Expression freedom**: Use any JavaScript expression syntax without HTML attribute limitations
+
+**Syntax Comparison Examples**:
+```html
+<!-- Quoted syntax - good for simple expressions and string templates -->
+<div :count="${42}" :greeting="Hello ${name}!">
+
+<!-- Unquoted syntax - ideal for complex expressions with mixed quotes -->
+<div :count=${42} :config=${{ theme: "dark", debug: true }}>
+  
+<!-- Both preserve types for single expressions -->
+<span>${typeof count}</span> <!-- "number" in both cases -->
+
+<!-- Interpolation vs template literals -->
+<div :quoted="Count: ${count}">     <!-- becomes string -->
+<div :unquoted=${`Count: ${count}`}> <!-- template literal (also string) -->
+```
 
 **Safe Markup Generation**: Framework uses triple-dash comments for conflict-free code generation:
 
@@ -161,12 +186,10 @@ Three simple additions to standard HTML:
   - Component preview and parameter interface documentation
   - Fragment explorer for modular code organization
 
-Example - complete working counter:
+Example - complete working counter (showing both syntaxes):
 
 ```html
-This is the canonical "click counter" example which is a traditional "hello world" for reactive frameworks:
-
-```html
+<!-- Quoted syntax -->
 <html>
   <body>
     <button :count="${0}" :on-click="${() => count++}">
@@ -174,7 +197,29 @@ This is the canonical "click counter" example which is a traditional "hello worl
     </button>
   </body>
 </html>
-```
+
+<!-- Unquoted syntax (equivalent) -->
+<html>
+  <body>
+    <button :count=${0} :on-click=${() => count++}>
+      Clicks: ${count}
+    </button>
+  </body>
+</html>
+
+<!-- Mixed syntax showing advantages -->
+<html>
+  <body>
+    <div :user=${{ name: "John", preferences: { theme: "dark" } }}
+         :greeting="Welcome ${user.name}!"
+         :debug=${process.env.NODE_ENV === "development"}>
+      <span>${greeting}</span>
+      <button :on-click=${() => console.log('User:', user.name)}>
+        Click me
+      </button>
+    </div>
+  </body>
+</html>
 ```
 
 ## Technical Architecture

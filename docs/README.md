@@ -21,7 +21,8 @@ The [`architecture/`](architecture/) directory contains detailed C4 architectura
 ## Key Features
 
 ### HTML-First Development
-- Enhance HTML with `:attributes` and `${expressions}` 
+- Enhance HTML with dual syntax: quoted `:attr="${expr}"` or unquoted `:attr=${expr}`
+- String interpolation: `:title="Hello ${name}!"` for template strings
 - No build step required for development
 - Works with existing HTML/CSS/JS knowledge
 

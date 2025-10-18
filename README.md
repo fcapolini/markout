@@ -25,12 +25,22 @@ Compared to mainstream JS-based frameworks like [React](https://react.dev/):
 - it makes componentization and code reuse a breeze
 - it provides server side rendering by default.
 
-This is the canonical "click counter" example which is a traditional "hello world" for reactive frameworks:
+This is the canonical "click counter" example which is a traditional "hello world" for reactive frameworks. Markout supports both quoted and unquoted expression syntaxes:
 
 ```html
+<!-- Quoted syntax (HTML-native with interpolation) -->
 <html>
   <body>
     <button :count="${0}" :on-click="${() => count++}">
+      Clicks: ${count}
+    </button>
+  </body>
+</html>
+
+<!-- Unquoted syntax (direct JavaScript expressions) -->
+<html>
+  <body>
+    <button :count=${0} :on-click=${() => count++}>
       Clicks: ${count}
     </button>
   </body>
@@ -277,34 +287,51 @@ As you can see, inside a tag and between attributes you can use C-style comments
 
 ### Reactive Attribute Syntax
 
-Markout uses natural HTML-style quoted attributes with predictable, no-magic parsing:
+Markout supports **dual expression syntax** for maximum developer flexibility:
+
+## Quoted Expression Syntax (HTML-native with interpolation)
 
 ```html
 <button :count="${0}" :on-click="${() => count++}">Clicks: ${count}</button>
 ```
 
 **Simple and predictable rules:**
-- **Quoted content without `${}`** is always a literal string: `:name="John"` → string "John"
-- **Content with `${}`** is always a JavaScript expression: `:count="${0}"` → number 0
+- **Single expressions**: `:count="${42}"` → number 42 (preserves type)
+- **String interpolation**: `:title="Welcome ${user.name}!"` → interpolated string
+- **Literal strings**: `:name="John"` → string "John" (no `${}` needed for literals)
 
 **Perfect syntax highlighting and editor support:**
 - **Works in any editor** - VS Code, Vim, Sublime, generic HTML highlighters all work perfectly
 - **No broken syntax** - Code never looks malformed in syntax highlighters
 - **Familiar to developers** - Standard HTML attribute quoting that every developer understands
-- **Copy-paste friendly** - Examples work seamlessly across documentation, Stack Overflow, blogs
 
-**Powerful text interpolation with embedded expressions:**
+## Unquoted Expression Syntax (direct JavaScript)
 
 ```html
-<!-- Natural string templates within quotes -->
+<button :count=${0} :on-click=${() => count++}>Clicks: ${count}</button>
+```
+
+**Key advantages:**
+- **Mixed quotes freedom**: `:message=${'String with "double" quotes'}` - no escaping needed
+- **Template literals**: `:greeting=${`Hello, ${name}! Welcome to "Markout".`}` - natural syntax
+- **Complex objects**: `:config=${{ theme: "dark", debug: true }}` - clean notation
+- **Type preservation**: All expressions preserve their original JavaScript types
+
+## String Interpolation Examples
+
+```html
+<!-- Quoted syntax - perfect for string templates -->
 <div :title="Welcome ${user.name}, you have ${notifications.count} messages"
      :class="btn btn-${variant} ${isActive ? 'active' : ''}"
      :style="color: ${theme.primary}; font-size: ${size}px">
-  ${content}
-</div>
+
+<!-- Unquoted syntax - ideal for complex expressions -->
+<div :config=${{ theme: user.preferences.theme, locale: "en-US" }}
+     :handler=${(event) => console.log('Event:', event.type)}
+     :condition=${user.isActive && notifications.count > 0}>
 ```
 
-This flexibility means you can use whichever syntax feels more natural for your use case, and copy-paste examples will work regardless of quote style.
+**Use whichever syntax feels more natural** - both preserve types for single expressions, and you can mix them freely within the same component.
 
 ## Reactive expressions
 
