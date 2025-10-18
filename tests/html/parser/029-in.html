@@ -1,0 +1,9 @@
+<html>
+  <body>
+    <!-- Test nested quotes in expressions -->
+    <input type='text' 
+           placeholder='Enter name (use "quotes" if needed): ${defaultName}'
+           pattern='${pattern || "[a-zA-Z ]+"}'
+           title='Must match: ${description || "default pattern"}'>
+  </body>
+</html>
