@@ -1,0 +1,139 @@
+{
+  "nodeType": 9,
+  "loc": {
+    "start": {
+      "line": 1,
+      "column": 0
+    },
+    "end": {
+      "line": 1,
+      "column": 88
+    },
+    "i1": 0,
+    "i2": 88
+  },
+  "childNodes": [
+    {
+      "nodeType": 1,
+      "loc": {
+        "source": "035-in.html",
+        "start": {
+          "line": 1,
+          "column": 0
+        },
+        "end": {
+          "line": 1,
+          "column": 88
+        },
+        "i1": 0,
+        "i2": 88
+      },
+      "childNodes": [
+        {
+          "nodeType": 1,
+          "loc": {
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end": {
+              "line": 1,
+              "column": 88
+            },
+            "i1": 0,
+            "i2": 88
+          },
+          "childNodes": [],
+          "tagName": "HEAD",
+          "attributes": []
+        },
+        {
+          "nodeType": 1,
+          "loc": {
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end": {
+              "line": 1,
+              "column": 88
+            },
+            "i1": 0,
+            "i2": 88
+          },
+          "childNodes": [],
+          "tagName": "BODY",
+          "attributes": []
+        }
+      ],
+      "tagName": "HTML",
+      "attributes": [
+        {
+          "nodeType": 2,
+          "loc": {
+            "source": "035-in.html",
+            "start": {
+              "line": 1,
+              "column": 6
+            },
+            "end": {
+              "line": 1,
+              "column": 71
+            },
+            "i1": 6,
+            "i2": 71
+          },
+          "name": ":placeholder",
+          "value": "`Template literal with ${ variable } interpolation`",
+          "valueLoc": {
+            "source": "035-in.html",
+            "start": {
+              "line": 1,
+              "column": 19
+            },
+            "end": {
+              "line": 1,
+              "column": 71
+            },
+            "i1": 19,
+            "i2": 71
+          }
+        },
+        {
+          "nodeType": 2,
+          "loc": {
+            "source": "035-in.html",
+            "start": {
+              "line": 1,
+              "column": 72
+            },
+            "end": {
+              "line": 1,
+              "column": 85
+            },
+            "i1": 72,
+            "i2": 85
+          },
+          "name": ":value",
+          "value": "123",
+          "valueLoc": {
+            "source": "035-in.html",
+            "start": {
+              "line": 1,
+              "column": 79
+            },
+            "end": {
+              "line": 1,
+              "column": 85
+            },
+            "i1": 79,
+            "i2": 85
+          }
+        }
+      ]
+    }
+  ],
+  "tagName": "#DOCUMENT",
+  "attributes": [],
+  "jsonLoc": true
+}
