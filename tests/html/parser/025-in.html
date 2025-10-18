@@ -1,0 +1,10 @@
+<html>
+  <body>
+    <!-- Test complex nested expressions -->
+    <div :style="transform: scale(${scale}) rotate(${rotation}deg); opacity: ${isVisible ? 1 : 0}">
+      <span data-info="User: ${user.name} (${user.role}), Score: ${calculateScore(user.points, user.level)}">
+        Complex Data
+      </span>
+    </div>
+  </body>
+</html>
