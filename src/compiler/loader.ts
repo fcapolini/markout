@@ -20,6 +20,10 @@ import {
 import { CompilerScope, CompilerScopeType } from './compiler';
 import * as k from './const';
 
+const SRC_EVENT_VALUE_PREFIX = 'on-';
+const SRC_CLASS_VALUE_PREFIX = 'class-';
+const SRC_STYLE_VALUE_PREFIX = 'style-';
+
 export function load(source: Source): CompilerScope {
   let id = 0;
   const definitions = new Map<string, CompilerScope>();
@@ -185,47 +189,10 @@ export function load(source: Source): CompilerScope {
             };
             continue;
           }
-          // event attribute (handle :on-* before ID_RE check)
-          if (name.startsWith('on-')) {
-            const eventType = name.substring(3); // remove 'on-' prefix
-            scope.values || (scope.values = {});
-            scope.values[RT_EVENT_VALUE_PREFIX + eventType] = {
-              val: (attr as ServerAttribute).value,
-              keyLoc: (attr as ServerAttribute).loc,
-              valLoc: (attr as ServerAttribute).valueLoc,
-            };
-            continue;
-          }
-          //TODO: special prefixes, e.g. 'on-'
-          if (!k.ID_RE.test(name)) {
-            error(attr.loc, 'invalid value name');
-            continue;
-          }
-          // class attribute
-          if (name.startsWith(k.CLASS_ATTR_PREFIX)) {
-            const key = name.substring(k.CLASS_ATTR_PREFIX.length);
-            scope.values || (scope.values = {});
-            scope.values[RT_CLASS_VALUE_PREFIX + key] = {
-              val: (attr as ServerAttribute).value,
-              keyLoc: (attr as ServerAttribute).loc,
-              valLoc: (attr as ServerAttribute).valueLoc,
-            };
-            continue;
-          }
-          // style attribute
-          if (name.startsWith(k.STYLE_ATTR_PREFIX)) {
-            const key = name.substring(k.STYLE_ATTR_PREFIX.length);
-            scope.values || (scope.values = {});
-            scope.values[RT_STYLE_VALUE_PREFIX + key] = {
-              val: (attr as ServerAttribute).value,
-              keyLoc: (attr as ServerAttribute).loc,
-              valLoc: (attr as ServerAttribute).valueLoc,
-            };
-            continue;
-          }
-          // event attribute
-          if (name.startsWith(k.EVENT_ATTR_PREFIX)) {
-            const key = name.substring(k.EVENT_ATTR_PREFIX.length);
+
+          // special reactive attributes
+          if (name.startsWith(SRC_EVENT_VALUE_PREFIX)) {
+            const key = name.substring(SRC_EVENT_VALUE_PREFIX.length);
             scope.values || (scope.values = {});
             scope.values[RT_EVENT_VALUE_PREFIX + key] = {
               val: (attr as ServerAttribute).value,
@@ -234,7 +201,32 @@ export function load(source: Source): CompilerScope {
             };
             continue;
           }
-          // value attribute
+          if (name.startsWith(SRC_CLASS_VALUE_PREFIX)) {
+            const key = name.substring(SRC_CLASS_VALUE_PREFIX.length);
+            scope.values || (scope.values = {});
+            scope.values[RT_CLASS_VALUE_PREFIX + key] = {
+              val: (attr as ServerAttribute).value,
+              keyLoc: (attr as ServerAttribute).loc,
+              valLoc: (attr as ServerAttribute).valueLoc,
+            };
+            continue;
+          }
+          if (name.startsWith(SRC_STYLE_VALUE_PREFIX)) {
+            const key = name.substring(SRC_STYLE_VALUE_PREFIX.length);
+            scope.values || (scope.values = {});
+            scope.values[RT_STYLE_VALUE_PREFIX + key] = {
+              val: (attr as ServerAttribute).value,
+              keyLoc: (attr as ServerAttribute).loc,
+              valLoc: (attr as ServerAttribute).valueLoc,
+            };
+            continue;
+          }
+
+          // regular reactive attribute
+          if (!k.ID_RE.test(name)) {
+            error(attr.loc, 'invalid value name');
+            continue;
+          }
           scope.values || (scope.values = {});
           const attrValue = (attr as ServerAttribute).value;
           let valueToStore;

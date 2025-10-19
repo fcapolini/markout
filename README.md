@@ -118,21 +118,22 @@ Create `app.html`:
 <body>
   <h1>Reactive Counter</h1>
   
-  <button 
-    :count="${0}" 
-    :on-click="${() => count++}"
-    :class-danger="${count > 5}"
-    :class-safe="${count <= 5}">
-    Clicks: ${count}
-  </button>
-  
-  <p>
-    ${count === 0 ? 'Click the button!' : 
-      count <= 5 ? `Nice! You clicked ${count} times.` : 
-      'Whoa, slow down there!'}
-  </p>
-  
-  <button :on-click="${() => count = 0}">Reset</button>
+  <div :count="${0}">
+    <button 
+      :class-danger="${count > 5}"
+      :class-safe="${count <= 5}"
+      :on-click="${() => count++}">
+      Clicks: ${count}
+    </button>
+    
+    <p>
+      ${count === 0 ? 'Click the button!' : 
+        count <= 5 ? `Nice! You clicked ${count} times.` : 
+        'Whoa, slow down there!'}
+    </p>
+    
+    <button :on-click="${() => count = 0}">Reset</button>
+  </div>
 </body>
 </html>
 ```

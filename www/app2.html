@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Markout App</title>
+  <style>
+    .danger { background: red; color: white; }
+    .safe { background: green; color: white; }
+  </style>
+</head>
+<body>
+  <h1>Reactive Counter</h1>
+  
+  <button 
+    :aka="button"
+    :count="${0}" 
+    :on-click="${() => count++}"
+    :class-danger="${count > 5}"
+    :class-safe="${count <= 5}">
+    Clicks: ${count}
+  </button>
+  
+  <p>
+    ${button.count === 0 ? 'Click the button!' : 
+      button.count <= 5 ? `Nice! You clicked ${button.count} times.` : 
+      'Whoa, slow down there!'}
+  </p>
+  
+  <button :on-click="${() => button.count = 0}">Reset</button>
+</body>
+</html>
