@@ -196,19 +196,18 @@ Markout is currently in alpha development. While the core reactive system is fun
 - Logic values (`:count`, `:on-click`, `:class-`, `:style-`, etc.)
 - Reactive expressions (`${...}`)
 - Fragments (`<:import>` for modular HTML)
+- Advanced fragment features
 - Server-side rendering with client-side hydration
 
 **🚧 In Development:**
 - Conditionals (`:if|:else|:elseif` attribute in `<template>`)
 - Looping (`:foreach` attribute in `<template>`)
-- Components (`<:define>` with slots)
 - Runtime component system improvements
-- Advanced fragment features
-- Development server with hot reload
 
 **❌ Not Yet Implemented:**
-- Conditionals (`<template :if>`, `:else`, `:elseif`)
+- Components (`<:define>` with slots)
 - Data services (`<:data>` directive)
+- Development server with hot reload
 - TypeScript support and VS Code extension (planned for v2.x)
 - Islands (`<:island>` for isolated web components - planned for v3.x)
 
@@ -768,7 +767,7 @@ GraphQL support will be implemented as **reusable component libraries** with ful
 
 #### tRPC Integration (Planned for v2.x)
 
-tRPC support will provide end-to-end type safety with seamless client-server communication:
+[tRPC](https://trpc.io/) support will provide end-to-end type safety with seamless client-server communication:
 
 ```html
 <!-- Type-safe tRPC client -->
