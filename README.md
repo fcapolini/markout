@@ -195,21 +195,22 @@ Markout is currently in alpha development. While the core reactive system is fun
 **✅ Working Features:**
 - Logic values (`:count`, `:on-click`, `:class-`, `:style-`, etc.)
 - Reactive expressions (`${...}`)
-- Looping (`:foreach` attribute and `<template :foreach>`)
-- Components (`<:define>` with slots)
 - Fragments (`<:import>` for modular HTML)
 - Server-side rendering with client-side hydration
-- Development server with hot reload
 
 **🚧 In Development:**
+- Conditionals (`:if|:else|:elseif` attribute in `<template>`)
+- Looping (`:foreach` attribute in `<template>`)
+- Components (`<:define>` with slots)
 - Runtime component system improvements
 - Advanced fragment features
+- Development server with hot reload
 
 **❌ Not Yet Implemented:**
 - Conditionals (`<template :if>`, `:else`, `:elseif`)
 - Data services (`<:data>` directive)
-- Islands (`<:island>` for isolated web components)
-- VS Code extension
+- TypeScript support and VS Code extension (planned for v2.x)
+- Islands (`<:island>` for isolated web components - planned for v3.x)
 
 See [ROADMAP.md](ROADMAP.md) for complete development timeline and feature status.
 
@@ -265,7 +266,6 @@ Logic value names must be either valid JavaScript identifiers or `*-`-prefixed n
 - `:on-` for [event handlers](#)
 - `:class-` for [conditional CSS classes](#)
 - `:style-` for [conditional CSS styles](#)
-- `:watch-` for [value watchers](#) (rarely needed)
 - `:did-` and `:will-` for [delegate methods](#) (advanced use cases).
 
 By adding logic values to HTML tags you're conceptually adding variables and methods to them. There's no need to use `<script>` tags to define interactive presentation logic: it becomes an integral part of Markout's reactive DOM model.
@@ -363,7 +363,9 @@ Given Markout's design where updates are surgically applied where needed, this r
 
 ### Cross-Scope Effects
 
-Markout's reactive system combined with lexical scoping enables elegant side effects that automatically respond to state changes. Here's how you can create an effect that applies dark mode across your application:
+Markout's reactive system combined with lexical scoping enables elegant side effects that automatically respond to state changes. Use the `:effect` pattern to create reactive side effects - the attribute name declares intent while the value implements the effect.
+
+Here's how you can create an effect that applies dark mode across your application:
 
 ```html
 <div :darkMode="${false}">
@@ -372,7 +374,7 @@ Markout's reactive system combined with lexical scoping enables elegant side eff
   </button>
   
   <!-- Component with effect that depends on parent's darkMode -->
-  <section :dummy="${
+  <section :effect="${
     (() => {
       // Side effect: update document theme when darkMode changes
       document.body.classList.toggle('dark-theme', head.darkMode);
@@ -387,10 +389,16 @@ Markout's reactive system combined with lexical scoping enables elegant side eff
 
 This pattern demonstrates several powerful features:
 
+- **Intent Declaration**: `:effect` clearly indicates this logic value creates a side effect
 - **Automatic dependency tracking**: The effect runs whenever `head.darkMode` changes
 - **Cross-scope reactivity**: Child components can react to parent state through lexical scoping  
-- **No special effect syntax**: Effects leverage the existing reactive expression system
+- **Standard JavaScript**: Effects use the `(() => sideEffect())(dependencies)` pattern with no special syntax
 - **Batched execution**: Multiple effects triggered by the same change are batched together
+
+The effect pattern `(() => sideEffect())(dependencies)` works by:
+1. Creating an immediately invoked function expression (IIFE) that performs the side effect
+2. Calling it with dependencies as arguments to establish reactive tracking
+3. Re-executing automatically when any dependency changes
 
 This approach works for any side effects: analytics tracking, API synchronization, local storage updates, or DOM manipulation outside the component tree.
 
@@ -411,7 +419,7 @@ Markout directives are based on either `<template>` or custom `<:...>` tags:
 - `<:define>`: reusable components
 - `<:import>|<:include>`: source code modules
 - `<:data>`: data and services
-- `<:island>`: isolated web components (planned for 1.x)
+- `<:island>`: isolated web components (planned for v3.x)
 
 ### Conditionals
 
@@ -470,7 +478,7 @@ This provides consistent animation behavior across all `<template>` blocks, whet
 
 ### Looping
 
-Replication can be expressed with `<template :foreach [:item] [:index]>`.
+Replication can be expressed with `<template :foreach [:item] [:index] [:key]>`.
 
 For example:
 
@@ -480,9 +488,23 @@ For example:
 </template>
 ```
 
+For optimal performance with dynamic arrays, you can provide a `:key` attribute:
+
+```html
+<template :foreach="${users}" :item="user" :key="user.id">
+  <div class="user-card">
+    <h3>${user.name}</h3>
+    <p>${user.email}</p>
+  </div>
+</template>
+```
+
 The `:foreach` logic value is meant to receive an array, but it accepts `null`, `undefined` and non-array types as synonims of `[]`, so if it doesn't get something valid to replicate, it simply won't replicate anything.
 
-Note that both `:item` and `:index` are optional: if `:item` is missing, you won't have access to the current item, and in the same way if `:index` is missing you won't have access to its index.
+Note that `:item`, `:index`, and `:key` are all optional:
+- If `:item` is missing, you won't have access to the current item
+- If `:index` is missing, you won't have access to its index  
+- If `:key` is missing, Markout will use the array index for tracking (less efficient for dynamic data)
 
 Keep in mind that the `<template>` element itself is kept in output markup, preceeded by its possible replicated clones. This is important to know in case you're using CSS pseudo-classes like `:last-child` for styling, in which case `:last-of-type` is advised.
 
@@ -501,9 +523,9 @@ The component can then be used anywhere as a simple custom tag, passing differen
 
 You can find a comprehensive demonstration of component creation and usage in the [Bootstrap](#Bootstrap) section below, which shows how to turn Bootstrap's verbose modal markup into a clean, reusable and reactive `<:bs-modal>` component.
 
-#### Two-Tier Component Architecture (Planned for 1.x)
+#### Two-Tier Component Architecture (Planned for v3.x)
 
-Markout 1.x will support an elegant dual-component system addressing different isolation needs:
+Markout v3.x will support an elegant dual-component system addressing different isolation needs:
 
 **🏝️ Islands = Web Components** (Heavy Isolation)
 ```html
@@ -700,15 +722,16 @@ With this approach to data handling you get four big wins:
 
 There's still a lot to say about the deceptively simple `<:data>` directive: things like HTTP methods, authentication, caching, error handling, retries etc. but it takes its own chapter in the docs.
 
-#### GraphQL Integration
+#### GraphQL Integration (Planned for v2.x)
 
-GraphQL support is implemented as **reusable component libraries** using Markout's fragment system - no special runtime code needed:
+GraphQL support will be implemented as **reusable component libraries** with full TypeScript integration, leveraging Markout's fragment system:
 
 ```html
-<!-- Import GraphQL query component -->
+<!-- GraphQL query with TypeScript schema validation -->
 <:import src="/lib/graphql/query.htm" 
          :aka="users"
          :endpoint="/graphql"
+         :schema="${UserSchema}"
          :query="${`
            query GetUsers($limit: Int) {
              users(limit: $limit) {
@@ -719,12 +742,13 @@ GraphQL support is implemented as **reusable component libraries** using Markout
          `}"
          :variables="${{ limit: 10 }}" />
 
-<!-- Import GraphQL mutation component -->
+<!-- Type-safe mutations -->
 <:import src="/lib/graphql/mutation.htm"
          :aka="userMutations"
-         :endpoint="/graphql" />
+         :endpoint="/graphql"
+         :schema="${UserMutationSchema}" />
 
-<!-- Use exactly like any other data -->
+<!-- Fully typed data access -->
 <template :foreach="${users.json.users}" :item="user">
   <div>
     ${user.name} - ${user.email}
@@ -735,11 +759,50 @@ GraphQL support is implemented as **reusable component libraries** using Markout
 </template>
 ```
 
-**Key Benefits:**
-- **Zero Runtime Overhead**: GraphQL clients are pure component libraries
-- **Community Ecosystem**: Anyone can build and share GraphQL integration patterns
-- **Company Standards**: Teams can create standardized GraphQL fragments for consistent usage
-- **Selective Import**: Only import GraphQL capabilities when needed, keeping bundle size minimal
+**v2.x GraphQL Features:**
+- **Full TypeScript Integration**: Schema validation and type-safe queries/mutations
+- **Code Generation**: Automatic TypeScript types from GraphQL schemas
+- **Real-time Subscriptions**: WebSocket-based GraphQL subscriptions with reactive state
+- **Fragment Composition**: Reusable GraphQL fragments as importable `.htm` files
+- **Zero Runtime Overhead**: Pure library implementation using existing reactive capabilities
+
+#### tRPC Integration (Planned for v2.x)
+
+tRPC support will provide end-to-end type safety with seamless client-server communication:
+
+```html
+<!-- Type-safe tRPC client -->
+<:import src="/lib/trpc/client.htm"
+         :aka="api"
+         :endpoint="/api/trpc"
+         :router="${AppRouter}" />
+
+<!-- Fully typed queries and mutations -->
+<div :user="${null}" :posts="${[]}" 
+     :on-load="${async () => {
+       user = await api.user.getById.query({ id: userId });
+       posts = await api.posts.getByUser.query({ userId });
+     }}">
+  
+  <h2>${user?.name}</h2>
+  
+  <template :foreach="${posts}" :item="post">
+    <article>
+      <h3>${post.title}</h3>
+      <button :on-click="${() => api.posts.delete.mutate({ id: post.id })}">
+        Delete
+      </button>
+    </article>
+  </template>
+</div>
+```
+
+**v2.x tRPC Features:**
+- **End-to-End Type Safety**: Shared types between server and client
+- **Reactive Integration**: tRPC calls work seamlessly with Markout's reactive system
+- **Real-time Updates**: WebSocket-based subscriptions with automatic UI updates
+- **Error Handling**: Type-safe error boundaries and validation
+- **Development Experience**: Full IntelliSense and compile-time error checking
 
 #### WebSocket Real-time Communication
 
@@ -823,7 +886,7 @@ For one, `<:data>` is where business logic should live: while presentation logic
 
 Another important thing to clarify is: `<:data>` is where `async/await` and promise-based code, if any, should live. Markout reactivity is synchronous, but it can be triggered by events, timers, and asynchronous data operations.
 
-The `<:data>` directive provides a universal async interface that works consistently across all transport layers - WebSockets, GraphQL subscriptions, Workers, IndexedDB, WebRTC, Server-Sent Events - using the same declarative patterns and reactive data flow.
+The `<:data>` directive provides a universal async interface that works consistently across all transport layers - WebSockets, Workers, IndexedDB, WebRTC, Server-Sent Events - using the same declarative patterns and reactive data flow. GraphQL and tRPC integrations (planned for v2.x) will extend this pattern with full TypeScript support.
 
 ## Ecosystem
 
@@ -880,7 +943,7 @@ For completeness, this is what the component definition could look like:
    // implementation:
    class="modal fade"
    tabindex="-1"
-   :watch-open="${() => open ? _modal.show() : _modal.hide()}"
+   :effect="${(() => open ? _modal.show() : _modal.hide())(open)}"
    :_modal="${new bootstrap.Modal(this.$dom)}"
 >
   <div class="modal-dialog">
@@ -904,7 +967,8 @@ It should be noted that:
 
 - you can componentize a block by just turning its root tag into a `<:define>` and giving it a tag name
 - by default the base tag for a Markout component is a `<div>`, which is OK here
-- in order to parametrize the component, you can add logic values with their defaults, and use them in the appropriate places inside its code.
+- in order to parametrize the component, you can add logic values with their defaults, and use them in the appropriate places inside its code
+- the `:effect` pattern `(() => sideEffect())(dependencies)` is the recommended way to create reactive side effects that respond to state changes.
 
 With this approach to components you get four big wins:
 
@@ -1233,7 +1297,7 @@ markout analyze
 markout docs --output ./docs
 ```
 
-### VS Code Extension
+### VS Code Extension (planned for v.2.x)
 
 The Markout VS Code extension (planned) will provide comprehensive development support for Markout projects:
 
@@ -1280,154 +1344,87 @@ The Markout VS Code extension (planned) will provide comprehensive development s
 
 The extension will significantly enhance the developer experience by providing the same level of tooling support that developers expect from modern frameworks, while maintaining Markout's philosophy of simplicity and HTML-first development.
 
-## Architecture
+## Roadmap
 
-Markout is built on a sophisticated multi-layered architecture designed for both developer experience and production reliability. The framework consists of several key components working together:
+Markout follows a **stability-first development philosophy**. Rather than rushing to market with incomplete features, we focus on thoughtful design and comprehensive testing to ensure each release provides genuine value without breaking existing code.
 
-- **CLI Tool & Server Infrastructure**: Express.js-based server with PM2 clustering, rate limiting, and graceful shutdown
-- **Multi-Phase Compiler Pipeline**: 7-phase compilation from HTML to executable reactive structures
-- **Reactive Runtime System**: Pull-based reactivity with hierarchical scoping and batched DOM updates
-- **HTML Preprocessor**: Module loading, fragment imports, and dependency resolution
+### Current Status: Alpha (v0.1.x)
 
-For detailed architectural documentation including C4 diagrams, system design principles, and component interactions, see the [Architecture Documentation](docs/architecture/).
+**✅ Completed Core Features:**
+- Reactive runtime system with batched DOM updates
+- Logic values (`:count`, `:on-click`, `:class-`, `:style-`)
+- Reactive expressions (`${...}`) in HTML and attributes
+- Components (`<:define>`) with slots and parameters
+- Fragments (`<:import>`) with automatic dependency resolution
+- Server-side rendering with client-side hydration
+- Development CLI with hot reload and production deployment
 
-Key architectural innovations:
-- **Polymorphic Execution**: Same reactive logic runs on server and client
-- **Reserved Namespace**: `$` prefix prevents framework/user code conflicts  
-- **Update Batching**: Set-based deduplication eliminates redundant DOM operations
-- **Hierarchical Scoping**: Lexical variable lookup with proxy-based reactive access
-- **Two-Tier Component System**: Islands (Web Components) for isolation + Components (markup scopes) for composition with service-oriented reactive communication
+### Near Term: Beta Releases (v0.2.x - v0.9.x)
 
-## Development
+**v0.2.x - Complete Core Directives:**
+- ✅ Conditionals (`<template :if>`, `:else`, `:elseif`)
+- ✅ Data services (`<:data>` directive for REST endpoints and reactive data)
+- ✅ Enhanced fragment system with attribute inheritance
+- ✅ Component lifecycle and validation
 
-This section is for contributors to the Markout framework itself. If you're looking to use Markout in your projects, see the CLI and API documentation above.
+**v0.3.x - v0.5.x - Library Ecosystem:**
+- WebSocket libraries for real-time communication
+- Universal async patterns (Server-Sent Events, IndexedDB, WebRTC)
+- Bootstrap and Shoelace integration libraries
+- Production deployment guides and best practices
 
-### Getting Started
+**v0.6.x - v0.9.x - Production Readiness:**
+- Performance optimizations and memory leak prevention
+- Advanced CLI features (project scaffolding, static site generation)
+- Accessibility (a11y) compliance and internationalization (i18n) support
+- Real-world application testing and ecosystem maturation
 
-1. **Clone and Setup**:
-   ```bash
-   git clone https://github.com/fcapolini/markout.git
-   cd markout
-   npm install
-   ```
+### Stable Release: v1.0.0
 
-2. **Build the Project**:
-   ```bash
-   npm run build    # Build both server and client
-   npm run watch    # Watch mode for development
-   ```
+**🎯 Stability Promise:**
+- **Semantic versioning** with backward compatibility guarantee
+- **Long-term support** with security updates and bug fixes
+- **Production ready** with proven real-world usage
+- **Complete documentation** with tutorials and migration guides
 
-3. **Run Tests**:
-   ```bash
-   npm test                # Run all tests
-   npm run test:watch      # Watch mode
-   npm run test:coverage   # Generate coverage report
-   ```
+**v1.x Feature Extensions:**
+- Optional dependencies with `?` syntax for graceful error handling
+- Advanced component patterns and enterprise features
+- Performance profiling and optimization tools
 
-4. **Start Development Server**:
-   ```bash
-   npm run dev     # Development server with hot reload
-   ```
+### Major Feature Releases
 
-### Project Structure
+**v2.x - Developer Experience & TypeScript:**
+- **VS Code Extension** with syntax highlighting and IntelliSense
+- **TypeScript Integration** with type-safe reactive expressions
+- **GraphQL Integration** with full TypeScript support (queries, mutations, subscriptions, schema validation)
+- **tRPC Integration** with end-to-end type safety and seamless client-server communication
+- Advanced development tools and error detection
+- Type-safe component interfaces and data contracts
 
-- **`src/`** - TypeScript source code
-  - **`compiler/`** - Multi-phase compilation pipeline
-  - **`runtime/`** - Reactive system (BaseContext, BaseScope, BaseValue)
-  - **`html/`** - HTML parser and preprocessor
-  - **`server/`** - Express.js server and middleware
-- **`tests/`** - Comprehensive test suite (245+ tests)
-- **`docs/`** - Architecture documentation
-- **`scripts/`** - Build configuration (esbuild)
+**v3.x - Islands Architecture:**
+- **Two-Tier Component System**: Islands (Web Components) + Components (markup scopes)
+- **Service-Oriented Communication** via reactive `<:data>` services
+- **Micro-frontend capabilities** with complete isolation boundaries
+- **Enterprise-grade** patterns for large-scale applications
 
-### Development Workflow
+**Future Vision (v4.x+):**
+- Edge computing optimization (Cloudflare Workers, Deno Deploy)
+- Mobile development patterns and PWA enhancements
+- AI/ML integration for template generation and accessibility
+- Advanced reactivity with fine-grained object tracking
 
-Markout includes automated code quality checks via Git hooks powered by [Husky](https://typicode.github.io/husky/):
+### Philosophy
 
-- **Pre-commit Hook**: Automatically runs before each commit to ensure:
-  - Code formatting follows Prettier standards (`npm run format:check`)
-  - All tests pass (`npm test`)
+Our roadmap reflects Markout's core principles:
 
-You can manually run the same validation:
+- **🎯 Stability Over Speed**: Features are thoroughly designed and tested before release
+- **🏗️ HTML-First**: Build on web standards rather than replacing them
+- **👥 Developer Experience**: Make common tasks simple while keeping complex things possible
+- **🔄 Thoughtful Evolution**: Changes driven by real user needs, not technology trends
+- **🌍 Community-Driven**: Roadmap priorities shaped by user feedback and contributions
 
-```bash
-npm run precommit
-```
-
-For emergencies only, bypass the hook with:
-
-```bash
-git commit --no-verify -m "emergency commit"
-```
-
-### Testing
-
-Markout has comprehensive test coverage across all components:
-
-- **Unit Tests**: Individual components (compiler phases, runtime classes)
-- **Integration Tests**: Compiler-runtime interaction, server middleware
-- **Cross-Platform**: Tests run on Windows, macOS, and Linux
-- **Coverage Reporting**: Detailed reports with V8 coverage provider
-
-```bash
-npm test                # Run all tests once
-npm run test:watch      # Interactive watch mode
-npm run test:coverage   # Generate coverage report (opens in browser)
-```
-
-Test files are organized to mirror the source structure:
-- `tests/compiler/` - Compiler phase tests with fixtures
-- `tests/runtime/` - Reactive system tests
-- `tests/integration/` - End-to-end compilation and execution
-- `tests/server/` - Express.js server tests
-
-### Architecture Guidelines
-
-- **Stability First**: Changes must not break existing functionality
-- **TypeScript**: All source code uses strict TypeScript
-- **Cross-Platform**: Support Windows, macOS, and Linux
-- **Performance**: Reactive updates use batching and deduplication
-- **Developer Experience**: Keep APIs intuitive and ceremony-free
-
-Key patterns:
-- **Reactive System**: Pull-based with hierarchical scopes
-- **Compilation**: Multi-phase pipeline with AST transformation
-- **DOM Updates**: Batched updates with Set-based deduplication
-- **Server-Client Hydration**: Same reactive logic on both sides
-
-### Contributing
-
-1. **Fork the Repository** and create a feature branch
-2. **Write Tests** for new functionality using Vitest
-3. **Follow Code Style** - Prettier will format automatically
-4. **Update Documentation** if adding user-facing features
-5. **Ensure Tests Pass** across all supported Node.js versions
-6. **Submit Pull Request** with clear description
-
-All contributions are welcome! See issues labeled "good first issue" for beginner-friendly tasks.
-
-### Development Scripts
-
-```bash
-# Build and Development
-npm run build           # Build both server and client
-npm run watch          # Watch TypeScript files
-npm run dev            # Development server with nodemon
-npm run clean          # Clean build directory
-
-# Testing and Quality
-npm test               # Run tests once
-npm run test:watch     # Run tests in watch mode
-npm run test:coverage  # Generate coverage report
-npm run format         # Format code with Prettier
-npm run format:check   # Check formatting
-
-# Production
-npm start              # Start production server
-npm run start:prod     # Start with PM2 cluster mode
-npm run logs           # View PM2 logs
-npm run monit          # Open PM2 monitoring
-```
+For detailed milestones, feature status, and contribution opportunities, see [ROADMAP.md](ROADMAP.md).
 
 ## Closing remarks
 
@@ -1439,7 +1436,7 @@ I believe in **thoughtful engineering over marketing hype**. While others chase 
 
 The upcoming island/component architecture exemplifies this philosophy: instead of inventing new abstractions, they'll leverage Web Components and extend Markout's existing `<:data>` system to enable service-oriented communication. Think of client-side microservices. Real-world benefits—like multiple independent functional modules on the same page—achieved through standards-based solutions that will still work in five years.
 
-Revolutionary? Nah, just careful engineering, as it should be.
+Revolutionary? No, just careful engineering, as it should be.
 
 ## License
 
