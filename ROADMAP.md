@@ -11,25 +11,26 @@ Markout is currently in **alpha development**. The core reactive system is funct
 - **Reactive Runtime System**: Full BaseContext/BaseScope/BaseValue system with DOM update batching
 - **Logic Values**: `:` prefixed attributes (`:count`, `:on-click`, `:class-`, `:style-`, `:watch-`)
 - **Reactive Expressions**: `${...}` syntax for dynamic content in HTML and attributes
-- **Looping**: `<template :foreach>` and `:foreach` attribute for array iteration
-- **Components**: `<:define>` directive with slot support for reusable components
 - **Fragments**: `<:import>` system for modular HTML organization
+- **Advanced Fragment Features**: Dependency resolution and attribute inheritance
+- **Cross-Platform Compatibility**: Windows/macOS/Linux line ending normalization
 - **Server Infrastructure**: Complete Express.js server with middleware, rate limiting, compression
 - **SSR/CSR**: Server-side rendering with seamless client-side hydration
-- **Development Tools**: CLI with `markout serve`, hot reload, PM2 process management
+- **Development Tools**: CLI with `markout serve`, PM2 process management
 - **Build System**: TypeScript compilation, client/server bundles via esbuild
 - **Testing**: Comprehensive test suite (178+ tests) covering runtime, compiler, and integration
 
 ### 🚧 In Development
 
+- **Conditionals**: `<template :if>`, `:else`, `:elseif` directives
+- **Looping**: `<template :foreach>` and `:foreach` attribute for array iteration
 - **Runtime Component System**: Moving from compile-time to runtime component instantiation
-- **Advanced Fragment Features**: Dependency resolution and attribute inheritance
-- **Cross-Platform Compatibility**: Windows/macOS/Linux line ending normalization
 
 ### ❌ Missing Features (Blocking Beta)
 
-- **Conditionals**: `<template :if>`, `:else`, `:elseif` directives
+- **Components**: `<:define>` directive with slot support for reusable components
 - **Data Services**: `<:data>` directive for REST endpoints and reactive data
+- **Development Tools**: hot reload in development server
 - **Advanced Component Features**: Dynamic component type selection, shared behavior
 
 ## Development Milestones
@@ -38,14 +39,14 @@ Markout is currently in **alpha development**. The core reactive system is funct
 **Theme: Complete Core Directives**
 
 **Distribution:**
-- [x] Publish to npm as `@markout-js/cli` ✅ **DONE in v0.1.0**
+- [x] Publish to npm as `@markout-js/cli`
+- [x] Create installation and quick start documentation
+- [x] Enhance fragment import system with dependency resolution
 - [ ] Set up automated releases via GitHub Actions
-- [x] Create installation and quick start documentation ✅ **DONE**
 
 **New Features:**
 - [ ] Implement conditional rendering (`<template :if>`, `:else`, `:elseif`)
 - [ ] Complete runtime component instantiation system
-- [ ] Enhance fragment import system with dependency resolution
 - [ ] Add component parameter validation and error handling
 
 **Improvements:**
