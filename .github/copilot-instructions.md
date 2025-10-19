@@ -378,23 +378,6 @@ node dist/index.js serve . --port 8080
 - **Ecosystem compatibility**: Bootstrap wrapper for familiar components, Web Components support (Shoelace, etc.)
 - **Thoughtful evolution**: Changes driven by real needs, not marketing pressure
 
-## Development Guidelines
-
-- Use TypeScript for all source code
-- Follow Express.js best practices
-- Build and test thoroughly - stability is a core value
-- Write tests for new features using Vitest
-- Use Prettier for consistent code formatting
-- Focus on developer experience and API design
-- Consider long-term maintenance and stability in all decisions
-
-## API Endpoints
-
-- `GET /` - Hello World message
-- `GET /health` - Health check endpoint
-- `POST /api/sensitive` - Example endpoint with stricter rate limiting
-- `GET /api/rate-limit-status` - Check current rate limit status
-
 ## Testing Framework
 
 - **Vitest** - Fast unit test framework with TypeScript support
@@ -497,15 +480,9 @@ All tests currently run in **Node.js** environment for maximum Node.js 18+ compa
 - **`tests/integration/`** - Full compiler-runtime integration tests
 - **`tests/line-endings.test.ts`** - Cross-platform compatibility validation
 
-## API Endpoints
-
-- `GET /` - Hello World message
-- `GET /health` - Health check endpoint
-- `POST /api/sensitive` - Example endpoint with stricter rate limiting
-- `GET /api/rate-limit-status` - Check current rate limit status
-
 ## Development Guidelines
 
+- **NEVER modify source code directly** - Do not make changes to files in `src/` directory. Always discuss architecture changes with the maintainer first
 - **Use TypeScript** for all source code with strict type checking
 - **Follow Express.js best practices** for server architecture
 - **Build and test thoroughly** - stability is a core value (178+ tests)
