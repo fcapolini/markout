@@ -289,7 +289,7 @@ As you can see, inside a tag and between attributes you can use C-style comments
 
 Markout supports **dual expression syntax** for maximum developer flexibility:
 
-## Quoted Expression Syntax (HTML-native with interpolation)
+#### Quoted Expression Syntax (HTML-native with interpolation)
 
 ```html
 <button :count="${0}" :on-click="${() => count++}">Clicks: ${count}</button>
@@ -305,7 +305,7 @@ Markout supports **dual expression syntax** for maximum developer flexibility:
 - **No broken syntax** - Code never looks malformed in syntax highlighters
 - **Familiar to developers** - Standard HTML attribute quoting that every developer understands
 
-## Unquoted Expression Syntax (direct JavaScript)
+#### Unquoted Expression Syntax (direct JavaScript)
 
 ```html
 <button :count=${0} :on-click=${() => count++}>Clicks: ${count}</button>
@@ -317,7 +317,7 @@ Markout supports **dual expression syntax** for maximum developer flexibility:
 - **Complex objects**: `:config=${{ theme: "dark", debug: true }}` - clean notation
 - **Type preservation**: All expressions preserve their original JavaScript types
 
-## String Interpolation Examples
+#### String Interpolation Examples
 
 ```html
 <!-- Quoted syntax - perfect for string templates -->
