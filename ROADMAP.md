@@ -97,15 +97,39 @@ Markout is currently in **alpha development**. The core reactive system is funct
 - [ ] Security hardening and vulnerability assessment
 - [ ] Bundle size optimization and tree shaking
 - [ ] Advanced testing utilities and patterns
+### Milestone: v0.3.0 (Alpha)
+**Theme: Library Ecosystem Foundation**
+
+**Distribution & Infrastructure:**
+- [ ] **Node.js Package Resolution**: Enhanced preprocessor for fragment imports from node_modules
+  - [ ] Support `@markout-js/*` official package imports
+  - [ ] Security validation for allowed package patterns  
+  - [ ] Automatic dependency resolution from npm packages
+  - [ ] Cross-platform compatibility testing
+- [ ] **Official Library Publishing**: First wave of @markout-js packages
+  - [ ] `@markout-js/ui-bootstrap` - Bootstrap integration components
+  - [ ] `@markout-js/data-validation` - Valibot validation library
+  - [ ] `@markout-js/ui-shoelace` - Shoelace Web Components integration
+  - [ ] Publishing workflow and automated releases
+
+**Advanced Fragment Features:**
+- [ ] Fragment parameter validation and type checking
+- [ ] Enhanced error reporting for fragment imports
 - [ ] Library documentation and usage patterns
 - [ ] Advanced component patterns (higher-order components, mixins)
+
+**SSR & Module Integration:**
+- [ ] Polymorphic fragment implementations (SSR + CSR compatible)
+- [ ] Static file serving for custom JS modules
+- [ ] Progressive enhancement patterns for client-side modules
+- [ ] SSR compatibility guidelines for library authors
 
 **Breaking Changes Expected:** Minor - focused on API consistency
 
 ---
 
-### Milestone: v0.5.0 (Beta)
-**Theme: Production Readiness**
+### Milestone: v0.4.0 (Alpha)
+**Theme: Advanced Integrations**
 
 **New Features:**
 - [ ] **Mature Library Ecosystem**: Production-ready integration libraries
@@ -113,31 +137,56 @@ Markout is currently in **alpha development**. The core reactive system is funct
   - [ ] Full WebSocket library ecosystem (chat, collaboration, real-time data)
   - [ ] Universal async libraries (Server-Sent Events, IndexedDB, Web Workers, WebRTC)
   - [ ] Community contribution guidelines and library standards
+- [ ] **Enhanced SSR Capabilities**: Optional advanced server-side rendering
+  - [ ] Evaluate Happy DOM for full browser environment SSR
+  - [ ] Custom module resolution for server-side execution
+  - [ ] Performance analysis and optimization strategies
+
+**Breaking Changes Expected:** Minor - focused on ecosystem expansion
+
+---
+
+### Milestone: v0.5.0 (Beta)
+**Theme: Production Readiness**
+
+**New Features:**
 - [ ] **Performance & Reliability**: Production-grade optimizations
   - [ ] Memory leak detection and prevention
   - [ ] Performance profiling and optimization
   - [ ] Cross-browser compatibility validation
   - [ ] Load testing and stress testing
+- [ ] **Enterprise Features**: Advanced production capabilities
+  - [ ] Component library versioning and compatibility
+  - [ ] Advanced caching strategies
+  - [ ] Security auditing and compliance
 
 **Improvements:**
 - [ ] Library ecosystem documentation and examples
 - [ ] Advanced debugging and error reporting
 - [ ] Production deployment best practices
+- [ ] Community package validation and certification
 
 **Breaking Changes Expected:** Minor - focused on API consistency and performance
 
 ---
 
 ### Milestone: v0.6.0 - v0.8.0 (Beta Iterations)
-**Theme: Ecosystem & Standards**
+**Theme: Ecosystem Maturation & Standards**
 
 **Focus Areas:**
 - [ ] Real-world application testing and feedback
 - [ ] Accessibility (a11y) compliance and testing
 - [ ] Internationalization (i18n) support
 - [ ] Advanced deployment scenarios (CDN, microservices, etc.)
-- [ ] Component library ecosystem maturation
+- [ ] Component library ecosystem growth and standardization
 - [ ] Documentation and tutorial refinement
+- [ ] Third-party integration examples and patterns
+
+**Library Ecosystem Growth:**
+- [ ] Community package showcase and discovery
+- [ ] Enterprise library patterns and best practices
+- [ ] Integration with popular development tools
+- [ ] Performance benchmarking across library combinations
 
 **Breaking Changes Expected:** None - bug fixes and ecosystem improvements only
 

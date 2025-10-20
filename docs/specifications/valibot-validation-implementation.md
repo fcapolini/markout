@@ -408,6 +408,21 @@ describe('Valibot Integration', () => {
 
 ## Ecosystem Development
 
+### Official Library Publishing Strategy
+
+**NPM Package Distribution Pattern:**
+```
+@markout-js/data-validation     # Core Valibot integration
+@markout-js/ui-bootstrap        # Bootstrap form validation
+@markout-js/ui-shoelace         # Shoelace Web Components validation
+@markout-js/data-graphql        # GraphQL schema validation
+```
+
+**Fragment Resolution from node_modules:**
+- Preprocessor enhanced to resolve `@markout-js/*` packages from node_modules
+- Security validation allows only approved package patterns
+- Automatic dependency resolution maintains zero-ceremony philosophy
+
 ### Community Libraries
 - **Bootstrap Integration**: Validation for Bootstrap form components
 - **Shoelace Integration**: Web Components with validation
@@ -416,15 +431,51 @@ describe('Valibot Integration', () => {
 ### Company Libraries
 ```html
 <!-- Company-specific validation patterns -->
-<:import src="/company-lib/user-management.htm" />
-<:import src="/company-lib/payment-validation.htm" />
-<:import src="/company-lib/address-validation.htm" />
+<:import src="@company/markout-components/lib/user-management.htm" />
+<:import src="@company/markout-validation/lib/payment-forms.htm" />
+<:import src="@company/markout-patterns/lib/address-validation.htm" />
 ```
 
 ### Third-Party Integration
 - **GraphQL Schema Validation**: Generate Valibot schemas from GraphQL
 - **OpenAPI Integration**: Generate validation from API specifications  
 - **Database Schema Sync**: Keep validation in sync with database constraints
+
+### SSR Compatibility Strategy
+
+**Polymorphic Fragment Implementation:**
+```html
+<!-- Universal validation that works in both SSR and CSR -->
+<script>
+  // Server-safe validation core
+  function createValidator(schema) {
+    return {
+      validate: (data) => {
+        // Universal validation logic
+        if (typeof v !== 'undefined') {
+          return v.safeParse(schema, data);
+        }
+        // Fallback validation for SSR
+        return { success: true, data };
+      }
+    };
+  }
+  globalThis.createValidator = createValidator;
+</script>
+
+<script type="module">
+  // Client-side enhancement
+  import * as v from 'https://esm.sh/valibot@latest';
+  globalThis.v = v;
+  // Re-initialize validators with full Valibot
+</script>
+```
+
+**Current SSR Limitations & Solutions:**
+- ES6 module imports don't work in current lightweight SSR eval environment
+- Fragment-based approach provides SSR compatibility with progressive enhancement
+- Custom JS modules work via static file serving for client-side functionality
+- Future consideration: Happy DOM for full browser environment SSR (v0.4.x+)
 
 ## Implementation Timeline
 
