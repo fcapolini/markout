@@ -79,10 +79,15 @@ Markout is currently in **alpha development**. The core reactive system is funct
 ---
 
 ### Milestone: v0.4.0 (Alpha)
-**Theme: Advanced Data & Library Foundations**
+**Theme: Advanced Data & Fragment Library Foundations**
 
 **New Features:**
 - [ ] Complete `<:data>` directive (REST endpoints, caching, error handling, delegate methods)
+- [ ] **Fragment Library Ecosystem**: NPM package publishing strategy for official @markout-js/* libraries
+  - [ ] Enhanced preprocessor with node_modules resolution and security validation
+  - [ ] Polymorphic fragment implementations (SSR + CSR compatible patterns)
+  - [ ] Static file serving for client-side JavaScript modules via Express.js
+  - [ ] Package discovery and validation system with comprehensive error reporting
 - [ ] **Reference Integration Libraries**: Community-ready library examples
   - [ ] GraphQL integration library: `<:import src="/lib/graphql/query.htm" />` with reactive state management
   - [ ] WebSocket integration library: `<:import src="/lib/websocket/client.htm" />` with lifecycle management
@@ -229,19 +234,37 @@ Markout is currently in **alpha development**. The core reactive system is funct
 ---
 
 ### Milestone: v1.x (Feature Extensions)
-**Theme: Advanced Language Features**
+**Theme: Advanced Ecosystem & VS Code Integration**
 
 **Major Features:**
+- [ ] **VS Code Extension**: Language Server Protocol implementation
+  - [ ] Syntax highlighting for `:` attributes and `${...}` expressions
+  - [ ] Import completion and IntelliSense for fragment libraries
+  - [ ] Package discovery with quick fixes for missing imports
+  - [ ] Component parameter completion and validation
+  - [ ] Error detection with actionable suggestions
+  - [ ] Fragment explorer and dependency visualization
+  - See: `docs/specifications/vscode-extension-integration.md`
+
+- [ ] **Fragment Library Ecosystem**: Complete NPM package strategy
+  - [ ] Official @markout-js/* component libraries (validation, bootstrap, forms, charts)
+  - [ ] Community package template and publishing guidelines
+  - [ ] Package discovery and validation system
+  - [ ] Library performance benchmarking and compatibility testing
+  - See: `docs/specifications/fragment-library-publishing.md`
+
 - [ ] **Optional Dependencies**: `?` syntax for graceful handling of missing scope variables
   - Syntax: `:x="${head.darkMode?}"` returns `undefined` instead of compilation error
   - Enables progressive enhancement and conditional features
   - Full backward compatibility with existing code
   - See: `docs/specifications/optional-dependencies.md`
+
 - [ ] **Advanced Component Patterns**: Enhanced composition and reusability
   - [ ] Higher-order components and component factories
   - [ ] Mixins and component inheritance patterns
   - [ ] Dynamic component type selection at runtime
   - [ ] Component lifecycle optimization and caching
+
 - [ ] **Enterprise Features**: Production-scale capabilities
   - [ ] Advanced monitoring and analytics integration
   - [ ] Performance profiling and optimization tools
