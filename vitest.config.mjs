@@ -40,6 +40,6 @@ export default defineConfig({
   }
   
   // Note: All tests currently run in Node.js environment for maximum Node.js 18+ compatibility.
-  // JSDOM is available in tests/util.ts for DOM testing when needed.
+  // Happy DOM is available in tests/dom-util.ts for DOM testing when needed.
   // Future DOM-specific tests can be added with projects configuration if needed.
 });

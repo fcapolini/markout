@@ -50,7 +50,7 @@ export function dumpScopes(scope: WebScope, tab = '') {
   scope.children.forEach(child => dumpScopes(child as WebScope, tab + '\t'));
 }
 
-// Note: runPage function moved to jsdom-util.ts to avoid loading JSDOM unless needed
+// Note: runPage function moved to dom-util.ts to avoid loading Happy DOM unless needed
 
 export function getMarkup(doc: any, cleanup = true): string {
   let act =
@@ -67,8 +67,8 @@ export function getMarkup(doc: any, cleanup = true): string {
 
 export function getDoc(html: string, client = false) {
   if (client) {
-    // JSDOM functionality moved to jsdom-util.ts to avoid Node.js 18 compatibility issues
-    throw new Error('Client-side getDoc moved to jsdom-util.ts');
+    // DOM functionality moved to dom-util.ts to keep DOM dependencies separate
+    throw new Error('Client-side getDoc moved to dom-util.ts');
   }
   const source = parse(html, 'test');
   return source.doc;

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { runPage } from '../jsdom-util';
+import { runPage } from '../dom-util';
 
-describe.skip('Unquoted Expression Syntax', () => {
+describe('Unquoted Expression Syntax', () => {
   it('should allow both double and single quotes in string literals without escaping', async () => {
     const html = `
       <html>
