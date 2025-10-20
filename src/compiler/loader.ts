@@ -375,8 +375,8 @@ function needsScope(e: dom.Element): boolean {
   // has a name
   const defName = k.DEF_SCOPE_NAMES[e.tagName];
   if (defName) {
-    if (!e.getAttribute(k.IN_VALUE_ATTR_PREFIX + 'name')) {
-      e.setAttribute(k.IN_VALUE_ATTR_PREFIX + 'name', defName);
+    if (!e.getAttribute(k.IN_VALUE_ATTR_PREFIX + k.NAME_ATTR)) {
+      e.setAttribute(k.IN_VALUE_ATTR_PREFIX + k.NAME_ATTR, defName);
     }
     return true;
   }
