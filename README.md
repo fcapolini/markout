@@ -557,7 +557,7 @@ Markout v3.x will support an elegant dual-component system addressing different 
 
 <!-- Product island consuming cart service -->
 <:island src="/widgets/products.htm">
-  <:data :aka="cart" :src="@cartService" />
+  <:data :logic-name="cart" :src="@cartService" />
   <button :on-click="${() => cart.json.addItem(product)}">
     Add to Cart (${cart.json.count})
   </button>
@@ -656,7 +656,7 @@ The `<:data>` directive lets you formally declare all data and service interacti
 For example, here is how you can connect to a REST endpoint:
 
 ```html
-<:data :aka="usersData" :src="/api/users" />
+<:data :logic-name="usersData" :src="/api/users" />
 ```
 
 And here's how you may use the data:
@@ -674,7 +674,7 @@ Note that `<:data>`'s `json` value is always defined, at most it can be an empty
 The data can be local as well:
 
 ```html
-<:data :aka="navigationData" :json="${{
+<:data :logic-name="navigationData" :json="${{
   list: [
     { id: 1, url: '/dashboard', title: 'Dashboard' },
     { id: 2, url: '/activity', title: 'Activity' },
@@ -685,11 +685,11 @@ The data can be local as well:
 And, because local data participates in the reactive system — `:json` is a logic value after all — it can automatically update too:
 
 ```html
-<:data :aka="localeData" :json="${{
+<:data :logic-name="localeData" :json="${{
   en: { dashboard: 'Dashboard', activity: 'Activity' },
   it: { dashboard: 'Panoramica', activity: 'Attività' }
 }}" />
-<:data :aka="navigationData" :lang="en" :_locale="${localeData.json[lang]}" :json="${{
+<:data :logic-name="navigationData" :lang="en" :_locale="${localeData.json[lang]}" :json="${{
   list: [
     { id: 1, url: '/dashboard', title: _locale.dashboard },
     { id: 2, url: '/activity', title: _locale.activity },
@@ -702,7 +702,7 @@ Now you have a localized menu which seamlessly updates when users switch languag
 In addition, again because `:json` is a logic attribute, you can locally generate data:
 
 ```html
-<:data :aka="totalsData" :json="${_generate()}" :_generate="${() => { return ...
+<:data :logic-name="totalsData" :json="${_generate()}" :_generate="${() => { return ...
 }}">
 ```
 

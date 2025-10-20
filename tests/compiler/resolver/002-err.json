@@ -1,0 +1,17 @@
+[
+  {
+    "loc": {
+      "end": {
+        "column": 19,
+        "line": 6
+      },
+      "source": "/002-in.html",
+      "start": {
+        "column": 13,
+        "line": 6
+      }
+    },
+    "msg": "invalid reference",
+    "type": "warning"
+  }
+]
