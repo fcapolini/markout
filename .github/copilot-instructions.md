@@ -133,9 +133,9 @@ Three simple additions to standard HTML:
   - **Ecosystem Benefits**: Community can build and share integration libraries without framework changes
   - **Zero Bloat**: Core runtime remains minimal, features added via selective library imports
   - **Company Libraries**: Internal teams can build standardized integration patterns as shared fragments
-- **TypeScript Integration Timeline**: Basic TypeScript support planned for v0.4.0, full integration in v0.5.0
-  - v0.4.0: Hybrid TypeScript/Acorn pipeline for type-safe expressions and basic IntelliSense
-  - v0.5.0: Complete TypeScript Compiler API integration with advanced language features
+- **TypeScript Integration Timeline**: Basic TypeScript support planned for v2.1, full integration in v2.2
+  - v2.1: Hybrid TypeScript/Acorn pipeline for type-safe expressions and basic IntelliSense  
+  - v2.2: Complete TypeScript Compiler API integration with advanced language features
   - Essential for GraphQL/WebSocket library ecosystem type safety and developer experience
 - Future tooling needs: Dependency analysis, circular detection, type inference, GraphQL schema validation for VS Code extension
 

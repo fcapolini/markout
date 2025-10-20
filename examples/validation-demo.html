@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Valibot Validation Fragment Demo</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 2rem;
+      }
+      .error {
+        color: red;
+        font-size: 0.8em;
+      }
+      form div {
+        margin-bottom: 1rem;
+      }
+      label {
+        display: inline-block;
+        width: 80px;
+      }
+      input {
+        padding: 0.5rem;
+        margin-left: 1rem;
+      }
+      button {
+        padding: 0.5rem 1rem;
+        margin-top: 1rem;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .debug {
+        background: #f5f5f5;
+        padding: 1rem;
+        margin-top: 2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Valibot Validation Fragment Demo</h1>
+
+    <!-- Import the validation fragment -->
+    <:import src="validation-fragment.htm" />
+
+    <!-- Use the validation example -->
+    <:import src="validation-fragment.htm#user-form-example" />
+
+    <hr />
+
+    <h2>API Data Validation Example</h2>
+
+    <!-- API data with validation -->
+    <:data :aka="apiSchema" :json="${v.object({ users: v.array(v.object({ id:
+    v.number(), name: v.string([v.maxLength(100)]), email: v.string([v.email()])
+    })) })}" /> <:data :aka="apiData"
+    :json="${validationService.json.createValidatedData({ aka: 'apiData', src:
+    '/api/users', // Would be actual API endpoint json: { users: [ { id: 1,
+    name: 'John Doe', email: 'john@example.com' }, { id: 2, name: 'Jane Smith',
+    email: 'jane@example.com' } ] }, schema: apiSchema.json })}" />
+
+    <div>
+      <h3>API Data (${apiData.json.valid ? 'Valid' : 'Invalid'})</h3>
+      <!-- :foreach implementation pending, using placeholder -->
+      <div>User data would be displayed here with :foreach</div>
+    </div>
+  </body>
+</html>

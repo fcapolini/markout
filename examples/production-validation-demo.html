@@ -1,0 +1,162 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Production Validation Pattern</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 2rem;
+      }
+      .field {
+        margin-bottom: 1rem;
+      }
+      .field label {
+        display: inline-block;
+        width: 100px;
+        font-weight: bold;
+      }
+      .field input {
+        padding: 0.5rem;
+        margin-left: 1rem;
+        border: 1px solid #ccc;
+      }
+      .field input.invalid {
+        border-color: #e74c3c;
+      }
+      .error {
+        color: #e74c3c;
+        font-size: 0.8em;
+        margin-left: 101px;
+      }
+      .form-actions {
+        margin-top: 2rem;
+      }
+      .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        cursor: pointer;
+      }
+      .btn-primary {
+        background: #3498db;
+        color: white;
+      }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .status {
+        margin-top: 1rem;
+        padding: 1rem;
+        border-radius: 4px;
+      }
+      .status.success {
+        background: #d4edda;
+        color: #155724;
+      }
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Production Validation Pattern</h1>
+
+    <!-- Import validation library -->
+    <:import src="../lib/validation.htm" />
+
+    <!-- User registration form with full validation -->
+    <:import src="../lib/validation.htm#valibot-service" /> <:import
+    src="../lib/validation.htm#common-schemas" />
+
+    <!-- Create validated form data -->
+    <:data :aka="registrationForm" :json="${valibot.json.validatedData({ schema:
+    schemas.json.build(schemas.json.user), initialData: { name: '', email: '',
+    age: 18 }, onValidation: (result, formData) => { console.log('Validation
+    result:', result); // Could trigger analytics, logging, etc. } })}" />
+
+    <form
+      :on-submit="${(e) => {
+        e.preventDefault();
+        const isValid = registrationForm.json.validate();
+        if (isValid.success) {
+            console.log('Form submitted:', registrationForm.json.json);
+            // Would submit to API
+        }
+    }}"
+    >
+      <h2>User Registration</h2>
+
+      <!-- Name field with validation -->
+      <:import src="../lib/validation.htm#validated-field" :label="Name"
+      :value="${registrationForm.json.json.name}"
+      :error="${registrationForm.json.errors.name}" :onInput="${(value) => {
+      const result = registrationForm.json.validateField('name', value); if
+      (result.success) { registrationForm.json.patch({ name: value }); } }}" />
+
+      <!-- Email field with validation -->
+      <:import src="../lib/validation.htm#validated-field" :label="Email"
+      :type="email" :value="${registrationForm.json.json.email}"
+      :error="${registrationForm.json.errors.email}" :onInput="${(value) => {
+      const result = registrationForm.json.validateField('email', value); if
+      (result.success) { registrationForm.json.patch({ email: value }); } }}" />
+
+      <!-- Age field with validation -->
+      <:import src="../lib/validation.htm#validated-field" :label="Age"
+      :type="number" :value="${registrationForm.json.json.age}"
+      :error="${registrationForm.json.errors.age}" :onInput="${(value) => {
+      const numValue = parseInt(value); const result =
+      registrationForm.json.validateField('age', numValue); if (result.success)
+      { registrationForm.json.patch({ age: numValue }); } }}" />
+
+      <div class="form-actions">
+        <button
+          type="submit"
+          class="btn btn-primary"
+          :disabled="${!registrationForm.json.valid}"
+        >
+          Register User
+        </button>
+
+        <button
+          type="button"
+          class="btn"
+          :on-click="${() => registrationForm.json.reset()}"
+        >
+          Reset Form
+        </button>
+      </div>
+
+      <!-- Form status -->
+      <div
+        :class="status ${registrationForm.json.valid ? 'success' : 'error'}"
+        :style-display="${Object.keys(registrationForm.json.errors).length > 0 || registrationForm.json.valid ? 'block' : 'none'}"
+      >
+        ${registrationForm.json.valid ? 'Form is valid and ready to submit!' :
+        `Please fix ${Object.keys(registrationForm.json.errors).length}
+        validation error(s)`}
+      </div>
+    </form>
+
+    <!-- Debug information -->
+    <details style="margin-top: 2rem">
+      <summary>Debug Information</summary>
+      <div style="background: #f8f9fa; padding: 1rem; margin-top: 1rem">
+        <h3>Form State</h3>
+        <p><strong>Valid:</strong> ${registrationForm.json.valid}</p>
+        <p>
+          <strong>Data:</strong>
+          <code>${JSON.stringify(registrationForm.json.json, null, 2)}</code>
+        </p>
+        <p>
+          <strong>Errors:</strong>
+          <code>${JSON.stringify(registrationForm.json.errors, null, 2)}</code>
+        </p>
+        <p>
+          <strong>Last Validation:</strong>
+          ${registrationForm.json.lastValidation || 'Never'}
+        </p>
+      </div>
+    </details>
+  </body>
+</html>

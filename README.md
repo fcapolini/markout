@@ -7,7 +7,7 @@
 [![codecov](https://codecov.io/gh/fcapolini/markout/graph/badge.svg?token=VENQIX1AWP)](https://codecov.io/gh/fcapolini/markout)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-**HTML-based** reactive web framework for Node.js and the browser — for devs who despise _needless complexity_.
+**HTML-first** reactive web framework for Node.js and the browser — for devs who despise _needless complexity_.
 
 🚧 **Alpha Release (v0.1.4)** - Core features working, some features still in development. See [ROADMAP.md](ROADMAP.md) for details.
 
@@ -146,8 +146,8 @@ Create `lib/greeting.htm`:
 <lib>
   <:define 
     :tag="greeting-card" 
-    :name="${'World'}" 
-    :mood="${'happy'}"
+    :name="World" 
+    :mood="happy"
     :style-color="${mood === 'happy' ? 'green' : 'red'}">
     
     <div style="padding: 1rem; border: 1px solid #ccc;">
@@ -181,7 +181,7 @@ Update your `app.html`:
 - **Learn the concepts**: Read the sections below for deep understanding
 - **Try the ecosystem**: Add Bootstrap or Shoelace components
 - **Build something real**: Markout scales from simple pages to complex apps
-- **⭐ Star the repo**: If Markout sparks joy, give us a star on GitHub - it really helps! 
+- **⭐ Star the repo**: If you like what you see, give us a star on GitHub - it really helps! 
 - **Join the community**: Check out the GitHub repo and contribute!
 
 **No build step needed** - Markout compiles on-the-fly during development and pre-renders for production automatically.
@@ -313,7 +313,7 @@ Markout supports **dual expression syntax** for maximum developer flexibility:
 
 **Key advantages:**
 - **Mixed quotes freedom**: `:message=${'String with "double" quotes'}` - no escaping needed
-- **Template literals**: `:greeting=${`Hello, ${name}! Welcome to "Markout".`}` - natural syntax
+- **Template literals**: ``:greeting=${`Hello, ${name}! Welcome to "Markout".`}`` - natural syntax
 - **Complex objects**: `:config=${{ theme: "dark", debug: true }}` - clean notation
 - **Type preservation**: All expressions preserve their original JavaScript types
 
@@ -473,7 +473,7 @@ Like looping with `:foreach`, conditionals support smooth appearance and disappe
 </template>
 ```
 
-This provides consistent animation behavior across all `<template>` blocks, whether controlled by data changes (`:foreach`) or boolean conditions (`:if`/:else`).
+This provides consistent animation behavior across all `<template>` blocks, whether controlled by data changes (`:foreach`) or boolean conditions (`:if`/`:else`).
 
 ### Looping
 
@@ -721,6 +721,8 @@ With this approach to data handling you get four big wins:
 
 There's still a lot to say about the deceptively simple `<:data>` directive: things like HTTP methods, authentication, caching, error handling, retries etc. but it takes its own chapter in the docs.
 
+A few highlights are worth to mention straight away though.
+
 #### GraphQL Integration (Planned for v2.x)
 
 GraphQL support will be implemented as **reusable component libraries** with full TypeScript integration, leveraging Markout's fragment system:
@@ -868,9 +870,11 @@ The same library-first pattern works for any async communication - all implement
 - **Zero Runtime Dependencies**: All integrations use existing `<:data>` capabilities and browser APIs
 - **Selective Enhancement**: Import only the async capabilities your application actually uses
 
-Two things are important to outline straight away though.
+### Role of `<:data>`
 
-For one, `<:data>` is where business logic should live: while presentation logic is more effectively scattered around in visual objects, business logic is better kept centralized in dedicated data-oriented objects. For example:
+The `<:data>` diretive has a unique role in Markout apps.
+
+First, `<:data>` is where **business logic** should live: while presentation logic is more effectively scattered around in visual objects, business logic is better kept centralized in dedicated data-oriented objects. For example:
 
 ```html
 <!--- Business logic: user validation, data processing -->
@@ -883,7 +887,7 @@ For one, `<:data>` is where business logic should live: while presentation logic
 </form>
 ```
 
-Another important thing to clarify is: `<:data>` is where `async/await` and promise-based code, if any, should live. Markout reactivity is synchronous, but it can be triggered by events, timers, and asynchronous data operations.
+Second, `<:data>` is where **`async/await` and promise-based code**, if any, should live. Markout reactivity is synchronous, but it can be triggered by events, timers, and asynchronous data operations.
 
 The `<:data>` directive provides a universal async interface that works consistently across all transport layers - WebSockets, Workers, IndexedDB, WebRTC, Server-Sent Events - using the same declarative patterns and reactive data flow. GraphQL and tRPC integrations (planned for v2.x) will extend this pattern with full TypeScript support.
 
@@ -1427,7 +1431,7 @@ For detailed milestones, feature status, and contribution opportunities, see [RO
 
 ## Closing remarks
 
-In an industry obsessed with the next big disruption—whether it's "signals" as the latest reactive primitive or yet another framework promising to revolutionize everything, without actually challenging the mainstream model—Markout takes a different path.
+In an industry obsessed with the next big disruption—whether it's "signals" as the latest reactive primitive or yet another framework promising to revolutionize everything without actually challenging the mainstream model—Markout takes a different path.
 
 I believe in **thoughtful engineering over marketing hype**. While others chase trends and breaking changes, Markout focuses on solving real problems with minimal disruption. Markout's HTML-first approach builds on web standards that have proven their worth, enhanced with just three simple additions that make complex things possible without making simple things complicated.
 
@@ -1435,7 +1439,7 @@ I believe in **thoughtful engineering over marketing hype**. While others chase 
 
 The upcoming island/component architecture exemplifies this philosophy: instead of inventing new abstractions, they'll leverage Web Components and extend Markout's existing `<:data>` system to enable service-oriented communication. Think of client-side microservices. Real-world benefits—like multiple independent functional modules on the same page—achieved through standards-based solutions that will still work in five years.
 
-Revolutionary? No, just careful engineering, as it should be.
+Revolutionary? Just careful engineering, as it should be.
 
 ## License
 
