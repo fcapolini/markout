@@ -70,10 +70,11 @@
     src="../lib/validation.htm#common-schemas" />
 
     <!-- Create validated form data -->
-    <:data :aka="registrationForm" :json="${valibot.json.validatedData({ schema:
-    schemas.json.build(schemas.json.user), initialData: { name: '', email: '',
-    age: 18 }, onValidation: (result, formData) => { console.log('Validation
-    result:', result); // Could trigger analytics, logging, etc. } })}" />
+    <:data :logic-name="registrationForm" :json="${valibot.json.validatedData({
+    schema: schemas.json.build(schemas.json.user), initialData: { name: '',
+    email: '', age: 18 }, onValidation: (result, formData) => {
+    console.log('Validation result:', result); // Could trigger analytics,
+    logging, etc. } })}" />
 
     <form
       :on-submit="${(e) => {

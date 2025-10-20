@@ -287,7 +287,7 @@ Markout is currently in **alpha development**. The core reactive system is funct
   - **Initial TypeScript Support** (v2.1): Hybrid TypeScript/Acorn compiler pipeline for type-safe expressions
     - Basic type checking for reactive values and component properties
     - TypeScript-aware VS Code extension with IntelliSense
-    - Type-safe data access patterns: `<:data :aka="users" :type="User[]" />`
+    - Type-safe data access patterns: `<:data :logic-name="users" :type="User[]" />`
     - Foundation for library ecosystem type safety
     - **Breaking Changes**: None - TypeScript is optional, JavaScript expressions continue to work unchanged
   - **Full TypeScript Integration** (v2.2): Replace Acorn with TypeScript Compiler API

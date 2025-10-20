@@ -11,7 +11,7 @@
   // This fragment provides the integration layer between Markout and Valibot
 </script>
 
-<:define name="valibot-service"> <:data :aka="valibot" :json="${{ // Main
+<:define name="valibot-service"> <:data :logic-name="valibot" :json="${{ // Main
 validation service createValidator(schema, options = {}) { return { schema:
 schema, validate: (data) => { try { // In real implementation: const result =
 v.safeParse(schema, data); const result = this.mockValidate(schema, data);
@@ -68,8 +68,8 @@ return errors; } }}" />
 <!-- End of validated-field component -->
 
 <!-- Schema builder helpers -->
-<:define name="common-schemas"> <:data :aka="schemas" :json="${{ user: { name:
-'string|required|max:50', email: 'string|required|email', age:
+<:define name="common-schemas"> <:data :logic-name="schemas" :json="${{ user: {
+name: 'string|required|max:50', email: 'string|required|email', age:
 'number|required|min:18|max:120' }, product: { title: 'string|required|max:100',
 price: 'number|required|min:0', category: 'string|required' }, // Helper to
 convert simple notation to Valibot schema // In real implementation, this would

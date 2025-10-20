@@ -96,8 +96,8 @@ Three simple additions to standard HTML:
 
 **Advanced Data Handling with `<:data>`**: Sophisticated reactive data system
 
-- REST endpoint integration: `<:data :aka="users" :src="/api/users" />`
-- Local reactive data: `<:data :aka="config" :json="${{...}}" />`
+- REST endpoint integration: `<:data :logic-name="users" :src="/api/users" />`
+- Local reactive data: `<:data :logic-name="config" :json="${{...}}" />`
 - **GraphQL Integration**: Library-level GraphQL support implemented as reusable Markout components
   - Implementation: GraphQL clients built as fragment libraries using `<:data>` and JavaScript APIs
   - Query syntax: `<:import src="/lib/graphql/query.htm" :endpoint="/graphql" :query="${...}" />`
@@ -124,7 +124,7 @@ Three simple additions to standard HTML:
 - Extensible transport layer: Custom communication via `:will-` and `:did-` delegate methods
 - **Business Logic Architecture**: `<:data>` is where business logic should live (validation, processing, domain rules)
 - **Separation of Concerns**: Presentation logic scattered in visual objects, business logic centralized in data objects
-- **Example Pattern**: `<:data :aka="userService" :validate="${(user) => ...}" />` for business rules, `:disabled="${!userService.validate(user)}"` for presentation
+- **Example Pattern**: `<:data :logic-name="userService" :validate="${(user) => ...}" />` for business rules, `:disabled="${!userService.validate(user)}"` for presentation
 - **Universal Async Interface**: Unified patterns for WebSockets, GraphQL subscriptions, Workers, IndexedDB, WebRTC, Server-Sent Events
 - **Library-First Architecture**: All advanced integrations implemented as importable fragment libraries, not runtime features
   - GraphQL clients: `<:import src="/lib/graphql/" />` - zero runtime overhead, pure component libraries
@@ -549,8 +549,8 @@ Islands can expose services through named registration, enabling reactive inter-
 ```html
 <!-- Service island -->
 <:island src="/services/cart.htm" name="cartService">
-  <:data :aka="cartData" :src="/api/cart/local" />
-  <:data :aka="cartService" :json="${{
+  <:data :logic-name="cartData" :src="/api/cart/local" />
+  <:data :logic-name="cartService" :json="${{
     async addItem(item) { /* async operations */ },
     get items() { return cartData.json.items; },
     get total() { return cartData.json.total; }
@@ -559,7 +559,7 @@ Islands can expose services through named registration, enabling reactive inter-
 
 <!-- Consumer island -->
 <:island src="/widgets/product-list.htm">
-  <:data :aka="cart" :src="@cartService" />
+  <:data :logic-name="cart" :src="@cartService" />
   <button :on-click="${() => cart.json.addItem(product)}">
     Add to Cart (${cart.json.count})
   </button>

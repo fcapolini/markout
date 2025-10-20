@@ -124,12 +124,12 @@
   console.log('Valibot loaded and ready!', v);
 </script>
 
-<:define name="validated-data"> <:data :aka="validationService" :json="${{ //
-Create a validation-enhanced data service using real Valibot
-createValidatedData(options) { const { aka, src, json, schema, onValidation } =
-options; // Enhanced data object with validation capabilities return { //
-Original data properties src: src, json: json || {}, loading: false, //
-Validation properties schema: schema, valid: true, errors: {}, lastValidated:
+<:define name="validated-data"> <:data :logic-name="validationService"
+:json="${{ // Create a validation-enhanced data service using real Valibot
+createValidatedData(options) { const { logicName, src, json, schema,
+onValidation } = options; // Enhanced data object with validation capabilities
+return { // Original data properties src: src, json: json || {}, loading: false,
+// Validation properties schema: schema, valid: true, errors: {}, lastValidated:
 null, // Validation methods using real Valibot validate(data = this.json) { if
 (!this.schema) return { success: true, data }; const result =
 ValibotUtils.safeParse(this.schema, data); this.valid = result.success;
@@ -155,14 +155,14 @@ Check if specific field is valid isFieldValid(fieldName) { return
 <!-- Real Valibot Usage Examples -->
 <:define name="user-form-example">
 <!-- Define validation schema using real Valibot -->
-<:data :aka="userSchema" :json="${ValibotUtils.createUserSchema()}" />
+<:data :logic-name="userSchema" :json="${ValibotUtils.createUserSchema()}" />
 
 <!-- Create validated data using the service -->
-<:import src="#validated-data" /> <:data :aka="userForm"
-:json="${validationService.json.createValidatedData({ aka: 'userForm', json: {
-name: '', email: '', age: 18 }, schema: userSchema.json, onValidation: (result)
-=> { console.log('User form validation:', result.success ? 'passed' : 'failed',
-result.errors); } })}" />
+<:import src="#validated-data" /> <:data :logic-name="userForm"
+:json="${validationService.json.createValidatedData({ logicName: 'userForm',
+json: { name: '', email: '', age: 18 }, schema: userSchema.json, onValidation:
+(result) => { console.log('User form validation:', result.success ? 'passed' :
+'failed', result.errors); } })}" />
 <!-- End of user-form-example component -->
 
 <!-- Form with validation -->
