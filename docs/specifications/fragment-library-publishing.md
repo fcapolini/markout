@@ -76,6 +76,34 @@ npm install @markout-js/data-validation
 
 ### Required Modifications to preprocessor.ts
 
+The preprocessor needs significant enhancement to support both package resolution and VS Code extension integration with comprehensive diagnostics.
+
+**Enhanced Package Resolution Interface:**
+```typescript
+export interface PreprocessorOptions {
+  docroot: string;
+  enableDiagnostics?: boolean;
+  allowedPackagePatterns?: string[];
+  packageResolutionCache?: Map<string, PackageInfo>;
+}
+
+export interface ImportDiagnostic extends PageError {
+  category: 'import-resolution';
+  code: ImportErrorCode;
+  resolvedPath?: string;
+  suggestions?: string[];
+  packageInfo?: PackageInfo;
+}
+
+export enum ImportErrorCode {
+  PACKAGE_NOT_FOUND = 'package-not-found',
+  PACKAGE_NOT_ALLOWED = 'package-not-allowed', 
+  FILE_NOT_FOUND = 'file-not-found',
+  CIRCULAR_DEPENDENCY = 'circular-dependency',
+  INVALID_PACKAGE_NAME = 'invalid-package-name'
+}
+```
+
 **Package Path Detection:**
 ```typescript
 function isPackagePath(fname: string): boolean {
@@ -87,34 +115,28 @@ function isPackagePath(fname: string): boolean {
 }
 ```
 
-**Node.js Module Resolution:**
+**Enhanced Node.js Module Resolution:**
 ```typescript
-function resolvePackagePath(packagePath: string, fromDir: string): string | null {
-  try {
-    // Use require.resolve for npm package resolution
-    const packageJsonPath = require.resolve(`${packageName}/package.json`, {
-      paths: [fromDir]
-    });
-    const packageDir = path.dirname(packageJsonPath);
-    return path.join(packageDir, filePath);
-  } catch (error) {
-    return null;
+class PackageResolver {
+  static async resolvePackage(
+    packagePath: string,
+    fromDir: string,
+    options: PreprocessorOptions
+  ): Promise<PackageResolutionResult> {
+    // Detailed resolution with comprehensive diagnostics
+    // See vscode-extension-integration.md for full implementation
   }
 }
 ```
 
-**Security Validation:**
-```typescript
-function isPackageAllowed(packageName: string): boolean {
-  // Allow official Markout packages
-  if (packageName.startsWith('@markout-js/')) return true;
-  // Allow community packages with markout prefix
-  if (packageName.startsWith('markout-')) return true;
-  // Allow scoped packages with markout in the name
-  if (packageName.includes('/markout-')) return true;
-  return false;
-}
-```
+**VS Code Integration Considerations:**
+- Enhanced error reporting with ImportDiagnostic types
+- Package discovery and caching for IntelliSense
+- Comprehensive suggestion system for quick fixes
+- Fragment analysis for component parameter completion
+- Performance optimization for real-time diagnostics
+
+See `docs/specifications/vscode-extension-integration.md` for detailed VS Code Language Server Protocol integration requirements.
 
 ## JavaScript Module Integration
 
