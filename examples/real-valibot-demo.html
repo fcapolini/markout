@@ -1,0 +1,454 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Real Valibot Integration Demo</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        margin: 2rem;
+        background: #f8f9fa;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+      .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #333;
+      }
+      .form-group input,
+      .form-group textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid #e1e5e9;
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: border-color 0.2s;
+      }
+      .form-group input:focus,
+      .form-group textarea:focus {
+        outline: none;
+        border-color: #007bff;
+      }
+      .form-group input.invalid,
+      .form-group textarea.invalid {
+        border-color: #dc3545;
+      }
+      .form-group input.valid,
+      .form-group textarea.valid {
+        border-color: #28a745;
+      }
+      .error-message {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: block;
+      }
+      .success-message {
+        color: #28a745;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+      }
+      .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 6px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-right: 1rem;
+      }
+      .btn-primary {
+        background: #007bff;
+        color: white;
+      }
+      .btn-primary:hover:not(:disabled) {
+        background: #0056b3;
+      }
+      .btn-secondary {
+        background: #6c757d;
+        color: white;
+      }
+      .btn-secondary:hover:not(:disabled) {
+        background: #545b62;
+      }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .form-status {
+        padding: 1rem;
+        border-radius: 6px;
+        margin-top: 1.5rem;
+        font-weight: 500;
+      }
+      .form-status.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .form-status.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .debug-panel {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 1rem;
+        margin-top: 2rem;
+      }
+      .debug-panel pre {
+        background: #fff;
+        padding: 1rem;
+        border-radius: 4px;
+        overflow-x: auto;
+        font-size: 0.875rem;
+      }
+      .validation-indicator {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        margin-left: 0.5rem;
+        vertical-align: middle;
+      }
+      .validation-indicator.valid {
+        background: #28a745;
+      }
+      .validation-indicator.invalid {
+        background: #dc3545;
+      }
+      .validation-indicator.pending {
+        background: #ffc107;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Real Valibot Integration Demo</h1>
+      <p>
+        This demo shows Markout integrated with real Valibot validation library
+        loaded from CDN.
+      </p>
+
+      <!-- Import the validation fragment with real Valibot -->
+      <:import src="validation-fragment.htm" />
+
+      <!-- Advanced Contact Form with Full Validation -->
+      <h2>Contact Form with Advanced Validation</h2>
+
+      <!-- Create schema and validated form data -->
+      <:data :aka="contactSchema" :json="${ValibotUtils.createContactSchema()}"
+      /> <:data :aka="contactForm"
+      :json="${validationService.json.createValidatedData({ aka: 'contactForm',
+      json: { firstName: '', lastName: '', email: '', phone: '', message: '' },
+      schema: contactSchema.json, onValidation: (result, formData) => {
+      console.log('Contact form validation:', { success: result.success, errors:
+      result.errors, timestamp: new Date().toISOString() }); } })}" />
+
+      <form
+        :on-submit="${(e) => {
+            e.preventDefault();
+            const result = contactForm.json.validate();
+            if (result.success) {
+                alert('Form submitted successfully!\\n\\nData: ' + JSON.stringify(result.data, null, 2));
+            } else {
+                console.log('Form validation failed:', result.errors);
+            }
+        }}"
+      >
+        <!-- First Name -->
+        <div class="form-group">
+          <label>
+            First Name
+            <span
+              :class="validation-indicator ${contactForm.json.isFieldValid('firstName') ? 'valid' : 'invalid'}"
+            ></span>
+          </label>
+          <input
+            type="text"
+            :value="${contactForm.json.json.firstName}"
+            :class="${contactForm.json.getFieldError('firstName') ? 'invalid' : (contactForm.json.json.firstName ? 'valid' : '')}"
+            :on-input="${(e) => {
+                           const result = contactForm.json.patch({ firstName: e.target.value });
+                       }}"
+          />
+          <span
+            :class-error-message="${!!contactForm.json.getFieldError('firstName')}"
+            :style-display="${contactForm.json.getFieldError('firstName') ? 'block' : 'none'}"
+          >
+            ${contactForm.json.getFieldError('firstName')}
+          </span>
+        </div>
+
+        <!-- Last Name -->
+        <div class="form-group">
+          <label>
+            Last Name
+            <span
+              :class="validation-indicator ${contactForm.json.isFieldValid('lastName') ? 'valid' : 'invalid'}"
+            ></span>
+          </label>
+          <input
+            type="text"
+            :value="${contactForm.json.json.lastName}"
+            :class="${contactForm.json.getFieldError('lastName') ? 'invalid' : (contactForm.json.json.lastName ? 'valid' : '')}"
+            :on-input="${(e) => {
+                           contactForm.json.patch({ lastName: e.target.value });
+                       }}"
+          />
+          <span
+            :class-error-message="${!!contactForm.json.getFieldError('lastName')}"
+            :style-display="${contactForm.json.getFieldError('lastName') ? 'block' : 'none'}"
+          >
+            ${contactForm.json.getFieldError('lastName')}
+          </span>
+        </div>
+
+        <!-- Email with real-time validation -->
+        <div class="form-group">
+          <label>
+            Email Address
+            <span
+              :class="validation-indicator ${contactForm.json.isFieldValid('email') ? 'valid' : 'invalid'}"
+            ></span>
+          </label>
+          <input
+            type="email"
+            :value="${contactForm.json.json.email}"
+            :class="${contactForm.json.getFieldError('email') ? 'invalid' : (contactForm.json.json.email && contactForm.json.isFieldValid('email') ? 'valid' : '')}"
+            :on-input="${(e) => {
+                           contactForm.json.patch({ email: e.target.value });
+                       }}"
+          />
+          <span
+            :class-error-message="${!!contactForm.json.getFieldError('email')}"
+            :style-display="${contactForm.json.getFieldError('email') ? 'block' : 'none'}"
+          >
+            ${contactForm.json.getFieldError('email')}
+          </span>
+          <span
+            :class-success-message="${contactForm.json.json.email && contactForm.json.isFieldValid('email')}"
+            :style-display="${contactForm.json.json.email && contactForm.json.isFieldValid('email') ? 'block' : 'none'}"
+          >
+            Valid email format ✓
+          </span>
+        </div>
+
+        <!-- Phone (optional) -->
+        <div class="form-group">
+          <label>
+            Phone Number (Optional)
+            <span
+              :class="validation-indicator ${!contactForm.json.json.phone || contactForm.json.isFieldValid('phone') ? 'valid' : 'invalid'}"
+            ></span>
+          </label>
+          <input
+            type="tel"
+            :value="${contactForm.json.json.phone}"
+            :class="${contactForm.json.getFieldError('phone') ? 'invalid' : (contactForm.json.json.phone && contactForm.json.isFieldValid('phone') ? 'valid' : '')}"
+            placeholder="+1 (555) 123-4567"
+            :on-input="${(e) => {
+                           contactForm.json.patch({ phone: e.target.value });
+                       }}"
+          />
+          <span
+            :class-error-message="${!!contactForm.json.getFieldError('phone')}"
+            :style-display="${contactForm.json.getFieldError('phone') ? 'block' : 'none'}"
+          >
+            ${contactForm.json.getFieldError('phone')}
+          </span>
+        </div>
+
+        <!-- Message -->
+        <div class="form-group">
+          <label>
+            Message
+            <span
+              :class="validation-indicator ${contactForm.json.isFieldValid('message') ? 'valid' : 'invalid'}"
+            ></span>
+            <small
+              >(${contactForm.json.json.message.length}/1000 characters)</small
+            >
+          </label>
+          <textarea
+            rows="4"
+            :value="${contactForm.json.json.message}"
+            :class="${contactForm.json.getFieldError('message') ? 'invalid' : (contactForm.json.json.message ? 'valid' : '')}"
+            placeholder="Please enter your message here..."
+            :on-input="${(e) => {
+                              contactForm.json.patch({ message: e.target.value });
+                          }}"
+          ></textarea>
+          <span
+            :class-error-message="${!!contactForm.json.getFieldError('message')}"
+            :style-display="${contactForm.json.getFieldError('message') ? 'block' : 'none'}"
+          >
+            ${contactForm.json.getFieldError('message')}
+          </span>
+        </div>
+
+        <!-- Form Actions -->
+        <div>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            :disabled="${!contactForm.json.valid}"
+          >
+            Send Message
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-secondary"
+            :on-click="${() => contactForm.json.reset()}"
+          >
+            Reset Form
+          </button>
+        </div>
+
+        <!-- Form Status -->
+        <div
+          :class="form-status ${contactForm.json.valid ? 'success' : 'error'}"
+          :style-display="${Object.keys(contactForm.json.errors).length > 0 || (contactForm.json.valid && contactForm.json.json.firstName) ? 'block' : 'none'}"
+        >
+          ${contactForm.json.valid && contactForm.json.json.firstName ? '✅ Form
+          is valid and ready to submit!' : `❌ Please fix
+          ${Object.keys(contactForm.json.errors).length} validation error(s)`}
+        </div>
+      </form>
+
+      <!-- Live Product Form Example -->
+      <hr style="margin: 3rem 0" />
+
+      <h2>Product Form with Dynamic Validation</h2>
+
+      <:data :aka="productSchema" :json="${ValibotUtils.createProductSchema()}"
+      /> <:data :aka="productForm"
+      :json="${validationService.json.createValidatedData({ json: { title: '',
+      price: 0, category: '', description: '' }, schema: productSchema.json })}"
+      />
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem">
+        <div>
+          <div class="form-group">
+            <label>Product Title</label>
+            <input
+              :value="${productForm.json.json.title}"
+              :class="${productForm.json.getFieldError('title') ? 'invalid' : (productForm.json.json.title ? 'valid' : '')}"
+              :on-input="${(e) => productForm.json.patch({ title: e.target.value })}"
+            />
+            <span
+              :class-error-message="${!!productForm.json.getFieldError('title')}"
+              :style-display="${productForm.json.getFieldError('title') ? 'block' : 'none'}"
+            >
+              ${productForm.json.getFieldError('title')}
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label>Price ($)</label>
+            <input
+              type="number"
+              step="0.01"
+              :value="${productForm.json.json.price}"
+              :class="${productForm.json.getFieldError('price') ? 'invalid' : (productForm.json.json.price > 0 ? 'valid' : '')}"
+              :on-input="${(e) => productForm.json.patch({ price: parseFloat(e.target.value) || 0 })}"
+            />
+            <span
+              :class-error-message="${!!productForm.json.getFieldError('price')}"
+              :style-display="${productForm.json.getFieldError('price') ? 'block' : 'none'}"
+            >
+              ${productForm.json.getFieldError('price')}
+            </span>
+          </div>
+        </div>
+
+        <div>
+          <div class="form-group">
+            <label>Category</label>
+            <input
+              :value="${productForm.json.json.category}"
+              :class="${productForm.json.getFieldError('category') ? 'invalid' : (productForm.json.json.category ? 'valid' : '')}"
+              :on-input="${(e) => productForm.json.patch({ category: e.target.value })}"
+            />
+            <span
+              :class-error-message="${!!productForm.json.getFieldError('category')}"
+              :style-display="${productForm.json.getFieldError('category') ? 'block' : 'none'}"
+            >
+              ${productForm.json.getFieldError('category')}
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label>Description (Optional)</label>
+            <textarea
+              rows="3"
+              :value="${productForm.json.json.description}"
+              :class="${productForm.json.getFieldError('description') ? 'invalid' : ''}"
+              :on-input="${(e) => productForm.json.patch({ description: e.target.value })}"
+            ></textarea>
+            <span
+              :class-error-message="${!!productForm.json.getFieldError('description')}"
+              :style-display="${productForm.json.getFieldError('description') ? 'block' : 'none'}"
+            >
+              ${productForm.json.getFieldError('description')}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <button
+        :disabled="${!productForm.json.valid}"
+        class="btn btn-primary"
+        :on-click="${() => alert('Product: ' + JSON.stringify(productForm.json.safeJson, null, 2))}"
+      >
+        Save Product
+      </button>
+
+      <!-- Debug Panel -->
+      <details class="debug-panel">
+        <summary>
+          <strong>Debug Information</strong> (Real Valibot Integration)
+        </summary>
+
+        <h4>Contact Form State</h4>
+        <pre>
+${JSON.stringify({
+                valid: contactForm.json.valid,
+                errors: contactForm.json.errors,
+                lastValidated: contactForm.json.lastValidated,
+                data: contactForm.json.json
+            }, null, 2)}</pre
+        >
+
+        <h4>Product Form State</h4>
+        <pre>
+${JSON.stringify({
+                valid: productForm.json.valid,
+                errors: productForm.json.errors,
+                data: productForm.json.json
+            }, null, 2)}</pre
+        >
+
+        <h4>Valibot Library Info</h4>
+        <pre>
+Valibot Version: ${typeof v !== 'undefined' ? 'Loaded from CDN' : 'Not loaded'}
+Available Schemas: ${typeof ValibotUtils !== 'undefined' ? Object.keys(ValibotUtils).join(', ') : 'None'}</pre
+        >
+      </details>
+    </div>
+  </body>
+</html>
