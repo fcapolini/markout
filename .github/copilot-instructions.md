@@ -329,7 +329,7 @@ Advanced compiler using Acorn for JavaScript AST analysis and escodegen for code
 - **`tests/html/`** - HTML parser and preprocessor tests
 - **`tests/server/`** - Server integration tests
 - **`tests/integration/`** - Full compiler-runtime integration tests
-- Testing with Vitest, JSDOM, and comprehensive coverage reporting
+- Testing with Vitest, Happy DOM, and comprehensive coverage reporting
 
 ## Available Scripts
 
@@ -382,17 +382,17 @@ node dist/index.js serve . --port 8080
 
 - **Vitest** - Fast unit test framework with TypeScript support
 - **Supertest** - HTTP assertion library for API testing
-- **jsdom** - DOM environment for client-side testing
+- **happy-dom** - Fast DOM environment for client-side testing
 - **Coverage reports** - V8 coverage provider with HTML/JSON output
 - Test files located in `tests/` directory
-- Automatic environment selection (Node.js vs jsdom based on file naming)
+- Automatic environment selection (Node.js vs happy-dom based on file naming)
 
 ## Testing Environment Selection
 
 All tests currently run in **Node.js** environment for maximum Node.js 18+ compatibility:
 
 - Server-side testing with Node.js environment provides optimal performance and compatibility
-- JSDOM is available in `tests/jsdom-util.ts` for DOM testing when needed via `runPage()` function
+- Happy DOM is available in `tests/dom-util.ts` for DOM testing when needed via `runPage()` function
 - Future DOM-specific tests can be added with `.dom.test.ts` naming if needed
 
 ## Example Components
@@ -457,7 +457,7 @@ All tests currently run in **Node.js** environment for maximum Node.js 18+ compa
 
 - **Vitest** - Fast unit test framework with TypeScript support
 - **Supertest** - HTTP assertion library for API testing
-- **JSDOM** - Full-featured DOM environment for client-side testing with Node.js 18+ compatibility
+- **Happy DOM** - Fast, lightweight DOM environment for client-side testing with full Node.js compatibility
 - **Coverage reports** - V8 coverage provider with HTML/JSON/LCOV output
 - **Cross-platform utilities** - Line ending normalization for reliable test comparisons
 - Test files located in `tests/` directory with comprehensive fixture-based testing
@@ -467,8 +467,8 @@ All tests currently run in **Node.js** environment for maximum Node.js 18+ compa
 All tests currently run in **Node.js** environment for maximum Node.js 18+ compatibility:
 
 - Server-side testing with Node.js environment provides optimal performance and compatibility
-- JSDOM is available in `tests/jsdom-util.ts` for DOM testing when needed via `runPage()` function
-- JSDOM tests automatically skip on Node.js 18 due to webidl-conversions compatibility issues
+- Happy DOM is available in `tests/dom-util.ts` for DOM testing when needed via `runPage()` function
+- Happy DOM provides better compatibility across all Node.js versions compared to JSDOM
 - Future DOM-specific tests can be added with `.dom.test.ts` naming if needed
 
 ### **Test Structure**
