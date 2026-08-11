@@ -146,6 +146,10 @@ export class Preprocessor {
     main: Source,
     nesting: number
   ) {
+    // a page (nesting 0) confines <:import> to <head>, so a fragment's root
+    // attributes always land in the same, well-known scope; a fragment has
+    // no <head>, so its own root element plays that role instead
+    const expectedImportParent = nesting === 0 ? doc.head : doc.documentElement;
     const includes = new Array<Include>();
     const collectIncludes = (p: dom.ServerElement) => {
       for (const n of p.childNodes) {
@@ -166,7 +170,14 @@ export class Preprocessor {
     for (const d of includes) {
       const i = d.parent.childNodes.indexOf(d.node);
       d.parent.childNodes.splice(i, 1);
-      await this.processInclude(d, i, currDir, main, nesting);
+      await this.processInclude(
+        d,
+        i,
+        currDir,
+        main,
+        nesting,
+        expectedImportParent
+      );
     }
   }
 
@@ -175,8 +186,19 @@ export class Preprocessor {
     i: number,
     currDir: string,
     main: Source,
-    nesting: number
+    nesting: number,
+    expectedImportParent: dom.ServerElement | null
   ) {
+    if (d.name === IMPORT_DIRECTIVE_TAG && d.parent !== expectedImportParent) {
+      main.addError(
+        'error',
+        nesting === 0
+          ? `<${IMPORT_DIRECTIVE_TAG}> is only allowed directly in <head>`
+          : `<${IMPORT_DIRECTIVE_TAG}> is only allowed at the top level of a fragment`,
+        d.node.loc
+      );
+      return;
+    }
     const src = d.node.getAttribute(INCLUDE_SRC_ATTR);
     if (!src?.trim()) {
       main.addError(

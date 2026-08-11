@@ -1,0 +1,8 @@
+<html>
+  <body :style="color: ${theme.primary}; font-size: ${size}px; background: ${colors.bg}">
+    <button :class="btn btn-${variant} ${isActive ? 'active' : 'inactive'}" 
+            aria-label="Button with ${count} items">
+      Items: ${count}
+    </button>
+  </body>
+</html>

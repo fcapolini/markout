@@ -1,0 +1,379 @@
+import * as acorn from 'acorn';
+import { generate } from 'escodegen';
+import fs from 'fs';
+import path from 'path';
+import { assert, describe, it } from 'vitest';
+import * as dom from '../../src/html/dom';
+import * as parser from '../../src/html/parser';
+import {
+  ServerDocument,
+  ServerElement,
+  ServerNode,
+  ServerTemplateElement,
+} from '../../src/html/server-dom';
+import { checkFixture, listFixtures } from '../test-utils';
+
+const docroot = path.join(__dirname, 'parser');
+
+describe('parser', () => {
+  listFixtures(docroot).forEach(fixture => {
+    it(fixture.title, async () => {
+      const filePath = path.join(docroot, fixture.file);
+      const text = await fs.promises.readFile(filePath);
+      const source = parser.parse(text.toString(), fixture.file);
+      checkFixture(
+        fixture,
+        source.errors.map(e => e.msg),
+        () => source.doc!.toString() + '\n'
+      );
+
+      if (!source.errors.length) {
+        // fixtures can additionally pin the parsed tree as `<name>-out.json`
+        const pname2 = path.join(docroot, `${fixture.name}-out.json`);
+        if (fs.existsSync(pname2)) {
+          const expectedJSON = await fs.promises.readFile(pname2, {
+            encoding: 'utf8',
+          });
+          const cleanup = (n: ServerNode) => {
+            delete (n as any).parentElement;
+            delete (n as any).ownerDocument;
+            if (n.nodeType === dom.NodeType.DOCUMENT) {
+              cleanup((n as ServerDocument).documentElement as ServerNode);
+            } else if (n.nodeType === dom.NodeType.ELEMENT) {
+              (n as ServerElement).attributes.forEach(a =>
+                cleanup(a as any as ServerNode)
+              );
+              (n as ServerElement).childNodes.forEach(c =>
+                cleanup(c as ServerNode)
+              );
+            } else if (n.nodeType === dom.NodeType.ATTRIBUTE) {
+              if ((n as any).value && typeof (n as any).value === 'object') {
+                (n as any).value = generate((n as any).value);
+              }
+            }
+          };
+          cleanup(source.doc);
+          const actualJSON = JSON.stringify(source.doc, null, 2);
+          const actual = JSON.parse(actualJSON);
+          const expected = JSON.parse(expectedJSON);
+          assert.deepEqual(actual, expected);
+        }
+      }
+    });
+  });
+});
+
+describe('attribute names', () => {
+  function attrsOf(markup: string) {
+    const source = parser.parse(markup, 'test');
+    assert.deepEqual(
+      source.errors.map(e => e.msg),
+      []
+    );
+    const root = source.doc.documentElement as ServerElement;
+    return { root, names: root.attributes.map(a => a.name) };
+  }
+
+  it('accepts $ for language attributes', () => {
+    assert.deepEqual(attrsOf('<html :aka="page" :if="${x}"></html>').names, [
+      ':aka',
+      ':if',
+    ]);
+  });
+
+  it('accepts * for wildcard bindings', () => {
+    assert.deepEqual(attrsOf('<html :class-badge-*="${tone}"></html>').names, [
+      ':class-badge-*',
+    ]);
+  });
+
+  it('accepts dots', () => {
+    assert.deepEqual(attrsOf('<html data-x.y="1"></html>').names, ['data-x.y']);
+  });
+
+  it('does not accept $ in attribute names', () => {
+    // the tag ends at `$`, so what follows lexes as an attribute instead
+    const source = parser.parse('<html $x></html>', 'test');
+    assert.equal(source.doc.documentElement?.tagName, 'HTML');
+    assert.deepEqual(
+      source.errors.map(e => e.msg),
+      ['Attribute names cannot start with "$" (use ":" prefix for directives like ":aka", ":if", ":foreach")']
+    );
+  });
+});
+
+describe('error handling', () => {
+  it('collects syntax errors instead of throwing', () => {
+    const source = parser.parse('<html>', 'test');
+    assert.deepEqual(
+      source.errors.map(e => e.msg),
+      ['Expected </HTML>']
+    );
+  });
+
+  it('propagates unexpected errors rather than reporting them as syntax errors', () => {
+    // parsing aborts via an internal sentinel; a genuine bug must not be
+    // swallowed and turned into a clean parse of a truncated document
+    const src = new parser.Source('<html></html>', 'test');
+    (src as unknown as { s: unknown }).s = null;
+    assert.throws(() => parser.parse('', 'test', src), TypeError);
+  });
+});
+
+it('linestarts (1)', () => {
+  const s = new parser.Source('', 'test');
+  assert.deepEqual(s.linestarts, [0]);
+});
+
+it('linestarts (2)', () => {
+  const s = new parser.Source('foo\nbar', 'test');
+  assert.deepEqual(s.linestarts, [0, 4]);
+});
+
+it('linestarts (3)', () => {
+  const s = new parser.Source('foo\nbar\n', 'test');
+  assert.deepEqual(s.linestarts, [0, 4]);
+});
+
+it('linestarts (4)', () => {
+  const s = new parser.Source('foo\n\nbar\n', 'test');
+  assert.deepEqual(s.linestarts, [0, 4, 5]);
+});
+
+it('pos() (1)', () => {
+  const s = new parser.Source('', 'test');
+  assert.equal(s.lineCount, 1);
+  assert.deepEqual(s.pos(0), { line: 1, column: 0 });
+  assert.deepEqual(s.pos(1), { line: 1, column: 1 });
+  assert.deepEqual(s.pos(100), { line: 1, column: 100 });
+});
+
+it('pos() (2)', () => {
+  const s = new parser.Source('foo\nbar', 'test');
+  assert.equal(s.lineCount, 2);
+  assert.deepEqual(s.pos(0), { line: 1, column: 0 });
+  assert.deepEqual(s.pos(1), { line: 1, column: 1 });
+  assert.deepEqual(s.pos(2), { line: 1, column: 2 });
+  assert.deepEqual(s.pos(3), { line: 1, column: 3 });
+  assert.deepEqual(s.pos(4), { line: 2, column: 0 });
+  assert.deepEqual(s.pos(5), { line: 2, column: 1 });
+  assert.deepEqual(s.pos(6), { line: 2, column: 2 });
+  assert.deepEqual(s.pos(7), { line: 2, column: 3 });
+  assert.deepEqual(s.pos(8), { line: 2, column: 4 });
+});
+
+it('pos() (3)', () => {
+  const s = new parser.Source('foo\nbar\n', 'test');
+  assert.equal(s.lineCount, 2);
+  assert.deepEqual(s.pos(0), { line: 1, column: 0 });
+  assert.deepEqual(s.pos(1), { line: 1, column: 1 });
+  assert.deepEqual(s.pos(2), { line: 1, column: 2 });
+  assert.deepEqual(s.pos(3), { line: 1, column: 3 });
+  assert.deepEqual(s.pos(4), { line: 2, column: 0 });
+  assert.deepEqual(s.pos(5), { line: 2, column: 1 });
+  assert.deepEqual(s.pos(6), { line: 2, column: 2 });
+  assert.deepEqual(s.pos(7), { line: 2, column: 3 });
+  assert.deepEqual(s.pos(8), { line: 2, column: 4 });
+});
+
+it('pos() (4)', () => {
+  const s = new parser.Source('foo\n\nbar\n', 'test');
+  assert.equal(s.lineCount, 3);
+  assert.deepEqual(s.pos(0), { line: 1, column: 0 });
+  assert.deepEqual(s.pos(1), { line: 1, column: 1 });
+  assert.deepEqual(s.pos(2), { line: 1, column: 2 });
+  assert.deepEqual(s.pos(3), { line: 1, column: 3 });
+  assert.deepEqual(s.pos(4), { line: 2, column: 0 });
+  assert.deepEqual(s.pos(5), { line: 3, column: 0 });
+  assert.deepEqual(s.pos(6), { line: 3, column: 1 });
+  assert.deepEqual(s.pos(7), { line: 3, column: 2 });
+  assert.deepEqual(s.pos(8), { line: 3, column: 3 });
+  assert.deepEqual(s.pos(9), { line: 3, column: 4 });
+  assert.deepEqual(s.pos(10), { line: 3, column: 5 });
+});
+
+it('loc() (1)', () => {
+  const s = new parser.Source(
+    /*  1 */ '<html :title="${\'sample\'}"\n' +
+      /*  2 */ '      // attr comment\n' +
+      /*  3 */ '      lang="en">\n' +
+      /*  4 */ '  <head><style>\n' +
+      /*  5 */ '    body {\n' +
+      /*  6 */ '      color: ${"red"};\n' +
+      /*  7 */ '    }\n' +
+      /*  8 */ '  </style></head>\n' +
+      /*  9 */ '  <body>\n' +
+      /* 10 */ '    ${title}\n' +
+      /* 11 */ '  </body>\n' +
+      /* 12 */ '</html>\n',
+    'inline'
+  );
+  const source = parser.parse(s.s, 'inline');
+  const doc = source.doc;
+
+  const root = doc.documentElement!;
+  assert.equal(root.tagName, 'HTML');
+  assert.deepEqual(root.loc, {
+    source: 'inline',
+    start: { line: 1, column: 0 },
+    end: { line: 12, column: 7 },
+    i1: 0,
+    i2: 179,
+  });
+
+  {
+    // root attributes
+    const a1 = (root as ServerElement).attributes[0] as dom.Attribute;
+    assert.equal(a1.name, ':title');
+    assert.deepEqual(a1.loc, {
+      source: 'inline',
+      start: { line: 1, column: 6 },
+      end: { line: 1, column: 26 },
+      i1: 6,
+      i2: 26,
+    });
+    assert.deepEqual(a1.valueLoc, {
+      source: 'inline',
+      start: { line: 1, column: 13 },
+      end: { line: 1, column: 26 },
+      i1: 13,
+      i2: 26,
+    });
+    const exp1 = a1.value as acorn.Expression;
+    assert.deepEqual(JSON.parse(JSON.stringify(exp1.loc)), {
+      source: 'inline',
+      start: { line: 1, column: 16 },
+      end: { line: 1, column: 24 },
+    });
+    const a2 = (root as ServerElement).attributes[1] as dom.Attribute;
+    assert.equal(a2.name, 'lang');
+    assert.deepEqual(a2.loc, {
+      source: 'inline',
+      start: { line: 3, column: 6 },
+      end: { line: 3, column: 15 },
+      i1: 55,
+      i2: 64,
+    });
+  }
+
+  const rootText1 = root.childNodes[0]!;
+  assert.equal(rootText1.nodeType, dom.NodeType.TEXT);
+  assert.deepEqual(rootText1.loc, {
+    source: 'inline',
+    start: { line: 3, column: 16 },
+    end: { line: 4, column: 2 },
+    i1: 65,
+    i2: 68,
+  });
+
+  const head = root.childNodes[1] as dom.Element;
+  assert.equal(head.tagName, 'HEAD');
+  assert.deepEqual(head.loc, {
+    source: 'inline',
+    start: { line: 4, column: 2 },
+    end: { line: 8, column: 17 },
+    i1: 68,
+    i2: 139,
+  });
+
+  {
+    // head content
+    const style = head.childNodes[0] as dom.Element;
+    assert.equal(style.tagName, 'STYLE');
+    assert.deepEqual(style.loc, {
+      source: 'inline',
+      start: { line: 4, column: 8 },
+      end: { line: 8, column: 10 },
+      i1: 74,
+      i2: 132,
+    });
+    // style text is atomic
+    assert.equal(style.childNodes.length, 1);
+    const styleText = style.childNodes[0] as dom.Text;
+    assert.equal(styleText.nodeType, dom.NodeType.TEXT);
+    assert.equal(typeof styleText.textContent, 'object');
+    assert.deepEqual(styleText.loc, {
+      source: 'inline',
+      start: { line: 4, column: 15 },
+      end: { line: 8, column: 2 },
+      i1: 81,
+      i2: 124,
+    });
+  }
+
+  const rootText2 = root.childNodes[2]!;
+  assert.equal(rootText2.nodeType, dom.NodeType.TEXT);
+  assert.deepEqual(rootText2.loc, {
+    source: 'inline',
+    start: { line: 8, column: 17 },
+    end: { line: 9, column: 2 },
+    i1: 139,
+    i2: 142,
+  });
+
+  const body = root.childNodes[3] as dom.Element;
+  assert.equal(body.tagName, 'BODY');
+  assert.deepEqual(body.loc, {
+    source: 'inline',
+    start: { line: 9, column: 2 },
+    end: { line: 11, column: 9 },
+    i1: 142,
+    i2: 171,
+  });
+
+  {
+    // body text
+    const bodyText1 = body.childNodes[0] as dom.Text;
+    assert.equal(bodyText1.nodeType, dom.NodeType.TEXT);
+    assert.equal(typeof bodyText1.textContent, 'string');
+    assert.deepEqual(bodyText1.loc, {
+      source: 'inline',
+      start: { line: 9, column: 8 },
+      end: { line: 10, column: 4 },
+      i1: 148,
+      i2: 153,
+    });
+
+    const bodyText2 = body.childNodes[1] as dom.Text;
+    assert.equal(bodyText2.nodeType, dom.NodeType.TEXT);
+    assert.equal(typeof bodyText2.textContent, 'object');
+    assert.deepEqual(bodyText2.loc, {
+      source: 'inline',
+      start: { line: 10, column: 4 },
+      end: { line: 10, column: 12 },
+      i1: 153,
+      i2: 161,
+    });
+
+    const bodyText3 = body.childNodes[2] as dom.Text;
+    assert.equal(bodyText3.nodeType, dom.NodeType.TEXT);
+    assert.deepEqual(bodyText3.loc, {
+      source: 'inline',
+      start: { line: 10, column: 12 },
+      end: { line: 11, column: 2 },
+      i1: 161,
+      i2: 164,
+    });
+  }
+
+  const rootText3 = root.childNodes[4]!;
+  assert.equal(rootText3.nodeType, dom.NodeType.TEXT);
+  assert.deepEqual(rootText3.loc, {
+    source: 'inline',
+    start: { line: 11, column: 9 },
+    end: { line: 12, column: 0 },
+    i1: 171,
+    i2: 172,
+  });
+});
+
+it('should parse template tags', () => {
+  const s = parser.parse(
+    '<template>content</template>',
+    'test',
+    undefined,
+    false
+  );
+  const root = s.doc.documentElement;
+  assert.instanceOf(root, ServerTemplateElement);
+});

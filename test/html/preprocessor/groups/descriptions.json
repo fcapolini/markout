@@ -1,0 +1,4 @@
+{
+  "001": "a group's children are flattened into its parent",
+  "002": "nested groups are flattened recursively"
+}

@@ -1,0 +1,14 @@
+{
+  "001": "include from a subdirectory",
+  "test002": "basic include",
+  "test002imports": "the same file imported twice is loaded once",
+  "test002includes": "the same file included twice is loaded twice",
+  "test003": "src outside the document root is rejected",
+  "test004": "missing src attribute",
+  "test005": "nested includes",
+  "testIncludedRootAttributesShouldPassToTargetElement": "attributes of an included root element are merged into the target",
+  "testTextualIncludeCSS": "literal include as a style element",
+  "testTextualIncludeJS": "literal include as a script element",
+  "testTextualIncludeText": "literal include as an arbitrary element",
+  "test006recursiveimport": "a fragment's own <:import>, at its top level, still lands its attributes in <head>"
+}

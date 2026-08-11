@@ -103,6 +103,8 @@ NOTE: `<html>`, `<head>`, and `<body>` always have their own scopes and by defau
 
 NOTE: `:class-` prefixes "class attributes", which dynamically add/remove a CSS class name depending on their value (if a value is unspecified as in this example, it's taken as `true`)
 
+NOTE: `<:import>` is only allowed in page `<head>` (or recursively in imported fragments), so imported fragments can rely on their root attributes being available as `head` scope values
+
 ## Replication
 
 ```html

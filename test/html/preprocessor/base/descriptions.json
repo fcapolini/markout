@@ -1,0 +1,19 @@
+{
+  "001": "expressions in text and attributes, spanning lines",
+  "002": "non-ascii attribute value",
+  "003": "non-ascii expression attribute value",
+  "004": "leading blank line",
+  "005": "doctype is dropped",
+  "006": "entities in attribute values are re-escaped",
+  "007": "comment containing markup",
+  "008": "comment before the root element",
+  "009": "expressions in script, code, style and normal content",
+  "010": "line comment before the first attribute",
+  "011": "line comment hiding an attribute",
+  "012": "block comment before the first attribute",
+  "013": "block comment hiding an attribute",
+  "014": "void elements need no close tag",
+  "015": "self-closing elements",
+  "016": "value-less attributes",
+  "017": "unknown directive tags pass through and are dropped on serialization"
+}
