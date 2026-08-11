@@ -15,8 +15,11 @@ rules:
 - `:on-x` binds an event, `:class-x` toggles a CSS class (presence implies
   `true`), always the same way.
 - `:for-each=${expr}` repeats a tag once per element (`null`/`undefined`
-  means zero, any other non-iterable value counts as one), binding each
-  element as `data` unless renamed with `:for-as`.
+  means zero), binding each element as `data` unless renamed with
+  `:for-as`; `:for-data=${expr}` renders a tag once if `expr` isn't
+  `null`/`undefined`, zero times otherwise — two different intents, so two
+  different attributes, rather than one guessing which you meant from the
+  shape of the value.
 - `:did-x`/`:will-x` bind lifecycle delegate methods (e.g. `:did-init`,
   `:will-dispose`), called when a scope reaches/leaves that phase.
 - Scopes nest lexically, like variables: a named scope is visible from any
@@ -119,14 +122,30 @@ NOTE: `<:import>` is only allowed in page `<head>` (or recursively in imported f
 </html>
 ```
 
-NOTE: `:for-` prefixes replication expressions
+NOTE: `:for-` prefixes anything related to replication/optional data, a
+shared namespace for `:for-each`/`:for-as`/`:for-key`/`:for-data`
 
 NOTE: by default the bound value is named `data` (`:for-as` can change that)
 
 NOTE: `:for-each` treats `null`/`undefined` as zero elements (nothing is
-rendered); any other non-iterable value is treated as an array of one, so
-`:for-each=${maybeItem}` doubles as optional single-item rendering, e.g.
-`:for-each=${isLoggedIn ? user : undefined}`
+rendered) and otherwise expects an iterable; it never guesses at a scalar
+meaning "one", since that would make its meaning depend on the incidental
+shape of the value rather than being one fixed rule
+
+## Optional rendering
+
+```html
+<html :user=${undefined}>
+  <body>
+    <p :for-data=${user}>Welcome, ${data.name}</p>
+  </body>
+</html>
+```
+
+NOTE: `:for-data=${expr}` renders its tag once if `expr` is neither `null`
+nor `undefined`, and not at all otherwise — the same `data`/`:for-as`
+binding as `:for-each`, but for an optional single item rather than a
+list, e.g. `:for-data=${isLoggedIn ? user : undefined}`
 
 ## Data-binding
 
