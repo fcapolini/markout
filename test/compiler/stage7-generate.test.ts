@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import * as acorn from 'acorn';
+import { generate } from 'escodegen';
 import { stage4resolve } from '../../src/compiler/stages/stage4-resolve';
 import { stage7generate } from '../../src/compiler/stages/stage7-generate';
 import { Page } from '../../src/compiler/ir/Page';
@@ -24,6 +25,17 @@ function parseExpr(source: string): acorn.Expression {
   });
 }
 
+// looks up an ObjectExpression AST's property value by key name
+function prop(obj: any, name: string): any {
+  return obj.properties.find((p: any) => p.key.name === name)?.value;
+}
+
+// turns a generated FunctionExpression AST node into a real callable, the
+// way an actual loader (outside the compiler) would after reading the code
+function evalExpr(node: any): (...args: any[]) => any {
+  return new Function(`return (${generate(node)});`)();
+}
+
 describe('stage7-generate', () => {
   let doc: ServerDocument;
   let page: Page;
@@ -46,13 +58,15 @@ describe('stage7-generate', () => {
     return v;
   }
 
-  it('should generate props with the root scope id and name', () => {
+  it('should generate propsAST and propsString with the root scope id and name', () => {
     stage4resolve(page);
     stage7generate(page);
 
-    expect(page.props).toBeDefined();
-    expect(page.props!.id).toBe(root.id);
-    expect(page.props!.name).toBe('page');
+    expect(page.propsAST).toBeDefined();
+    expect(prop(page.propsAST, 'id').value).toBe(root.id);
+    expect(prop(page.propsAST, 'name').value).toBe('page');
+    expect(typeof page.propsString).toBe('string');
+    expect(page.propsString).toContain(root.id);
   });
 
   it('should compile a literal value into an exp function returning that constant', () => {
@@ -61,7 +75,8 @@ describe('stage7-generate', () => {
     stage4resolve(page);
     stage7generate(page);
 
-    const exp = page.props!.values!.count.exp!;
+    const count = prop(prop(page.propsAST, 'values'), 'count');
+    const exp = evalExpr(prop(count, 'exp'));
     expect(exp.apply({})).toBe(42);
   });
 
@@ -71,7 +86,8 @@ describe('stage7-generate', () => {
     stage4resolve(page);
     stage7generate(page);
 
-    const exp = page.props!.values!.label.exp!;
+    const label = prop(prop(page.propsAST, 'values'), 'label');
+    const exp = evalExpr(prop(label, 'exp'));
     expect(exp.apply({})).toBe('hello');
   });
 
@@ -81,7 +97,8 @@ describe('stage7-generate', () => {
     stage4resolve(page);
     stage7generate(page);
 
-    const exp = page.props!.values!['class$active'].exp!;
+    const value = prop(prop(page.propsAST, 'values'), 'class$active');
+    const exp = evalExpr(prop(value, 'exp'));
     expect(exp.apply({})).toBe(true);
   });
 
@@ -91,11 +108,12 @@ describe('stage7-generate', () => {
     stage4resolve(page);
     stage7generate(page);
 
-    const exp = page.props!.values!.doubled.exp!;
+    const doubled = prop(prop(page.propsAST, 'values'), 'doubled');
+    const exp = evalExpr(prop(doubled, 'exp'));
     expect(exp.apply({ count: 21 })).toBe(42);
   });
 
-  it('should compile deps into ValueDep functions resolving via $value/$parent.$value', () => {
+  it('should compile deps into functions resolving via $value/$parent.$value', () => {
     addValue(root, 'doubled', parseExpr('this.count * 2'));
     addValue(root, 'fromParent', parseExpr('this.$parent.count * 2'));
 
@@ -116,10 +134,11 @@ describe('stage7-generate', () => {
       },
     };
 
-    const ownDep = page.props!.values!.doubled.deps![0];
+    const values = prop(page.propsAST, 'values');
+    const ownDep = evalExpr(prop(values, 'doubled').properties.find((p: any) => p.key.name === 'deps').value.elements[0]);
     expect(ownDep.apply(fakeScope)).toBe('own-value');
 
-    const parentDep = page.props!.values!.fromParent.deps![0];
+    const parentDep = evalExpr(prop(values, 'fromParent').properties.find((p: any) => p.key.name === 'deps').value.elements[0]);
     expect(parentDep.apply(fakeScope)).toBe('parent-value');
 
     expect(seen).toEqual([
@@ -141,7 +160,7 @@ describe('stage7-generate', () => {
     stage4resolve(page);
     stage7generate(page);
 
-    const keys = Object.keys(page.props!.values!);
+    const keys = prop(page.propsAST, 'values').properties.map((p: any) => p.key.name);
     expect(keys).toContain('event$click');
     expect(keys).toContain('text$0');
     expect(keys).toContain('class$active');
@@ -157,8 +176,11 @@ describe('stage7-generate', () => {
     stage4resolve(page);
     stage7generate(page);
 
-    expect(page.props!.children).toHaveLength(1);
-    expect(page.props!.children![0].id).toBe(child.id);
-    expect(page.props!.children![0].values!.x.exp!.apply({})).toBe(1);
+    const children = prop(page.propsAST, 'children').elements;
+    expect(children).toHaveLength(1);
+    expect(prop(children[0], 'id').value).toBe(child.id);
+    const x = prop(prop(children[0], 'values'), 'x');
+    expect(evalExpr(prop(x, 'exp')).apply({})).toBe(1);
   });
 });
+
