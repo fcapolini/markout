@@ -1,9 +1,7 @@
-import { Application } from "express";
 import { execSync } from "child_process";
 import path from 'path';
-import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { Window } from "happy-dom";
+import { Browser } from "happy-dom";
 import { Server } from "../../src/server";
 import fs from "fs";
 import os from "os";
@@ -11,7 +9,6 @@ import os from "os";
 describe("Browser execution (happy-dom)", () => {
   let tempDir: string;
   let server: Server;
-  let app: Application;
 
   beforeAll(async () => {
     // guarantee a fresh dist/markout-runtime.js regardless of local state
@@ -29,7 +26,6 @@ describe("Browser execution (happy-dom)", () => {
 
     server = new Server({ docroot: tempDir });
     await server.start();
-    app = server.app!;
   });
 
   afterAll(async () => {
@@ -40,28 +36,26 @@ describe("Browser execution (happy-dom)", () => {
   });
 
   it('should hydrate and react to a real click, entirely inside a happy-dom window', async () => {
-    const page = await request(app).get('/counter.html');
-    const runtime = await request(app).get('/.markout.js');
-    expect(runtime.text.length).toBeGreaterThan(0);
+    // navigating for real exercises the actual <script async> loading and
+    // execution pipeline, rather than manually eval-ing extracted source
+    const browser = new Browser({ settings: { enableJavaScriptEvaluation: true } });
+    try {
+      const page = browser.newPage();
+      await page.goto(`http://127.0.0.1:${server.port}/counter.html`);
+      await page.waitUntilComplete();
 
-    const propsScript = page.text.match(/(window\.__MARKOUT_PROPS = [\s\S]*?);<\/script>/)![1];
+      const document = page.mainFrame.document;
+      const button = document.querySelector('button')!;
+      expect(button.textContent?.replace(/\s+/g, ' ').trim()).toBe('Clicked 0 times');
 
-    const window = new Window();
-    window.document.write(page.text);
+      button.dispatchEvent(new page.mainFrame.window.MouseEvent('click'));
+      expect(button.textContent?.replace(/\s+/g, ' ').trim()).toBe('Clicked 1 times');
 
-    // execute the two bootstrap scripts exactly as a browser would, just
-    // without relying on happy-dom's own <script> auto-execution/fetching
-    (window as any).eval(propsScript);
-    (window as any).eval(runtime.text);
-
-    const button = window.document.querySelector('button')!;
-    expect(button.textContent?.replace(/\s+/g, ' ').trim()).toBe('Clicked 0 times');
-
-    button.dispatchEvent(new window.MouseEvent('click'));
-    expect(button.textContent?.replace(/\s+/g, ' ').trim()).toBe('Clicked 1 times');
-
-    button.dispatchEvent(new window.MouseEvent('click'));
-    button.dispatchEvent(new window.MouseEvent('click'));
-    expect(button.textContent?.replace(/\s+/g, ' ').trim()).toBe('Clicked 3 times');
+      button.dispatchEvent(new page.mainFrame.window.MouseEvent('click'));
+      button.dispatchEvent(new page.mainFrame.window.MouseEvent('click'));
+      expect(button.textContent?.replace(/\s+/g, ' ').trim()).toBe('Clicked 3 times');
+    } finally {
+      await browser.close();
+    }
   });
 });
