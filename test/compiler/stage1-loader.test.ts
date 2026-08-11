@@ -1,0 +1,384 @@
+import { NodeType } from '../../src/html/dom';
+import { Source, parse } from '../../src/html/parser';
+import {
+    ServerDocument,
+    ServerElement,
+    SourceLocation
+} from '../../src/html/server-dom';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { Page } from '../../src/compiler/ir/Page';
+import { stage1load } from '../../src/compiler/stages/stage1-load';
+
+const LOC: SourceLocation = {
+  start: { line: 0, column: 0 },
+  end: { line: 0, column: 0 },
+  i1: 0,
+  i2: 0,
+};
+
+describe('stage1-loader', () => {
+  let doc: ServerDocument;
+
+  beforeEach(() => {
+    doc = new ServerDocument('test');
+  });
+
+  // Helper to get the loaded scope (child of global)
+  function getLoadedScope(context: Page) {
+    return context.global.children[0];
+  }
+
+  function getChildScope(scope: Page['global'], index = 0) {
+    return scope.children[index];
+  }
+
+  function runLoader(root: ServerElement): Page {
+    const source = new Source('', 'test');
+    source.doc.appendChild(root);
+    return stage1load(new Page(source))!;
+  }
+
+  function runLoaderFromMarkup(markup: string): Page {
+    return stage1load(new Page(parse(markup, 'test')))!;
+  }
+
+  describe('loader function', () => {
+    it('should create a context from a ServerElement', () => {
+      const root = new ServerElement(doc, 'html', LOC);
+      const context = runLoader(root);
+
+      expect(context).toBeInstanceOf(Page);
+      expect(context.global).toBeDefined();
+      expect(context.errors).toStrictEqual([]);
+    });
+
+    it('should set default scope name to "page"', () => {
+      const root = new ServerElement(doc, 'html', LOC);
+      const context = runLoader(root);
+
+      const loadedScope = getLoadedScope(context);
+      expect(loadedScope.name).toBe('page');
+    });
+
+    it('should store the element in the loaded scope', () => {
+      const root = new ServerElement(doc, 'html', LOC);
+      const context = runLoader(root);
+
+      const loadedScope = getLoadedScope(context);
+      expect(loadedScope.e).toBe(root);
+    });
+
+    it('should create a global scope with no parent', () => {
+      const root = new ServerElement(doc, 'html', LOC);
+      const context = runLoader(root);
+
+      expect(context.global.parent).toBeUndefined();
+    });
+
+    it('should create the loaded scope as a child of global', () => {
+      const root = new ServerElement(doc, 'html', LOC);
+      const context = runLoader(root);
+
+      const loadedScope = getLoadedScope(context);
+      expect(loadedScope.parent).toBe(context.global);
+    });
+  });
+
+  describe(':aka attribute handling', () => {
+    it('should ignore other special attributes', () => {
+      const root = new ServerElement(doc, 'html', LOC);
+      root.setAttribute(':other', 'value');
+      root.setAttribute(':foo', 'bar');
+      const context = runLoader(root);
+
+      const loadedScope = getLoadedScope(context);
+      expect(loadedScope.name).toBe('page');
+      expect(context.errors).toStrictEqual([]);
+    });
+
+    it('should ignore regular attributes without colon prefix', () => {
+      const root = new ServerElement(doc, 'html', LOC);
+      root.setAttribute('class', 'container');
+      root.setAttribute('id', 'main');
+      const context = runLoader(root);
+
+      const loadedScope = getLoadedScope(context);
+      expect(loadedScope.name).toBe('page');
+      expect(context.errors).toStrictEqual([]);
+    });
+  });
+
+  describe('reserved scope names', () => {
+    it('should keep html scope name reserved', () => {
+      const root = new ServerElement(doc, 'html', LOC);
+      root.setAttribute(':aka', 'customPage');
+      const context = runLoader(root);
+
+      const loadedScope = getLoadedScope(context);
+      expect(loadedScope.name).toBe('page');
+      expect(context.errors).toHaveLength(1);
+      expect(context.errors[0].msg).toBe('Cannot redefine scope name: "page"');
+    });
+
+    it('should keep head scope name reserved', () => {
+      const root = new ServerElement(doc, 'head', LOC);
+      root.setAttribute(':aka', 'customHead');
+      const context = runLoader(root);
+
+      const loadedScope = getLoadedScope(context);
+      expect(loadedScope.name).toBe('head');
+      expect(context.errors).toHaveLength(1);
+      expect(context.errors[0].msg).toBe('Cannot redefine scope name: "head"');
+    });
+
+    it('should keep body scope name reserved', () => {
+      const root = new ServerElement(doc, 'body', LOC);
+      root.setAttribute(':aka', 'customBody');
+      const context = runLoader(root);
+
+      const loadedScope = getLoadedScope(context);
+      expect(loadedScope.name).toBe('body');
+      expect(context.errors).toHaveLength(1);
+      expect(context.errors[0].msg).toBe('Cannot redefine scope name: "body"');
+    });
+  });
+
+  describe('scope creation', () => {
+    it('should initialize loaded scope with empty children array', () => {
+      const root = new ServerElement(doc, 'html', LOC);
+      const context = runLoader(root);
+
+      const loadedScope = getLoadedScope(context);
+      expect(loadedScope.children).toStrictEqual([]);
+    });
+
+    it('should initialize loaded scope with empty values map', () => {
+      const root = new ServerElement(doc, 'html', LOC);
+      const context = runLoader(root);
+
+      const loadedScope = getLoadedScope(context);
+      expect(loadedScope.values.size).toBe(0);
+    });
+
+    it('should create context with empty defines map', () => {
+      const root = new ServerElement(doc, 'html', LOC);
+      const context = runLoader(root);
+
+      expect(context.defines.size).toBe(0);
+    });
+
+    it('should create context with empty errors array on success', () => {
+      const root = new ServerElement(doc, 'html', LOC);
+      const context = runLoader(root);
+
+      expect(context.errors).toStrictEqual([]);
+    });
+
+    it('should create scopes recursively for html, head, and body', () => {
+      const context = runLoaderFromMarkup(
+        '<html><head></head><body><section></section></body></html>'
+      );
+
+      const htmlScope = getLoadedScope(context);
+      const headScope = getChildScope(htmlScope, 0);
+      const bodyScope = getChildScope(htmlScope, 1);
+
+      expect(htmlScope.name).toBe('page');
+      expect(htmlScope.children).toHaveLength(2);
+      expect(headScope.e?.tagName).toBe('HEAD');
+      expect(headScope.name).toBe('head');
+      expect(bodyScope.e?.tagName).toBe('BODY');
+      expect(bodyScope.name).toBe('body');
+      expect(bodyScope.children).toHaveLength(0);
+    });
+
+    it('should create scopes for descendants with special attributes', () => {
+      const context = runLoaderFromMarkup(
+        '<html><body><section><div :x="a"><span></span></div></section></body></html>'
+      );
+
+      const htmlScope = getLoadedScope(context);
+      const bodyScope = getChildScope(htmlScope, 1);
+      const divScope = getChildScope(bodyScope, 0);
+
+      expect(bodyScope.e?.tagName).toBe('BODY');
+      expect(divScope.e?.tagName).toBe('DIV');
+      expect(divScope.parent).toBe(bodyScope);
+      expect(divScope.e?.parentElement?.tagName).toBe('SECTION');
+      expect(divScope.values.size).toBe(1);
+      expect(divScope.values.has('x')).toBe(true);
+      expect(divScope.children).toHaveLength(0);
+    });
+
+  });
+
+  describe('logic value loading', () => {
+    it('should load directive values for logic attributes', () => {
+      const context = runLoaderFromMarkup(
+        "<html :x=\"a\" :y=\"some ${'text'}\" :z=${0}></html>"
+      );
+      const loadedScope = getLoadedScope(context);
+
+      expect(loadedScope.values.size).toBe(3);
+      expect(loadedScope.values.has('x')).toBe(true);
+      expect(loadedScope.values.has('y')).toBe(true);
+      expect(loadedScope.values.has('z')).toBe(true);
+
+      const x = loadedScope.values.get('x');
+      const y = loadedScope.values.get('y');
+      const z = loadedScope.values.get('z');
+
+      expect(x?.name).toBe('x');
+      expect(x?.value).toBe('a');
+
+      expect(y?.name).toBe('y');
+      expect(y?.value).toMatchObject({ type: 'TemplateLiteral' });
+
+      expect(z?.name).toBe('z');
+      expect(z?.value).toMatchObject({ type: 'Literal', value: 0 });
+    });
+
+    it('should not load :aka, :class-*, :style-*, or :on-* as logic values', () => {
+      const context = runLoaderFromMarkup(
+        '<html :aka="pageName" :class-active="yes" :style-color="red" :on-click="fn" :x="ok"></html>'
+      );
+      const loadedScope = getLoadedScope(context);
+
+      expect(loadedScope.name).toBe('page');
+      expect(loadedScope.values.size).toBe(4);
+      expect(loadedScope.values.has('x')).toBe(true);
+      expect(loadedScope.values.has('class$active')).toBe(true);
+      expect(loadedScope.values.has('style$color')).toBe(true);
+      expect(loadedScope.values.has('on$click')).toBe(true);
+      expect(loadedScope.values.has('aka')).toBe(false);
+    });
+
+    it('should remove special attributes from the root element DOM', () => {
+      const context = runLoaderFromMarkup(
+        '<html :aka="pageName" :x="ok" lang="en"></html>'
+      );
+      const root = context.source.doc.documentElement!;
+
+      expect(root.attributes.map(a => a.name)).toStrictEqual(['lang']);
+    });
+
+    it('should remove special attributes from nested element DOM', () => {
+      const context = runLoaderFromMarkup(
+        '<html><body><div id="x" :x="v" :style-color="red"></div></body></html>'
+      );
+      const body = context.source.doc.body!;
+      const div = body.childNodes[0] as ServerElement;
+
+      expect(div.attributes.map(a => a.name)).toStrictEqual(['id']);
+    });
+  });
+
+  describe('text value loading', () => {
+    it('should load expression text into scope text values', () => {
+      const context = runLoaderFromMarkup('<html><body>${name}</body></html>');
+      const htmlScope = getLoadedScope(context);
+      const bodyScope = getChildScope(htmlScope, 1);
+
+      expect(bodyScope.values.has('t$0')).toBe(false);
+      expect(bodyScope.textValues.has('t$0')).toBe(true);
+      const textValue = bodyScope.textValues.get('t$0');
+      expect(textValue?.name).toBe('t$0');
+      expect(textValue?.node.nodeType).toBe(NodeType.TEXT);
+      expect((textValue?.node as any).textContent).toMatchObject({
+        type: 'Identifier',
+        name: 'name',
+      });
+    });
+
+    it('should insert html markers around expression text nodes', () => {
+      const context = runLoaderFromMarkup('<html><body>${name}</body></html>');
+      const body = context.source.doc.body!;
+      const children = body.childNodes;
+
+      const markerComments = children
+        .filter(node => node.nodeType === NodeType.COMMENT)
+        .map(node => (node as any).textContent);
+
+      expect(markerComments).toContain('t$0');
+      expect(markerComments).toContain('/');
+      expect(
+        children.some(node => {
+          if (node.nodeType !== NodeType.TEXT) return false;
+          const textContent = (node as any).textContent;
+          return typeof textContent === 'object' && textContent?.type === 'Identifier';
+        })
+      ).toBe(true);
+    });
+
+    it('should add nested non-scope text values to the closest ancestor scope', () => {
+      const context = runLoaderFromMarkup(
+        '<html><body><section>${name}</section></body></html>'
+      );
+      const htmlScope = getLoadedScope(context);
+      const bodyScope = getChildScope(htmlScope, 1);
+      const section = context.source.doc.body!.childNodes[0] as ServerElement;
+
+      expect(bodyScope.textValues.has('t$0')).toBe(true);
+      const textValue = bodyScope.textValues.get('t$0');
+      expect(textValue?.node.parentElement).toBe(section);
+
+      const markerComments = section.childNodes
+        .filter(node => node.nodeType === NodeType.COMMENT)
+        .map(node => (node as any).textContent);
+      expect(markerComments).toContain('t$0');
+      expect(markerComments).toContain('/');
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle element with no attributes', () => {
+      const root = new ServerElement(doc, 'html', LOC);
+      const context = runLoader(root);
+
+      const loadedScope = getLoadedScope(context);
+      expect(loadedScope.name).toBe('page');
+      expect(context.errors).toStrictEqual([]);
+    });
+
+    it('should preserve element reference in loaded scope', () => {
+      const root = new ServerElement(doc, 'div', LOC);
+      const context = runLoader(root);
+
+      const loadedScope = getLoadedScope(context);
+      expect(loadedScope.e).toBe(root);
+    });
+
+    it('should work with various HTML elements', () => {
+      const root = new ServerElement(doc, 'div', LOC);
+      const context = runLoader(root);
+
+      const loadedScope = getLoadedScope(context);
+      expect(loadedScope.name).toBe('page');
+    });
+
+    it('should work with custom elements', () => {
+      const root = new ServerElement(doc, 'custom-element', LOC);
+      const context = runLoader(root);
+
+      const loadedScope = getLoadedScope(context);
+      expect(loadedScope.name).toBe('page');
+    });
+
+    it('should add child scope to global.children', () => {
+      const root = new ServerElement(doc, 'html', LOC);
+      const context = runLoader(root);
+
+      expect(context.global.children.length).toBe(1);
+      expect(context.global.children[0]).toBe(getLoadedScope(context));
+    });
+
+    it('should preserve context errors across multiple operations', () => {
+      const root = new ServerElement(doc, 'div', LOC);
+      const context = runLoader(root);
+
+      expect(context.errors).toStrictEqual([]);
+      const loadedScope = getLoadedScope(context);
+      expect(loadedScope.name).toBe('page');
+    });
+  });
+});
