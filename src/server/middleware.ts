@@ -7,6 +7,20 @@ import { DEFAULT_RUNTIME_SRC } from "../compiler/stages/stage7-generate";
 
 export const CLIENT_CODE_REQ = DEFAULT_RUNTIME_SRC;
 
+// __dirname is src/server (dev, via tsx) or dist/server (built); either way
+// this is exactly two levels below the project root, where esbuild puts the
+// bundle (see scripts/build-runtime.mjs)
+const RUNTIME_BUNDLE_PATH = path.join(__dirname, '../../dist/markout-runtime.js');
+
+function loadClientCode(): string {
+  try {
+    return fs.readFileSync(RUNTIME_BUNDLE_PATH, 'utf8');
+  } catch {
+    console.warn(`[markout] runtime bundle not found at "${RUNTIME_BUNDLE_PATH}" -- run "npm run build:runtime"`);
+    return '';
+  }
+}
+
 export interface MarkoutProps {
   docroot: string;
 }
@@ -14,7 +28,7 @@ export interface MarkoutProps {
 export function markout(props: MarkoutProps) {
   const docroot = props.docroot || process.cwd();
   const compiler = new Compiler({ docroot });
-  const clientCode = '';
+  const clientCode = loadClientCode();
 
   return async function (req: Request, res: Response, next: NextFunction) {
     const i = req.path.lastIndexOf('.');
