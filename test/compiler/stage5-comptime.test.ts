@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import * as acorn from 'acorn';
 import { Page } from '../../src/compiler/ir/Page';
 import { Scope } from '../../src/compiler/ir/Scope';
 import { Value } from '../../src/compiler/ir/Value';
@@ -15,6 +16,16 @@ const LOC = {
   i2: 0,
 };
 
+// the html parser only produces an AST for a `:`-attribute value when it
+// contains `${...}`; simulate that here for values meant to be qualified.
+function parseExpr(source: string): acorn.Expression {
+  return acorn.parseExpressionAt(source, 0, {
+    ecmaVersion: 'latest',
+    sourceType: 'script',
+    locations: true,
+  });
+}
+
 describe('stage5-comptime', () => {
   let doc: ServerDocument;
   let page: Page;
@@ -30,7 +41,7 @@ describe('stage5-comptime', () => {
     const scope = new Scope(page, page.global);
 
     const exprAttr = new ServerAttribute(doc, null as any, ':class-active', null, LOC as any);
-    exprAttr.value = 'otherValue + 1';
+    exprAttr.value = parseExpr('otherValue + 1');
     exprAttr.valueLoc = LOC as any;
     scope.values.set('class$active', new Value('class$active', exprAttr, scope));
 

@@ -1,6 +1,6 @@
 import * as acorn from 'acorn';
 import * as estraverse from 'estraverse';
-import type { AssignmentPattern, Identifier, Node, Pattern } from 'estree';
+import type { Identifier, Node, Pattern } from 'estree';
 import { NodeType } from '../../html/dom';
 import { ServerAttribute, ServerText } from '../../html/server-dom';
 import type { Page } from '../ir/Page';
@@ -30,6 +30,9 @@ function qualifyScope(scope: Scope) {
   for (const [name, value] of scope.values) {
     qualifyValue(name, value);
   }
+  for (const [name, value] of scope.textValues) {
+    qualifyValue(name, value);
+  }
 
   for (const child of scope.children) {
     qualifyScope(child);
@@ -37,29 +40,18 @@ function qualifyScope(scope: Scope) {
 }
 
 function qualifyValue(name: string, value: Value) {
-  if (value.node.nodeType !== NodeType.ATTRIBUTE) {
-    return;
-  }
-
   const expression = value.value;
-  if (!expression || typeof expression !== 'string') {
+  // a plain (non-`${}`) string is a static literal, not an expression to
+  // qualify; only already-parsed `${...}` expressions need qualifying
+  if (!expression || typeof expression === 'string') {
     return;
   }
 
-  try {
-    const ast = acorn.parseExpressionAt(expression, 0, {
-      ecmaVersion: 'latest',
-      sourceType: 'script',
-      locations: true,
-    });
-    const qualified = qualifyExpression(name, ast as unknown as Node);
-    if (value.node.nodeType === NodeType.ATTRIBUTE) {
-      (value.node as ServerAttribute).value = qualified as unknown as string;
-    } else if (value.node.nodeType === NodeType.TEXT) {
-      (value.node as ServerText).textContent = qualified as unknown as string;
-    }
-  } catch {
-    // Keep the original expression if it cannot be parsed.
+  const qualified = qualifyExpression(name, expression as unknown as Node);
+  if (value.node.nodeType === NodeType.ATTRIBUTE) {
+    (value.node as ServerAttribute).value = qualified as unknown as acorn.Expression;
+  } else if (value.node.nodeType === NodeType.TEXT) {
+    (value.node as ServerText).textContent = qualified as unknown as acorn.Expression;
   }
 }
 
@@ -172,21 +164,64 @@ function isLocalAccess(id: Node, stack: Node[]) {
         return true;
       }
     }
+    if (parent.type === 'ForOfStatement' || parent.type === 'ForInStatement') {
+      if (
+        parent.left.type === 'VariableDeclaration' &&
+        isDeclaredByPatterns(identifier.name, parent.left.declarations.map(d => d.id as unknown as Node))
+      ) {
+        return true;
+      }
+    }
+    if (parent.type === 'ForStatement') {
+      if (
+        parent.init?.type === 'VariableDeclaration' &&
+        isDeclaredByPatterns(identifier.name, parent.init.declarations.map(d => d.id as unknown as Node))
+      ) {
+        return true;
+      }
+    }
   }
   return false;
 }
 
 function isFunctionParam(name: string, params: Pattern[]) {
-  return params.some(param => {
-    if (param.type === 'Identifier') {
-      return param.name === name;
-    }
-    if (param.type === 'AssignmentPattern') {
-      const assignment = param as AssignmentPattern;
-      return assignment.left.type === 'Identifier' && assignment.left.name === name;
-    }
-    return false;
-  });
+  return isDeclaredByPatterns(name, params as unknown as Node[]);
+}
+
+function isDeclaredByPatterns(name: string, patterns: Node[]) {
+  const names = new Set<string>();
+  patterns.forEach(pattern => collectPatternNames(pattern, names));
+  return names.has(name);
+}
+
+function collectPatternNames(pattern: Node | null | undefined, names: Set<string>) {
+  if (!pattern) {
+    return;
+  }
+  switch (pattern.type) {
+    case 'Identifier':
+      names.add(pattern.name);
+      break;
+    case 'ObjectPattern':
+      pattern.properties.forEach(prop => {
+        collectPatternNames(
+          (prop.type === 'RestElement' ? prop.argument : prop.value) as unknown as Node,
+          names
+        );
+      });
+      break;
+    case 'ArrayPattern':
+      pattern.elements.forEach(el => collectPatternNames(el as unknown as Node, names));
+      break;
+    case 'AssignmentPattern':
+      collectPatternNames(pattern.left as unknown as Node, names);
+      break;
+    case 'RestElement':
+      collectPatternNames(pattern.argument as unknown as Node, names);
+      break;
+    default:
+      break;
+  }
 }
 
 function inFunctionBody(stack: Node[]) {
@@ -201,12 +236,13 @@ function inFunctionBody(stack: Node[]) {
 }
 
 function isDeclaredInBlock(name: string, body: Node[]) {
-  return body.some(statement => {
-    if (statement.type !== 'VariableDeclaration') {
-      return false;
+  const names = new Set<string>();
+  for (const statement of body) {
+    if (statement.type === 'VariableDeclaration') {
+      statement.declarations.forEach(d => collectPatternNames(d.id as unknown as Node, names));
+    } else if (statement.type === 'FunctionDeclaration' && statement.id) {
+      names.add(statement.id.name);
     }
-    return statement.declarations.some(declaration => {
-      return declaration.id.type === 'Identifier' && declaration.id.name === name;
-    });
-  });
+  }
+  return names.has(name);
 }

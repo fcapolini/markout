@@ -15,9 +15,17 @@ import {
   CLASS_VALUE_ATTR_PREFIX,
   STYLE_VALUE_ATTR_PREFIX,
   EVENT_VALUE_ATTR_PREFIX,
+  DID_VALUE_ATTR_PREFIX,
+  WILL_VALUE_ATTR_PREFIX,
   CLASS_VALUE_PREFIX,
   STYLE_VALUE_PREFIX,
   EVENT_VALUE_PREFIX,
+  DID_VALUE_PREFIX,
+  WILL_VALUE_PREFIX,
+  FOR_EACH_ATTR,
+  FOR_AS_ATTR,
+  FOR_EACH_VALUE,
+  FOR_AS_VALUE,
 } from '../ir/Page';
 import { NodeType } from '../../html/dom';
 
@@ -100,6 +108,14 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
       page.defines.set(scope.name, scope);
       continue;
     }
+    if (name === FOR_EACH_ATTR) {
+      scope.values.set(FOR_EACH_VALUE, new Value(FOR_EACH_VALUE, attr, scope, page.createValueId()));
+      continue;
+    }
+    if (name === FOR_AS_ATTR) {
+      scope.values.set(FOR_AS_VALUE, new Value(FOR_AS_VALUE, attr, scope, page.createValueId()));
+      continue;
+    }
     let prefix = '';
     let compiledPrefix = '';
     if (name.startsWith(CLASS_VALUE_ATTR_PREFIX)) {
@@ -111,6 +127,12 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     } else if (name.startsWith(EVENT_VALUE_ATTR_PREFIX)) {
       prefix = EVENT_VALUE_ATTR_PREFIX;
       compiledPrefix = EVENT_VALUE_PREFIX;
+    } else if (name.startsWith(DID_VALUE_ATTR_PREFIX)) {
+      prefix = DID_VALUE_ATTR_PREFIX;
+      compiledPrefix = DID_VALUE_PREFIX;
+    } else if (name.startsWith(WILL_VALUE_ATTR_PREFIX)) {
+      prefix = WILL_VALUE_ATTR_PREFIX;
+      compiledPrefix = WILL_VALUE_PREFIX;
     }
     const loc = {
       ...attr.loc,

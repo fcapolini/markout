@@ -7,11 +7,21 @@ export const SCOPE_NAME_ATTR = 'aka';
 export const CLASS_VALUE_ATTR_PREFIX = 'class-';
 export const STYLE_VALUE_ATTR_PREFIX = 'style-';
 export const EVENT_VALUE_ATTR_PREFIX = 'on-';
+export const DID_VALUE_ATTR_PREFIX = 'did-';
+export const WILL_VALUE_ATTR_PREFIX = 'will-';
 export const TEXT_VALUE_PREFIX = 't$';
 // compiled form of the ATTR prefixes above, as stored in Scope.values keys
 export const CLASS_VALUE_PREFIX = 'class$';
 export const STYLE_VALUE_PREFIX = 'style$';
 export const EVENT_VALUE_PREFIX = 'on$';
+export const DID_VALUE_PREFIX = 'did$';
+export const WILL_VALUE_PREFIX = 'will$';
+// `:for-each`/`:for-as` are fixed (non-prefixed) attribute names, not
+// open-ended `prefix-name` families like class-/style-/on-/did-/will-
+export const FOR_EACH_ATTR = 'for-each';
+export const FOR_AS_ATTR = 'for-as';
+export const FOR_EACH_VALUE = 'for$each';
+export const FOR_AS_VALUE = 'for$as';
 
 export class Page {
   source: Source;

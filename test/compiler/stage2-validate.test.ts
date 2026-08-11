@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest';
+import * as acorn from 'acorn';
 import { stage2validate } from '../../src/compiler/stages/stage2-validate';
 import { Page, TEXT_VALUE_PREFIX } from '../../src/compiler/ir/Page';
 import { Scope } from '../../src/compiler/ir/Scope';
@@ -12,6 +13,16 @@ const LOC: SourceLocation = {
   i1: 0,
   i2: 0,
 };
+
+// the html parser only produces an AST for a `:`-attribute value when it
+// contains `${...}`; simulate that here for values meant to be qualified.
+function parseExpr(source: string): acorn.Expression {
+  return acorn.parseExpressionAt(source, 0, {
+    ecmaVersion: 'latest',
+    sourceType: 'script',
+    locations: true,
+  });
+}
 
 describe('stage2-validate', () => {
   let doc: ServerDocument;
@@ -28,7 +39,7 @@ describe('stage2-validate', () => {
     it('should accept arrow function event handlers', () => {
       const scope = page.global;
       const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
-      attr.value = '() => console.log("clicked")';
+      attr.value = parseExpr('() => console.log("clicked")');
       attr.valueLoc = LOC;
 
       const value = new Value('on-click', attr, scope);
@@ -41,7 +52,7 @@ describe('stage2-validate', () => {
     it('should accept arrow functions with parameters', () => {
       const scope = page.global;
       const attr = new ServerAttribute(doc, null as any, ':on-change', null, LOC);
-      attr.value = '(e) => setName(e.target.value)';
+      attr.value = parseExpr('(e) => setName(e.target.value)');
       attr.valueLoc = LOC;
 
       const value = new Value('on-change', attr, scope);
@@ -54,7 +65,7 @@ describe('stage2-validate', () => {
     it('should accept arrow functions with multiple parameters', () => {
       const scope = page.global;
       const attr = new ServerAttribute(doc, null as any, ':on-custom', null, LOC);
-      attr.value = '(a, b, c) => a + b + c';
+      attr.value = parseExpr('(a, b, c) => a + b + c');
       attr.valueLoc = LOC;
 
       const value = new Value('on-custom', attr, scope);
@@ -67,7 +78,7 @@ describe('stage2-validate', () => {
     it('should accept arrow functions with block body', () => {
       const scope = page.global;
       const attr = new ServerAttribute(doc, null as any, ':on-submit', null, LOC);
-      attr.value = '() => { console.log("submitted"); return false; }';
+      attr.value = parseExpr('() => { console.log("submitted"); return false; }');
       attr.valueLoc = LOC;
 
       const value = new Value('on-submit', attr, scope);
@@ -80,7 +91,7 @@ describe('stage2-validate', () => {
     it('should reject function declarations in event handlers', () => {
       const scope = page.global;
       const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
-      attr.value = 'function handleClick() { }';
+      attr.value = parseExpr('function handleClick() { }');
       attr.valueLoc = LOC;
 
       const value = new Value('on-click', attr, scope);
@@ -94,7 +105,7 @@ describe('stage2-validate', () => {
     it('should reject function expressions in event handlers', () => {
       const scope = page.global;
       const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
-      attr.value = 'function (e) { console.log(e); }';
+      attr.value = parseExpr('(function (e) { console.log(e); })');
       attr.valueLoc = LOC;
 
       const value = new Value('on-click', attr, scope);
@@ -108,7 +119,7 @@ describe('stage2-validate', () => {
     it('should reject plain identifiers in event handlers', () => {
       const scope = page.global;
       const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
-      attr.value = 'handleClick';
+      attr.value = parseExpr('handleClick');
       attr.valueLoc = LOC;
 
       const value = new Value('on-click', attr, scope);
@@ -119,10 +130,10 @@ describe('stage2-validate', () => {
       expect(result.errors[0].msg).toContain('must be an arrow function');
     });
 
-    it('should reject invalid expressions in event handlers', () => {
+    it('should reject a classic function nested inside an otherwise-valid arrow handler', () => {
       const scope = page.global;
       const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
-      attr.value = '() => {';  // Incomplete arrow function
+      attr.value = parseExpr('() => { function helper() { return 1; } return helper(); }');
       attr.valueLoc = LOC;
 
       const value = new Value('on-click', attr, scope);
@@ -130,13 +141,26 @@ describe('stage2-validate', () => {
 
       const result = stage2validate(page);
       expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors[0].msg).toContain('Invalid expression');
+      expect(result.errors[0].msg).toContain('must be arrow functions');
+    });
+
+    it('should not validate event handlers given as a plain literal string (no interpolation)', () => {
+      const scope = page.global;
+      const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
+      attr.value = 'handleClick';
+      attr.valueLoc = LOC;
+
+      const value = new Value('on-click', attr, scope);
+      scope.values.set('on-click', value);
+
+      const result = stage2validate(page);
+      expect(result.errors).toStrictEqual([]);
     });
 
     it('should allow $ in event handler expressions (identifier access)', () => {
       const scope = page.global;
       const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
-      attr.value = '() => $state.count++';
+      attr.value = parseExpr('() => $state.count++');
       attr.valueLoc = LOC;
 
       const value = new Value('on-click', attr, scope);
@@ -149,7 +173,7 @@ describe('stage2-validate', () => {
     it('should allow multiple $ references in event handlers', () => {
       const scope = page.global;
       const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
-      attr.value = '() => { $a = 1; $b = 2; return $a + $b; }';
+      attr.value = parseExpr('() => { $a = 1; $b = 2; return $a + $b; }');
       attr.valueLoc = LOC;
 
       const value = new Value('on-click', attr, scope);
@@ -159,6 +183,7 @@ describe('stage2-validate', () => {
       expect(result.errors).toStrictEqual([]);
     });
   });
+
 
   describe('identifier declaration validation', () => {
     it('should accept value names without $', () => {
@@ -251,19 +276,19 @@ describe('stage2-validate', () => {
 
       // Add values to each scope
       const attr1 = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
-      attr1.value = '() => {}';
+      attr1.value = parseExpr('() => {}');
       attr1.valueLoc = LOC;
       const value1 = new Value('on-click', attr1, globalScope);
       globalScope.values.set('on-click', value1);
 
       const attr2 = new ServerAttribute(doc, null as any, ':on-change', null, LOC);
-      attr2.value = '(e) => e';
+      attr2.value = parseExpr('(e) => e');
       attr2.valueLoc = LOC;
       const value2 = new Value('on-change', attr2, childScope);
       childScope.values.set('on-change', value2);
 
       const attr3 = new ServerAttribute(doc, null as any, ':on-submit', null, LOC);
-      attr3.value = '() => true';
+      attr3.value = parseExpr('() => true');
       attr3.valueLoc = LOC;
       const value3 = new Value('on-submit', attr3, grandchildScope);
       grandchildScope.values.set('on-submit', value3);
@@ -366,7 +391,7 @@ describe('stage2-validate', () => {
     it('should validate arrow functions with nested function calls', () => {
       const scope = page.global;
       const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
-      attr.value = '() => calculateTotal(value, multiplier)';
+      attr.value = parseExpr('() => calculateTotal(value, multiplier)');
       attr.valueLoc = LOC;
 
       const value = new Value('on-click', attr, scope);
@@ -379,7 +404,7 @@ describe('stage2-validate', () => {
     it('should validate arrow functions with object access', () => {
       const scope = page.global;
       const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
-      attr.value = '() => obj.prop.nested';
+      attr.value = parseExpr('() => obj.prop.nested');
       attr.valueLoc = LOC;
 
       const value = new Value('on-click', attr, scope);
@@ -392,7 +417,7 @@ describe('stage2-validate', () => {
     it('should validate arrow functions with array access', () => {
       const scope = page.global;
       const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
-      attr.value = '() => arr[0]';
+      attr.value = parseExpr('() => arr[0]');
       attr.valueLoc = LOC;
 
       const value = new Value('on-click', attr, scope);
@@ -405,7 +430,7 @@ describe('stage2-validate', () => {
     it('should validate arrow functions with ternary expressions', () => {
       const scope = page.global;
       const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
-      attr.value = '() => condition ? valueA : valueB';
+      attr.value = parseExpr('() => condition ? valueA : valueB');
       attr.valueLoc = LOC;
 
       const value = new Value('on-click', attr, scope);
@@ -418,7 +443,7 @@ describe('stage2-validate', () => {
     it('should validate arrow functions with logical operators', () => {
       const scope = page.global;
       const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
-      attr.value = '() => a && b || c';
+      attr.value = parseExpr('() => a && b || c');
       attr.valueLoc = LOC;
 
       const value = new Value('on-click', attr, scope);
@@ -431,7 +456,7 @@ describe('stage2-validate', () => {
     it('should validate arrow functions with template literals', () => {
       const scope = page.global;
       const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
-      attr.value = '() => `Hello ${name}`';
+      attr.value = parseExpr('() => `Hello ${name}`');
       attr.valueLoc = LOC;
 
       const value = new Value('on-click', attr, scope);
