@@ -1,13 +1,17 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import * as acorn from 'acorn';
 import { generate } from 'escodegen';
+import { stage1load } from '../../src/compiler/stages/stage1-load';
+import { stage2validate } from '../../src/compiler/stages/stage2-validate';
+import { stage3qualify } from '../../src/compiler/stages/stage3-qualify';
 import { stage4resolve } from '../../src/compiler/stages/stage4-resolve';
-import { stage7generate } from '../../src/compiler/stages/stage7-generate';
+import { DEFAULT_RUNTIME_SRC, stage7generate } from '../../src/compiler/stages/stage7-generate';
 import { Page } from '../../src/compiler/ir/Page';
 import { Scope } from '../../src/compiler/ir/Scope';
 import { Value } from '../../src/compiler/ir/Value';
 import { ServerAttribute, ServerDocument, SourceLocation } from '../../src/html/server-dom';
-import { Source } from '../../src/html/parser';
+import { Source, parse } from '../../src/html/parser';
+import { NodeType } from '../../src/html/dom';
 
 const LOC: SourceLocation = {
   start: { line: 0, column: 0 },
@@ -181,6 +185,53 @@ describe('stage7-generate', () => {
     expect(prop(children[0], 'id').value).toBe(child.id);
     const x = prop(prop(children[0], 'values'), 'x');
     expect(evalExpr(prop(x, 'exp')).apply({})).toBe(1);
+  });
+});
+
+describe('stage7-generate bootstrap scripts', () => {
+  function compilePage(html: string, runtimeSrc?: string) {
+    const p = new Page(parse(html, 'test.html'));
+    stage1load(p);
+    stage2validate(p);
+    stage3qualify(p);
+    stage4resolve(p);
+    stage7generate(p, runtimeSrc);
+    return p;
+  }
+
+  function bodyScripts(p: Page) {
+    return p.source.doc.body!.childNodes.filter(
+      (n: any) => n.nodeType === NodeType.ELEMENT && n.tagName === 'SCRIPT'
+    ) as any[];
+  }
+
+  it('should append a props script and an async runtime script to the end of body', () => {
+    const p = compilePage('<html><body></body></html>');
+    const scripts = bodyScripts(p);
+
+    expect(scripts).toHaveLength(2);
+    const [propsScript, runtimeScript] = scripts;
+    expect((propsScript.childNodes[0] as any).textContent).toContain('window.__MARKOUT_PROPS =');
+    expect(runtimeScript.getAttribute('src')).toBe(DEFAULT_RUNTIME_SRC);
+    expect(runtimeScript.getAttributeNode('async')).not.toBeNull();
+  });
+
+  it('should honor a custom runtimeSrc', () => {
+    const p = compilePage('<html><body></body></html>', '/custom-runtime.js');
+    const [, runtimeScript] = bodyScripts(p);
+
+    expect(runtimeScript.getAttribute('src')).toBe('/custom-runtime.js');
+  });
+
+  it('should escape a literal </script> found inside generated source', () => {
+    const p = compilePage(
+      '<html :label=${"</script><script>alert(1)</script>"}></html>'
+    );
+    const [propsScript] = bodyScripts(p);
+    const text = (propsScript.childNodes[0] as any).textContent as string;
+
+    expect(text).not.toMatch(/<\/script>/i);
+    expect(text).toContain('<\\/script>');
   });
 });
 

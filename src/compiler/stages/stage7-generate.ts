@@ -1,5 +1,7 @@
 import { generate } from 'escodegen';
 import type { Expression, Node, ObjectExpression, Property } from 'estree';
+import { ServerText } from '../../html/server-dom';
+import { PROPS_GLOBAL } from '../../runtime/core/core-context';
 import { EVENT_VALUE_PREFIX, TEXT_VALUE_PREFIX } from '../ir/Page';
 import type { Page } from '../ir/Page';
 import type { Scope } from '../ir/Scope';
@@ -12,6 +14,9 @@ const RUNTIME_KEY_PREFIX_MAP: [string, string][] = [
   [TEXT_VALUE_PREFIX, 'text$'],
 ];
 
+// TODO: no bundler exists yet to produce this file; placeholder until one does
+export const DEFAULT_RUNTIME_SRC = '/markout-runtime.js';
+
 /**
  * Stage 7: Generate a `CoreScopeProps`-shaped `ObjectExpression` AST for the
  * root scope (`page.propsAST`), and its escodegen-serialized source
@@ -22,15 +27,51 @@ const RUNTIME_KEY_PREFIX_MAP: [string, string][] = [
  * that optimization is left for later. This stage is pure codegen: it
  * doesn't execute any user expression (that's stage5-comptime's concern,
  * if/when it exists).
+ *
+ * Also appends two bootstrap `<script>` tags at the end of `<body>`: one
+ * sets `window[PROPS_GLOBAL]` to the generated props, the other loads the
+ * runtime asynchronously — which, once loaded, autonomously initializes
+ * itself from that global (no explicit entry-point call needed).
  */
 
-export function stage7generate(page: Page) {
+export function stage7generate(page: Page, runtimeSrc = DEFAULT_RUNTIME_SRC) {
   const root = page.global.children[0];
   if (root) {
     page.propsAST = generateScope(root);
     page.propsString = generate(page.propsAST);
+    injectBootstrapScripts(page, runtimeSrc);
   }
   return page;
+}
+
+function injectBootstrapScripts(page: Page, runtimeSrc: string) {
+  const doc = page.source.doc;
+  const body = doc.body;
+  if (!body || !page.propsString) {
+    return;
+  }
+
+  const propsScript = doc.createElement('script');
+  propsScript.appendChild(
+    new ServerText(
+      doc,
+      `window.${PROPS_GLOBAL} = ${escapeScriptClose(page.propsString)};`,
+      body.loc,
+      false
+    )
+  );
+  body.appendChild(propsScript);
+
+  const runtimeScript = doc.createElement('script');
+  runtimeScript.setAttribute('src', runtimeSrc, body.loc);
+  runtimeScript.setAttribute('async', null, body.loc);
+  body.appendChild(runtimeScript);
+}
+
+// a literal `</script` inside generated source (e.g. from a string a user
+// wrote in a template expression) would otherwise close the tag early
+function escapeScriptClose(js: string): string {
+  return js.replace(/<\/script/gi, '<\\/script');
 }
 
 function generateScope(scope: Scope): ObjectExpression {

@@ -6,17 +6,21 @@ import { stage3qualify } from "./stages/stage3-qualify";
 import { stage4resolve } from "./stages/stage4-resolve";
 import { stage5comptime } from "./stages/stage5-comptime";
 import { stage6treeshake } from "./stages/stage6-treeshake";
-import { stage7generate } from "./stages/stage7-generate";
+import { DEFAULT_RUNTIME_SRC, stage7generate } from "./stages/stage7-generate";
 
 export interface CompilerProps {
   docroot: string;
+  /** `src` for the bootstrap `<script>` that loads the runtime; see stage7-generate.ts */
+  runtimeSrc?: string;
 }
 
 export class Compiler {
   preprocessor: Preprocessor;
+  runtimeSrc: string;
 
   constructor(options: CompilerProps) {
     this.preprocessor = new Preprocessor(options.docroot);
+    this.runtimeSrc = options.runtimeSrc ?? DEFAULT_RUNTIME_SRC;
   }
 
   async compile(pathname: string): Promise<Page> {
@@ -28,7 +32,7 @@ export class Compiler {
     page.errors.length || stage4resolve(page);
     page.errors.length || stage5comptime(page);
     page.errors.length || stage6treeshake(page);
-    page.errors.length || stage7generate(page);
+    page.errors.length || stage7generate(page, this.runtimeSrc);
     return page;
   }
 }
