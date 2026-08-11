@@ -189,6 +189,17 @@ describe('event$', () => {
     scope.dispose();
     assert.deepEqual(scope.domListeners, []);
   });
+
+  it('converts camelCase keys to dashed event names', () => {
+    const { scope } = setup(ROOT, {
+      id: '0',
+      values: { event$itemSelected: { exp: () => () => {} } },
+    });
+    assert.deepEqual(
+      scope.domListeners?.map(l => l.name),
+      ['item-selected']
+    );
+  });
 });
 
 describe('scopes without a matching element', () => {

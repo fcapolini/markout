@@ -190,7 +190,9 @@ export class WebScope extends CoreScope {
       return ret;
     }
     if (key.startsWith(RT_EVENT_VALUE_PREFIX)) {
-      const name = key.slice(RT_EVENT_VALUE_PREFIX.length);
+      // the compiler camelizes dash-case event names (e.g. custom events
+      // like "item-selected") into the compiled key, same as class$/style$
+      const name = this.camelToDash(key.slice(RT_EVENT_VALUE_PREFIX.length));
       if (typeof ret.exp?.apply(this.proxy) === 'function') {
         const listener: EventListener = (e: Event) => this.proxy[key]?.(e);
         this.domListeners ||= [];

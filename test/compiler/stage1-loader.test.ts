@@ -253,6 +253,41 @@ describe('stage1-loader', () => {
       expect(loadedScope.values.has('aka')).toBe(false);
     });
 
+    it('should allow dashed class-/style-/on- suffixes and camelize them', () => {
+      const context = runLoaderFromMarkup(
+        '<html :style-background-color="red" :class-is-active=${true} :on-item-selected=${() => {}}></html>'
+      );
+      const loadedScope = getLoadedScope(context);
+
+      expect(loadedScope.values.has('style$backgroundColor')).toBe(true);
+      expect(loadedScope.values.has('class$isActive')).toBe(true);
+      expect(loadedScope.values.has('on$itemSelected')).toBe(true);
+    });
+
+    it('should reject a dash in a plain value name', () => {
+      expect(() => runLoaderFromMarkup('<html :my-value="a"></html>')).toThrow(
+        'Invalid name: my-value'
+      );
+    });
+
+    it('should reject a dash in a :did-*/:will-* suffix', () => {
+      expect(() =>
+        runLoaderFromMarkup('<html :did-my-thing=${() => {}}></html>')
+      ).toThrow('Invalid name: my-thing');
+    });
+
+    it('should reject a dollar sign even inside a dash-allowed class-/style-/on- suffix', () => {
+      expect(() => runLoaderFromMarkup('<html :class-a$b=${true}></html>')).toThrow(
+        'Invalid name: a$b'
+      );
+    });
+
+    it('should reject a dash in an :aka scope name', () => {
+      expect(() =>
+        runLoaderFromMarkup('<html><body><div :aka="my-name"></div></body></html>')
+      ).toThrow('Invalid name: my-name');
+    });
+
     it('should remove special attributes from the root element DOM', () => {
       const context = runLoaderFromMarkup(
         '<html :aka="pageName" :x="ok" lang="en"></html>'

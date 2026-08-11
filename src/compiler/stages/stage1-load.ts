@@ -136,15 +136,24 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     }
     let prefix = '';
     let compiledPrefix = '';
+    // class-/style-/on- suffixes may be multi-word (CSS properties, class
+    // names, custom event names are conventionally dash-case) -- allowed
+    // here "for expressiveness", then camelized to a plain JS identifier
+    // for the compiled name, mirroring how WebScope.camelToDash() turns it
+    // back into the real dash-case name when writing to the DOM
+    let allowDash = false;
     if (name.startsWith(CLASS_VALUE_ATTR_PREFIX)) {
       prefix = CLASS_VALUE_ATTR_PREFIX;
       compiledPrefix = CLASS_VALUE_PREFIX;
+      allowDash = true;
     } else if (name.startsWith(STYLE_VALUE_ATTR_PREFIX)) {
       prefix = STYLE_VALUE_ATTR_PREFIX;
       compiledPrefix = STYLE_VALUE_PREFIX;
+      allowDash = true;
     } else if (name.startsWith(EVENT_VALUE_ATTR_PREFIX)) {
       prefix = EVENT_VALUE_ATTR_PREFIX;
       compiledPrefix = EVENT_VALUE_PREFIX;
+      allowDash = true;
     } else if (name.startsWith(DID_VALUE_ATTR_PREFIX)) {
       prefix = DID_VALUE_ATTR_PREFIX;
       compiledPrefix = DID_VALUE_PREFIX;
@@ -159,7 +168,8 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
         column: attr.loc.start.column + prefix.length,
       },
     };
-    name = compiledPrefix + validateName(page, name.slice(prefix.length), loc);
+    const suffix = validateName(page, name.slice(prefix.length), loc, allowDash);
+    name = compiledPrefix + (allowDash ? dashToCamel(suffix) : suffix);
     scope.values.set(name, new Value(name, attr, scope, page.createValueId()));
   }
   e.attributes = e.attributes.filter(
@@ -167,13 +177,26 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
   );
 }
 
-function validateName(page: Page, name: any, loc?: SourceLocation): string {
+// a plain (non-prefixed) value or scope name must be a clean JS identifier:
+// no dash (reserved for our own class-/style-/on- families, for
+// expressiveness there), no dollar sign (reserved for system values)
+function validateName(
+  page: Page,
+  name: any,
+  loc?: SourceLocation,
+  allowDash = false
+): string {
   name = name ? `${name}` : '';
-  if (!name || /[^a-zA-Z0-9_]/.exec(name)?.index) {
+  const invalid = allowDash ? /[^a-zA-Z0-9_-]/ : /[^a-zA-Z0-9_]/;
+  if (!name || invalid.test(name)) {
     addError(page, `Invalid name: "${name}"`, loc);
     throw new Error(`Invalid name: ${name}`);
   }
   return name;
+}
+
+function dashToCamel(name: string): string {
+  return name.replace(/-([a-zA-Z0-9])/g, (_, c) => c.toUpperCase());
 }
 
 function addError(page: Page, msg: string, loc?: SourceLocation) {
