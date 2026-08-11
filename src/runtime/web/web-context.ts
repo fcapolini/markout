@@ -12,6 +12,11 @@ export interface WebContextProps extends CoreContextProps {
 }
 
 export class WebContext extends CoreContext {
+
+  constructor(props: WebContextProps) {
+    super(props);
+  }
+
   override newScope(
     props: CoreScopeProps,
     ctx: CoreContext,
@@ -20,4 +25,3 @@ export class WebContext extends CoreContext {
     return new WebScope(props, ctx as WebContext, parent);
   }
 }
-

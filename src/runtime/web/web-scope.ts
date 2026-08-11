@@ -23,9 +23,12 @@ export const RT_TEXT_VALUE_PREFIX = 'text$';
 export const RT_EVENT_VALUE_PREFIX = 'event$';
 
 export class WebScope extends CoreScope {
-  dom!: Element;
-  texts!: Text[];
-  domListeners?: { name: string; listener: EventListener }[];
+  // `declare`: init() (invoked from within CoreScope's constructor, i.e.
+  // during super()) sets these; a real class field would instead
+  // re-initialize them to undefined right after super() returns
+  declare dom: Element;
+  declare texts: Text[];
+  declare domListeners?: { name: string; listener: EventListener }[];
 
   constructor(props: CoreScopeProps, context: WebContext, parent?: CoreScope) {
     super(props, context, parent);
