@@ -1,0 +1,144 @@
+import { PageError } from "../html/parser";
+import { NextFunction, Request, Response } from "express";
+import fs from "fs";
+import path from "path";
+import { Compiler } from "../compiler";
+import { DEFAULT_RUNTIME_SRC } from "../compiler/stages/stage7-generate";
+
+export const CLIENT_CODE_REQ = DEFAULT_RUNTIME_SRC;
+
+export interface MarkoutProps {
+  docroot: string;
+}
+
+export function markout(props: MarkoutProps) {
+  const docroot = props.docroot || process.cwd();
+  const compiler = new Compiler({ docroot });
+  const clientCode = '';
+
+  return async function (req: Request, res: Response, next: NextFunction) {
+    const i = req.path.lastIndexOf('.');
+    const extname = i < 0 ? '.html' : req.path.substring(i).toLowerCase();
+
+    if (handleNonPageRequests(req, res, i, extname, clientCode, next)) {
+      return;
+    }
+
+    const pathname = await resolvePath(req, i, docroot);
+    if (!pathname) {
+      res.sendStatus(404);
+      return;
+    }
+
+    const page = await compiler.compile(pathname);
+    if (page.source.errors.length) {
+      if (
+        page.source.errors.length === 1 &&
+        page.source.errors[0].msg === `File not found "${pathname}"`
+      ) {
+        res.sendStatus(404);
+        return;
+      }
+      return serveErrorPage(page.source.errors, res);
+    }
+
+    let doc = page.source.doc;
+    const html = doc.toString();
+    res.header('Content-Type', 'text/html;charset=UTF-8');
+    res.send('<!doctype html>\n' + html);
+  }
+}
+
+function handleNonPageRequests(
+  req: Request,
+  res: Response,
+  _i: number,
+  extname: string,
+  clientCode: string,
+  next: NextFunction
+) {
+  if (req.path === CLIENT_CODE_REQ) {
+    res.header('Content-Type', 'text/javascript;charset=UTF-8');
+    res.send(clientCode);
+    return true;
+  }
+  if (req.path.startsWith('/.') || extname === '.htm') {
+    res.sendStatus(404);
+    return true;
+  }
+  if (extname !== '.html') {
+    next();
+    return true;
+  }
+  return false;
+}
+
+// exported for direct unit testing: Express normalizes `..` out of req.path
+// before any middleware sees it, so a real HTTP request can't exercise the
+// bypass this guards against
+export async function resolvePath(
+  req: Request,
+  i: number,
+  docroot: string
+) {
+  let pathname = i < 0 ? req.path : req.path.substring(0, i).toLowerCase();
+  const root = path.resolve(docroot);
+  // Remove leading slash to ensure relative path resolution
+  const relativePath = pathname.startsWith('/')
+    ? pathname.slice(1)
+    : pathname;
+  const fullPath = path.resolve(root, relativePath);
+  // Ensure the resolved path is contained in docroot: a plain startsWith(root)
+  // would also match a sibling directory sharing the same prefix, e.g. `root`
+  // = "/a/site" and a candidate of "/a/site-other/secret"
+  if (fullPath !== root && !fullPath.startsWith(root + path.sep)) {
+    return;
+  }
+  if (i < 0) {
+    try {
+      let stat = null;
+      try {
+        stat = await fs.promises.stat(fullPath);
+      } catch {
+        // try adding .html extension if no extension was provided
+        stat = await fs.promises.stat(fullPath + '.html');
+      }
+      if (stat.isDirectory()) {
+        // if path is a dir, access <dir>/index.html
+        pathname = path.join(pathname, 'index');
+      }
+    } catch (ignored) {
+      // Intentionally ignore file system errors (file not found, permission denied, etc.)
+      // Return undefined to let caller handle with 404 response
+      return;
+    }
+  }
+  return pathname + '.html';
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function serveErrorPage(errors: PageError[], res: Response) {
+  const p = new Array<string>();
+  p.push(`<!doctype html><html><head>
+    <title>Page Error</title>
+    <meta name="color-scheme" content="light dark"/>
+    </head><body><ul>`);
+  errors.forEach(err => {
+    const l = err.loc;
+    p.push(`<li>${escapeHtml(err.msg)}`);
+    l && p.push(` - ${escapeHtml(l.source ?? '')} `);
+    l && p.push(`[${l.start.line}, ${l.start.column + 1}]`);
+    p.push('</li>');
+  });
+  p.push('</ul></body></html>');
+  res.header('Content-Type', 'text/html;charset=UTF-8');
+  // res.sendStatus(500);
+  res.status(500).send(p.join(''));
+}

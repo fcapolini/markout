@@ -14,8 +14,9 @@ const RUNTIME_KEY_PREFIX_MAP: [string, string][] = [
   [TEXT_VALUE_PREFIX, 'text$'],
 ];
 
-// TODO: no bundler exists yet to produce this file; placeholder until one does
-export const DEFAULT_RUNTIME_SRC = '/markout-runtime.js';
+// TODO: no bundler exists yet to produce this file; placeholder until one does.
+// dot-prefixed so it reads as a reserved path, distinct from real site content
+export const DEFAULT_RUNTIME_SRC = '/.markout.js';
 
 /**
  * Stage 7: Generate a `CoreScopeProps`-shaped `ObjectExpression` AST for the

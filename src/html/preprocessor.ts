@@ -30,7 +30,7 @@ export class Preprocessor {
   docroot: string;
 
   constructor(docroot: string) {
-    this.docroot = docroot;
+    this.docroot = path.resolve(docroot);
   }
 
   async load(fname: string): Promise<Source> {
@@ -113,7 +113,10 @@ export class Preprocessor {
       currDir = '';
     }
     const pname = path.normalize(path.join(this.docroot, currDir, fname));
-    if (!pname.startsWith(this.docroot)) {
+    // a plain startsWith(docroot) would also match a sibling directory
+    // sharing the same prefix, e.g. docroot "/a/site" and a candidate of
+    // "/a/site-other/secret"
+    if (pname !== this.docroot && !pname.startsWith(this.docroot + path.sep)) {
       const s = normalizePathSeparators(path.relative(this.docroot, pname));
       main.addError('error', `Forbidden pathname "${s}"`, from?.loc);
       return;
