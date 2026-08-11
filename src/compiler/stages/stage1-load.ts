@@ -24,8 +24,10 @@ import {
   WILL_VALUE_PREFIX,
   FOR_EACH_ATTR,
   FOR_AS_ATTR,
+  FOR_KEY_ATTR,
   FOR_EACH_VALUE,
   FOR_AS_VALUE,
+  FOR_KEY_VALUE,
 } from '../ir/Page';
 import { NodeType } from '../../html/dom';
 
@@ -114,6 +116,10 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     }
     if (name === FOR_AS_ATTR) {
       scope.values.set(FOR_AS_VALUE, new Value(FOR_AS_VALUE, attr, scope, page.createValueId()));
+      continue;
+    }
+    if (name === FOR_KEY_ATTR) {
+      scope.values.set(FOR_KEY_VALUE, new Value(FOR_KEY_VALUE, attr, scope, page.createValueId()));
       continue;
     }
     let prefix = '';

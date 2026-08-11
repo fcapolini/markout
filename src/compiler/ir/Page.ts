@@ -17,12 +17,14 @@ export const STYLE_VALUE_PREFIX = 'style$';
 export const EVENT_VALUE_PREFIX = 'on$';
 export const DID_VALUE_PREFIX = 'did$';
 export const WILL_VALUE_PREFIX = 'will$';
-// `:for-each`/`:for-as` are fixed (non-prefixed) attribute names, not
-// open-ended `prefix-name` families like class-/style-/on-/did-/will-
+// `:for-each`/`:for-as`/`:for-key` are fixed (non-prefixed) attribute names,
+// not open-ended `prefix-name` families like class-/style-/on-/did-/will-
 export const FOR_EACH_ATTR = 'for-each';
 export const FOR_AS_ATTR = 'for-as';
+export const FOR_KEY_ATTR = 'for-key';
 export const FOR_EACH_VALUE = 'for$each';
 export const FOR_AS_VALUE = 'for$as';
+export const FOR_KEY_VALUE = 'for$key';
 
 export class Page {
   source: Source;

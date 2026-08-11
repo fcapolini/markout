@@ -273,6 +273,50 @@ describe('stage1-loader', () => {
     });
   });
 
+  describe(':for-each/:for-as/:for-key loading', () => {
+    it('should load :for-each as a for$each value', () => {
+      const context = runLoaderFromMarkup(
+        '<html><body><li :for-each=${items}></li></body></html>'
+      );
+      const htmlScope = getLoadedScope(context);
+      const bodyScope = getChildScope(htmlScope, 1);
+      const liScope = getChildScope(bodyScope, 0);
+
+      expect(liScope.values.size).toBe(1);
+      expect(liScope.values.has('for$each')).toBe(true);
+      expect(liScope.values.get('for$each')?.value).toMatchObject({
+        type: 'Identifier',
+        name: 'items',
+      });
+    });
+
+    it('should load :for-as and :for-key alongside :for-each', () => {
+      const context = runLoaderFromMarkup(
+        '<html><body><li :for-each=${items} :for-as="item" :for-key=${item.id}></li></body></html>'
+      );
+      const htmlScope = getLoadedScope(context);
+      const bodyScope = getChildScope(htmlScope, 1);
+      const liScope = getChildScope(bodyScope, 0);
+
+      expect(liScope.values.size).toBe(3);
+      expect(liScope.values.has('for$each')).toBe(true);
+      expect(liScope.values.get('for$as')?.value).toBe('item');
+      expect(liScope.values.get('for$key')?.value).toMatchObject({
+        type: 'MemberExpression',
+      });
+    });
+
+    it('should remove :for-each/:for-as/:for-key from the DOM element', () => {
+      const context = runLoaderFromMarkup(
+        '<html><body><li :for-each=${items} :for-as="item" :for-key=${item.id}></li></body></html>'
+      );
+      const body = context.source.doc.body!;
+      const li = body.childNodes[0] as ServerElement;
+
+      expect(li.attributes).toStrictEqual([]);
+    });
+  });
+
   describe('text value loading', () => {
     it('should load expression text into scope text values', () => {
       const context = runLoaderFromMarkup('<html><body>${name}</body></html>');
