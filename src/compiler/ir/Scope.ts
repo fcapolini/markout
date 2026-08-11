@@ -4,6 +4,7 @@ import type { Value } from './Value';
 
 export class Scope {
   page: Page;
+  id: string;
   parent?: Scope;
   children: Scope[];
   values: Map<string, Value>;
@@ -14,6 +15,7 @@ export class Scope {
 
   constructor(page: Page, parent?: Scope, e?: ServerElement, name?: string) {
     this.page = page;
+    this.id = page.createScopeId();
     this.parent = parent;
     this.children = [];
     this.values = new Map();

@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "acorn": "^8.18.0",
+    "astring": "^1.9.0",
     "estraverse": "^5.3.0"
   }
 }
