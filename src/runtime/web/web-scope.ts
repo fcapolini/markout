@@ -80,7 +80,7 @@ export class WebScope extends CoreScope {
       parentView ?? (this.ctx.props as WebContextProps).doc;
     if (!container) return undefined;
     const childNodesOf = (e: Element | Document): NodeList =>
-      (e as Element).tagName === 'TEMPLATE'
+      (e as Element).tagName === "TEMPLATE"
         ? (e as unknown as TemplateElement).content.childNodes
         : e.childNodes;
     const lookup = (childNodes: NodeList): Element | undefined => {
@@ -108,8 +108,13 @@ export class WebScope extends CoreScope {
     super.dispose();
   }
 
-  override newValue(key: string, props: CoreValueProps<any>) {
-    const ret = super.newValue(key, props);
+  override newValue(
+    key: string,
+    props: CoreValueProps<any>,
+    allValues?: { [key: string]: CoreValueProps<any> },
+  ) {
+    const ret = super.newValue(key, props, allValues);
+    if (ret.cb) return ret;
     if (key.startsWith(RT_ATTR_VALUE_PREFIX)) {
       const name = this.camelToDash(key.slice(RT_ATTR_VALUE_PREFIX.length));
       ret.setCB((_, val) => {
@@ -144,7 +149,7 @@ export class WebScope extends CoreScope {
     }
     if (key.startsWith(RT_TEXT_VALUE_PREFIX)) {
       const suffix = key.slice(RT_TEXT_VALUE_PREFIX.length); // Remove "text$"
-      const underscoreIndex = suffix.lastIndexOf('_');
+      const underscoreIndex = suffix.lastIndexOf("_");
 
       let t: Text | undefined;
       if (underscoreIndex >= 0) {
@@ -185,7 +190,7 @@ export class WebScope extends CoreScope {
         // a real zero-width space, not the `&#8203;` reference: text content
         // is escaped on serialization, so an entity written here would reach
         // the page as the literal characters `&#8203;`
-        t.textContent = val == null ? '​' : String(val);
+        t.textContent = val == null ? "​" : String(val);
       });
       return ret;
     }
@@ -193,7 +198,7 @@ export class WebScope extends CoreScope {
       // the compiler keeps dash-case event names (e.g. custom events like
       // "item-selected") verbatim in the compiled key, same as class$/style$
       const name = key.slice(RT_EVENT_VALUE_PREFIX.length);
-      if (typeof ret.exp?.apply(this.proxy) === 'function') {
+      if (typeof ret.exp?.apply(this.proxy) === "function") {
         const listener: EventListener = (e: Event) => this.proxy[key]?.(e);
         this.domListeners ||= [];
         this.domListeners.push({ name, listener });
@@ -205,6 +210,16 @@ export class WebScope extends CoreScope {
   }
 
   camelToDash(s: string): string {
-    return s.replace(/([a-z][A-Z])/g, g => g[0] + '-' + g[1].toLowerCase());
+    return s.replace(/([a-z][A-Z])/g, (g) => g[0] + "-" + g[1].toLowerCase());
+  }
+
+  override clone(ci: number): WebScope {
+    const ret = super.clone(ci) as WebScope;
+
+    //FIXME
+    ret.dom = this.dom;
+    ret.texts = this.texts;
+
+    return ret;
   }
 }
