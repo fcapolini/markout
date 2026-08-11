@@ -138,9 +138,8 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     let compiledPrefix = '';
     // class-/style-/on- suffixes may be multi-word (CSS properties, class
     // names, custom event names are conventionally dash-case) -- allowed
-    // here "for expressiveness", then camelized to a plain JS identifier
-    // for the compiled name, mirroring how WebScope.camelToDash() turns it
-    // back into the real dash-case name when writing to the DOM
+    // here "for expressiveness" and kept dash-case verbatim in the
+    // compiled name (stage7-generate quotes value keys, so a dash is fine)
     let allowDash = false;
     if (name.startsWith(CLASS_VALUE_ATTR_PREFIX)) {
       prefix = CLASS_VALUE_ATTR_PREFIX;
@@ -169,7 +168,7 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
       },
     };
     const suffix = validateName(page, name.slice(prefix.length), loc, allowDash);
-    name = compiledPrefix + (allowDash ? dashToCamel(suffix) : suffix);
+    name = compiledPrefix + suffix;
     scope.values.set(name, new Value(name, attr, scope, page.createValueId()));
   }
   e.attributes = e.attributes.filter(
@@ -193,10 +192,6 @@ function validateName(
     throw new Error(`Invalid name: ${name}`);
   }
   return name;
-}
-
-function dashToCamel(name: string): string {
-  return name.replace(/-([a-zA-Z0-9])/g, (_, c) => c.toUpperCase());
 }
 
 function addError(page: Page, msg: string, loc?: SourceLocation) {

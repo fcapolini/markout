@@ -62,10 +62,10 @@ describe('class$', () => {
     assert.notInclude(markup(), 'active');
   });
 
-  it('converts camelCase keys to dashed class names', () => {
+  it('supports dashed multi-word class names verbatim', () => {
     const { markup } = setup(ROOT, {
       id: '0',
-      values: { class$isActive: { val: true } },
+      values: { 'class$is-active': { val: true } },
     });
     assert.include(markup(), 'class="is-active"');
   });
@@ -82,10 +82,10 @@ describe('style$', () => {
     assert.notInclude(markup(), 'color');
   });
 
-  it('converts camelCase keys to dashed property names', () => {
+  it('supports dashed multi-word property names verbatim', () => {
     const { markup } = setup(ROOT, {
       id: '0',
-      values: { style$backgroundColor: { val: 'blue' } },
+      values: { 'style$background-color': { val: 'blue' } },
     });
     assert.include(markup(), 'background-color: blue;');
   });
@@ -190,10 +190,10 @@ describe('event$', () => {
     assert.deepEqual(scope.domListeners, []);
   });
 
-  it('converts camelCase keys to dashed event names', () => {
+  it('supports dashed multi-word event names verbatim', () => {
     const { scope } = setup(ROOT, {
       id: '0',
-      values: { event$itemSelected: { exp: () => () => {} } },
+      values: { 'event$item-selected': { exp: () => () => {} } },
     });
     assert.deepEqual(
       scope.domListeners?.map(l => l.name),

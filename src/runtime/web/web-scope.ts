@@ -123,7 +123,7 @@ export class WebScope extends CoreScope {
       return ret;
     }
     if (key.startsWith(RT_CLASS_VALUE_PREFIX)) {
-      const name = this.camelToDash(key.slice(RT_CLASS_VALUE_PREFIX.length));
+      const name = key.slice(RT_CLASS_VALUE_PREFIX.length);
       ret.setCB((_, val) => {
         if (!this.dom) return;
         if (val) {
@@ -135,7 +135,7 @@ export class WebScope extends CoreScope {
       return ret;
     }
     if (key.startsWith(RT_STYLE_VALUE_PREFIX)) {
-      const name = this.camelToDash(key.slice(RT_STYLE_VALUE_PREFIX.length));
+      const name = key.slice(RT_STYLE_VALUE_PREFIX.length);
       ret.setCB((_, val) => {
         if (!this.dom) return;
         this.dom.style.setProperty(name, val);
@@ -190,9 +190,9 @@ export class WebScope extends CoreScope {
       return ret;
     }
     if (key.startsWith(RT_EVENT_VALUE_PREFIX)) {
-      // the compiler camelizes dash-case event names (e.g. custom events
-      // like "item-selected") into the compiled key, same as class$/style$
-      const name = this.camelToDash(key.slice(RT_EVENT_VALUE_PREFIX.length));
+      // the compiler keeps dash-case event names (e.g. custom events like
+      // "item-selected") verbatim in the compiled key, same as class$/style$
+      const name = key.slice(RT_EVENT_VALUE_PREFIX.length);
       if (typeof ret.exp?.apply(this.proxy) === 'function') {
         const listener: EventListener = (e: Event) => this.proxy[key]?.(e);
         this.domListeners ||= [];

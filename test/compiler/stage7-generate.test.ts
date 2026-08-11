@@ -29,9 +29,14 @@ function parseExpr(source: string): acorn.Expression {
   });
 }
 
-// looks up an ObjectExpression AST's property value by key name
+// looks up an ObjectExpression AST's property value by key name -- keys are
+// either an Identifier (structural props) or a quoted Literal (scope values)
 function prop(obj: any, name: string): any {
-  return obj.properties.find((p: any) => p.key.name === name)?.value;
+  return obj.properties.find((p: any) => keyName(p) === name)?.value;
+}
+
+function keyName(p: any): string {
+  return p.key.type === 'Literal' ? p.key.value : p.key.name;
 }
 
 // turns a generated FunctionExpression AST node into a real callable, the
@@ -164,7 +169,7 @@ describe('stage7-generate', () => {
     stage4resolve(page);
     stage7generate(page);
 
-    const keys = prop(page.propsAST, 'values').properties.map((p: any) => p.key.name);
+    const keys = prop(page.propsAST, 'values').properties.map((p: any) => keyName(p));
     expect(keys).toContain('event$click');
     expect(keys).toContain('text$0');
     expect(keys).toContain('class$active');

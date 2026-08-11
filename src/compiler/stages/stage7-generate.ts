@@ -78,10 +78,10 @@ function escapeScriptClose(js: string): string {
 function generateScope(scope: Scope): ObjectExpression {
   const valueProps: Property[] = [];
   for (const [name, value] of scope.values) {
-    valueProps.push(property(toRuntimeKey(name), generateValueProps(value)));
+    valueProps.push(valueProperty(toRuntimeKey(name), generateValueProps(value)));
   }
   for (const [name, value] of scope.textValues) {
-    valueProps.push(property(toRuntimeKey(name), generateValueProps(value)));
+    valueProps.push(valueProperty(toRuntimeKey(name), generateValueProps(value)));
   }
 
   const props: Property[] = [property('id', literal(scope.id))];
@@ -144,6 +144,22 @@ function property(name: string, value: Expression | ObjectExpression): Property 
   return {
     type: 'Property',
     key: identifier(name),
+    value,
+    kind: 'init',
+    method: false,
+    shorthand: false,
+    computed: false,
+  } as unknown as Property;
+}
+
+// scope value names (class$/style$/on$ suffixes, in particular) may contain
+// dashes -- not valid bare identifiers -- so always quote them; escodegen
+// prints an Identifier key as-is without validation, which would otherwise
+// emit syntactically broken source (e.g. `on$item-selected: ...`)
+function valueProperty(name: string, value: Expression | ObjectExpression): Property {
+  return {
+    type: 'Property',
+    key: literal(name),
     value,
     kind: 'init',
     method: false,

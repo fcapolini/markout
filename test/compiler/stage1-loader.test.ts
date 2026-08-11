@@ -253,15 +253,15 @@ describe('stage1-loader', () => {
       expect(loadedScope.values.has('aka')).toBe(false);
     });
 
-    it('should allow dashed class-/style-/on- suffixes and camelize them', () => {
+    it('should allow dashed class-/style-/on- suffixes and keep them dash-case verbatim', () => {
       const context = runLoaderFromMarkup(
         '<html :style-background-color="red" :class-is-active=${true} :on-item-selected=${() => {}}></html>'
       );
       const loadedScope = getLoadedScope(context);
 
-      expect(loadedScope.values.has('style$backgroundColor')).toBe(true);
-      expect(loadedScope.values.has('class$isActive')).toBe(true);
-      expect(loadedScope.values.has('on$itemSelected')).toBe(true);
+      expect(loadedScope.values.has('style$background-color')).toBe(true);
+      expect(loadedScope.values.has('class$is-active')).toBe(true);
+      expect(loadedScope.values.has('on$item-selected')).toBe(true);
     });
 
     it('should reject a dash in a plain value name', () => {
