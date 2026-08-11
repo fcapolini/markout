@@ -259,7 +259,7 @@ describe('stage1-loader', () => {
       );
       const root = context.source.doc.documentElement!;
 
-      expect(root.attributes.map(a => a.name)).toStrictEqual(['lang']);
+      expect(root.attributes.map(a => a.name)).toStrictEqual(['lang', 'data-markout']);
     });
 
     it('should remove special attributes from nested element DOM', () => {
@@ -269,7 +269,7 @@ describe('stage1-loader', () => {
       const body = context.source.doc.body!;
       const div = body.childNodes[0] as ServerElement;
 
-      expect(div.attributes.map(a => a.name)).toStrictEqual(['id']);
+      expect(div.attributes.map(a => a.name)).toStrictEqual(['id', 'data-markout']);
     });
   });
 
@@ -306,14 +306,14 @@ describe('stage1-loader', () => {
       });
     });
 
-    it('should remove :for-each/:for-as/:for-key from the DOM element', () => {
+    it('should remove :for-each/:for-as/:for-key from the DOM element, keeping only data-markout', () => {
       const context = runLoaderFromMarkup(
         '<html><body><li :for-each=${items} :for-as="item" :for-key=${item.id}></li></body></html>'
       );
       const body = context.source.doc.body!;
       const li = body.childNodes[0] as ServerElement;
 
-      expect(li.attributes).toStrictEqual([]);
+      expect(li.attributes.map(a => a.name)).toStrictEqual(['data-markout']);
     });
   });
 

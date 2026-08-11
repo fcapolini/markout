@@ -30,6 +30,7 @@ import {
   FOR_KEY_VALUE,
 } from '../ir/Page';
 import { NodeType } from '../../html/dom';
+import { DOM_ID_ATTR } from '../../runtime/web/web-context';
 
 /**
  * Stage 1 loader: Transforms a DOM tree into scoped semantic IR.
@@ -59,6 +60,10 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string) {
   if (tagName === 'HEAD') name = 'head';
   if (tagName === 'BODY') name = 'body';
   const scope = name || needsScope(e) ? new Scope(page, parent, e, name) : parent;
+  if (scope.e === e) {
+    // so WebScope.lookupView() can find this element's DOM node at runtime
+    e.setAttribute(DOM_ID_ATTR, scope.id);
+  }
   extractValues(page, scope, e);
   let i = -1;
   for (const child of [...e.childNodes]) {
