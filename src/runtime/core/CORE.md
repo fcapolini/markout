@@ -149,6 +149,16 @@ execution. Concretely, the compiler is responsible for:
   reject classic functions outright or transparently rewrite them as arrow
   functions.
 
+For the DOM-specific layer (`runtime/web`), the compiler also marks dynamic
+text positions with HTML comments, so `WebScope` can find the DOM text node
+each `text$N` value should update without needing its own separate parse
+pass. Those comments are `-`-prefixed (`DOM_TEXT_MARKER1`/`DOM_TEXT_MARKER2`
+in `web-context.ts`, e.g. `<!---t0-->text<!---/-->`), the same convention
+`html/preprocessor.ts` uses for triple-dash "private" comments that get
+stripped from page/fragment source during preprocessing — since that
+stripping happens before the compiler ever inserts its own markers, a
+`-`-prefixed marker can never collide with anything a page author wrote.
+
 ## Change batching
 
 Rather than invoking value-change callbacks (`cb`, set via `setCB()`)

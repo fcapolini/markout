@@ -63,4 +63,14 @@ describe("Reactive page compilation", () => {
     expect(body.values['text$1'].exp.apply(fakeScope)).toBe(5);
     expect(body.values['text$1'].deps[0].apply({ $value: (key: string) => key })).toBe('count');
   });
+
+  it('should server-render the actual interpolated value into the markup, not a blank gap', async () => {
+    const res = await request(app).get('/counter.html');
+
+    // strip the hydration marker comments (never rendered by a browser
+    // either) to check the actual visible text, which must be the real
+    // initial value ("0"), not an empty gap left for the client to fill in
+    const visibleText = res.text.replace(/<!--.*?-->/g, '');
+    expect(visibleText).toContain('Clicked 0 times');
+  });
 });

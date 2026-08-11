@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import { Compiler } from "../compiler";
 import { DEFAULT_RUNTIME_SRC } from "../compiler/stages/stage7-generate";
+import { renderPage } from "./render";
 
 export const CLIENT_CODE_REQ = DEFAULT_RUNTIME_SRC;
 
@@ -55,6 +56,8 @@ export function markout(props: MarkoutProps) {
       }
       return serveErrorPage(page.source.errors, res);
     }
+
+    renderPage(page);
 
     let doc = page.source.doc;
     const html = doc.toString();

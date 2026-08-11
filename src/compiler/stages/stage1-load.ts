@@ -30,7 +30,7 @@ import {
   FOR_KEY_VALUE,
 } from '../ir/Page';
 import { NodeType } from '../../html/dom';
-import { DOM_ID_ATTR } from '../../runtime/web/web-context';
+import { DOM_ID_ATTR, DOM_TEXT_MARKER1, DOM_TEXT_MARKER2 } from '../../runtime/web/web-context';
 
 /**
  * Stage 1 loader: Transforms a DOM tree into scoped semantic IR.
@@ -80,13 +80,20 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string) {
       const id = scope.textCount++;
       const name = `${TEXT_VALUE_PREFIX}${id}`;
       scope.textValues.set(name, new Value(name, text, scope, page.createValueId()));
+      // `-` prefixed, like a triple-dash "private" comment (see
+      // preprocessor.ts's removeTripleComments): those are already stripped
+      // from user source before this stage ever runs, so these reserved
+      // markers can never collide with anything the page author wrote
       e.insertBefore(
-        new ServerComment(e.ownerDocument, `${name}`, text.loc),
+        new ServerComment(e.ownerDocument, `${DOM_TEXT_MARKER1}${id}`, text.loc),
         text
       );
-      const next = (i + 1 < e.childNodes.length ? e.childNodes[i + 1] : null);
+      // recompute text's position instead of reusing the pre-insertion `i`:
+      // it shifted by one when the start marker was just inserted before it
+      const textIndex = e.childNodes.indexOf(text);
+      const next = textIndex + 1 < e.childNodes.length ? e.childNodes[textIndex + 1] : null;
       e.insertBefore(
-        new ServerComment(e.ownerDocument, `/`, text.loc),
+        new ServerComment(e.ownerDocument, DOM_TEXT_MARKER2, text.loc),
         next
       );
       continue;

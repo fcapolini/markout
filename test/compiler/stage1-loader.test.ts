@@ -343,8 +343,8 @@ describe('stage1-loader', () => {
         .filter(node => node.nodeType === NodeType.COMMENT)
         .map(node => (node as any).textContent);
 
-      expect(markerComments).toContain('t$0');
-      expect(markerComments).toContain('/');
+      expect(markerComments).toContain('-t0');
+      expect(markerComments).toContain('-/');
       expect(
         children.some(node => {
           if (node.nodeType !== NodeType.TEXT) return false;
@@ -369,8 +369,8 @@ describe('stage1-loader', () => {
       const markerComments = section.childNodes
         .filter(node => node.nodeType === NodeType.COMMENT)
         .map(node => (node as any).textContent);
-      expect(markerComments).toContain('t$0');
-      expect(markerComments).toContain('/');
+      expect(markerComments).toContain('-t0');
+      expect(markerComments).toContain('-/');
     });
   });
 
