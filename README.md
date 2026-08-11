@@ -17,6 +17,8 @@ rules:
 - `:for-each=${expr}` repeats a tag once per element (`null`/`undefined`
   means zero, any other non-iterable value counts as one), binding each
   element as `data` unless renamed with `:for-as`.
+- `:did-x`/`:will-x` bind lifecycle delegate methods (e.g. `:did-init`,
+  `:will-dispose`), called when a scope reaches/leaves that phase.
 - Scopes nest lexically, like variables: a named scope is visible from any
   of its descendants with no separate wiring (no `provide`/`inject`, no
   `Context`).
@@ -29,6 +31,15 @@ Compare that to what's required to be productive in most other frameworks
 (hooks and dependency arrays, `computed` vs `watch`, whole directive sets,
 dependency injection, change detection, ...): the goal is for this list to
 stay short.
+
+No rule above has a "convenient" exception (e.g. `class`/`style` silently
+merging instead of overriding when re-assigned, or a callback attribute
+accepting a bare expression sometimes and requiring a function other
+times). A shortcut that only saves a few characters at the call site but
+requires every future reader to remember a special case isn't a
+simplification, it's deferred, compounding complexity: better to always
+type a couple more characters than to hide behavior that depends on
+context.
 
 ## Integrated reactivity example
 
@@ -114,3 +125,27 @@ NOTE: `:for-each` treats `null`/`undefined` as zero elements (nothing is
 rendered); any other non-iterable value is treated as an array of one, so
 `:for-each=${maybeItem}` doubles as optional single-item rendering, e.g.
 `:for-each=${isLoggedIn ? user : undefined}`
+
+## Data-binding
+
+```html
+<html>
+  <body>
+    <script
+      :aka="timer"
+      :count=${0}
+      :did-init=${() => {
+        _timer = setInterval(() => {
+          count++;
+        }, 100);
+      }}
+      :will-dispose=${() => {
+        _timer && clearInterval(_timer);
+        _timer = null;
+      }}
+      :_timer=${null}
+    />
+    <div>Ticks ${timer.count}</div>
+  </body>
+</html>
+```
