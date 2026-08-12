@@ -12,15 +12,19 @@ export interface CompilerProps {
   docroot: string;
   /** `src` for the bootstrap `<script>` that loads the runtime; see stage7-generate.ts */
   runtimeSrc?: string;
+  /** emit the dev flag, so the browser runtime surfaces errors in the page */
+  dev?: boolean;
 }
 
 export class Compiler {
   preprocessor: Preprocessor;
   runtimeSrc: string;
+  dev: boolean;
 
   constructor(options: CompilerProps) {
     this.preprocessor = new Preprocessor(options.docroot);
     this.runtimeSrc = options.runtimeSrc ?? DEFAULT_RUNTIME_SRC;
+    this.dev = options.dev ?? false;
   }
 
   async compile(pathname: string): Promise<Page> {
@@ -32,7 +36,7 @@ export class Compiler {
     page.errors.length || stage4resolve(page);
     page.errors.length || stage5comptime(page);
     page.errors.length || stage6treeshake(page);
-    page.errors.length || stage7generate(page, this.runtimeSrc);
+    page.errors.length || stage7generate(page, this.runtimeSrc, this.dev);
     return page;
   }
 }

@@ -20,11 +20,12 @@ async function main() {
     .helpOption('-h, --help', 'display help for command')
     .argument('<pathname>', 'path to directory containing HTML files (docroot)')
     .option('-p, --port <number>', 'port number, default: 3000')
+    .option('-d, --dev', 'dev mode: show runtime expression errors in the page')
     .action((pathname, options) => {
       console.log(`Starting server for ${pathname}...`);
       const docroot = path.normalize(path.join(process.cwd(), pathname));
       const port = Number.parseInt(options.port) || 3000;
-      new Server({ docroot, port }).start();
+      new Server({ docroot, port, dev: !!options.dev }).start();
     });
 
   if (process.argv.length === 2) {

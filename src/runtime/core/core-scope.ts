@@ -96,6 +96,7 @@ export class CoreScope {
       parent.values[this.props.name] = new CoreValue(
         { val: this.proxy },
         parent,
+        this.props.name,
       );
     }
   }
@@ -134,7 +135,7 @@ export class CoreScope {
     props: CoreValueProps<any>,
     allValues?: { [key: string]: CoreValueProps<any> },
   ): CoreValue<any> {
-    const ret = new CoreValue(props, this);
+    const ret = new CoreValue(props, this, key);
     if (key === RT_FOR_EACH_VALUE) {
       ret.setCB(CoreScope.foreachCB);
       return ret;
@@ -168,12 +169,16 @@ export class CoreScope {
       if (that.values[RT_FOR_OFFSET_VALUE]) {
         offset = that.proxy[RT_FOR_OFFSET_VALUE] - 0;
       }
-    } catch (ignored: any) {}
+    } catch (err: any) {
+      that.ctx.onError('update', err, that.values[RT_FOR_OFFSET_VALUE]);
+    }
     try {
       if (that.values[RT_FOR_LENGTH_VALUE]) {
         length = that.proxy[RT_FOR_LENGTH_VALUE] - 0;
       }
-    } catch (ignored: any) {}
+    } catch (err: any) {
+      that.ctx.onError('update', err, that.values[RT_FOR_LENGTH_VALUE]);
+    }
     offset < 0 && (offset = 0);
     offset > vv.length && (offset = vv.length);
     length < 0 && (length = vv.length);

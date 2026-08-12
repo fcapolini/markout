@@ -62,6 +62,14 @@ default:
 npx markout ./demo --port 8080
 ```
 
+`-d`/`--dev` turns on dev mode, which surfaces runtime expression errors in the
+page itself (both those hit while server-rendering and those hit in the browser
+afterwards) instead of only logging them server-side:
+
+```sh
+npx markout ./demo --dev
+```
+
 ## Integrated reactivity example
 
 ```html

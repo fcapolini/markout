@@ -1,4 +1,4 @@
-import { PROPS_GLOBAL } from '../core/core-context';
+import { DEV_GLOBAL, PROPS_GLOBAL } from '../core/core-context';
 import type { CoreScopeProps } from '../core/core-scope';
 import type { Document as MarkoutDocument } from '../../html/dom';
 import { WebContext } from './web-context';
@@ -19,7 +19,15 @@ export function init(): WebContext | undefined {
     console.error(`markout: window.${PROPS_GLOBAL} not found, nothing to initialize`);
     return undefined;
   }
-  const context = new WebContext({ root, doc: document as unknown as MarkoutDocument });
+  // set by the compiler alongside the props when the page was built in dev
+  // mode: keep surfacing errors in the page after hydration, the same way
+  // SSR already did
+  const dev = window[DEV_GLOBAL] === true;
+  const context = new WebContext({
+    root,
+    doc: document as unknown as MarkoutDocument,
+    dev,
+  });
   context.refresh();
   return context;
 }

@@ -83,3 +83,25 @@ These are still values. They just have side effects instead of being pure logic 
 When a dependency changes, Markout propagates updates through the dependency
 graph. Dependencies are updated when needed so that added or
 removed scopes and values stay in sync.
+
+## When an expression fails
+
+An expression that throws — `${user.name}` before `user` has loaded, say — does
+not break the page. The value becomes `undefined`, and evaluation of everything
+else continues.
+
+It becomes `undefined` *always*, never the value it held before. Keeping the
+old one would make a binding's contents depend on which earlier evaluations
+happened to succeed, and would show stale data as though it were current. One
+fixed rule beats a result you have to reconstruct from history.
+
+The failure is still reported. Run the server with `--dev` and it appears in
+the page itself, naming the scope and value at fault:
+
+```
+markout [update] s3.text$0: Cannot read properties of null (reading 'name')
+```
+
+The same panel is produced during server rendering and in the browser after
+hydration, so an error shows up in the same place wherever it happened. Without
+`--dev`, errors are logged server-side and never reach the served markup.

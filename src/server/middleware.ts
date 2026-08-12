@@ -4,6 +4,8 @@ import fs from "fs";
 import path from "path";
 import { Compiler } from "../compiler";
 import { DEFAULT_RUNTIME_SRC } from "../compiler/stages/stage7-generate";
+import { formatRuntimeError } from "../runtime/core/core-context";
+import { defaultLogger, MarkoutLogger } from "./logger";
 import { renderPage } from "./render";
 
 export const CLIENT_CODE_REQ = DEFAULT_RUNTIME_SRC;
@@ -24,11 +26,20 @@ function loadClientCode(): string {
 
 export interface MarkoutProps {
   docroot: string;
+  /**
+   * Surface runtime expression errors in the served page (and tell the
+   * browser runtime to do the same after hydration). Off by default: outside
+   * dev mode these are logged server-side and never reach the markup.
+   */
+  dev?: boolean;
+  logger?: MarkoutLogger;
 }
 
 export function markout(props: MarkoutProps) {
   const docroot = props.docroot || process.cwd();
-  const compiler = new Compiler({ docroot });
+  const dev = props.dev ?? false;
+  const logger = props.logger ?? defaultLogger;
+  const compiler = new Compiler({ docroot, dev });
   const clientCode = loadClientCode();
 
   return async function (req: Request, res: Response, next: NextFunction) {
@@ -57,7 +68,10 @@ export function markout(props: MarkoutProps) {
       return serveErrorPage(page.source.errors, res);
     }
 
-    renderPage(page);
+    // always logged; only present in the markup when dev is on
+    renderPage(page, dev).forEach(e =>
+      logger('error', `[markout] ${pathname} ${formatRuntimeError(e)}`)
+    );
 
     let doc = page.source.doc;
     const html = doc.toString();

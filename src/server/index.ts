@@ -11,6 +11,8 @@ export interface ServerProps {
   port?: number;
   trustProxy?: boolean;
   logger?: MarkoutLogger;
+  /** surface runtime expression errors in the page; see MarkoutProps */
+  dev?: boolean;
 }
 
 export class Server {
@@ -37,13 +39,14 @@ export class Server {
     config.trustProxy && app.set('trust proxy', 1);
     config.docroot ||= process.cwd();
 
-    app.use(markout(config));
+    app.use(markout({ ...config, logger: this.logger }));
 
     app.use(express.static(config.docroot));
     this.server = app.listen(config.port);
     this.port = (this.server?.address() as AddressInfo).port;
     this.logger('info', `[server] docroot ${config.docroot}`);
     this.logger('info', `[server] address http://127.0.0.1:${this.port}/`);
+    config.dev && this.logger('info', '[server] dev mode: runtime errors will be shown in the page');
     exitHook(() => this.logger('info', '[server] will exit'));
     process.on('uncaughtException', err => {
       this.logger('error', err.stack ? err.stack : `${err}`);
