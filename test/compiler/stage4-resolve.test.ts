@@ -1,11 +1,14 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import * as acorn from 'acorn';
+import { stage1load } from '../../src/compiler/stages/stage1-load';
+import { stage2validate } from '../../src/compiler/stages/stage2-validate';
+import { stage3qualify } from '../../src/compiler/stages/stage3-qualify';
 import { stage4resolve } from '../../src/compiler/stages/stage4-resolve';
 import { Page } from '../../src/compiler/ir/Page';
 import { Scope } from '../../src/compiler/ir/Scope';
 import { Value } from '../../src/compiler/ir/Value';
 import { ServerAttribute, ServerDocument, SourceLocation } from '../../src/html/server-dom';
-import { Source } from '../../src/html/parser';
+import { Source, parse } from '../../src/html/parser';
 
 const LOC: SourceLocation = {
   start: { line: 0, column: 0 },
@@ -151,5 +154,52 @@ describe('stage4-resolve', () => {
 
     stage4resolve(page);
     expect(value.deps).toStrictEqual([{ key: 'count' }]);
+  });
+});
+
+describe('stage4-resolve: unknown reference validation', () => {
+  function compile(html: string) {
+    const p = new Page(parse(html, 'test.html'));
+    stage1load(p);
+    stage2validate(p);
+    stage3qualify(p);
+    stage4resolve(p);
+    return p;
+  }
+
+  it('reports an error for a reference to an undeclared value', () => {
+    const p = compile('<html><body><div :count=${0}><p>${bar}</p></div></body></html>');
+    expect(p.errors.map(e => e.msg)).toContain('Unknown reference: "bar"');
+  });
+
+  it('reports an error for an undeclared property on a known named scope', () => {
+    const p = compile(
+      '<html><body><div :aka="foo" :x=${1}></div><p>${foo.nope}</p></body></html>'
+    );
+    expect(p.errors.map(e => e.msg)).toContain('Unknown reference: "foo.nope"');
+  });
+
+  it('does not error for a same-scope reference', () => {
+    const p = compile('<html><body><div :count=${0}><p>${count}</p></div></body></html>');
+    expect(p.errors).toStrictEqual([]);
+  });
+
+  it('does not error for a reference resolved through an ancestor scope', () => {
+    const p = compile(
+      '<html><body><div :items=${[1,2,3]}><li :for-each=${items}>${data}</li></div></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+  });
+
+  it('does not error for a value declared on a known named scope', () => {
+    const p = compile(
+      '<html><body><div :aka="foo" :x=${1}></div><p>${foo.x}</p></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+  });
+
+  it('does not error for a bare reference to a named scope itself', () => {
+    const p = compile('<html><body><div :aka="foo"></div><p>${foo}</p></body></html>');
+    expect(p.errors).toStrictEqual([]);
   });
 });

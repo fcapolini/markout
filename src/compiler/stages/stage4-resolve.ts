@@ -6,6 +6,7 @@ import type { Scope } from '../ir/Scope';
 import type { Value, ValueDepRef } from '../ir/Value';
 
 const RT_PARENT_VALUE_KEY = '$parent';
+const RT_VALUE_FN_KEY = '$value';
 
 // values whose top-level expression is itself a callback (an event/lifecycle
 // handler): its body only runs later, when invoked, not as part of
@@ -56,6 +57,39 @@ function resolveValue(name: string, value: Value, page: Page) {
   // a callback's own body isn't evaluated until it's invoked, so its
   // references aren't dependencies of the callback value itself
   value.deps = isCallback ? [] : collectDeps(ast, page);
+  isCallback || validateDeps(page, value);
+}
+
+// each dep must actually resolve to something real: a declared value, or a
+// named (:aka) scope reference -- mirroring how CoreScope.link() registers
+// a named child scope as a value on ITS OWN parent, not on itself
+function validateDeps(page: Page, value: Value) {
+  for (const dep of value.deps) {
+    if (dep.key === RT_PARENT_VALUE_KEY || dep.key === RT_VALUE_FN_KEY) continue;
+    const target = dep.via
+      ? dep.via === RT_PARENT_VALUE_KEY
+        ? value.scope.parent
+        : page.defines.get(dep.via)
+      : value.scope;
+    if (!target || !resolvesToKnownValue(target, dep.key)) {
+      const ref = dep.via ? `${dep.via}.${dep.key}` : dep.key;
+      addError(page, `Unknown reference: "${ref}"`, value.node.loc);
+    }
+  }
+}
+
+function resolvesToKnownValue(scope: Scope, key: string): boolean {
+  let s: Scope | undefined = scope;
+  while (s) {
+    if (s.values.has(key)) return true;
+    if (s.children.some(c => c.name === key)) return true;
+    s = s.parent;
+  }
+  return false;
+}
+
+function addError(page: Page, msg: string, loc: Value['node']['loc']) {
+  page.errors.push({ type: 'error', msg, loc });
 }
 
 function collectDeps(ast: Node, page: Page): ValueDepRef[] {

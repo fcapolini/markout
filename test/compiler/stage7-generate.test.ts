@@ -240,3 +240,53 @@ describe('stage7-generate bootstrap scripts', () => {
   });
 });
 
+describe('stage7-generate full pipeline: dependency codegen', () => {
+  function compilePage(html: string) {
+    const p = new Page(parse(html, 'test.html'));
+    stage1load(p);
+    stage2validate(p);
+    stage3qualify(p);
+    stage4resolve(p);
+    stage7generate(p);
+    return p;
+  }
+
+  it('compiles a same-scope reference from a plain child element into this.$value(key)', () => {
+    // :count and ${count} end up on the same scope: <p> has no special
+    // attribute of its own, so it doesn't get a scope and the
+    // interpolation attaches to the enclosing <div>'s
+    const p = compilePage(
+      '<html><body><div :count=${0}><p>${count}</p></div></body></html>'
+    );
+
+    const body = prop(p.propsAST, 'children').elements[1];
+    const div = prop(body, 'children').elements[0];
+    const textValue = prop(div, 'values').properties.find(
+      (property: any) => keyName(property) === 'text$0'
+    ).value;
+    const dep = prop(textValue, 'deps').elements[0];
+
+    expect(generate(dep)).toContain("this.$value('count')");
+  });
+
+  it('still compiles to this.$value(key) when the reference lives in its own nested (:aka) scope', () => {
+    // ${count} qualifies to `this.count` regardless of which scope actually
+    // owns it -- the scope-chain walk happens at runtime, in lookup(),
+    // never at compile time -- so this must compile exactly like the
+    // same-scope case above, even though <p> now has its own scope
+    const p = compilePage(
+      '<html><body><div :count=${0}><p :aka="foo">${count}</p></div></body></html>'
+    );
+
+    const body = prop(p.propsAST, 'children').elements[1];
+    const div = prop(body, 'children').elements[0];
+    const foo = prop(div, 'children').elements[0];
+    const textValue = prop(foo, 'values').properties.find(
+      (property: any) => keyName(property) === 'text$0'
+    ).value;
+    const dep = prop(textValue, 'deps').elements[0];
+
+    expect(generate(dep)).toContain("this.$value('count')");
+  });
+});
+
