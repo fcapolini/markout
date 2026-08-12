@@ -1,7 +1,7 @@
-# Directive Reference
+# Syntax Reference
 
-This page is a compact summary of the main Markout directives and special tag
-forms.
+The whole language on one page: what interpolation means, every `:` family,
+the module and composition tags, and the names the runtime supplies.
 
 ## Interpolation
 
