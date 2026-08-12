@@ -5,6 +5,22 @@ import { CoreValue, CoreValueProps } from './core-value';
 
 export const RT_VALUE_FN_KEY = '$value';
 export const RT_PARENT_VALUE_KEY = '$parent';
+/** this scope's own compiler-assigned id, e.g. `s4` (`s4-0` for a replica) */
+export const RT_ID_VALUE_KEY = '$id';
+
+/**
+ * A replica's scope id, derived from the id of the scope it replicates.
+ *
+ * The separator has to leave the result usable as an HTML id, because that's
+ * what pages build out of `$id` (`id`, `aria-controls`, `data-bs-target`, a
+ * label's `for`). The obvious `#` doesn't: it's legal in an id attribute but
+ * starts a new id in a selector, so `document.querySelector('#s4#0')` never
+ * matches the element -- a component that worked standalone would break
+ * silently as soon as it was replicated.
+ */
+export function cloneId(baseId: string, index: number): string {
+  return `${baseId}-${index}`;
+}
 export const RT_FOR_EACH_VALUE = 'for$each';
 export const RT_FOR_OFFSET_VALUE = 'for$offset';
 export const RT_FOR_LENGTH_VALUE = 'for$length';
@@ -75,6 +91,16 @@ export class CoreScope {
         val: this.parent?.proxy,
       });
     }
+    // unconditionally, unlike the two above: lookup() walks up the scope
+    // chain, so a scope missing its own $id wouldn't fail -- it would
+    // silently answer with an ancestor's, which is exactly the kind of
+    // quietly-wrong binding that's hardest to notice
+    this.values[RT_ID_VALUE_KEY] = this.newValue(RT_ID_VALUE_KEY, {
+      // the same id stage1 stamped into the element as `data-markout`, and
+      // the same one the browser reads back out of the compiled props: it
+      // comes from the page, so server and client can't disagree on it
+      val: props.id,
+    });
     props.children?.forEach((p) => context.newScope(p, context, this));
   }
 
@@ -218,7 +244,7 @@ export class CoreScope {
 
   clone(index: number): CoreScope {
     const clone = this.ctx.newScope({
-      id: `${this.props.id}#${index}`,
+      id: cloneId(this.props.id, index),
       // name: this.props.name,
       children: this.props.children,
       values: this.props.values,

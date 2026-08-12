@@ -7,7 +7,7 @@ import {
   TemplateElement,
   Text,
 } from '../../html/dom';
-import { CoreScope, CoreScopeProps } from '../core/core-scope';
+import { CoreScope, CoreScopeProps, cloneId } from '../core/core-scope';
 import { CoreValueProps } from '../core/core-value';
 import {
   DOM_ATOMIC_TEXT_TAGS,
@@ -242,7 +242,7 @@ export class WebScope extends CoreScope {
   override clone(index: number): WebScope {
     // resolved before construction, so the clone's own init() (running
     // during super()) can pick it up via pendingCloneDom
-    this.pendingCloneDom = this.acquireCloneDom(`${this.props.id}#${index}`);
+    this.pendingCloneDom = this.acquireCloneDom(cloneId(this.props.id, index));
     const clone = super.clone(index) as WebScope;
     this.pendingCloneDom = undefined;
     return clone;

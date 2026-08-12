@@ -262,6 +262,11 @@ describe('stage4-resolve: unknown reference validation', () => {
     const p = compile('<html><body><div :aka="foo"></div><p>${foo}</p></body></html>');
     expect(p.errors).toStrictEqual([]);
   });
+
+  it('does not error for the runtime-provided $id', () => {
+    const p = compile('<html><body><p>${$id}</p></body></html>');
+    expect(p.errors).toStrictEqual([]);
+  });
 });
 
 // A reference the compiler fails to record doesn't blow up at runtime -- it

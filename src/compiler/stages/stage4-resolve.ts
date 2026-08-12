@@ -7,6 +7,7 @@ import type { Value, ValueDepRef } from '../ir/Value';
 
 const RT_PARENT_VALUE_KEY = '$parent';
 const RT_VALUE_FN_KEY = '$value';
+const RT_ID_VALUE_KEY = '$id';
 
 // values whose top-level expression is itself a callback (an event/lifecycle
 // handler): its body only runs later, when invoked, not as part of
@@ -185,7 +186,7 @@ function validated(
   page: Page
 ): ValueDepRef | undefined {
   // the runtime supplies these on every scope; there's nothing to declare
-  if (key !== RT_PARENT_VALUE_KEY && key !== RT_VALUE_FN_KEY) {
+  if (key !== RT_PARENT_VALUE_KEY && key !== RT_VALUE_FN_KEY && key !== RT_ID_VALUE_KEY) {
     if (!resolvesToKnownValue(target, key)) {
       addError(page, `Unknown reference: "${[...via, key].join('.')}"`, value.node.loc);
       return undefined;
