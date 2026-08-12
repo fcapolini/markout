@@ -146,8 +146,19 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
 function needsScope(e: ServerElement): boolean {
   for (const attr of e.attributes as ServerAttribute[]) {
     if (attr.name.startsWith(SPECIAL_ATTR_PREFIX)) return true;
+    // a plain attribute with an interpolated value is reactive too, so its
+    // element needs its own scope to hold the resulting attr$ value -- were
+    // it to land on the enclosing scope instead (see load()), it would set
+    // the attribute on that scope's element rather than on this one
+    if (isDynamic(attr)) return true;
   }
   return false;
+}
+
+// a `${...}` attribute value is parsed into an expression; a plain one stays
+// a string, and a valueless attribute (e.g. `disabled`) is null
+function isDynamic(attr: ServerAttribute): boolean {
+  return attr.value != null && typeof attr.value !== 'string';
 }
 
 function hasForEachAttr(e: ServerElement): boolean {
@@ -235,14 +246,11 @@ function expandCustomTagUsages(page: Page): void {
     scope.children = defScope.children;
     scope.usesTemplate = defScope.id;
     scope.attributes = new Map();
+    // only static ones are left to carry over: extractValues() already
+    // turned any `${...}` attribute here into an attr$ value on
+    // loadedUsageScope, merged in below like every other usage-site value
     for (const name of usageEl.getAttributeNames()) {
       if (name.startsWith(SPECIAL_ATTR_PREFIX) || name === DOM_ID_ATTR) continue;
-      const attr = usageEl.getAttributeNode(name) as ServerAttribute | null;
-      if (attr && typeof attr.value !== 'string' && attr.value !== null) {
-        const valueName = `${ATTR_VALUE_PREFIX}${name}`;
-        scope.values.set(valueName, new Value(valueName, attr, scope, page.createValueId()));
-        continue;
-      }
       scope.attributes.set(name, usageEl.getAttribute(name));
     }
     if (loadedUsageScope) {
@@ -278,7 +286,16 @@ function findScopeForElement(scope: Scope | undefined, e: ServerElement): Scope 
 
 function extractValues(page: Page, scope: Scope, e: ServerElement) {
   for (const attr of e.attributes as ServerAttribute[]) {
-    if (!attr.name.startsWith(SPECIAL_ATTR_PREFIX)) continue;
+    if (!attr.name.startsWith(SPECIAL_ATTR_PREFIX)) {
+      // `href=${...}` and the like: no `:` needed, since the attribute is
+      // already named by the HTML author -- the expression alone is what
+      // makes it reactive, exactly as in text and CSS
+      if (isDynamic(attr)) {
+        const attrName = `${ATTR_VALUE_PREFIX}${attr.name}`;
+        scope.values.set(attrName, new Value(attrName, attr, scope, page.createValueId()));
+      }
+      continue;
+    }
     let name = attr.name.slice(SPECIAL_ATTR_PREFIX.length);
     if (name === SCOPE_NAME_ATTR) {
       if (scope.name) {
@@ -337,8 +354,11 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     name = compiledPrefix + suffix;
     scope.values.set(name, new Value(name, attr, scope, page.createValueId()));
   }
+  // both families are now scope values: leaving them behind would serialize
+  // an expression object as an empty attribute, which the runtime would then
+  // immediately overwrite anyway
   e.attributes = e.attributes.filter(
-    attr => !attr.name.startsWith(SPECIAL_ATTR_PREFIX)
+    attr => !attr.name.startsWith(SPECIAL_ATTR_PREFIX) && !isDynamic(attr as ServerAttribute)
   );
   if (scope.values.has(FOR_EACH_VALUE)) {
     // ordinary value, not a for$-prefixed one: stage3-qualify already turns
