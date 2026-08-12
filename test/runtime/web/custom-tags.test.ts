@@ -9,7 +9,7 @@ import { WebScope } from '../../../src/runtime/web/web-scope';
 // the usage site is a comment marker until WebScope instantiates it
 const HTML =
   '<html data-markout="0"><head>' +
-  '<template><button data-markout="def"></button></template>' +
+  '<template><button class="action" data-markout="def"></button></template>' +
   '</head><body><!---uuse--></body></html>';
 
 function setup(root: CoreScopeProps, html = HTML) {
@@ -41,6 +41,7 @@ describe('custom tags: usage-site DOM instantiation', () => {
     const button = body.childNodes.find((n: any) => n.tagName === 'BUTTON');
     assert.isDefined(button);
     assert.equal(button.getAttribute('data-markout'), 'use');
+    assert.include(button.className, 'action');
     assert.include(button.className, 'active');
     // the marker comment is gone, replaced in place
     const stillHasMarker = body.childNodes.some(
