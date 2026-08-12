@@ -60,6 +60,7 @@ describe('stage4-resolve', () => {
 
   it('should record a this.foo reference as a non-parent dependency', () => {
     const scope = new Scope(page, page.global);
+    addValue(scope, 'count', null);
     const value = addValue(scope, 'x', 'this.count + 1');
 
     stage4resolve(page);
@@ -68,29 +69,32 @@ describe('stage4-resolve', () => {
 
   it('should record a this.$parent.foo reference as a parent dependency', () => {
     const scope = new Scope(page, page.global);
+    addValue(page.global, 'count', null);
     const value = addValue(scope, 'x', 'this.$parent.count + 1');
 
     stage4resolve(page);
-    expect(value.deps).toStrictEqual([{ via: '$parent', key: 'count' }]);
+    expect(value.deps).toStrictEqual([{ via: ['$parent'], key: 'count' }]);
   });
 
   it('should record a this.foo.bar reference as a named-scope dependency when foo is a known :aka scope', () => {
     const scope = new Scope(page, page.global);
-    new Scope(page, page.global, undefined, 'foo');
+    const foo = new Scope(page, page.global, undefined, 'foo');
+    addValue(foo, 'bar', null);
     const value = addValue(scope, 'x', 'this.foo.bar + 1');
 
     stage4resolve(page);
-    expect(value.deps).toStrictEqual([{ via: 'foo', key: 'bar' }]);
+    expect(value.deps).toStrictEqual([{ via: ['foo'], key: 'bar' }]);
   });
 
   it('should resolve a named scope reachable through an intermediate ancestor (ascends the IR tree)', () => {
     const middle = new Scope(page, page.global);
     const scope = new Scope(page, middle);
-    new Scope(page, page.global, undefined, 'foo');
+    const foo = new Scope(page, page.global, undefined, 'foo');
+    addValue(foo, 'bar', null);
     const value = addValue(scope, 'x', 'this.foo.bar + 1');
 
     stage4resolve(page);
-    expect(value.deps).toStrictEqual([{ via: 'foo', key: 'bar' }]);
+    expect(value.deps).toStrictEqual([{ via: ['foo'], key: 'bar' }]);
   });
 
   it('should NOT treat this.foo.bar as a scope reference when foo is just an ordinary value', () => {
@@ -115,6 +119,7 @@ describe('stage4-resolve', () => {
 
   it('should dedupe repeated references to the same dependency', () => {
     const scope = new Scope(page, page.global);
+    addValue(scope, 'count', null);
     const value = addValue(scope, 'x', 'this.count + this.count * 2');
 
     stage4resolve(page);
@@ -123,13 +128,15 @@ describe('stage4-resolve', () => {
 
   it('should record multiple distinct dependencies', () => {
     const scope = new Scope(page, page.global);
+    addValue(scope, 'a', null);
+    addValue(page.global, 'b', null);
     const value = addValue(scope, 'x', 'this.a + this.$parent.b');
 
     stage4resolve(page);
     expect(value.deps).toEqual(
       expect.arrayContaining([
         { key: 'a' },
-        { via: '$parent', key: 'b' },
+        { via: ['$parent'], key: 'b' },
       ])
     );
     expect(value.deps).toHaveLength(2);
@@ -153,6 +160,8 @@ describe('stage4-resolve', () => {
 
   it('should still record dependencies for a regular value containing a nested arrow function', () => {
     const scope = new Scope(page, page.global);
+    addValue(scope, 'items', null);
+    addValue(scope, 'offset', null);
     const value = addValue(scope, 'x', 'this.items.map(item => item + this.offset)');
 
     stage4resolve(page);
@@ -167,6 +176,7 @@ describe('stage4-resolve', () => {
 
   it('should resolve text values too', () => {
     const scope = new Scope(page, page.global);
+    addValue(scope, 'count', null);
     const textAttr = new ServerAttribute(doc, null as any, ':t$0', null, LOC);
     const textValue = new Value('t$0', textAttr, scope);
     textAttr.value = parseExpr('this.count');
@@ -179,6 +189,7 @@ describe('stage4-resolve', () => {
   it('should recurse into child scopes', () => {
     const scope = new Scope(page, page.global);
     const child = new Scope(page, scope);
+    addValue(child, 'count', null);
     const value = addValue(child, 'x', 'this.count');
 
     stage4resolve(page);
@@ -230,5 +241,103 @@ describe('stage4-resolve: unknown reference validation', () => {
   it('does not error for a bare reference to a named scope itself', () => {
     const p = compile('<html><body><div :aka="foo"></div><p>${foo}</p></body></html>');
     expect(p.errors).toStrictEqual([]);
+  });
+});
+
+// A reference the compiler fails to record doesn't blow up at runtime -- it
+// produces a binding that silently never updates. So every one of these
+// asserts either the right dependency or an explicit error, never a
+// quietly-dropped reference.
+describe('stage4-resolve: chained scope navigation', () => {
+  function compile(html: string) {
+    const p = new Page(parse(html, 'test.html'));
+    stage1load(p);
+    stage2validate(p);
+    stage3qualify(p);
+    stage4resolve(p);
+    return p;
+  }
+
+  // the value carrying the page's single interpolated text
+  function textDeps(p: Page) {
+    for (const [, v] of p.values) {
+      if (v.name.startsWith('t$') && v.deps.length) return v.deps;
+    }
+    return [];
+  }
+
+  it('walks a chain through two named scopes down to the value', () => {
+    const p = compile(
+      '<html><body><div :aka="outer"><span :aka="inner" :count=${1}></span></div>' +
+        '<p>${outer.inner.count}</p></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+    // NOT [{ via: ['outer'], key: 'inner' }] -- that's the scope object,
+    // which never changes, so `count` would never trigger an update
+    expect(textDeps(p)).toStrictEqual([{ via: ['outer', 'inner'], key: 'count' }]);
+  });
+
+  it('walks repeated $parent hops down to the value', () => {
+    const p = compile(
+      '<html :n=${1}><body><div :aka="a"><span>${$parent.$parent.n}</span></div></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+    expect(textDeps(p)).toStrictEqual([{ via: ['$parent', '$parent'], key: 'n' }]);
+  });
+
+  it('walks a chain mixing a named scope and $parent', () => {
+    const p = compile(
+      '<html :n=${1}><body><div :aka="a"></div><p>${a.$parent.$parent.n}</p></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+    expect(textDeps(p)).toStrictEqual([
+      { via: ['a', '$parent', '$parent'], key: 'n' },
+    ]);
+  });
+
+  it('stops the chain at the first ordinary value and depends on that', () => {
+    const p = compile(
+      '<html :user=${{profile: {name: "ann"}}}><body><p>${user.profile.name}</p></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+    // `profile`/`name` are plain properties of whatever `user` holds, not
+    // scopes -- the value itself is the only thing that can change
+    expect(textDeps(p)).toStrictEqual([{ key: 'user' }]);
+  });
+
+  it('reports an unknown value at the end of a resolved scope chain', () => {
+    const p = compile(
+      '<html><body><div :aka="outer"><span :aka="inner" :count=${1}></span></div>' +
+        '<p>${outer.inner.nope}</p></body></html>'
+    );
+    expect(p.errors.map(e => e.msg)).toContain('Unknown reference: "outer.inner.nope"');
+  });
+
+  it('reports a $parent hop that walks off the top of the scope tree', () => {
+    const p = compile('<html :n=${1}><body><p>${$parent.$parent.$parent.n}</p></body></html>');
+    expect(p.errors.map(e => e.msg)).toContain(
+      'Unknown reference: "$parent.$parent.$parent.n"'
+    );
+  });
+
+  it('reports a computed property access on a scope instead of silently mistracking it', () => {
+    const p = compile(
+      '<html :k="count"><body><div :aka="outer" :count=${1}></div>' +
+        '<p>${outer[k]}</p></body></html>'
+    );
+    expect(p.errors.map(e => e.msg)).toContain(
+      'Cannot track dependencies through a computed property access on scope "outer"'
+    );
+  });
+
+  it('still records both sides of a computed access on an ordinary value', () => {
+    const p = compile(
+      '<html :items=${[1,2]} :i=${0}><body><p>${items[i]}</p></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+    expect(textDeps(p)).toEqual(
+      expect.arrayContaining([{ key: 'items' }, { key: 'i' }])
+    );
+    expect(textDeps(p)).toHaveLength(2);
   });
 });

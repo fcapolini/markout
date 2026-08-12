@@ -116,8 +116,12 @@ function qualifyExpression(key: string, expression: Node) {
   });
 }
 
+// the `b` in `a.b` is a property name, already resolved by the member access
+// itself. The `b` in `a[b]`, though, is an ordinary reference that still needs
+// qualifying -- without the `computed` check it silently stays bare, becoming
+// an undeclared global at runtime and contributing no dependency
 function isQualified(id: Node, parent: Node | null | undefined) {
-  return parent?.type === 'MemberExpression' && parent.property === id;
+  return parent?.type === 'MemberExpression' && !parent.computed && parent.property === id;
 }
 
 function isInDeclaration(id: Node, stack: Node[]) {

@@ -196,7 +196,22 @@ execution. Concretely, the compiler is responsible for:
   declared value or named (`:aka`) scope somewhere in the reachable scope
   chain (own scope, ancestors, or a named scope's own values), reporting a
   compile error otherwise — the runtime never has to tolerate a `deps`
-  entry pointing at nothing.
+  entry pointing at nothing;
+- resolving a reference chain (`outer.inner.count`, `$parent.$parent.n`)
+  one segment at a time, each against the scope the previous segment landed
+  in — the same walk `lookup()` performs — and stopping at the first
+  segment that isn't a scope navigation, since everything after it is plain
+  property access on that value's own runtime shape (`items.filter`).
+
+That last point carries more weight than it looks. Because the runtime
+trusts `deps` completely, a reference the compiler resolves *wrongly* —
+recording a dependency on the scope it navigated through rather than on the
+value at the end of the chain — doesn't surface as a runtime error. It
+produces a binding that renders correctly once and then silently never
+updates again. So the compiler must treat "I don't recognize this shape" as
+an error to report, never as a reference to quietly skip: anything it can't
+follow statically (a computed property access on a scope, say) has to fail
+the build rather than compile into a dead binding.
 
 For the DOM-specific layer (`runtime/web`), the compiler also marks dynamic
 text positions with HTML comments, so `WebScope` can find the DOM text node

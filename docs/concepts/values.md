@@ -42,6 +42,31 @@ In practice, that means:
   `this`;
 - arrow functions are the safe syntax.
 
+## Reference chains
+
+A reference can walk through as many named scopes as you like. Each segment is
+resolved against the scope the previous one landed in, exactly the way a lookup
+happens at runtime:
+
+```html
+<div :aka="outer">
+  <span :aka="inner" :count=${1}></span>
+</div>
+<p>${outer.inner.count}</p>
+```
+
+The chain stops at the first name that isn't a scope. Anything after that is
+ordinary property access on whatever the value holds, so `${user.profile.name}`
+depends on `user` — not on `profile` or `name`, which are plain object
+properties the compiler can't and shouldn't track.
+
+One restriction follows from this: a *computed* property access on a scope,
+like `${outer[key]}`, is a compile error. It works at runtime, but the compiler
+can't tell statically which value it lands on, and recording a dependency on
+the scope instead would give you a binding that renders once and then never
+updates. An error you see at build time is better than a page that quietly goes
+stale, so the compiler refuses rather than guesses.
+
 ## Special binding prefixes
 
 Some prefixes change how a value behaves at runtime:

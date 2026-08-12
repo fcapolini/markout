@@ -18,8 +18,21 @@ const CALLBACK_VALUE_PREFIXES = [EVENT_VALUE_PREFIX, DID_VALUE_PREFIX, WILL_VALU
  * Stage 4: Resolve value references at compile time.
  *
  * Walks each value's qualified expression (from stage3) and records every
- * `this.foo`/`this.<via>.foo` reference it makes as a `ValueDepRef` on
+ * `this.foo`/`this.<via...>.foo` reference it makes as a `ValueDepRef` on
  * `Value.deps`, mirroring the runtime's `CoreValueProps.deps` contract.
+ *
+ * A reference is a `this`-rooted chain of static property accesses. It's
+ * consumed whole, walking one segment at a time and resolving each against
+ * the scope the previous segment landed in -- exactly mirroring what
+ * `CoreScope.lookup()` does at runtime. The walk stops at the first segment
+ * that isn't a scope navigation: that segment is the dependency key, and
+ * anything after it is plain JS property access on the value's own runtime
+ * shape (`items.filter`), not something the compiler can or should track.
+ *
+ * Every chain that can't be resolved this way is a compile error. That
+ * matters more than it looks: a reference the compiler fails to record
+ * doesn't fail loudly at runtime, it produces a binding that silently never
+ * updates -- so "unrecognized" must never be a quiet no-op here.
  */
 
 export function stage4resolve(page: Page) {
@@ -56,26 +69,7 @@ function resolveValue(name: string, value: Value, page: Page) {
     (ast.type === 'ArrowFunctionExpression' || ast.type === 'FunctionExpression');
   // a callback's own body isn't evaluated until it's invoked, so its
   // references aren't dependencies of the callback value itself
-  value.deps = isCallback ? [] : collectDeps(ast, value.scope);
-  isCallback || validateDeps(page, value);
-}
-
-// each dep must actually resolve to something real: a declared value, or a
-// named (:aka) scope reference -- mirroring how CoreScope.link() registers
-// a named child scope as a value on ITS OWN parent, not on itself
-function validateDeps(page: Page, value: Value) {
-  for (const dep of value.deps) {
-    if (dep.key === RT_PARENT_VALUE_KEY || dep.key === RT_VALUE_FN_KEY) continue;
-    const target = dep.via
-      ? dep.via === RT_PARENT_VALUE_KEY
-        ? value.scope.parent
-        : findNavigableScope(value.scope, dep.via)
-      : value.scope;
-    if (!target || !resolvesToKnownValue(target, dep.key)) {
-      const ref = dep.via ? `${dep.via}.${dep.key}` : dep.key;
-      addError(page, `Unknown reference: "${ref}"`, value.node.loc);
-    }
-  }
+  value.deps = isCallback ? [] : collectDeps(ast, value, page);
 }
 
 function resolvesToKnownValue(scope: Scope, key: string): boolean {
@@ -92,27 +86,143 @@ function addError(page: Page, msg: string, loc: Value['node']['loc']) {
   page.errors.push({ type: 'error', msg, loc });
 }
 
-function collectDeps(ast: Node, scope: Scope): ValueDepRef[] {
+function collectDeps(ast: Node, value: Value, page: Page): ValueDepRef[] {
   const deps = new Map<string, ValueDepRef>();
   estraverse.traverse(ast, {
     enter(node) {
-      const dep = matchDep(node, scope);
-      if (dep) {
-        deps.set(`${dep.via}:${dep.key}`, dep);
+      // a computed access on a scope (`foo[expr].bar`) resolves fine at
+      // runtime but can't be followed statically -- report it rather than
+      // silently recording a dependency on the scope itself, which would
+      // never change and so would never trigger an update
+      const dynamic = dynamicScopeAccess(node, value.scope);
+      if (dynamic) {
+        addError(
+          page,
+          `Cannot track dependencies through a computed property access on scope "${dynamic}"`,
+          value.node.loc
+        );
         this.skip();
+        return;
       }
+      const segments = chainSegments(node);
+      if (!segments) {
+        return;
+      }
+      // the chain is consumed whole; descending into it again would re-match
+      // its own prefixes as separate (wrong) dependencies
+      this.skip();
+      const dep = resolveChain(segments, value, page);
+      dep && deps.set(depKey(dep), dep);
     },
   });
   return [...deps.values()];
 }
 
-// a name navigates to another scope only if it's the reserved $parent, or a
-// named (:aka) scope actually reachable by walking up from `scope` --
-// anything else is just a regular value whose own runtime shape we can't
-// (and shouldn't) peek into at compile time (e.g. `this.items.filter` isn't
-// a dependency on some scope named "items")
-function isNavigableScopeName(name: string, scope: Scope): boolean {
-  return name === RT_PARENT_VALUE_KEY || findNavigableScope(scope, name) !== undefined;
+function depKey(dep: ValueDepRef): string {
+  return `${(dep.via ?? []).join('.')}:${dep.key}`;
+}
+
+/**
+ * The segments of a fully static `this`-rooted member chain, outermost last:
+ * `this.a.b.c` -> `['a', 'b', 'c']`.
+ *
+ * Returns undefined for anything else -- a computed access, a non-Identifier
+ * key, or a chain rooted somewhere other than `this` -- so the traversal
+ * descends and matches sub-expressions individually instead. That's what
+ * keeps `this.items[this.i]` recording both `items` and `i`.
+ */
+function chainSegments(node: Node): string[] | undefined {
+  const segments: string[] = [];
+  let n: Node = node;
+  while (n.type === 'MemberExpression') {
+    if (n.computed || n.property.type !== 'Identifier') {
+      return undefined;
+    }
+    segments.unshift(n.property.name);
+    n = n.object as Node;
+  }
+  return n.type === 'ThisExpression' && segments.length ? segments : undefined;
+}
+
+/**
+ * Walk a chain segment by segment, resolving each against the scope the
+ * previous one landed in, and return the dependency it denotes. Reports a
+ * compile error (and returns undefined) if it doesn't resolve.
+ */
+function resolveChain(segments: string[], value: Value, page: Page): ValueDepRef | undefined {
+  const via: string[] = [];
+  let target: Scope = value.scope;
+
+  // every segment but the last is a candidate navigation; the last is always
+  // a key, so that `this.foo` on a named scope depends on the scope-valued
+  // entry itself rather than trying to navigate into it
+  for (let i = 0; i < segments.length - 1; i++) {
+    const step = navigate(target, segments[i]);
+    if (!step.isNavigation) {
+      // an ordinary value: it's the dependency, and the remaining segments
+      // are plain property access on whatever it holds at runtime
+      return validated(via, segments[i], target, value, page);
+    }
+    if (!step.scope) {
+      addError(page, `Unknown reference: "${segments.join('.')}"`, value.node.loc);
+      return undefined;
+    }
+    via.push(segments[i]);
+    target = step.scope;
+  }
+
+  return validated(via, segments[segments.length - 1], target, value, page);
+}
+
+function validated(
+  via: string[],
+  key: string,
+  target: Scope,
+  value: Value,
+  page: Page
+): ValueDepRef | undefined {
+  // the runtime supplies these on every scope; there's nothing to declare
+  if (key !== RT_PARENT_VALUE_KEY && key !== RT_VALUE_FN_KEY) {
+    if (!resolvesToKnownValue(target, key)) {
+      addError(page, `Unknown reference: "${[...via, key].join('.')}"`, value.node.loc);
+      return undefined;
+    }
+  }
+  return via.length ? { via, key } : { key };
+}
+
+/**
+ * Whether `name` navigates to another scope from `scope`. `isNavigation`
+ * says the name means "go to a scope" (so failing to find one is an error);
+ * `scope` is where it lands.
+ */
+function navigate(scope: Scope, name: string): { isNavigation: boolean; scope?: Scope } {
+  if (name === RT_PARENT_VALUE_KEY) {
+    return { isNavigation: true, scope: scope.parent };
+  }
+  const target = findNavigableScope(scope, name);
+  return { isNavigation: !!target, scope: target };
+}
+
+// the object of a computed access, when that object is itself a static chain
+// landing on a named scope -- e.g. `foo[k]` / `outer.inner[k]`
+function dynamicScopeAccess(node: Node, scope: Scope): string | undefined {
+  if (node.type !== 'MemberExpression' || !node.computed) {
+    return undefined;
+  }
+  const segments = chainSegments(node.object as Node);
+  if (!segments) {
+    return undefined;
+  }
+  let target: Scope = scope;
+  for (const segment of segments) {
+    const step = navigate(target, segment);
+    if (!step.isNavigation || !step.scope) {
+      return undefined;
+    }
+    target = step.scope;
+  }
+  return segments.join('.');
 }
 
 // walks up from `scope` (inclusive) looking for an ancestor with a named
@@ -132,25 +242,3 @@ function findNavigableScope(scope: Scope, name: string): Scope | undefined {
   return undefined;
 }
 
-function matchDep(node: Node, scope: Scope): ValueDepRef | undefined {
-  if (node.type !== 'MemberExpression' || node.computed) {
-    return undefined;
-  }
-  if (node.property.type !== 'Identifier') {
-    return undefined;
-  }
-  const object = node.object;
-  if (object.type === 'ThisExpression') {
-    return { key: node.property.name };
-  }
-  if (
-    object.type === 'MemberExpression' &&
-    !object.computed &&
-    object.object.type === 'ThisExpression' &&
-    object.property.type === 'Identifier' &&
-    isNavigableScopeName(object.property.name, scope)
-  ) {
-    return { via: object.property.name, key: node.property.name };
-  }
-  return undefined;
-}
