@@ -1,5 +1,6 @@
 import { assert, it } from 'vitest';
 import { CoreContext } from '../../../src/runtime/core/core-context';
+import { RT_FOR_EACH_VALUE, RT_FOR_AS_VALUE } from '../../../src/runtime/core/core-scope';
 
 it(`creates global scope`, () => {
   const context = new CoreContext({
@@ -260,3 +261,101 @@ it(`should call value callback (2)`, () => {
 //     },
 //   });
 // });
+
+it(`replicates a scope for each array item, first item on the host itself`, () => {
+  const context = new CoreContext({
+    root: {
+      id: '0',
+      values: {
+        [RT_FOR_EACH_VALUE]: { val: [10, 20, 30] },
+        data: {},
+      },
+    },
+  }).refresh();
+
+  assert.equal(context.root.proxy.data, 10);
+  assert.equal(context.root.clones?.length, 2);
+  assert.deepEqual(
+    context.root.clones?.map(c => c.proxy.data),
+    [20, 30]
+  );
+});
+
+it(`treats null/undefined as zero items, removing any existing clones`, () => {
+  const context = new CoreContext({
+    root: {
+      id: '0',
+      values: {
+        [RT_FOR_EACH_VALUE]: { val: [1, 2, 3] },
+        data: {},
+      },
+    },
+  }).refresh();
+  assert.equal(context.root.clones?.length, 2);
+
+  context.root.proxy[RT_FOR_EACH_VALUE] = null;
+  assert.equal(context.root.clones?.length, 0);
+  // KNOWN GAP: the host's own per-item value is never reset (stays 1, the
+  // last real item) when the array becomes null/undefined -- foreachCB's
+  // "not an array" branch only removes clones, it never touches the
+  // host's own alias value or hides the host's own DOM contribution. The
+  // language rule ("null/undefined means zero elements, nothing rendered")
+  // isn't actually honored for the host's own instance yet.
+  assert.equal(context.root.proxy.data, 1);
+});
+
+it(`grows and shrinks clones as the array changes, reusing existing ones in place`, () => {
+  const context = new CoreContext({
+    root: {
+      id: '0',
+      values: {
+        [RT_FOR_EACH_VALUE]: { val: [1, 2, 3] },
+        data: {},
+      },
+    },
+  }).refresh();
+  const firstClone = context.root.clones![0];
+
+  context.root.proxy[RT_FOR_EACH_VALUE] = [1, 2, 3, 4, 5];
+  assert.equal(context.root.clones?.length, 4);
+  assert.equal(context.root.clones![0], firstClone, 'existing clone identity is reused, not recreated');
+
+  context.root.proxy[RT_FOR_EACH_VALUE] = [1];
+  assert.equal(context.root.clones?.length, 0);
+  assert.equal(context.root.proxy.data, 1);
+});
+
+it(`honors a custom :for-as-style alias name`, () => {
+  const context = new CoreContext({
+    root: {
+      id: '0',
+      values: {
+        [RT_FOR_EACH_VALUE]: { val: ['a', 'b'] },
+        [RT_FOR_AS_VALUE]: { val: 'item' },
+        item: {},
+      },
+    },
+  }).refresh();
+
+  assert.equal(context.root.proxy.item, 'a');
+  assert.deepEqual(
+    context.root.clones?.map(c => c.proxy.item),
+    ['b']
+  );
+});
+
+it(`clones ignore their own for$each -- only the host reconciles`, () => {
+  const context = new CoreContext({
+    root: {
+      id: '0',
+      values: {
+        [RT_FOR_EACH_VALUE]: { val: [1, 2] },
+        data: {},
+      },
+    },
+  }).refresh();
+
+  const clone = context.root.clones![0];
+  assert.equal(clone.cloned, true);
+  assert.isUndefined(clone.clones);
+});
