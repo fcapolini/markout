@@ -252,8 +252,6 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
         continue;
       }
       scope.name = validateName(page, attr.value, attr.valueLoc);
-      //TODO: this is probably wrong
-      page.defines.set(scope.name, scope);
       continue;
     }
     if (name === FOR_EACH_ATTR) {

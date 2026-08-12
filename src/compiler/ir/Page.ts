@@ -44,7 +44,6 @@ export const DEFINE_NAME_MARKER = 'data-markout-define';
 export class Page {
   source: Source;
   global: Scope;
-  defines: Map<string, Scope>;
   /** custom tag name -> its <:define> scope, populated by stage1-load */
   customTags: Map<string, Scope>;
   /** the <:define> scopes themselves -- excluded from their parent's
@@ -67,7 +66,6 @@ export class Page {
     if (global) {
       global.page = this;
     }
-    this.defines = new Map();
     this.customTags = new Map();
     this.definitionScopes = new Set();
     this.values = new Map();

@@ -76,12 +76,41 @@ describe('stage4-resolve', () => {
 
   it('should record a this.foo.bar reference as a named-scope dependency when foo is a known :aka scope', () => {
     const scope = new Scope(page, page.global);
-    const namedScope = new Scope(page, page.global, undefined, 'foo');
-    page.defines.set('foo', namedScope);
+    new Scope(page, page.global, undefined, 'foo');
     const value = addValue(scope, 'x', 'this.foo.bar + 1');
 
     stage4resolve(page);
     expect(value.deps).toStrictEqual([{ via: 'foo', key: 'bar' }]);
+  });
+
+  it('should resolve a named scope reachable through an intermediate ancestor (ascends the IR tree)', () => {
+    const middle = new Scope(page, page.global);
+    const scope = new Scope(page, middle);
+    new Scope(page, page.global, undefined, 'foo');
+    const value = addValue(scope, 'x', 'this.foo.bar + 1');
+
+    stage4resolve(page);
+    expect(value.deps).toStrictEqual([{ via: 'foo', key: 'bar' }]);
+  });
+
+  it('should NOT treat this.foo.bar as a scope reference when foo is just an ordinary value', () => {
+    const scope = new Scope(page, page.global);
+    addValue(page.global, 'items', null);
+    const value = addValue(scope, 'x', 'this.items.filter');
+
+    stage4resolve(page);
+    expect(value.deps).toStrictEqual([{ key: 'items' }]);
+  });
+
+  it('a closer ordinary value shadows a same-named scope further up', () => {
+    const middle = new Scope(page, page.global);
+    addValue(middle, 'foo', null);
+    const scope = new Scope(page, middle);
+    new Scope(page, page.global, undefined, 'foo');
+    const value = addValue(scope, 'x', 'this.foo.bar + 1');
+
+    stage4resolve(page);
+    expect(value.deps).toStrictEqual([{ key: 'foo' }]);
   });
 
   it('should dedupe repeated references to the same dependency', () => {

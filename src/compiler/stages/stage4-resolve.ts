@@ -56,7 +56,7 @@ function resolveValue(name: string, value: Value, page: Page) {
     (ast.type === 'ArrowFunctionExpression' || ast.type === 'FunctionExpression');
   // a callback's own body isn't evaluated until it's invoked, so its
   // references aren't dependencies of the callback value itself
-  value.deps = isCallback ? [] : collectDeps(ast, page);
+  value.deps = isCallback ? [] : collectDeps(ast, value.scope);
   isCallback || validateDeps(page, value);
 }
 
@@ -69,7 +69,7 @@ function validateDeps(page: Page, value: Value) {
     const target = dep.via
       ? dep.via === RT_PARENT_VALUE_KEY
         ? value.scope.parent
-        : page.defines.get(dep.via)
+        : findNavigableScope(value.scope, dep.via)
       : value.scope;
     if (!target || !resolvesToKnownValue(target, dep.key)) {
       const ref = dep.via ? `${dep.via}.${dep.key}` : dep.key;
@@ -92,11 +92,11 @@ function addError(page: Page, msg: string, loc: Value['node']['loc']) {
   page.errors.push({ type: 'error', msg, loc });
 }
 
-function collectDeps(ast: Node, page: Page): ValueDepRef[] {
+function collectDeps(ast: Node, scope: Scope): ValueDepRef[] {
   const deps = new Map<string, ValueDepRef>();
   estraverse.traverse(ast, {
     enter(node) {
-      const dep = matchDep(node, page);
+      const dep = matchDep(node, scope);
       if (dep) {
         deps.set(`${dep.via}:${dep.key}`, dep);
         this.skip();
@@ -106,15 +106,33 @@ function collectDeps(ast: Node, page: Page): ValueDepRef[] {
   return [...deps.values()];
 }
 
-// a segment navigates to another scope only if it's the reserved $parent, or
-// a known `:aka`-named scope -- anything else is just a regular value whose
-// own runtime shape we can't (and shouldn't) peek into at compile time (e.g.
-// `this.items.filter` isn't a dependency on some scope named "items")
-function isNavigableScopeName(name: string, page: Page): boolean {
-  return name === RT_PARENT_VALUE_KEY || page.defines.has(name);
+// a name navigates to another scope only if it's the reserved $parent, or a
+// named (:aka) scope actually reachable by walking up from `scope` --
+// anything else is just a regular value whose own runtime shape we can't
+// (and shouldn't) peek into at compile time (e.g. `this.items.filter` isn't
+// a dependency on some scope named "items")
+function isNavigableScopeName(name: string, scope: Scope): boolean {
+  return name === RT_PARENT_VALUE_KEY || findNavigableScope(scope, name) !== undefined;
 }
 
-function matchDep(node: Node, page: Page): ValueDepRef | undefined {
+// walks up from `scope` (inclusive) looking for an ancestor with a named
+// child scope called `name` -- mirrors the runtime's CoreScope.lookup(),
+// where a named child registers itself as a value on its OWN PARENT, so at
+// each level we check whether THAT level has such a child. An ordinary
+// value of the same name at a closer level shadows any named scope further
+// up (same precedence a real lookup() walk would give it).
+function findNavigableScope(scope: Scope, name: string): Scope | undefined {
+  let s: Scope | undefined = scope;
+  while (s) {
+    const child = s.children.find(c => c.name === name);
+    if (child) return child;
+    if (s.values.has(name)) return undefined;
+    s = s.parent;
+  }
+  return undefined;
+}
+
+function matchDep(node: Node, scope: Scope): ValueDepRef | undefined {
   if (node.type !== 'MemberExpression' || node.computed) {
     return undefined;
   }
@@ -130,7 +148,7 @@ function matchDep(node: Node, page: Page): ValueDepRef | undefined {
     !object.computed &&
     object.object.type === 'ThisExpression' &&
     object.property.type === 'Identifier' &&
-    isNavigableScopeName(object.property.name, page)
+    isNavigableScopeName(object.property.name, scope)
   ) {
     return { via: object.property.name, key: node.property.name };
   }

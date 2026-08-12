@@ -161,13 +161,6 @@ describe('stage1-loader', () => {
       expect(loadedScope.values.size).toBe(0);
     });
 
-    it('should create context with empty defines map', () => {
-      const root = new ServerElement(doc, 'html', LOC);
-      const context = runLoader(root);
-
-      expect(context.defines.size).toBe(0);
-    });
-
     it('should create context with empty errors array on success', () => {
       const root = new ServerElement(doc, 'html', LOC);
       const context = runLoader(root);
