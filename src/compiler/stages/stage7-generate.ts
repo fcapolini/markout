@@ -88,8 +88,16 @@ function generateScope(scope: Scope): ObjectExpression {
   if (scope.name) {
     props.push(property('name', literal(scope.name)));
   }
+  if (scope.usesTemplate) {
+    // a custom-tag usage instance: WebScope instantiates its DOM from the
+    // named <:define> stencil if no already-rendered element is found
+    props.push(property('template', literal(scope.usesTemplate)));
+  }
   props.push(property('values', objectExpression(valueProps)));
-  props.push(property('children', arrayExpression(scope.children.map(generateScope))));
+  // a <:define> scope is never itself live at its own (natural, nested)
+  // position -- only usage-site instances of it are, elsewhere in the tree
+  const children = scope.children.filter(child => !scope.page.definitionScopes.has(child));
+  props.push(property('children', arrayExpression(children.map(generateScope))));
 
   return objectExpression(props);
 }

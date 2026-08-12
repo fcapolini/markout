@@ -7,12 +7,7 @@ import { Server } from "../../src/server";
 import fs from "fs";
 import os from "os";
 
-// These mirror README.md's first three examples verbatim. Example 2
-// ("Source level modularity") is deliberately NOT covered here: its
-// <:define>/custom-tag usage (<theme-switcher />) doesn't actually get
-// instantiated by the compiler today -- confirmed empirically, tracked as
-// a known gap (see /memories/repo/markout4core.md) rather than tested as
-// if it worked.
+// These mirror README.md's first three examples verbatim.
 
 describe("README example: Integrated reactivity", () => {
   let tempDir: string;
@@ -169,6 +164,100 @@ describe("README example: Replication", () => {
       expect(lists.length).toBe(2);
       expect(lists[0].querySelectorAll('li').length).toBe(3);
       expect(lists[1].querySelectorAll('li').length).toBe(2);
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+describe("README example: Source level modularity", () => {
+  let tempDir: string;
+  let server: Server;
+
+  beforeAll(async () => {
+    execSync('npm run build:runtime', { cwd: path.resolve(__dirname, '../..') });
+
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "markout-readme-ex2-"));
+    fs.writeFileSync(
+      path.join(tempDir, "lib.htm"),
+      `<lib :light=\${true}>
+
+  <style>
+    body {
+      color: \${light ? 'black' : 'white'};
+      background-color: \${light ? 'white' : 'black'};
+    }
+
+    .theme-switcher {
+      font-size: bold;
+    }
+  </style>
+
+  <:define tag="theme-switcher:button"
+           :class-theme-switcher
+           :on-click=\${() => head.light = !head.light}>
+      Switch theme
+  </:define>
+</lib>`
+    );
+    fs.writeFileSync(
+      path.join(tempDir, "index.html"),
+      `<html>
+  <head>
+    <:import src="lib.htm" />
+  </head>
+  <body>
+    <theme-switcher />
+  </body>
+</html>`
+    );
+
+    server = new Server({ docroot: tempDir });
+    await server.start();
+  });
+
+  afterAll(async () => {
+    await server.stop();
+    if (fs.existsSync(tempDir)) {
+      fs.rmSync(tempDir, { recursive: true });
+    }
+  });
+
+  it('server-renders the usage site as a real, styled button', async () => {
+    const res = await request(server.app!).get('/index.html');
+    expect(res.status).toBe(200);
+
+    const window = new Window();
+    const document = window.document as any;
+    document.write(res.text);
+
+    const button = document.querySelector('.theme-switcher');
+    expect(button).not.toBeNull();
+    expect(button.tagName).toBe('BUTTON');
+    expect(button.textContent.trim()).toBe('Switch theme');
+    // the <theme-switcher> usage tag itself is gone, replaced by the button
+    expect(document.querySelector('theme-switcher')).toBeNull();
+    expect(document.querySelector('style').textContent).toContain('color: black');
+  });
+
+  it('hydrates and toggles the shared "light" scope value on click', async () => {
+    const browser = new Browser({ settings: { enableJavaScriptEvaluation: true } });
+    try {
+      const page = browser.newPage();
+      await page.goto(`http://127.0.0.1:${server.port}/index.html`);
+      await page.waitUntilComplete();
+
+      const document = page.mainFrame.document;
+      const button = document.querySelector('.theme-switcher');
+      const style = document.querySelector('style')!;
+
+      expect(style.textContent).toContain('color: black');
+      expect(style.textContent).toContain('background-color: white');
+
+      button.dispatchEvent(new page.mainFrame.window.MouseEvent('click'));
+
+      expect(style.textContent).toContain('color: white');
+      expect(style.textContent).toContain('background-color: black');
     } finally {
       await browser.close();
     }

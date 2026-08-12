@@ -102,6 +102,48 @@ describe('attribute names', () => {
   });
 });
 
+describe('atomic text (<style>/<title>)', () => {
+  function styleTextOf(markup: string) {
+    const source = parser.parse(markup, 'test');
+    assert.deepEqual(source.errors.map(e => e.msg), []);
+    const style = (source.doc.documentElement as ServerElement).childNodes.find(
+      n => (n as ServerElement).tagName === 'STYLE'
+    ) as dom.Element;
+    assert.equal(style.childNodes.length, 1);
+    return style.childNodes[0] as dom.Text;
+  }
+
+  it('parses mixed literal/interpolated content as a single concatenated expression', () => {
+    const text = styleTextOf(
+      '<html><style>body{color:${light?"black":"white"};}.x{margin:${5}px;}</style></html>'
+    );
+    assert.equal(typeof text.textContent, 'object');
+    const exp = text.textContent as acorn.Expression;
+    // a single node, not one node per interpolation
+    const js = generate(exp);
+    const evaluate = (light: boolean) => new Function('light', `return ${js};`)(light);
+    assert.equal(
+      evaluate(true),
+      'body{color:black;}.x{margin:5px;}'
+    );
+    assert.equal(
+      evaluate(false),
+      'body{color:white;}.x{margin:5px;}'
+    );
+  });
+
+  it('parses purely static content as a plain string, not an expression', () => {
+    const text = styleTextOf('<html><style>body{color:black;}</style></html>');
+    assert.equal(typeof text.textContent, 'string');
+    assert.equal(text.textContent, 'body{color:black;}');
+  });
+
+  it('parses a single interpolation with no surrounding literal text', () => {
+    const text = styleTextOf('<html><style>${css}</style></html>');
+    assert.equal(typeof text.textContent, 'object');
+  });
+});
+
 describe('error handling', () => {
   it('collects syntax errors instead of throwing', () => {
     const source = parser.parse('<html>', 'test');

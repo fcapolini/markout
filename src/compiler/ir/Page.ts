@@ -1,5 +1,6 @@
 import { PageError, Source } from '../../html/parser';
 import type { Node } from 'estree';
+import { DIRECTIVE_TAG_PREFIX } from '../../html/dom';
 import { Scope } from './Scope';
 import { Value } from './Value';
 
@@ -29,11 +30,27 @@ export const FOR_KEY_VALUE = 'for$key';
 // it's compiled as an ordinary value, not a `for$`-prefixed one, so bare
 // `${data}` references qualify to `this.data` with no special-casing needed
 export const FOR_DATA_DEFAULT_NAME = 'data';
+// <:define tag="custom-name:base-tag" ...> declares a custom tag; parser
+// uppercases tag names, matching how preprocessor.ts's own directive tags
+// (IMPORT_DIRECTIVE_TAG etc.) are spelled
+export const DEFINE_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'DEFINE';
+export const DEFINE_TAG_ATTR = 'tag';
+// internal-only marker stamped on a <:define>'s expanded inner element
+// during stage1-load's pre-pass, so the element can be matched back up to
+// its custom tag name once its own scope is created; stripped before that
+// scope's element is otherwise treated like any other
+export const DEFINE_NAME_MARKER = 'data-markout-define';
 
 export class Page {
   source: Source;
   global: Scope;
   defines: Map<string, Scope>;
+  /** custom tag name -> its <:define> scope, populated by stage1-load */
+  customTags: Map<string, Scope>;
+  /** the <:define> scopes themselves -- excluded from their parent's
+   * compiled children by stage7-generate, since they're never live at
+   * their own natural position, only instantiated per usage site */
+  definitionScopes: Set<Scope>;
   values: Map<string, Value>;
   main?: Scope;
   errors: PageError[] = [];
@@ -51,6 +68,8 @@ export class Page {
       global.page = this;
     }
     this.defines = new Map();
+    this.customTags = new Map();
+    this.definitionScopes = new Set();
     this.values = new Map();
   }
 

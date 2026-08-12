@@ -475,4 +475,64 @@ describe('stage1-loader', () => {
       expect(loadedScope.name).toBe('page');
     });
   });
+
+  describe('<:define>/custom tags', () => {
+    it('registers the definition and excludes it from its natural parent', () => {
+      const page = runLoaderFromMarkup(
+        `<html><head><:define tag="theme-switcher:button" :class-active>Switch</:define></head><body></body></html>`
+      );
+      expect(page.errors).toStrictEqual([]);
+      expect([...page.customTags.keys()]).toStrictEqual(['theme-switcher']);
+      const defScope = page.customTags.get('theme-switcher')!;
+      expect(page.definitionScopes.has(defScope)).toBe(true);
+      expect(defScope.e?.tagName).toBe('BUTTON');
+      expect(defScope.values.has('class$active')).toBe(true);
+    });
+
+    it('places a usage instance as a direct child of the root page scope', () => {
+      const page = runLoaderFromMarkup(
+        `<html><head><:define tag="theme-switcher:button" :class-active>Switch</:define></head>` +
+        `<body><section><theme-switcher></theme-switcher></section></body></html>`
+      );
+      expect(page.errors).toStrictEqual([]);
+      const defScope = page.customTags.get('theme-switcher')!;
+      const usage = page.main!.children.find(c => c.usesTemplate === defScope.id);
+      expect(usage).toBeDefined();
+      expect(usage!.parent).toBe(page.main);
+      expect(usage!.values.has('class$active')).toBe(true);
+    });
+
+    it('replaces the usage element with a comment marker in the DOM', () => {
+      const page = runLoaderFromMarkup(
+        `<html><head><:define tag="theme-switcher:button" :class-active>Switch</:define></head>` +
+        `<body><theme-switcher></theme-switcher></body></html>`
+      );
+      const body = (page.source.doc as any).documentElement.childNodes.find(
+        (n: any) => n.tagName === 'BODY'
+      );
+      const tags = body.childNodes.map((n: any) => n.tagName ?? n.nodeType);
+      expect(tags).not.toContain('THEME-SWITCHER');
+      const usage = page.main!.children.find(c => c.usesTemplate);
+      const marker = body.childNodes.find(
+        (n: any) => n.nodeType === NodeType.COMMENT && n.textContent === `-u${usage!.id}`
+      );
+      expect(marker).toBeDefined();
+    });
+
+    it('reports an error for a malformed tag attribute', () => {
+      const page = runLoaderFromMarkup(
+        `<html><head><:define tag="not-valid">x</:define></head><body></body></html>`
+      );
+      expect(page.errors.length).toBe(1);
+      expect(page.errors[0].msg).toContain('tag');
+    });
+
+    it('does nothing when there are no usage sites', () => {
+      const page = runLoaderFromMarkup(
+        `<html><head><:define tag="theme-switcher:button">Switch</:define></head><body></body></html>`
+      );
+      expect(page.errors).toStrictEqual([]);
+      expect(page.main!.children.some(c => c.usesTemplate)).toBe(false);
+    });
+  });
 });

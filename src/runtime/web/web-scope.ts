@@ -10,6 +10,7 @@ import {
 import { CoreScope, CoreScopeProps } from '../core/core-scope';
 import { CoreValueProps } from '../core/core-value';
 import {
+  DOM_ATOMIC_TEXT_TAGS,
   DOM_ID_ATTR,
   DOM_TEXT_MARKER1,
   WebContext,
@@ -45,9 +46,12 @@ export class WebScope extends CoreScope {
   override init() {
     super.init();
     this.texts = [];
+    const templateId = this.props.template;
     const view = this.cloned
       ? (this.parent as WebScope)?.pendingCloneDom
-      : this.lookupView(this.parent instanceof WebScope ? this.parent.dom : undefined);
+      : templateId
+        ? this.acquireUsageDom(templateId)
+        : this.lookupView(this.parent instanceof WebScope ? this.parent.dom : undefined);
     if (!view) {
       // Root scope or other scopes without corresponding DOM elements
       // should not try to perform DOM operations
@@ -57,10 +61,16 @@ export class WebScope extends CoreScope {
     const f = (e: Element) => {
       const childNodes = [...e.childNodes];
       childNodes.forEach((n, i) => {
-        if (
-          n.nodeType === NodeType.ELEMENT &&
-          (n as Element).getAttribute(DOM_ID_ATTR) === null
-        ) {
+        if (n.nodeType === NodeType.ELEMENT && (n as Element).getAttribute(DOM_ID_ATTR) === null) {
+          if (DOM_ATOMIC_TEXT_TAGS.has((n as Element).tagName)) {
+            // holds its whole interpolated content as one marker-less text
+            // child (see stage1-load.ts's load()); push it directly, in the
+            // same document-order position a marker-delimited entry would
+            // occupy, so text$N indices stay aligned either way
+            const only = (n as Element).childNodes[0];
+            only?.nodeType === NodeType.TEXT && this.texts.push(only as Text);
+            return;
+          }
           return f(n as Element);
         }
         if (
@@ -72,6 +82,32 @@ export class WebScope extends CoreScope {
       });
     };
     f(this.dom);
+  }
+
+  /**
+   * A custom-tag usage instance's CoreScope parent is the root 'page'
+   * scope (not wherever it physically sits -- see stage1-load.ts's
+   * expandCustomTagUsages), so unlike lookupView() this can't be scoped to
+   * a single parent's own subtree; it searches the whole document instead,
+   * via WebContext (mirroring, at usage-site granularity, what
+   * acquireCloneDom() does for :for-each clones).
+   */
+  private acquireUsageDom(templateId: string): Element | undefined {
+    const ctx = this.ctx as WebContext;
+    const id = `${this.props.id}`;
+    const existing = ctx.findElementById(id);
+    if (existing) return existing;
+
+    const stencil = ctx.findElementById(templateId);
+    const marker = ctx.findUseMarker(id);
+    if (!stencil || !marker) return undefined;
+
+    const node = stencil.cloneNode(true) as unknown as Element;
+    node.setAttribute(DOM_ID_ATTR, id);
+    const container = marker.parentElement!;
+    container.insertBefore(node, marker);
+    container.removeChild(marker);
+    return node;
   }
 
   /**
@@ -162,43 +198,16 @@ export class WebScope extends CoreScope {
       return ret;
     }
     if (key.startsWith(RT_TEXT_VALUE_PREFIX)) {
-      const suffix = key.slice(RT_TEXT_VALUE_PREFIX.length); // Remove "text$"
-      const underscoreIndex = suffix.lastIndexOf("_");
+      const textIndex = Number.parseInt(key.slice(RT_TEXT_VALUE_PREFIX.length));
+      const t = this.texts[textIndex];
 
-      let t: Text | undefined;
-      if (underscoreIndex >= 0) {
-        // Splittable text: text$scopeId_index
-        const textIndex = Number.parseInt(suffix.slice(underscoreIndex + 1));
-        t = this.texts[textIndex];
-      } else if (/^\d+$/.test(suffix)) {
-        // Could be either legacy format (text$index) or atomic format (text$scopeId)
-        // Try legacy format first - if we have texts array with this index, use it
-        const textIndex = Number.parseInt(suffix);
-        if (this.texts && textIndex < this.texts.length) {
-          t = this.texts[textIndex];
-        } else {
-          // Fall back to atomic format - find first text child
-          if (this.dom) {
-            for (const child of this.dom.childNodes) {
-              if (child.nodeType === NodeType.TEXT) {
-                t = child as Text;
-                break;
-              }
-            }
-          }
-        }
-      } else {
-        // Non-numeric suffix - shouldn't happen in current implementation
-        console.warn(`Unexpected text key format: ${key}`);
-      }
-
-      //TODO: atomic text (<style>, <title> — see ATOMIC_TEXT_TAGS in
-      //@markout/html) is parsed as a single node holding one concatenated
-      //expression, so changing any interpolated value rewrites the whole
-      //content. That's nothing for a title, but a reactive stylesheet
-      //re-emits every rule when one binding changes. Splitting atomic text
-      //per interpolation would be a compiler/parser change, not a language
-      //one: the keys arriving here would just become finer-grained.
+      //TODO: atomic text (<style>, <title>) is parsed as a single node
+      //holding one concatenated expression, so changing any interpolated
+      //value rewrites the whole content. That's nothing for a title, but a
+      //reactive stylesheet re-emits every rule when one binding changes.
+      //Splitting atomic text per interpolation would be a compiler/parser
+      //change, not a language one: the keys arriving here would just become
+      //finer-grained.
       ret.setCB((_, val) => {
         if (!t) return;
         // a real zero-width space, not the `&#8203;` reference: text content

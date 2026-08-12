@@ -21,6 +21,9 @@ export interface CoreScopeProps {
   values?: { [key: string]: CoreValueProps<any> };
   /** set by CoreScope.clone() on a replica's own props; read during init() */
   cloned?: boolean;
+  /** a custom-tag usage instance: the id of the <:define> scope/template it
+   * instantiates its DOM from -- DOM-specific, so only WebScope acts on it */
+  template?: string;
 }
 
 export class CoreScope {

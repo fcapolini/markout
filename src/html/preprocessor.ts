@@ -68,6 +68,7 @@ export class Preprocessor {
         if (p.childNodes[i].nodeType === NodeType.ELEMENT) {
           const e = p.childNodes[i] as dom.ServerElement;
           if (e.tagName === GROUP_DIRECTIVE_TAG) {
+            e.childNodes.forEach(n => (n.parentElement = p));
             p.childNodes.splice(i, 1, ...e.childNodes);
             continue;
           }
@@ -245,6 +246,7 @@ export class Preprocessor {
     e.appendChild(
       new dom.ServerText(e.ownerDocument, loaded.text, d.node.loc, false)
     );
+    e.parentElement = d.parent;
     d.parent.childNodes.splice(i, 0, e);
   }
 
@@ -293,6 +295,7 @@ export class Preprocessor {
         nn.pop();
       }
     }
+    nn.forEach(n => (n.parentElement = d.parent));
     d.parent.childNodes.splice(i, 0, ...nn);
   }
 

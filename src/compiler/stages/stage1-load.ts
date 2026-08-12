@@ -5,6 +5,7 @@ import {
   ServerText,
   ServerComment,
   ServerTemplateElement,
+  ServerNode,
 } from '../../html/server-dom';
 import { TEXT_VALUE_PREFIX } from '../ir/Page';
 import { Value } from '../ir/Value';
@@ -30,9 +31,13 @@ import {
   FOR_AS_VALUE,
   FOR_KEY_VALUE,
   FOR_DATA_DEFAULT_NAME,
+  DEFINE_DIRECTIVE_TAG,
+  DEFINE_TAG_ATTR,
+  DEFINE_NAME_MARKER,
 } from '../ir/Page';
 import { NodeType } from '../../html/dom';
-import { DOM_ID_ATTR, DOM_TEXT_MARKER1, DOM_TEXT_MARKER2 } from '../../runtime/web/web-context';
+import { ATOMIC_TEXT_TAGS } from '../../html/parser';
+import { DOM_ID_ATTR, DOM_TEXT_MARKER1, DOM_TEXT_MARKER2, DOM_USE_MARKER } from '../../runtime/web/web-context';
 
 /**
  * Stage 1 loader: Transforms a DOM tree into scoped semantic IR.
@@ -52,11 +57,12 @@ import { DOM_ID_ATTR, DOM_TEXT_MARKER1, DOM_TEXT_MARKER2 } from '../../runtime/w
  */
 
 export function stage1load(page: Page) {
-  load(page, page.global, page.source.doc.documentElement!, 'page');
+  page.main = load(page, page.global, page.source.doc.documentElement!, 'page');
+  expandCustomTagUsages(page);
   return page;
 }
 
-function load(page: Page, parent: Scope, e: ServerElement, name?: string) {
+function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope {
   const tagName = e.tagName.toUpperCase();
   if (tagName === 'HTML') name = 'page';
   if (tagName === 'HEAD') name = 'head';
@@ -65,6 +71,15 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string) {
   if (scope.e === e) {
     // so WebScope.lookupView() can find this element's DOM node at runtime
     e.setAttribute(DOM_ID_ATTR, scope.id);
+    const defineName = e.getAttribute(DEFINE_NAME_MARKER);
+    if (defineName !== null) {
+      // this scope is a <:define>'s own (never-live) template stencil, not
+      // a normal element -- register it, stage7-generate excludes it from
+      // its parent's compiled children (see page.definitionScopes)
+      e.removeAttribute(DEFINE_NAME_MARKER);
+      page.customTags.set(defineName, scope);
+      page.definitionScopes.add(scope);
+    }
   }
   extractValues(page, scope, e);
   let i = -1;
@@ -72,6 +87,15 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string) {
     i++;
     if (child.nodeType === NodeType.ELEMENT) {
       const childEl = child as ServerElement;
+      if (childEl.tagName === DEFINE_DIRECTIVE_TAG) {
+        // <:define> never itself becomes a live scope; expandDefine() moves
+        // its content into an inert <template> stencil and returns the
+        // (unwrapped) base-tag element, which we load() directly here since
+        // template.content is invisible to this function's normal childNodes walk
+        const inner = expandDefine(page, childEl);
+        if (inner) load(page, scope, inner);
+        continue;
+      }
       // the stencil for each instance WebScope.clone() creates/reuses at
       // runtime; :for-each's element itself is never a live instance
       if (hasForEachAttr(childEl)) wrapInTemplate(childEl);
@@ -86,6 +110,15 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string) {
       const id = scope.textCount++;
       const name = `${TEXT_VALUE_PREFIX}${id}`;
       scope.textValues.set(name, new Value(name, text, scope, page.createValueId()));
+      // atomic-text containers (<style>/<title>) always hold exactly this
+      // one text child (see parser.ts's parseAtomicText) -- comments can't
+      // survive as siblings inside them (raw text elements, HTML spec
+      // 13.2.5.1), so markers would corrupt the served content and desync
+      // WebScope's marker-scanned text index; WebScope locates it directly
+      // via the container instead (see web-scope.ts's init())
+      if (ATOMIC_TEXT_TAGS.has(e.tagName)) {
+        continue;
+      }
       // `-` prefixed, like a triple-dash "private" comment (see
       // preprocessor.ts's removeTripleComments): those are already stripped
       // from user source before this stage ever runs, so these reserved
@@ -105,6 +138,7 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string) {
       continue;
     }
   }
+  return scope;
 }
 
 function needsScope(e: ServerElement): boolean {
@@ -125,6 +159,87 @@ function wrapInTemplate(e: ServerElement): void {
   parent.insertBefore(template, e);
   parent.removeChild(e);
   template.appendChild(e);
+}
+
+// <:define tag="custom-name:base-tag" ...special-attrs...>children</:define>
+// becomes an inert <template data-markout="D"><base-tag ...>children</base-tag></template>,
+// with the base-tag element registered under its custom name (page.customTags)
+// once load() creates its scope for the returned inner element -- mirrors
+// :for-each's wrapInTemplate, except the stencil here is never array-driven
+function expandDefine(page: Page, defineEl: ServerElement): ServerElement | undefined {
+  const tagAttr = defineEl.getAttribute(DEFINE_TAG_ATTR);
+  const sep = tagAttr ? tagAttr.indexOf(':') : -1;
+  const customName = sep > 0 ? tagAttr!.slice(0, sep).trim().toLowerCase() : '';
+  const baseTag = sep > 0 ? tagAttr!.slice(sep + 1).trim() : '';
+  if (!customName || !baseTag) {
+    addError(
+      page,
+      `<${DEFINE_DIRECTIVE_TAG}> requires a "${DEFINE_TAG_ATTR}" attribute shaped "custom-name:base-tag"`,
+      defineEl.loc
+    );
+    return undefined;
+  }
+
+  const doc = defineEl.ownerDocument;
+  const inner = new ServerElement(doc, baseTag, defineEl.loc);
+  for (const attr of [...(defineEl.attributes as ServerAttribute[])]) {
+    if (attr.name === DEFINE_TAG_ATTR) continue;
+    attr.clone(doc, inner);
+  }
+  for (const child of [...defineEl.childNodes]) {
+    (child as ServerNode).clone(doc, inner);
+  }
+  // consumed by load() once it creates inner's own scope, then stripped
+  inner.setAttribute(DEFINE_NAME_MARKER, customName);
+
+  const template = new ServerTemplateElement(doc, defineEl.loc);
+  const parent = defineEl.parentElement!;
+  parent.insertBefore(template, defineEl);
+  parent.removeChild(defineEl);
+  template.appendChild(inner);
+  return inner;
+}
+
+// runs after load() so page.customTags is fully populated regardless of
+// whether a <:define> appears before or after its usage sites in source
+function expandCustomTagUsages(page: Page): void {
+  if (page.customTags.size === 0 || !page.main) return;
+  const usages: ServerElement[] = [];
+  const collect = (e: ServerElement) => {
+    for (const child of [...e.childNodes]) {
+      if (child.nodeType !== NodeType.ELEMENT) continue;
+      const el = child as ServerElement;
+      if (page.customTags.has(el.tagName.toLowerCase())) {
+        usages.push(el);
+        continue; // usage sites don't (yet) support light-DOM children
+      }
+      collect(el);
+    }
+  };
+  collect(page.source.doc.documentElement!);
+
+  for (const usageEl of usages) {
+    const defScope = page.customTags.get(usageEl.tagName.toLowerCase())!;
+    // reuses the definition's own values/children by reference: every
+    // instance is parented at the root 'page' scope (not wherever its
+    // usage physically sits), so a definition's own expressions can only
+    // ever see page/global, by construction -- no special runtime
+    // provisions needed for that, since it's just normal scope-tree nesting
+    const scope = new Scope(page, page.main);
+    scope.values = defScope.values;
+    scope.textValues = defScope.textValues;
+    scope.children = defScope.children;
+    scope.usesTemplate = defScope.id;
+
+    const parent = usageEl.parentElement!;
+    const marker = new ServerComment(
+      usageEl.ownerDocument,
+      `${DOM_USE_MARKER}${scope.id}`,
+      usageEl.loc
+    );
+    parent.insertBefore(marker, usageEl);
+    parent.removeChild(usageEl);
+  }
 }
 
 function extractValues(page: Page, scope: Scope, e: ServerElement) {

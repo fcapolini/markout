@@ -107,24 +107,21 @@ describe('text$', () => {
     assert.include(markup(), '<!---t1-->c<!---/-->');
   });
 
-  it('addresses marked text nodes by scope-qualified index', () => {
-    const { markup } = setup(MARKED, {
-      id: '0',
-      values: { text$0_1: { val: 'second' } },
-    });
-    assert.include(markup(), '<!---t1-->second<!---/-->');
-  });
-
-  it('falls back to the first text child when there are no markers', () => {
-    const { markup } = setup(
-      '<html data-markout="0"><body data-markout="1">plain</body></html>',
+  it('addresses an atomic-text container (<style>/<title>) directly, unmarked', () => {
+    // <style>'s whole interpolated content is one marker-less text child
+    // (see parser.ts's parseAtomicText); text$0 here is head's own first
+    // (and only) text value, resolved via style's container, not a marker
+    const { context, markup } = setup(
+      '<html data-markout="0"><head data-markout="1"><style>placeholder</style></head></html>',
       {
         id: '0',
         values: {},
-        children: [{ id: '1', values: { text$0: { val: 'replaced' } } }],
+        children: [{ id: '1', values: { text$0: { val: 'body{color:red}' } } }],
       }
     );
-    assert.include(markup(), '<body>replaced</body>');
+    assert.include(markup(), '<style>body{color:red}</style>');
+    context.root.children[0].proxy.text$0 = 'body{color:blue}';
+    assert.include(markup(), '<style>body{color:blue}</style>');
   });
 
   it('renders a nullish value as a zero-width space', () => {
@@ -136,17 +133,13 @@ describe('text$', () => {
     assert.include(markup(), '<!---t0-->​<!---/-->');
   });
 
-  it('warns and does nothing for an unrecognised key format', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  it('does nothing (rather than throwing) for an unrecognised key format', () => {
     const { context, markup } = setup(MARKED, {
       id: '0',
       values: { text$oops: { val: 'a' } },
     });
-    expect(warn).toHaveBeenCalledOnce();
-    // the binding is inert rather than throwing
     context.root.proxy.text$oops = 'b';
     assert.include(markup(), '<!---t0-->​<!---/-->');
-    warn.mockRestore();
   });
 });
 

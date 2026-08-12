@@ -12,6 +12,8 @@ export class Scope {
   textCount: number;
   e?: ServerElement;
   name?: string;
+  /** set for a custom-tag usage scope: the id of the <:define> scope it instantiates from */
+  usesTemplate?: string;
 
   constructor(page: Page, parent?: Scope, e?: ServerElement, name?: string) {
     this.page = page;
