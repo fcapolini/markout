@@ -1,5 +1,7 @@
 HTML-first reactive web framework, aiming at presenting developers with the
-equivalent of a natively modular and reactive HTML.
+equivalent of a natively modular and reactive HTML. It is isomorphic: the same
+scope/value model runs on the server and in the browser, so SSR comes for
+free.
 
 ## Design philosophy
 
