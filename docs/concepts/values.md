@@ -95,13 +95,17 @@ old one would make a binding's contents depend on which earlier evaluations
 happened to succeed, and would show stale data as though it were current. One
 fixed rule beats a result you have to reconstruct from history.
 
-The failure is still reported. Run the server with `--dev` and it appears in
-the page itself, naming the scope and value at fault:
+The failure is still reported, naming the scope and value at fault:
 
 ```
 markout [update] s3.text$0: Cannot read properties of null (reading 'name')
 ```
 
-The same panel is produced during server rendering and in the browser after
-hydration, so an error shows up in the same place wherever it happened. Without
-`--dev`, errors are logged server-side and never reach the served markup.
+Run the server with `--dev` and you see it. If the failure happened while
+server rendering, the page is replaced by one listing the errors — it carries
+no content and no runtime, because a page whose expressions already failed on
+the server would only fail the same way again in the browser. If it happened
+after the page loaded, it appears in a panel at the bottom of the page.
+
+Without `--dev` the page is served as rendered and errors go only to the server
+log: a failing expression never costs a production page its runtime.

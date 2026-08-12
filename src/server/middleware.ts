@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 import { Compiler } from "../compiler";
 import { DEFAULT_RUNTIME_SRC } from "../compiler/stages/stage7-generate";
-import { formatRuntimeError } from "../runtime/core/core-context";
+import { formatRuntimeError, RuntimeError } from "../runtime/core/core-context";
 import { defaultLogger, MarkoutLogger } from "./logger";
 import { renderPage } from "./render";
 
@@ -68,10 +68,14 @@ export function markout(props: MarkoutProps) {
       return serveErrorPage(page.source.errors, res);
     }
 
-    // always logged; only present in the markup when dev is on
-    renderPage(page, dev).forEach(e =>
+    const runtimeErrors = renderPage(page);
+    // always logged, whatever the mode
+    runtimeErrors.forEach(e =>
       logger('error', `[markout] ${pathname} ${formatRuntimeError(e)}`)
     );
+    if (dev && runtimeErrors.length) {
+      return serveRuntimeErrorPage(runtimeErrors, res);
+    }
 
     let doc = page.source.doc;
     const html = doc.toString();
@@ -171,5 +175,25 @@ function serveErrorPage(errors: PageError[], res: Response) {
   p.push('</ul></body></html>');
   res.header('Content-Type', 'text/html;charset=UTF-8');
   // res.sendStatus(500);
+  res.status(500).send(p.join(''));
+}
+
+/**
+ * Dev mode only. Server rendering hit these errors, so the page it produced
+ * is already wrong -- and shipping it would send the browser off to run the
+ * very same expressions against the very same initial values, fail
+ * identically, and paint its own report over a page that was never going to
+ * work. A page built solely from the errors says the one useful thing, and
+ * carries no runtime to muddy it.
+ */
+function serveRuntimeErrorPage(errors: RuntimeError[], res: Response) {
+  const p = new Array<string>();
+  p.push(`<!doctype html><html><head>
+    <title>Page Error</title>
+    <meta name="color-scheme" content="light dark"/>
+    </head><body><ul>`);
+  errors.forEach(e => p.push(`<li>${escapeHtml(formatRuntimeError(e))}</li>`));
+  p.push('</ul></body></html>');
+  res.header('Content-Type', 'text/html;charset=UTF-8');
   res.status(500).send(p.join(''));
 }

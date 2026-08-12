@@ -6,6 +6,7 @@ import path from 'path';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Server } from '../../src/server';
+import { CLIENT_CODE_REQ } from '../../src/server/middleware';
 import { DOM_ERRORS_ID } from '../../src/runtime/web/web-context';
 
 // `user` is null, so `${user.name}` throws every time it's evaluated -- a
@@ -27,14 +28,8 @@ const BREAKS_ON_CLICK = `<html :user=\${{name: 'ann'}}>
   </body>
 </html>`;
 
-function panelEntries(html: string): string[] {
-  const panel = html.match(
-    new RegExp(`<ul id="${DOM_ERRORS_ID}"[\\s\\S]*?</ul>`)
-  );
-  if (!panel) {
-    return [];
-  }
-  return [...panel[0].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)].map(m =>
+function listItems(html: string): string[] {
+  return [...html.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)].map(m =>
     m[1].replace(/\s+/g, ' ').trim()
   );
 }
@@ -63,11 +58,12 @@ describe('dev mode: runtime error reporting', () => {
   });
 
   describe('without dev mode', () => {
-    it('keeps runtime errors out of the served markup', async () => {
+    it('serves the page anyway, keeping runtime errors out of the markup', async () => {
       const res = await request(prodServer.app!).get('/broken.html');
       expect(res.status).toBe(200);
-      expect(panelEntries(res.text)).toStrictEqual([]);
       expect(res.text).not.toContain(DOM_ERRORS_ID);
+      // a failing expression must not cost a production page its runtime
+      expect(res.text).toContain(CLIENT_CODE_REQ);
     });
 
     it('does not tell the browser runtime to surface them either', async () => {
@@ -87,23 +83,36 @@ describe('dev mode: runtime error reporting', () => {
   });
 
   describe('with dev mode', () => {
-    it('surfaces SSR expression errors in the served markup', async () => {
+    it('replaces a page that failed server-side with an error page', async () => {
       const res = await request(devServer.app!).get('/broken.html');
-      const entries = panelEntries(res.text);
-      expect(entries).toHaveLength(1);
-      expect(entries[0]).toContain('[update]');
-      expect(entries[0]).toContain("Cannot read properties of null (reading 'name')");
+      expect(res.status).toBe(500);
+      const items = listItems(res.text);
+      expect(items).toHaveLength(1);
+      expect(items[0]).toContain('[update]');
+      expect(items[0]).toContain("Cannot read properties of null (reading 'name')");
     });
 
     it('names the scope and value that failed', async () => {
       const res = await request(devServer.app!).get('/broken.html');
       // `s<n>.text$<n>` -- enough to find the expression in a page with many
-      expect(panelEntries(res.text)[0]).toMatch(/ s\d+\.text\$\d+:/);
+      expect(listItems(res.text)[0]).toMatch(/ s\d+\.text\$\d+:/);
     });
 
-    it('tells the browser runtime to do the same after hydration', async () => {
+    it('carries none of the failed page: no content, no runtime', async () => {
       const res = await request(devServer.app!).get('/broken.html');
+      // shipping it would send the browser off to run the very same
+      // expressions against the very same values and fail identically
+      expect(res.text).not.toContain('__MARKOUT_PROPS');
+      expect(res.text).not.toContain(CLIENT_CODE_REQ);
+      expect(res.text).not.toContain('fine');
+    });
+
+    it('serves a page that rendered cleanly as normal, runtime and all', async () => {
+      const res = await request(devServer.app!).get('/onclick.html');
+      expect(res.status).toBe(200);
       expect(res.text).toContain('__MARKOUT_DEV = true');
+      expect(res.text).toContain(CLIENT_CODE_REQ);
+      expect(res.text).not.toContain(DOM_ERRORS_ID);
     });
   });
 
@@ -125,16 +134,6 @@ describe('dev mode: runtime error reporting', () => {
         await browser.close();
       }
     }
-
-    it('does not duplicate an SSR-reported error after hydration', async () => {
-      await withPage(devServer.port!, 'broken.html', page => {
-        const doc = page.mainFrame.document;
-        const rows = doc.querySelectorAll(`#${DOM_ERRORS_ID} li`);
-        // the browser re-evaluates the same expression and hits the same
-        // failure; it belongs in the row SSR already wrote, not a second one
-        expect(rows.length).toBe(1);
-      });
-    });
 
     it('surfaces an error that only happens in the browser', async () => {
       await withPage(devServer.port!, 'onclick.html', page => {

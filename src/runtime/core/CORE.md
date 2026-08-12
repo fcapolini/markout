@@ -264,10 +264,19 @@ throws on every cycle is reported once, not once per cycle. Each carries the
 owning scope's id and the value's key, so a message names the binding at fault
 (`markout [update] s3.text$0: ...`) rather than pointing into runtime internals.
 
-`props.onError` replaces the default console reporting — the server uses it to
-collect errors for logging. `WebContext` additionally paints them into the page
-when built with `dev: true`, appending to a `<ul id="markout-errors">` panel.
-That's written against the shared DOM interface, so the *same* code runs during
-SSR (where it serializes into the served markup) and in the browser after
-hydration; entries are keyed so a failure both halves hit lands in one row
-rather than two. Outside dev mode nothing reaches the markup.
+`props.onError` replaces the default console reporting. The server passes one
+to collect what server rendering hits, and the two halves are then handled
+differently — deliberately, because they mean different things:
+
+- **Server rendering failed.** The page it produced is already wrong, and
+  shipping it would send the browser off to run the very same expressions
+  against the very same initial values and fail identically. In dev the server
+  serves a page built *solely* from the errors instead, carrying no content and
+  no runtime. Outside dev the page is served as rendered, with the errors going
+  only to the server log — a failing expression shouldn't cost a production
+  page its runtime.
+- **The browser failed after hydration.** There's no server round-trip to
+  reuse, so `WebContext` (built with `dev: true`, which the compiler signals
+  via `window.__MARKOUT_DEV`) appends to a `<ul id="markout-errors">` panel in
+  the page. Since `onError()` has already de-duplicated, each row is distinct
+  by construction.

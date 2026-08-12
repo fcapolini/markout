@@ -62,9 +62,11 @@ default:
 npx markout ./demo --port 8080
 ```
 
-`-d`/`--dev` turns on dev mode, which surfaces runtime expression errors in the
-page itself (both those hit while server-rendering and those hit in the browser
-afterwards) instead of only logging them server-side:
+`-d`/`--dev` turns on dev mode, which surfaces runtime expression errors instead
+of only logging them server-side. A page whose expressions failed during server
+rendering is replaced by one listing the errors (no content, no runtime — it
+would only fail the same way in the browser); failures that happen after the
+page loads appear in a panel at the bottom of it:
 
 ```sh
 npx markout ./demo --dev
