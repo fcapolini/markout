@@ -80,7 +80,7 @@ anywhere inside any `${...}`, for the same reason.
 | `:for-key=${expr}` | Reserved for keyed reconciliation. |
 | `:for-data=${expr}` | Optional single-item rendering. Designed, **not implemented** — a compile error today. |
 
-## Modules
+## Modules and components
 
 | Syntax | Meaning |
 | --- | --- |
