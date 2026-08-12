@@ -1,9 +1,15 @@
 <lib>
-  <!-- <:import src="base.htm" /> -->
+  <:import src="base.htm" />
 
   <:define tag="bs-nav:nav"
            class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top"
            :title="Title"
+           :options=${[
+            { name: 'link1', link: '#link1' },
+            { name: 'link2', link: '#link2' },
+            { name: 'link3', link: '#link3' },
+            { name: 'link3', link: '#link3', button: true, primary: true},
+           ]}
   >
     <div class="container py-2">
       <a class="navbar-brand fw-bold text-primary"
@@ -20,14 +26,14 @@
       <div class="collapse navbar-collapse"
            id="main-navigation">
         <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
-          <li class="nav-item"><a class="nav-link"
-               href="#services">Services</a></li>
-          <li class="nav-item"><a class="nav-link"
-               href="#work">Our work</a></li>
-          <li class="nav-item"><a class="nav-link"
-               href="#insights">Insights</a></li>
-          <li class="nav-item ms-lg-3"><a class="btn btn-primary"
-               href="#contact">Start a project</a></li>
+          <li class="nav-item"
+              :for-each=${options}
+              :class-ms-lg-3=${data.button}>
+            <a :class-nav-link=${!data.button}
+               :class-btn=${data.button}
+               :class-btn-primary=${data.primary}
+               href=${data.link}>${data.name}</a>
+          </li>
         </ul>
       </div>
     </div>

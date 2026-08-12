@@ -1,0 +1,18 @@
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: dark; }
+
+  body { background-color: #121820; color: #edf2f7; }
+  .bg-light { background-color: #18222d !important; }
+  .bg-white, .card, .list-group-item { background-color: #1b2632 !important; }
+  .border, .border-top, .border-bottom, .border-end { border-color: #384858 !important; }
+  .text-muted { color: #afbdc9 !important; }
+  .navbar-light .navbar-nav .nav-link { color: #dbe5ee; }
+  .navbar-light .navbar-nav .nav-link:hover, .navbar-light .navbar-nav .nav-link:focus { color: #fff; }
+  .navbar-toggler { border-color: #6c7d8e; filter: invert(1); }
+  .btn-outline-secondary { border-color: #afbdc9; color: #dbe5ee; }
+  .btn-outline-secondary:hover { background-color: #afbdc9; color: #121820; }
+  .list-group-item { border-color: #384858; color: #edf2f7; }
+  .list-group-item-action:hover, .list-group-item-action:focus { background-color: #253443; color: #fff; }
+  #work article.bg-white.text-dark { color: #edf2f7 !important; }
+  #work article.bg-white .badge { background-color: #253443 !important; color: #edf2f7 !important; }
+}
