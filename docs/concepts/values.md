@@ -119,6 +119,10 @@ options, say. `:prop-x` assigns the JS property directly:
 ```
 
 The name is written exactly as the property is spelled, `maxLength` and all.
+Quoting the value changes nothing: `:prop-options="${items}"` passes the
+array itself, because a lone expression keeps its type. Only combining it
+with literal text makes a string — see the [syntax
+reference](../reference/syntax.md#attribute-values-and-quoting).
 
 This one is **browser-only**, and unavoidably so: a property is state on an
 element instance, not part of the document, so there is nothing a served page

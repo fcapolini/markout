@@ -10,8 +10,36 @@ the module and composition tags, and the names the runtime supplies.
 | `${expr}` in text | Reactive text content. |
 | `${expr}` in CSS | Reactive stylesheet content. |
 | `attr=${expr}` | Reactive plain attribute; no `:` needed. `null`/`undefined` removes it. |
-| `:attr-name=${expr}` | Toggles whether attribute `name` is PRESENT, for boolean/custom-element attributes. |
-| `:prop-name=${expr}` | Assigns the element's JS property `name`, for what an attribute can't carry. Browser-only. |
+
+### Attribute values and quoting
+
+An attribute value can be unquoted, `"double quoted"` or `'single quoted'`,
+and any of them may contain `${...}`. What quoting does *not* do is decide
+the type — that depends on whether an expression fills the value on its own:
+
+| Written | Result |
+| --- | --- |
+| `:x=${expr}` | the expression's value, whatever its type |
+| `:x="${expr}"` | identical: quoting changes nothing here |
+| `:x='${expr}'` | identical |
+| `:x="text ${expr}"` | interpolation — always a string |
+| `:x="${a}${b}"` | interpolation — always a string |
+| `:x="literal"` | the string `literal` |
+
+So a lone expression is passed through with its type intact — object, array,
+number, boolean, function — while anything combining literal text with
+expressions, or more than one expression, is assembled into a string.
+
+That distinction matters most for `:prop-`, where a component is expecting
+something an attribute could never carry:
+
+```html
+<sl-select :prop-options="${items}"      <!-- the array itself -->
+           :prop-label="Pick one of ${items.length}">   <!-- a string -->
+```
+
+NOTE: "on its own" is literal — whitespace is text like any other, so
+`:x=" ${expr}"` interpolates and yields a string.
 
 ## Value and binding directives
 
@@ -19,8 +47,8 @@ the module and composition tags, and the names the runtime supplies.
 | --- | --- |
 | `:name=${expr}` | Declares a reactive value on the current scope. |
 | `:aka="name"` | Names the current scope so descendants can reference it. |
-| `:attr-name` | Toggles the presence of attribute `name` (see above). |
-| `:prop-name=${expr}` | Assigns an element property; skipped when server rendering. |
+| `:attr-name=${expr}` | Toggles whether attribute `name` is PRESENT, as boolean and custom-element attributes need. Bare `:attr-name` implies `true`. |
+| `:prop-name=${expr}` | Assigns the element's JS property `name`, for what an attribute can't carry. Browser-only: skipped when server rendering. |
 | `:class-name` | Toggles the `name` CSS class. |
 | `:style-name` | Writes the `name` CSS property. |
 | `:on-click=${fn}` | Binds an event handler. |
