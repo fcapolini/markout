@@ -1,6 +1,7 @@
 import { parse } from '../../../src/html/parser';
 import { assert, describe, expect, it, vi } from 'vitest';
 import { CoreScopeProps } from '../../../src/runtime/core/core-scope';
+import type { RuntimeError } from '../../../src/runtime/core/core-context';
 import { WebContext } from '../../../src/runtime/web/web-context';
 import { WebScope } from '../../../src/runtime/web/web-scope';
 
@@ -9,9 +10,13 @@ import { WebScope } from '../../../src/runtime/web/web-scope';
  * them, and the runtime, which gives them meaning. These state the rules per
  * prefix rather than pinning one example each.
  */
-function setup(html: string, root: CoreScopeProps) {
+function setup(html: string, root: CoreScopeProps, onError?: RuntimeError[]) {
   const source = parse(html, 'test');
-  const context = new WebContext({ doc: source.doc, root }).refresh();
+  const context = new WebContext({
+    doc: source.doc,
+    root,
+    ...(onError ? { onError: (e: RuntimeError) => onError.push(e) } : {}),
+  }).refresh();
   const markup = () => {
     // the ids are noise in the assertions
     const s = source.doc.toString();
@@ -113,14 +118,36 @@ describe('text$', () => {
     assert.include(markup(), '<!---t0-->changed<!---/-->');
   });
 
-  it('leaves a binding alone when its id is absent from the DOM', () => {
+  it('reports a binding whose id is absent from the DOM', () => {
+    // silence here is the worst outcome: the page renders, nothing throws,
+    // and one binding is dead forever. Every way markup gets relocated --
+    // slots, replication, stencil clones -- can produce exactly this
+    const errors: RuntimeError[] = [];
     const { context, markup } = setup(
       '<html data-markout="0"><body><!---t0-->&#8203;<!---/--></body></html>',
-      { id: '0', values: { text$0: { val: 'a' }, text$7: { val: 'b' } } }
+      { id: '0', values: { text$0: { val: 'a' }, text$7: { val: 'b' } } },
+      errors
     );
     context.root.proxy.text$7 = 'c';
     assert.include(markup(), '<!---t0-->a<!---/-->');
     assert.notInclude(markup(), 'c<');
+    assert.deepEqual(
+      errors.map(e => [e.scope, e.key, e.message]),
+      [['0', 'text$7', 'unbound binding: no text node carrying that marker id']]
+    );
+  });
+
+  it('reports an attribute binding with no element to write to', () => {
+    const errors: RuntimeError[] = [];
+    setup(
+      '<html data-markout="0"><body></body></html>',
+      { id: '0', values: {}, children: [{ id: 'missing', values: { 'attr$href': { val: '/x' } } }] },
+      errors
+    );
+    assert.deepEqual(
+      errors.map(e => e.message),
+      ['unbound binding: no element to set "href" on']
+    );
   });
 
   it('addresses marked text nodes by index', () => {

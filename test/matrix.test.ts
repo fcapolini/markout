@@ -1,0 +1,283 @@
+import { describe, expect, it } from 'vitest';
+import { Page } from '../src/compiler/ir/Page';
+import { stage1load } from '../src/compiler/stages/stage1-load';
+import { stage2validate } from '../src/compiler/stages/stage2-validate';
+import { stage3qualify } from '../src/compiler/stages/stage3-qualify';
+import { stage4resolve } from '../src/compiler/stages/stage4-resolve';
+import { stage7generate } from '../src/compiler/stages/stage7-generate';
+import { parse } from '../src/html/parser';
+import type { RuntimeError } from '../src/runtime/core/core-context';
+import { WebContext } from '../src/runtime/web/web-context';
+
+/**
+ * Every kind of binding, in every kind of container that relocates or
+ * replicates the markup carrying it.
+ *
+ * Each construct here is covered on its own elsewhere. What kept breaking was
+ * the PRODUCTS: a binding's DOM target is found by scanning its scope's
+ * territory, and `:for-each`, `<:define>` and `<:slot>` all move or duplicate
+ * markup out from under that assumption. Every silent bug found so far --
+ * interpolated attributes, components in lists, slotted text, colliding
+ * `$id`s -- was one cell of this table, so the table is generated rather than
+ * written out: adding a row or a column covers all of its intersections at
+ * once.
+ */
+
+// ---------------------------------------------------------------------------
+// axes
+// ---------------------------------------------------------------------------
+
+/** the server DOM keeps textContent on text nodes, not on elements */
+function textOf(el: any): string {
+  let out = '';
+  for (const n of el.childNodes ?? []) {
+    if (n.nodeType === 3) out += n.textContent;
+    else if (n.nodeType === 1) out += textOf(n);
+  }
+  return out;
+}
+
+/** each renders `v`, marked so the oracle can find it, on a <b> element */
+const BINDINGS = [
+  {
+    name: 'text',
+    markup: '<b data-probe="1">${v}</b>',
+    read: textOf,
+  },
+  {
+    name: 'attribute',
+    markup: '<b data-probe="1" title=${v}>x</b>',
+    read: (el: any) => el.getAttribute('title'),
+  },
+  {
+    name: 'class',
+    markup: '<b data-probe="1" :class-on=${v === "A"}>x</b>',
+    read: (el: any) => (el.getAttribute('class') ?? '').includes('on') ? 'A' : 'B',
+  },
+  {
+    name: 'style',
+    markup: '<b data-probe="1" :style-content=${v}>x</b>',
+    read: (el: any) => (el.getAttribute('style') ?? '').includes('A') ? 'A' : 'B',
+  },
+  {
+    name: 'scope value',
+    markup: '<b data-probe="1" :inner=${v}>${inner}</b>',
+    read: textOf,
+  },
+];
+
+/**
+ * each wraps binding markup so it ends up somewhere awkward. `count` is how
+ * many probes should result, since replication multiplies them.
+ */
+const CONTAINERS = [
+  {
+    name: 'plain',
+    wrap: (m: string) => ({ head: '', body: m }),
+    count: 1,
+  },
+  {
+    name: 'inside :for-each',
+    wrap: (m: string) => ({ head: '', body: `<i :for-each=${'${[1, 2]}'}>${m}</i>` }),
+    count: 2,
+  },
+  {
+    name: 'inside nested :for-each',
+    wrap: (m: string) => ({
+      head: '',
+      body: `<i :for-each=${'${[[1], [2, 3]]}'}><u :for-each=${'${data}'}>${m}</u></i>`,
+    }),
+    count: 3,
+  },
+  {
+    name: 'inside a <:define> body',
+    wrap: (m: string) => ({
+      head: `<:define tag="my-one:div">${m}</:define>`,
+      body: '<em :v="SHADOW"><my-one /></em>',
+    }),
+    count: 1,
+  },
+  {
+    name: 'in a component used inside :for-each',
+    wrap: (m: string) => ({
+      head: `<:define tag="my-one:div">${m}</:define>`,
+      body: `<i :for-each=${'${[1, 2]}'}><my-one /></i>`,
+    }),
+    count: 2,
+  },
+  {
+    name: 'in a component inside a component',
+    wrap: (m: string) => ({
+      head:
+        `<:define tag="my-inner:div">${m}</:define>` +
+        '<:define tag="my-outer:div"><my-inner /></:define>',
+      body: '<my-outer />',
+    }),
+    count: 1,
+  },
+  {
+    name: 'in slotted content',
+    wrap: (m: string) => ({
+      head: '<:define tag="my-box:div" :v="SHADOW"><:slot /></:define>',
+      body: `<em>\${v}</em><my-box>${m}</my-box><em>\${v}</em>`,
+    }),
+    count: 1,
+  },
+  {
+    name: 'in slotted content inside :for-each',
+    wrap: (m: string) => ({
+      head: '<:define tag="my-box:div" :v="SHADOW"><:slot /></:define>',
+      body: `<i :for-each=${'${[1, 2]}'}><my-box>${m}</my-box></i>`,
+    }),
+    count: 2,
+  },
+  {
+    // the value reaches the binding through a usage-site attribute, which
+    // evaluates at the call site while living on the instance
+    name: 'via a component parameter',
+    wrap: (m: string) => ({
+      head: `<:define tag="my-p:div" :v="SHADOW">${m}</:define>`,
+      body: '<em :w=${v}><my-p :v=${w} /></em>',
+    }),
+    count: 1,
+  },
+  {
+    name: 'via a component parameter inside :for-each',
+    wrap: (m: string) => ({
+      head: `<:define tag="my-p:div" :v="SHADOW">${m}</:define>`,
+      body: `<i :for-each=${'${[v, v]}'}><my-p :v=${'${data}'} /></i>`,
+    }),
+    count: 2,
+  },
+  {
+    name: 'in a named slot',
+    wrap: (m: string) => ({
+      head:
+        '<:define tag="my-box:div" :v="SHADOW">' +
+        '<u><:slot name="s"><i :class-fallback>${v}</i></:slot></u></:define>',
+      body: `<my-box><b :slot="s">${m}</b></my-box>`,
+    }),
+    count: 1,
+  },
+];
+
+// ---------------------------------------------------------------------------
+// oracle
+// ---------------------------------------------------------------------------
+
+function compile(html: string) {
+  const page = new Page(parse(html, 'matrix.html'));
+  stage1load(page);
+  stage2validate(page);
+  stage3qualify(page);
+  stage4resolve(page);
+  stage7generate(page);
+  return page;
+}
+
+function probes(doc: any): any[] {
+  const found: any[] = [];
+  const walk = (node: any, inTemplate: boolean) => {
+    for (const n of node.childNodes ?? []) {
+      if (n.nodeType !== 1) continue;
+      const nested = inTemplate || n.tagName === 'TEMPLATE';
+      // a <template> holds an inert stencil: it renders, but is never live
+      if (!nested && n.getAttribute?.('data-probe') !== null) found.push(n);
+      walk(n.tagName === 'TEMPLATE' ? n.content : n, nested);
+    }
+  };
+  walk(doc, false);
+  return found;
+}
+
+function check(binding: (typeof BINDINGS)[number], container: (typeof CONTAINERS)[number]) {
+  const { head, body } = container.wrap(binding.markup);
+  const page = compile(
+    `<html :v=\${'A'}><head>${head}</head><body>${body}</body></html>`
+  );
+
+  // 1. it compiles
+  expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+
+  // 2. server rendering raises nothing -- including the unbound-binding
+  //    report, which is what catches a value whose DOM target went missing
+  const ssrErrors: RuntimeError[] = [];
+  const root = new Function(`return (${page.propsString});`)();
+  const ctx = new WebContext({
+    root,
+    doc: page.source.doc,
+    onError: e => ssrErrors.push(e),
+  }).refresh();
+  expect(ssrErrors).toStrictEqual([]);
+
+  // 3. nothing was silently dropped: the expected number of probes exist and
+  //    all show the value, and no compiler-only markup survived
+  const found = probes(page.source.doc);
+  expect(found.length).toBe(container.count);
+  for (const el of found) {
+    expect(binding.read(el)).toContain('A');
+  }
+  const markup = page.source.doc.toString();
+  expect(markup).not.toMatch(/<my-[a-z]+[\s/>]/);
+  expect(markup).not.toMatch(/\s:[a-z-]+=/);
+  expect(markup).not.toContain(':slot');
+
+  // 4. a dependency change reaches every one of them
+  ctx.root.proxy['v'] = 'B';
+  expect(ssrErrors).toStrictEqual([]);
+  for (const el of probes(page.source.doc)) {
+    expect(binding.read(el)).toContain('B');
+  }
+
+  // 5. re-running the compiled props over the served DOM is what the browser
+  //    does on hydration: it must settle on the same markup, not double up
+  const served = page.source.doc.toString();
+  const rehydrated = parse(served, 'matrix.html');
+  const hydrationErrors: RuntimeError[] = [];
+  new WebContext({
+    root: new Function(`return (${page.propsString});`)(),
+    doc: rehydrated.doc,
+    onError: e => hydrationErrors.push(e),
+  }).refresh();
+  expect(hydrationErrors).toStrictEqual([]);
+  expect(probes(rehydrated.doc).length).toBe(container.count);
+}
+
+// ---------------------------------------------------------------------------
+
+for (const container of CONTAINERS) {
+  describe(`binding ${container.name}`, () => {
+    for (const binding of BINDINGS) {
+      it(`binds ${binding.name}`, () => check(binding, container));
+    }
+  });
+}
+
+describe('$id across containers', () => {
+  // $id gets its own pass: its contract is uniqueness, not a value, so the
+  // oracle above can't express it
+  for (const container of CONTAINERS) {
+    it(`is distinct per instance ${container.name}`, () => {
+      const { head, body } = container.wrap('<b data-probe="1" id="p-${$id}">x</b>');
+      const page = compile(
+        `<html :v=\${'A'}><head>${head}</head><body>${body}</body></html>`
+      );
+      expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+
+      const errors: RuntimeError[] = [];
+      new WebContext({
+        root: new Function(`return (${page.propsString});`)(),
+        doc: page.source.doc,
+        onError: e => errors.push(e),
+      }).refresh();
+      expect(errors).toStrictEqual([]);
+
+      const ids = probes(page.source.doc).map(e => e.getAttribute('id'));
+      expect(ids.length).toBe(container.count);
+      expect(new Set(ids).size).toBe(ids.length);
+      // usable as an HTML id: no `#`, which would be legal markup that no
+      // selector can match
+      for (const id of ids) expect(id).not.toContain('#');
+    });
+  }
+});

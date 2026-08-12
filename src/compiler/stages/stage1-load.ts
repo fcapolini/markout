@@ -418,6 +418,13 @@ function slotUsage(
   stencil.setAttribute(DOM_ID_ATTR, stencilId);
 
   const slots = findSlots(stencil);
+  // the definition's own scopes inside a slot that got filled: their markup
+  // was just replaced, so the instance must not carry values still pointing
+  // at it (see rehomeSlottedText for the text half of the same problem)
+  const filled = [...groups.keys()].map(name => defSlots.get(name)!.el);
+  scope.children = scope.children.filter(
+    child => !child.e || !filled.some(slot => contains(slot as ServerNode, child.e!))
+  );
   for (const [name, nodes] of groups) {
     const target = slots.get(name)!.el;
     const host = target.parentElement!;
@@ -486,8 +493,11 @@ function rehomeSlottedText(
       movedText.set(node, name);
     }
   }
-  if (!movedText.size) return;
 
+  // rebuilt unconditionally, not just when the usage brought text of its own:
+  // filling a slot REMOVES its fallback, and the definition's values for that
+  // fallback would otherwise stay on the instance pointing at markup this
+  // stencil no longer has
   const textValues = new Map<string, Value>();
   scope.callSiteValues ??= new Set();
   let index = 0;
