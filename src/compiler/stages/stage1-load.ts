@@ -35,6 +35,10 @@ import {
   DEFINE_DIRECTIVE_TAG,
   DEFINE_TAG_ATTR,
   DEFINE_NAME_MARKER,
+  SLOT_DIRECTIVE_TAG,
+  SLOT_NAME_ATTR,
+  SLOT_TARGET_ATTR,
+  DEFAULT_SLOT_NAME,
 } from '../ir/Page';
 import { NodeType } from '../../html/dom';
 import { ATOMIC_TEXT_TAGS } from '../../html/parser';
@@ -60,7 +64,31 @@ import { DOM_ID_ATTR, DOM_TEXT_MARKER1, DOM_TEXT_MARKER2, DOM_USE_MARKER } from 
 export function stage1load(page: Page) {
   page.main = load(page, page.global, page.source.doc.documentElement!, 'page');
   expandCustomTagUsages(page);
+  // after every usage has had its chance to clone a stencil with the slot
+  // still in place. A directive tag isn't serialized -- children and all --
+  // so an untouched <:slot> has to be replaced by its own content, which is
+  // exactly the fallback a usage supplying nothing should get
+  unwrapSlots(page.source.doc.documentElement!);
   return page;
+}
+
+function unwrapSlots(e: ServerElement): void {
+  const children =
+    e.tagName === 'TEMPLATE'
+      ? [...(e as ServerTemplateElement).content.childNodes]
+      : [...e.childNodes];
+  for (const child of children) {
+    if (child.nodeType !== NodeType.ELEMENT) continue;
+    const el = child as ServerElement;
+    unwrapSlots(el);
+    if (el.tagName !== SLOT_DIRECTIVE_TAG) continue;
+    const host = el.parentElement!;
+    for (const inner of [...el.childNodes]) {
+      el.removeChild(inner);
+      host.insertBefore(inner, el);
+    }
+    host.removeChild(el);
+  }
 }
 
 function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope {
@@ -145,6 +173,9 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
 
 function needsScope(e: ServerElement): boolean {
   for (const attr of e.attributes as ServerAttribute[]) {
+    // `:slot` only says where this element goes; on its own it's no reason
+    // to give it a scope (and a data-markout id) it would never use
+    if (attr.name === `${SPECIAL_ATTR_PREFIX}${SLOT_TARGET_ATTR}`) continue;
     if (attr.name.startsWith(SPECIAL_ATTR_PREFIX)) return true;
     // a plain attribute with an interpolated value is reactive too, so its
     // element needs its own scope to hold the resulting attr$ value -- were
@@ -256,8 +287,10 @@ function expandCustomTagUsages(page: Page): void {
     const scope = new Scope(page, enclosingScope(page, usageEl, loadedUsageScope));
     scope.values = new Map(defScope.values);
     scope.textValues = defScope.textValues;
-    scope.children = defScope.children;
-    scope.usesTemplate = defScope.id;
+    // copied, not shared: a usage supplying slotted content adds its own
+    // scopes here, and that must not reach the other instances
+    scope.children = [...defScope.children];
+    scope.usesTemplate = slotUsage(page, usageEl, defScope, scope, loadedUsageScope);
     scope.attributes = new Map();
     // only static ones are left to carry over: extractValues() already
     // turned any `${...}` attribute here into an attr$ value on
@@ -294,6 +327,240 @@ function expandCustomTagUsages(page: Page): void {
     parent.insertBefore(marker, usageEl);
     parent.removeChild(usageEl);
   }
+}
+
+/**
+ * Wires a usage site's children into the definition's `<:slot>`, and returns
+ * the id of the stencil the instance should be built from.
+ *
+ * A usage supplying no children just instantiates the definition's own
+ * (shared) stencil, keeping whatever the `<:slot>` holds as fallback. One
+ * that does gets a stencil of its own: a clone of the definition's, with the
+ * children moved into the slot's place. Per usage site, not per replica --
+ * a `:for-each` still stamps every replica out of that one stencil.
+ *
+ * The children are MOVED, not copied, so the scopes load() already built for
+ * them stay attached to the very nodes that end up in the instance.
+ */
+function slotUsage(
+  page: Page,
+  usageEl: ServerElement,
+  defScope: Scope,
+  scope: Scope,
+  loadedUsageScope: Scope | undefined
+): string {
+  const children = [...usageEl.childNodes].filter(
+    n => n.nodeType !== NodeType.TEXT || `${(n as ServerText).textContent}`.trim()
+  );
+  if (!children.length) return defScope.id;
+
+  const defEl = defScope.e!;
+  const defSlots = findSlots(defEl);
+  // grouped by the slot each child addresses; anything unaddressed fills the
+  // default one, which is also where every text node goes
+  const groups = new Map<string, ServerNode[]>();
+  for (const child of children) {
+    const name =
+      child.nodeType === NodeType.ELEMENT
+        ? page.slotTargets.get(child as ServerElement) ?? DEFAULT_SLOT_NAME
+        : DEFAULT_SLOT_NAME;
+    groups.set(name, [...(groups.get(name) ?? []), child as ServerNode]);
+  }
+
+  let missing = false;
+  for (const name of groups.keys()) {
+    if (defSlots.has(name)) continue;
+    missing = true;
+    addError(
+      page,
+      name === DEFAULT_SLOT_NAME
+        ? `<${usageEl.tagName.toLowerCase()}> was given content but its ` +
+            `<${DEFINE_DIRECTIVE_TAG.toLowerCase()}> has no ` +
+            `<${SLOT_DIRECTIVE_TAG.toLowerCase()}> to put it in`
+        : `<${usageEl.tagName.toLowerCase()}> has no "${name}" slot`,
+      usageEl.loc
+    );
+  }
+  if (missing) return defScope.id;
+
+  const doc = usageEl.ownerDocument;
+  const stencil = defEl.clone(doc, null) as ServerElement;
+  // `${scope.id}t` rather than a scope id: this is a stencil, not a scope,
+  // and it only has to be unique among data-markout values so
+  // WebContext.findElementById() can tell it from the definition's own
+  const stencilId = `${scope.id}t`;
+  stencil.setAttribute(DOM_ID_ATTR, stencilId);
+
+  const slots = findSlots(stencil);
+  for (const [name, nodes] of groups) {
+    const target = slots.get(name)!;
+    const host = target.parentElement!;
+    for (const child of nodes) {
+      usageEl.removeChild(child);
+      host.insertBefore(child, target);
+    }
+    // only the ones that were filled: an untouched slot keeps its own
+    // content, which unwrapSlots() leaves behind as the fallback
+    host.removeChild(target);
+  }
+
+  const template = new ServerTemplateElement(doc, usageEl.loc);
+  template.appendChild(stencil);
+  (doc!.head ?? doc!.documentElement!).appendChild(template);
+
+  // the slotted scopes move under the instance, where their DOM now lives,
+  // but keep resolving against the scope the usage was written in
+  for (const slotted of outermostScopesIn(page, children as ServerNode[])) {
+    const index = slotted.parent!.children.indexOf(slotted);
+    index >= 0 && slotted.parent!.children.splice(index, 1);
+    slotted.parent = scope;
+    slotted.lexicalParent = scope.parent;
+    slotted.slotted = true;
+    scope.children.push(slotted);
+  }
+  // whichever scope load() gave the usage element's own territory to: its
+  // own, if the tag had attributes worth one, else the enclosing scope
+  rehomeSlottedText(
+    defScope,
+    scope,
+    loadedUsageScope ?? scope.parent!,
+    !loadedUsageScope,
+    stencil,
+    children as ServerNode[]
+  );
+  return stencilId;
+}
+
+/**
+ * Re-keys the interpolated text of an instance that received slotted content.
+ *
+ * Text is bound by POSITION: WebScope.init() collects the marker-delimited
+ * nodes of a scope's own territory in document order, and `text$K` is the Kth
+ * of them. Bare `${...}` written between a custom tag's tags belongs to the
+ * scope containing the usage, but its node ends up inside the instance --
+ * where that scope's own scan can't reach it, since the scan stops at any
+ * element bearing a scope id. Left alone it silently renders nothing.
+ *
+ * So the instance takes over those values, interleaved with the definition's
+ * own in the order they now appear, and the call-site scope re-keys what it
+ * has left. Marking them in `callSiteValues` keeps them evaluating where they
+ * were written, exactly like a usage-site attribute.
+ */
+function rehomeSlottedText(
+  defScope: Scope,
+  scope: Scope,
+  callScope: Scope,
+  rekeyCallScope: boolean,
+  stencil: ServerElement,
+  moved: ServerNode[]
+): void {
+  const movedText = new Map<ServerText, string>();
+  for (const [name, value] of callScope.textValues) {
+    const node = value.node as ServerText;
+    if (node.nodeType === NodeType.TEXT && moved.some(n => contains(n, node as any))) {
+      movedText.set(node, name);
+    }
+  }
+  if (!movedText.size) return;
+
+  const textValues = new Map<string, Value>();
+  scope.callSiteValues ??= new Set();
+  let index = 0;
+  for (const { marker, text } of orderedTexts(stencil)) {
+    const key = `${TEXT_VALUE_PREFIX}${index++}`;
+    const fromCallSite = movedText.get(text);
+    if (fromCallSite !== undefined) {
+      textValues.set(key, callScope.textValues.get(fromCallSite)!);
+      scope.callSiteValues.add(key);
+      callScope.textValues.delete(fromCallSite);
+      continue;
+    }
+    // a clone of one of the definition's own: its marker still carries the
+    // index it had there, which is the key it kept in defScope
+    const defKey = `${TEXT_VALUE_PREFIX}${marker.textContent.slice(DOM_TEXT_MARKER1.length)}`;
+    const value = defScope.textValues.get(defKey);
+    value && textValues.set(key, value);
+  }
+  scope.textValues = textValues;
+
+  // only when the text came from a scope that survives: a usage element's
+  // own scope is spliced out of the tree, so nothing is left to re-key
+  if (!rekeyCallScope) return;
+  // the call-site scope's own keys are positional too, so closing the gaps
+  // the moved ones left is not cosmetic
+  const remaining = [...callScope.textValues.values()];
+  callScope.textValues = new Map(
+    remaining.map((value, i) => [`${TEXT_VALUE_PREFIX}${i}`, value])
+  );
+  callScope.textCount = remaining.length;
+}
+
+/**
+ * The marker/text pairs of an element's own territory, in the order
+ * WebScope.init() collects them -- descending only into elements that don't
+ * carry a scope id of their own.
+ */
+function orderedTexts(e: ServerElement): { marker: ServerComment; text: ServerText }[] {
+  const out: { marker: ServerComment; text: ServerText }[] = [];
+  const walk = (host: ServerElement) => {
+    const children = [...host.childNodes];
+    children.forEach((n, i) => {
+      if (n.nodeType === NodeType.ELEMENT) {
+        (n as ServerElement).getAttribute(DOM_ID_ATTR) === null && walk(n as ServerElement);
+        return;
+      }
+      if (
+        n.nodeType === NodeType.COMMENT &&
+        `${(n as ServerComment).textContent}`.startsWith(DOM_TEXT_MARKER1)
+      ) {
+        const text = children[i + 1];
+        text?.nodeType === NodeType.TEXT &&
+          out.push({ marker: n as ServerComment, text: text as ServerText });
+      }
+    });
+  };
+  walk(e);
+  return out;
+}
+
+/** every `<:slot>` in a definition body, by name (the default one is `''`) */
+function findSlots(e: ServerElement, into = new Map<string, ServerElement>()): Map<string, ServerElement> {
+  for (const child of e.childNodes) {
+    if (child.nodeType !== NodeType.ELEMENT) continue;
+    const el = child as ServerElement;
+    if (el.tagName === SLOT_DIRECTIVE_TAG) {
+      // first one wins, so a duplicate name can't silently steal content
+      const name = `${el.getAttribute(SLOT_NAME_ATTR) ?? DEFAULT_SLOT_NAME}`;
+      into.has(name) || into.set(name, el);
+      continue;
+    }
+    findSlots(el, into);
+  }
+  return into;
+}
+
+/** the scopes rooted inside `nodes`, without descending past the first one found */
+function outermostScopesIn(page: Page, nodes: ServerNode[]): Scope[] {
+  const found: Scope[] = [];
+  const visit = (scope: Scope) => {
+    if (scope.e && nodes.some(n => contains(n, scope.e!))) {
+      found.push(scope);
+      return;
+    }
+    [...scope.children].forEach(visit);
+  };
+  page.main && visit(page.main);
+  return found;
+}
+
+function contains(root: ServerNode, e: ServerElement): boolean {
+  if (root === (e as unknown as ServerNode)) return true;
+  let p = e.parentElement;
+  while (p) {
+    if ((p as unknown as ServerNode) === root) return true;
+    p = p.parentElement;
+  }
+  return false;
 }
 
 /**
@@ -343,6 +610,13 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
       continue;
     }
     let name = attr.name.slice(SPECIAL_ATTR_PREFIX.length);
+    if (name === SLOT_TARGET_ATTR) {
+      // addressed to a slot, not a value of its own: kept aside here because
+      // the `:` attributes are stripped at the end of this function, long
+      // before expandCustomTagUsages() gets to read it
+      page.slotTargets.set(e, `${attr.value ?? ''}`);
+      continue;
+    }
     if (name === SCOPE_NAME_ATTR) {
       if (scope.name) {
         addError(page, `Cannot redefine scope name: "${scope.name}"`, attr.loc);

@@ -1,4 +1,5 @@
 import { PageError, Source } from '../../html/parser';
+import type { ServerElement } from '../../html/server-dom';
 import type { Node } from 'estree';
 import { DIRECTIVE_TAG_PREFIX } from '../../html/dom';
 import { Scope } from './Scope';
@@ -35,6 +36,17 @@ export const FOR_DATA_DEFAULT_NAME = 'data';
 // uppercases tag names, matching how preprocessor.ts's own directive tags
 // (IMPORT_DIRECTIVE_TAG etc.) are spelled
 export const DEFINE_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'DEFINE';
+// marks where a <:define> body accepts the children written at a usage
+// site; its own content, if any, stands in when a usage supplies none
+export const SLOT_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'SLOT';
+// `<:slot name="header">`; a slot with no name is the default one, taking
+// everything a usage site doesn't address to another
+export const SLOT_NAME_ATTR = 'name';
+// `<div :slot="header">` at a usage site: which slot this child fills. An
+// attribute rather than a wrapper element, so filling a slot doesn't add
+// markup a CSS framework would then have to style around
+export const SLOT_TARGET_ATTR = 'slot';
+export const DEFAULT_SLOT_NAME = '';
 export const DEFINE_TAG_ATTR = 'tag';
 // internal-only marker stamped on a <:define>'s expanded inner element
 // during stage1-load's pre-pass, so the element can be matched back up to
@@ -52,6 +64,8 @@ export class Page {
    * their own natural position, only instantiated per usage site */
   definitionScopes: Set<Scope>;
   values: Map<string, Value>;
+  /** `:slot` targets, kept aside by stage1 before it strips `:` attributes */
+  slotTargets: Map<ServerElement, string>;
   main?: Scope;
   errors: PageError[] = [];
   nextValueId = 0;
@@ -68,6 +82,7 @@ export class Page {
       global.page = this;
     }
     this.customTags = new Map();
+    this.slotTargets = new Map();
     this.definitionScopes = new Set();
     this.values = new Map();
   }

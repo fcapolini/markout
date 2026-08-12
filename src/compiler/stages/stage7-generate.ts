@@ -93,12 +93,22 @@ function generateScope(scope: Scope): ObjectExpression {
     );
   }
   for (const [name, value] of scope.textValues) {
-    valueProps.push(valueProperty(toRuntimeKey(name), generateValueProps(value)));
+    valueProps.push(
+      valueProperty(
+        toRuntimeKey(name),
+        generateValueProps(value, scope.callSiteValues?.has(name))
+      )
+    );
   }
 
   const props: Property[] = [property('id', literal(scope.id))];
   if (scope.name) {
     props.push(property('name', literal(scope.name)));
+  }
+  if (scope.slotted) {
+    // written at a usage site, living inside the instance: the runtime
+    // resolves its names from outside rather than from the definition
+    props.push(property('slotted', literal(true)));
   }
   if (scope.usesTemplate) {
     // a custom-tag usage instance: WebScope instantiates its DOM from the

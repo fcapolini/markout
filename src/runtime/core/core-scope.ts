@@ -45,6 +45,9 @@ export interface CoreScopeProps {
   template?: string;
   /** plain attributes from a custom-tag usage site, applied to its stencil clone */
   attributes?: { [key: string]: string };
+  /** markup written at a usage site and slotted into the instance: it lives
+   * here but resolves names from outside (see lexicalParent()) */
+  slotted?: boolean;
 }
 
 export class CoreScope {
@@ -168,7 +171,18 @@ export class CoreScope {
    * happened to declare -- compiling clean, and reactive, but wrong.
    */
   lexicalParent(): CoreScope | undefined {
-    return this.props.template ? this.rootScope() : this.parent;
+    if (this.props.template) return this.rootScope();
+    // markup slotted into a custom tag: its DOM is inside the instance, but
+    // it was written OUTSIDE it, so it resolves from there -- skipping the
+    // instance entirely rather than reading the definition's values
+    if (this.props.slotted) return this.enclosingInstance()?.parent ?? this.parent;
+    return this.parent;
+  }
+
+  private enclosingInstance(): CoreScope | undefined {
+    let scope: CoreScope | undefined = this.parent;
+    while (scope && !scope.props.template) scope = scope.parent;
+    return scope;
   }
 
   private rootScope(): CoreScope | undefined {
