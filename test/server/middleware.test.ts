@@ -58,11 +58,8 @@ describe("Middleware", () => {
 
   it("should serve index.html for directory paths", async () => {
     const res = await request(app).get("/subdir");
-    expect(res.status).toBe(200);
-    const window = new Window();
-    window.document.write(res.text);
-    const heading = window.document.querySelector("h1");
-    expect(heading?.textContent).toBe("Subdir");
+    expect(res.status).toBe(301);
+    expect(res.headers.location).toBe("/subdir/");
   });
 
   it("should serve index.html for directory paths with trailing slash", async () => {

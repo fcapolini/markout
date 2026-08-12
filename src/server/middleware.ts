@@ -50,6 +50,11 @@ export function markout(props: MarkoutProps) {
       return;
     }
 
+    if (i < 0 && !req.path.endsWith('/') && (await isDirectory(req.path, docroot))) {
+      res.redirect(301, `${req.path}/`);
+      return;
+    }
+
     const pathname = await resolvePath(req, i, docroot);
     if (!pathname) {
       res.sendStatus(404);
@@ -81,6 +86,17 @@ export function markout(props: MarkoutProps) {
     const html = doc.toString();
     res.header('Content-Type', 'text/html;charset=UTF-8');
     res.send('<!doctype html>\n' + html);
+  }
+}
+
+async function isDirectory(requestPath: string, docroot: string): Promise<boolean> {
+  const relativePath = requestPath.startsWith('/')
+    ? requestPath.slice(1)
+    : requestPath;
+  try {
+    return (await fs.promises.stat(path.resolve(docroot, relativePath))).isDirectory();
+  } catch {
+    return false;
   }
 }
 
