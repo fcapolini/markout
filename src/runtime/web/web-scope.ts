@@ -8,7 +8,7 @@ import {
   Text,
 } from '../../html/dom';
 import { CoreScope, CoreScopeProps, cloneId } from '../core/core-scope';
-import { CoreValueProps } from '../core/core-value';
+import { CoreValue, CoreValueProps } from '../core/core-value';
 import {
   DOM_ATOMIC_TEXT_TAGS,
   DOM_ID_ATTR,
@@ -186,7 +186,7 @@ export class WebScope extends CoreScope {
     if (key.startsWith(RT_ATTR_VALUE_PREFIX)) {
       const name = this.camelToDash(key.slice(RT_ATTR_VALUE_PREFIX.length));
       ret.setCB((_, val) => {
-        if (!this.dom) return;
+        if (!this.dom) return this.unbound(ret, `no element to set "${name}" on`);
         if (val == null) {
           this.dom.removeAttribute(name);
         } else {
@@ -198,7 +198,7 @@ export class WebScope extends CoreScope {
     if (key.startsWith(RT_CLASS_VALUE_PREFIX)) {
       const name = key.slice(RT_CLASS_VALUE_PREFIX.length);
       ret.setCB((_, val) => {
-        if (!this.dom) return;
+        if (!this.dom) return this.unbound(ret, `no element to toggle class "${name}" on`);
         if (val) {
           this.dom.classList.add(name);
         } else {
@@ -210,7 +210,7 @@ export class WebScope extends CoreScope {
     if (key.startsWith(RT_STYLE_VALUE_PREFIX)) {
       const name = key.slice(RT_STYLE_VALUE_PREFIX.length);
       ret.setCB((_, val) => {
-        if (!this.dom) return;
+        if (!this.dom) return this.unbound(ret, `no element to set style "${name}" on`);
         this.dom.style.setProperty(name, val);
       });
       return ret;
@@ -227,7 +227,7 @@ export class WebScope extends CoreScope {
       //change, not a language one: the keys arriving here would just become
       //finer-grained.
       ret.setCB((_, val) => {
-        if (!t) return;
+        if (!t) return this.unbound(ret, 'no text node carrying that marker id');
         // a real zero-width space, not the `&#8203;` reference: text content
         // is escaped on serialization, so an entity written here would reach
         // the page as the literal characters `&#8203;`
@@ -243,11 +243,27 @@ export class WebScope extends CoreScope {
         const listener: EventListener = (e: Event) => this.proxy[key]?.(e);
         this.domListeners ||= [];
         this.domListeners.push({ name, listener });
-        this.dom?.addEventListener(name, listener);
+        this.dom
+          ? this.dom.addEventListener(name, listener)
+          : this.unbound(ret, `no element to bind "${name}" on`);
       }
       return ret;
     }
     return ret;
+  }
+
+  /**
+   * A binding whose DOM target isn't there.
+   *
+   * Every one of these used to be an early `return`, which is the quietest
+   * possible failure: the page renders, nothing throws, and one binding is
+   * simply dead forever. Reporting it costs nothing when everything is
+   * wired correctly, and turns a whole class of silent breakage -- markup
+   * relocated by a slot, replicated by `:for-each`, cloned from a stencil --
+   * into a message naming the scope and key at fault.
+   */
+  private unbound(value: CoreValue<any>, why: string): void {
+    this.ctx.onError('callback', new Error(`unbound binding: ${why}`), value);
   }
 
   camelToDash(s: string): string {
