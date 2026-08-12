@@ -511,6 +511,7 @@ describe('stage1-loader', () => {
       expect(page.errors).toStrictEqual([]);
       const defScope = page.customTags.get('site-nav')!;
       expect(defScope.e?.tagName).toBe('NAV');
+      expect(defScope.e?.getAttribute('class')).toBe('navbar');
       expect(page.definitionScopes.has(defScope)).toBe(true);
       expect(page.main!.children.some(c => c.usesTemplate === defScope.id)).toBe(true);
     });

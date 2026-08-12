@@ -187,6 +187,7 @@ function expandDefine(page: Page, defineEl: ServerElement): ServerElement | unde
     if (attr.name === DEFINE_TAG_ATTR) continue;
     attr.clone(doc, inner);
   }
+  inner.className = defineEl.className;
   for (const child of [...defineEl.childNodes]) {
     (child as ServerNode).clone(doc, inner);
   }
