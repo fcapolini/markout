@@ -361,6 +361,27 @@ describe('stage1-loader', () => {
   });
 
   describe('text value loading', () => {
+    it('should ignore static text and source formatting whitespace', () => {
+      const context = runLoaderFromMarkup(
+        `<html>
+  <head>
+    <title>Static title</title>
+  </head>
+  <body>
+    <p>Static body</p>
+  </body>
+</html>`
+      );
+      const htmlScope = getLoadedScope(context);
+      const headScope = getChildScope(htmlScope, 0);
+      const bodyScope = getChildScope(htmlScope, 1);
+
+      expect(htmlScope.textValues.size).toBe(0);
+      expect(headScope.textValues.size).toBe(0);
+      expect(bodyScope.textValues.size).toBe(0);
+      expect(context.source.doc.toString().match(/-t\d+|\-\//g)).toBeNull();
+    });
+
     it('should load expression text into scope text values', () => {
       const context = runLoaderFromMarkup('<html><body>${name}</body></html>');
       const htmlScope = getLoadedScope(context);

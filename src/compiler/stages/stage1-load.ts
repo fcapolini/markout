@@ -104,7 +104,7 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
     }
     if (child.nodeType === NodeType.TEXT) {
       const text = child as ServerText;
-      if (!text.textContent || text.textContent instanceof String) {
+      if (typeof text.textContent === 'string') {
         continue;
       }
       const id = scope.textCount++;

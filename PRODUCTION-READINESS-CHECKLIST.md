@@ -1,6 +1,6 @@
-# Markout4core Production Readiness Checklist
+# Markout Production Readiness Checklist
 
-This checklist is a practical roadmap to move markout4core from a strong prototype to a production-ready platform.
+This checklist is a practical roadmap to move Markout from a strong prototype to a production-ready platform.
 
 ## Current baseline
 

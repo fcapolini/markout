@@ -1,6 +1,6 @@
 {
-  "name": "markout4core",
-  "version": "1.0.0",
+  "name": "markout",
+  "version": "0.4.0",
   "description": "",
   "scripts": {
     "build": "tsc -p tsconfig.json && npm run build:runtime",
@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "acorn": "^8.18.0",
+    "commander": "^15.0.0",
     "escodegen": "^2.1.0",
     "estraverse": "^5.3.0",
     "express": "^5.2.1"
