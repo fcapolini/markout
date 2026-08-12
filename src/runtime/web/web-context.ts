@@ -28,9 +28,8 @@ export const DOM_USE_MARKER = '-u';
 // need to) surround it -- see stage1-load.ts's load() and WebScope.init()
 export const DOM_ATOMIC_TEXT_TAGS = new Set(['STYLE', 'TITLE']);
 
-/** id of the dev-mode error panel, and the attribute keying its entries */
+/** id of the dev-mode error panel the browser runtime paints into */
 export const DOM_ERRORS_ID = 'markout-errors';
-const DOM_ERROR_KEY_ATTR = 'data-markout-error';
 
 export interface WebContextProps extends CoreContextProps {
   doc: Document;
@@ -55,10 +54,13 @@ export class WebContext extends CoreContext {
 
   /**
    * Appends an error to a panel at the end of `<body>`, creating it on first
-   * use. Written against the shared DOM interface, so it runs unchanged
-   * against the `ServerDocument` during SSR (where it serializes into the
-   * markup) and against the real DOM after hydration -- which is the whole
-   * point: the same errors surface in the same place either way.
+   * use.
+   *
+   * This is the browser's half of dev-mode reporting: errors hit while
+   * server rendering never get here, because the server serves a dedicated
+   * error page for those instead of the broken page. So the panel only ever
+   * collects failures that happen after hydration -- and since onError() has
+   * already de-duplicated by then, each row is distinct by construction.
    */
   private showError(e: RuntimeError): void {
     try {
@@ -68,20 +70,7 @@ export class WebContext extends CoreContext {
         return;
       }
       const panel = this.findErrorPanel() ?? this.createErrorPanel(host);
-      // an SSR-rendered panel is still present when the browser re-runs the
-      // same expressions and hits the same failures; key each entry so those
-      // land as the same row rather than a duplicate
-      const key = `${e.phase}|${e.scope ?? ''}|${e.key ?? ''}|${e.message}`;
-      for (const n of panel.childNodes) {
-        if (
-          n.nodeType === NodeType.ELEMENT &&
-          (n as Element).getAttribute(DOM_ERROR_KEY_ATTR) === key
-        ) {
-          return;
-        }
-      }
       const row = doc.createElement('li');
-      row.setAttribute(DOM_ERROR_KEY_ATTR, key);
       row.appendChild(doc.createTextNode(formatRuntimeError(e)));
       panel.appendChild(row);
     } catch (ignored) {

@@ -10,11 +10,11 @@ import type { Page } from "../compiler/ir/Page";
  * so the served markup reflects each value's initial computed output
  * instead of shipping empty interpolation gaps for the client to fill in.
  *
- * In dev mode the context paints any expression errors into the page as it
- * goes (see WebContext); either way they're returned, so the caller can log
- * them. Outside dev mode they never reach the served markup.
+ * Any expression that failed is returned rather than painted into the page:
+ * the caller decides what to do with them (log them, and in dev mode serve
+ * an error page instead of this one).
  */
-export function renderPage(page: Page, dev = false): RuntimeError[] {
+export function renderPage(page: Page): RuntimeError[] {
   if (!page.propsString) {
     return [];
   }
@@ -23,7 +23,6 @@ export function renderPage(page: Page, dev = false): RuntimeError[] {
   new WebContext({
     root,
     doc: page.source.doc,
-    dev,
     onError: e => errors.push(e),
   }).refresh();
   return errors;
