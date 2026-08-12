@@ -136,4 +136,43 @@ describe('stage3-qualify', () => {
 
     expect((attr.value as any).type).toBe('Identifier');
   });
+
+  it('should shadow-qualify a :for-each expression referencing its own alias name, so a nested :for-each does not accidentally self-reference the alias it is about to define', () => {
+    const scope = new Scope(page, page.global);
+
+    // :for-each=${data} -- 'data' is also this scope's own per-item alias
+    // name (the default), so the reference must resolve to whatever the
+    // PARENT scope already has, not the alias this :for-each is defining
+    const attr = new ServerAttribute(doc, null as any, ':for-each', null, LOC);
+    attr.value = parseExpr('data');
+    attr.valueLoc = LOC;
+    scope.values.set('for$each', new Value('for$each', attr, scope));
+
+    stage3qualify(page);
+
+    const qualified = attr.value as any;
+    expect(qualified.type).toBe('MemberExpression');
+    expect(qualified.object.type).toBe('MemberExpression');
+    expect(qualified.object.object.type).toBe('ThisExpression');
+    expect(qualified.object.property.name).toBe('$parent');
+    expect(qualified.property.name).toBe('data');
+  });
+
+  it('should NOT shadow-qualify a :for-key expression referencing the alias, since it legitimately means the current item', () => {
+    const scope = new Scope(page, page.global);
+    scope.values.set('for$each', new Value('for$each', new ServerAttribute(doc, null as any, ':for-each', null, LOC), scope));
+
+    const attr = new ServerAttribute(doc, null as any, ':for-key', null, LOC);
+    attr.value = parseExpr('data.id');
+    attr.valueLoc = LOC;
+    scope.values.set('for$key', new Value('for$key', attr, scope));
+
+    stage3qualify(page);
+
+    const qualified = attr.value as any;
+    expect(qualified.type).toBe('MemberExpression');
+    expect(qualified.object.type).toBe('MemberExpression');
+    expect(qualified.object.object.type).toBe('ThisExpression');
+    expect(qualified.object.property.name).toBe('data');
+  });
 });

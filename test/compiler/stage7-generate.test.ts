@@ -12,6 +12,7 @@ import { Value } from '../../src/compiler/ir/Value';
 import { ServerAttribute, ServerDocument, SourceLocation } from '../../src/html/server-dom';
 import { Source, parse } from '../../src/html/parser';
 import { NodeType } from '../../src/html/dom';
+import { renderPage } from '../../src/server/render';
 
 const LOC: SourceLocation = {
   start: { line: 0, column: 0 },
@@ -287,6 +288,40 @@ describe('stage7-generate full pipeline: dependency codegen', () => {
     const dep = prop(textValue, 'deps').elements[0];
 
     expect(generate(dep)).toContain("this.$value('count')");
+  });
+});
+
+describe('stage7-generate full pipeline: nested :for-each', () => {
+  function compilePage(html: string) {
+    const p = new Page(parse(html, 'test.html'));
+    stage1load(p);
+    stage2validate(p);
+    stage3qualify(p);
+    stage4resolve(p);
+    stage7generate(p);
+    return p;
+  }
+
+  it('renders each sub-array with its own items, not the outer alias shadowing itself', () => {
+    // regression test: :for-each's own alias (default 'data') used to be
+    // qualified as a same-scope reference, so a nested :for-each=${data}
+    // accidentally resolved to the alias IT was about to define instead of
+    // the outer :for-each's already-bound array -- this is the README's
+    // own flagship replication example
+    const p = compilePage(
+      '<html><body><ul :for-each=${[[1, 2, 3], [4, 5]]}>' +
+        '<li :for-each=${data}>Item ${data}</li></ul></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+
+    renderPage(p);
+    const markup = p.source.doc.body!.toString();
+
+    expect(markup).toContain('<!---t1-->1<!---/-->');
+    expect(markup).toContain('<!---t1-->2<!---/-->');
+    expect(markup).toContain('<!---t1-->3<!---/-->');
+    expect(markup).toContain('<!---t1-->4<!---/-->');
+    expect(markup).toContain('<!---t1-->5<!---/-->');
   });
 });
 

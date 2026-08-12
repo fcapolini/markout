@@ -125,6 +125,45 @@ propagating a change are caught and logged (`console.error`) rather than
 allowed to escape — a single broken expression shouldn't abort a refresh or
 a propagation pass affecting unrelated values.
 
+## Replication (`:for-each`)
+
+A scope whose `values` include `for$each` (`RT_FOR_EACH_VALUE`) is a
+*for-each host*. `CoreScope.newValue()` wires that key to a static callback
+(`foreachCB`, set via `setCB()`), so it runs through the ordinary
+push/pull machinery like any other value with a callback — several array
+changes within one batch still only reconcile once.
+
+`foreachCB` computes the effective `(offset, length)` window (from
+`for$offset`/`for$length`, if present), then binds items across the host
+scope and *clones*:
+
+- the **host scope's own** per-item value (named `data` by default, or
+  whatever `:for-as` renamed it to) is set directly to the *first* item in
+  the window — the host is never a separate "extra" instance, it's simply
+  where item 0 lives;
+- one **clone** (`CoreScope.clone(index)`) is created/updated/removed per
+  remaining item. A clone is a full scope reusing the host's own
+  `props.values`/`props.children` (so it gets independent `CoreValue`s
+  from the exact same declarations), with id `${hostId}#${index}` and
+  `cloned: true` set on its props — read into `this.cloned` as the very
+  first constructor statement, before `init()` runs, so a subclass can
+  already tell it's building a clone while constructing it.
+  `foreachCB` returns early for a scope with `this.cloned` set: only the
+  host scope drives reconciliation, clones ignore their own `for$each`.
+- shrinking the array disposes excess clones (`removeExcessClones`) the
+  same way any scope teardown works (`dispose()`).
+
+The DOM-specific half of this — turning a for-each host's own compiled
+element into an inert `<template>` stencil, and turning `clone()` into
+"reuse an already-present element by id, or `cloneNode(true)` the stencil
+and insert it" — lives in `WebScope` (see
+[web-scope.ts](../web/web-scope.ts)). Because SSR
+(`src/server/render.ts`) runs this exact runtime against a
+`ServerDocument`, replication produces real, literal markup during server
+rendering too, with no SSR-specific logic at all; hydration is then just
+the ordinary "find an existing element by id" path locating an
+SSR-rendered node instead of creating a new one.
+
 ## The compiler contract
 
 The runtime never discovers dependencies on its own — it trusts that the
@@ -147,7 +186,12 @@ execution. Concretely, the compiler is responsible for:
   never a classic `function`, since a classic function rebinds `this` and
   would mask the `.apply(scope.proxy)` binding — the compiler can either
   reject classic functions outright or transparently rewrite them as arrow
-  functions.
+  functions;
+- validating that every reference it qualifies actually resolves to a real
+  declared value or named (`:aka`) scope somewhere in the reachable scope
+  chain (own scope, ancestors, or a named scope's own values), reporting a
+  compile error otherwise — the runtime never has to tolerate a `deps`
+  entry pointing at nothing.
 
 For the DOM-specific layer (`runtime/web`), the compiler also marks dynamic
 text positions with HTML comments, so `WebScope` can find the DOM text node

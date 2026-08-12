@@ -3,6 +3,7 @@ import * as estraverse from 'estraverse';
 import type { Identifier, Node, Pattern } from 'estree';
 import { NodeType } from '../../html/dom';
 import { ServerAttribute, ServerText } from '../../html/server-dom';
+import { FOR_AS_VALUE, FOR_DATA_DEFAULT_NAME, FOR_EACH_VALUE } from '../ir/Page';
 import type { Page } from '../ir/Page';
 import type { Scope } from '../ir/Scope';
 import type { Value } from '../ir/Value';
@@ -28,7 +29,7 @@ export function stage3qualify(page: Page) {
 
 function qualifyScope(scope: Scope) {
   for (const [name, value] of scope.values) {
-    qualifyValue(name, value);
+    qualifyValue(shadowKeyFor(scope, name), value);
   }
   for (const [name, value] of scope.textValues) {
     qualifyValue(name, value);
@@ -37,6 +38,20 @@ function qualifyScope(scope: Scope) {
   for (const child of scope.children) {
     qualifyScope(child);
   }
+}
+
+// :for-each's own array expression logically runs in the OUTER scope --
+// the per-item alias (e.g. `data`) it's about to bind doesn't exist yet, so
+// a bare reference to that same name inside it must shadow-skip to
+// whatever the parent already has, exactly like a value referencing its
+// own name would. Keying the shadow-check on the raw 'for$each' name
+// wouldn't trigger this (it never collides with a user-chosen alias), so
+// the alias itself has to be used as the qualification key instead.
+function shadowKeyFor(scope: Scope, name: string): string {
+  if (name === FOR_EACH_VALUE) {
+    return (scope.values.get(FOR_AS_VALUE)?.value as string) || FOR_DATA_DEFAULT_NAME;
+  }
+  return name;
 }
 
 function qualifyValue(name: string, value: Value) {
