@@ -534,6 +534,19 @@ describe('stage1-loader', () => {
   });
 
   describe('<:define>/custom tags', () => {
+    // a usage instance sits where the usage physically sits, so find it
+    // anywhere in the tree rather than only among the root's own children
+    function findUsage(page: Page, templateId?: string) {
+      const hit = (s: any): any => {
+        if (s.usesTemplate && (!templateId || s.usesTemplate === templateId)) return s;
+        for (const c of s.children) {
+          const found = hit(c);
+          if (found) return found;
+        }
+        return undefined;
+      };
+      return hit(page.main!);
+    }
     it('registers the definition and excludes it from its natural parent', () => {
       const page = runLoaderFromMarkup(
         `<html><head><:define tag="theme-switcher:button" :class-active>Switch</:define></head><body></body></html>`
@@ -556,20 +569,23 @@ describe('stage1-loader', () => {
       expect(defScope.e?.tagName).toBe('NAV');
       expect(defScope.e?.getAttribute('class')).toBe('navbar');
       expect(page.definitionScopes.has(defScope)).toBe(true);
-      expect(page.main!.children.some(c => c.usesTemplate === defScope.id)).toBe(true);
+      expect(findUsage(page, defScope.id)).toBeDefined();
     });
 
-    it('places a usage instance as a direct child of the root page scope', () => {
+    it('places a usage instance where the usage physically sits', () => {
+      // so :for-each replicates it and its DOM is found inside its
+      // container; name resolution still starts at the page root, which
+      // CoreScope.lexicalParent() handles off the back of usesTemplate
       const page = runLoaderFromMarkup(
         `<html><head><:define tag="theme-switcher:button" :class-active>Switch</:define></head>` +
-        `<body><section><theme-switcher></theme-switcher></section></body></html>`
+        '<body><section :aka="sect"><theme-switcher></theme-switcher></section></body></html>'
       );
       expect(page.errors).toStrictEqual([]);
       const defScope = page.customTags.get('theme-switcher')!;
-      const usage = page.main!.children.find(c => c.usesTemplate === defScope.id);
+      const usage = findUsage(page, defScope.id);
       expect(usage).toBeDefined();
-      expect(usage!.parent).toBe(page.main);
-      expect(usage!.values.has('class$active')).toBe(true);
+      expect(usage.parent!.name).toBe('sect');
+      expect(usage.values.has('class$active')).toBe(true);
     });
 
     it('lets usage logic attributes override definition logic attributes', () => {
@@ -577,7 +593,7 @@ describe('stage1-loader', () => {
         `<html><head><:define tag="theme-switcher:button" :class-active>Switch</:define></head>` +
         '<body><theme-switcher :class-active=${false}></theme-switcher></body></html>'
       );
-      const usage = page.main!.children.find(c => c.usesTemplate)!;
+      const usage = findUsage(page)!;
       expect(usage.values.get('class$active')!.value).toMatchObject({
         type: 'Literal',
         value: false,
@@ -589,7 +605,7 @@ describe('stage1-loader', () => {
         '<html><head><:define tag="site-nav:nav" class="navbar" id="default-nav">Navigation</:define></head>' +
         '<body><site-nav class="navbar-dark" id="main-nav"></site-nav></body></html>'
       );
-      const usage = page.main!.children.find(c => c.usesTemplate)!;
+      const usage = findUsage(page)!;
       expect(usage.attributes).toEqual(
         new Map([
           ['class', 'navbar-dark'],
@@ -603,7 +619,7 @@ describe('stage1-loader', () => {
         '<html :navId=${"main-nav"}><head><:define tag="site-nav:nav" id="default-nav">Navigation</:define></head>' +
         '<body><site-nav id=${navId}></site-nav></body></html>'
       );
-      const usage = page.main!.children.find(c => c.usesTemplate)!;
+      const usage = findUsage(page)!;
       expect(usage.attributes).toEqual(new Map());
       expect(usage.values.get('attr$id')!.value).toMatchObject({ type: 'Identifier', name: 'navId' });
     });
@@ -618,7 +634,7 @@ describe('stage1-loader', () => {
       );
       const tags = body.childNodes.map((n: any) => n.tagName ?? n.nodeType);
       expect(tags).not.toContain('THEME-SWITCHER');
-      const usage = page.main!.children.find(c => c.usesTemplate);
+      const usage = findUsage(page);
       const marker = body.childNodes.find(
         (n: any) => n.nodeType === NodeType.COMMENT && n.textContent === `-u${usage!.id}`
       );
@@ -638,7 +654,46 @@ describe('stage1-loader', () => {
         `<html><head><:define tag="theme-switcher:button">Switch</:define></head><body></body></html>`
       );
       expect(page.errors).toStrictEqual([]);
-      expect(page.main!.children.some(c => c.usesTemplate)).toBe(false);
+      expect(findUsage(page)).toBeUndefined();
+    });
+
+    // these used to be skipped in silence: the usage sits inside a
+    // <template>, which a childNodes walk never sees into, so the custom tag
+    // survived into the served markup and rendered nothing at all
+    it('expands a usage inside :for-each, under the replicated scope', () => {
+      const page = runLoaderFromMarkup(
+        `<html><head><:define tag="theme-switcher:button">Switch</:define></head>` +
+        '<body><div :for-each=${[1, 2]}><theme-switcher /></div></body></html>'
+      );
+      expect(page.errors).toStrictEqual([]);
+      const usage = findUsage(page);
+      expect(usage).toBeDefined();
+      // parented at the :for-each host, so every replica gets an instance
+      expect(usage.parent!.values.has('for$each')).toBe(true);
+    });
+
+    it('expands a usage inside another <:define>', () => {
+      const page = runLoaderFromMarkup(
+        `<html><head>` +
+        `<:define tag="theme-switcher:button">Switch</:define>` +
+        `<:define tag="site-nav:nav"><theme-switcher /></:define>` +
+        `</head><body><site-nav /></body></html>`
+      );
+      expect(page.errors).toStrictEqual([]);
+      const inner = page.customTags.get('theme-switcher')!;
+      const outer = page.customTags.get('site-nav')!;
+      // the inner instance hangs off the outer definition, so it comes along
+      // with every instance of the outer tag
+      expect(outer.children.some(c => c.usesTemplate === inner.id)).toBe(true);
+    });
+
+    it('expands a usage that merely follows a <template> sibling', () => {
+      const page = runLoaderFromMarkup(
+        `<html><head><:define tag="theme-switcher:button">Switch</:define></head>` +
+        '<body><div :for-each=${[1, 2]}>x</div><theme-switcher /></body></html>'
+      );
+      expect(page.errors).toStrictEqual([]);
+      expect(findUsage(page)).toBeDefined();
     });
   });
 });

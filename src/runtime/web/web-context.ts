@@ -131,7 +131,10 @@ export class WebContext extends CoreContext {
   // tag's <:define> template and its usage sites aren't siblings under any
   // common scoped parent -- these searches cover the whole document instead
 
-  private searchDocument<T>(match: (n: Node) => T | undefined): T | undefined {
+  private searchDocument<T>(
+    match: (n: Node) => T | undefined,
+    within?: Element
+  ): T | undefined {
     const doc = (this.props as WebContextProps).doc;
     const childNodesOf = (e: Element): NodeList =>
       e.tagName === 'TEMPLATE'
@@ -148,28 +151,32 @@ export class WebContext extends CoreContext {
       }
       return undefined;
     };
-    return search(doc.childNodes);
+    return search(within ? childNodesOf(within) : doc.childNodes);
   }
 
-  /** finds an element anywhere in the document (descending into <template>
-   * content) bearing the given data-markout id -- used to find a <:define>
-   * stencil to clone from */
-  findElementById(id: string): Element | undefined {
-    return this.searchDocument(n =>
-      n.nodeType === NodeType.ELEMENT && (n as Element).getAttribute(DOM_ID_ATTR) === id
-        ? (n as Element)
-        : undefined
+  /** finds an element bearing the given data-markout id, descending into
+   * <template> content -- across the whole document, or within `within` when
+   * one instance per container is what's wanted (see acquireUsageDom) */
+  findElementById(id: string, within?: Element): Element | undefined {
+    return this.searchDocument(
+      n =>
+        n.nodeType === NodeType.ELEMENT && (n as Element).getAttribute(DOM_ID_ATTR) === id
+          ? (n as Element)
+          : undefined,
+      within
     );
   }
 
   /** finds a custom-tag usage site's marker comment, if it hasn't been
    * replaced with a real instantiated element yet (e.g. by SSR) */
-  findUseMarker(scopeId: string): Comment | undefined {
+  findUseMarker(scopeId: string, within?: Element): Comment | undefined {
     const marker = `${DOM_USE_MARKER}${scopeId}`;
-    return this.searchDocument(n =>
-      n.nodeType === NodeType.COMMENT && (n as Comment).textContent === marker
-        ? (n as Comment)
-        : undefined
+    return this.searchDocument(
+      n =>
+        n.nodeType === NodeType.COMMENT && (n as Comment).textContent === marker
+          ? (n as Comment)
+          : undefined,
+      within
     );
   }
 }

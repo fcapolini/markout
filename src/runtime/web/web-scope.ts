@@ -85,21 +85,24 @@ export class WebScope extends CoreScope {
   }
 
   /**
-   * A custom-tag usage instance's CoreScope parent is the root 'page'
-   * scope (not wherever it physically sits -- see stage1-load.ts's
-   * expandCustomTagUsages), so unlike lookupView() this can't be scoped to
-   * a single parent's own subtree; it searches the whole document instead,
-   * via WebContext (mirroring, at usage-site granularity, what
-   * acquireCloneDom() does for :for-each clones).
+   * A usage instance sits where the tag was written, so its element and its
+   * marker are looked for within its container's own subtree -- the same
+   * containment rule lookupView() uses, and what lets one usage site inside
+   * a `:for-each` become a separate instance per replica, each finding its
+   * own marker rather than racing for one document-wide match.
+   *
+   * The <:define> stencil is the exception: it lives in <head>, nowhere near
+   * the usage, so that lookup stays document-wide.
    */
   private acquireUsageDom(templateId: string): Element | undefined {
     const ctx = this.ctx as WebContext;
     const id = `${this.props.id}`;
-    const existing = ctx.findElementById(id);
+    const within = this.parent instanceof WebScope ? this.parent.dom : undefined;
+    const existing = ctx.findElementById(id, within);
     if (existing) return existing;
 
     const stencil = ctx.findElementById(templateId);
-    const marker = ctx.findUseMarker(id);
+    const marker = ctx.findUseMarker(id, within);
     if (!stencil || !marker) return undefined;
 
     const node = stencil.cloneNode(true) as unknown as Element;

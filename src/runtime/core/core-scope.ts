@@ -37,6 +37,9 @@ export interface CoreScopeProps {
   values?: { [key: string]: CoreValueProps<any> };
   /** set by CoreScope.clone() on a replica's own props; read during init() */
   cloned?: boolean;
+  /** a replica's index within its `:for-each`, set alongside `cloned` --
+   * what makes `$id` unique for everything nested inside it */
+  replicaIndex?: number;
   /** a custom-tag usage instance: the id of the <:define> scope/template it
    * instantiates its DOM from -- DOM-specific, so only WebScope acts on it */
   template?: string;
@@ -52,11 +55,32 @@ export class CoreScope {
   cache: Map<string | symbol, CoreValue>;
   values: { [key: string | symbol]: CoreValue<any> };
   proxy: { [key: string | symbol]: any };
+  /**
+   * Which replica this scope lives in, as a chain of `:for-each` indices
+   * (`''` outside any, `-1` inside replica 1, `-0-2` once nested).
+   *
+   * Compiler-assigned ids are unique per page, but a replicated subtree
+   * reuses the same props for every replica, so every scope inside one would
+   * otherwise answer with the same id. Appending this makes `$id` unique
+   * document-wide -- which is the whole point of it, since pages build HTML
+   * ids out of it. DOM lookup deliberately keeps using the bare `props.id`:
+   * it searches within one parent's subtree, where replicas can't collide.
+   */
+  replicaPath: string;
+  /** `props.id` made unique across replicas; what `$id` answers */
+  uid: string;
 
   constructor(props: CoreScopeProps, context: CoreContext, parent?: CoreScope) {
     this.props = props;
     this.ctx = context;
     this.cloned = !!props.cloned;
+    // a replica's own props.id already carries its index (see cloneId), so
+    // both cases are the same expression: it's what a scope contributes to
+    // its DESCENDANTS that differs
+    const inherited = parent?.replicaPath ?? '';
+    this.uid = `${props.id}${inherited}`;
+    this.replicaPath =
+      props.replicaIndex !== undefined ? `${inherited}-${props.replicaIndex}` : inherited;
     this.children = [];
     this.cache = new Map();
     this.values = {};
@@ -87,8 +111,11 @@ export class CoreScope {
       });
       this.values[RT_PARENT_VALUE_KEY] = this.newValue(RT_PARENT_VALUE_KEY, {
         // a direct value, not `exp`/a callable: parent is already fixed by
-        // this point (linked above, before init()) and never changes again
-        val: this.parent?.proxy,
+        // this point (linked above, before init()) and never changes again.
+        // The LEXICAL one: `$parent` reaching into a component's call site
+        // would hand back through the front door the isolation lookup() is
+        // careful to keep
+        val: this.lexicalParent()?.proxy,
       });
     }
     // unconditionally, unlike the two above: lookup() walks up the scope
@@ -96,10 +123,10 @@ export class CoreScope {
     // silently answer with an ancestor's, which is exactly the kind of
     // quietly-wrong binding that's hardest to notice
     this.values[RT_ID_VALUE_KEY] = this.newValue(RT_ID_VALUE_KEY, {
-      // the same id stage1 stamped into the element as `data-markout`, and
-      // the same one the browser reads back out of the compiled props: it
-      // comes from the page, so server and client can't disagree on it
-      val: props.id,
+      // rooted in the id stage1 stamped into the element as `data-markout`,
+      // which the browser reads back out of the compiled props: it comes
+      // from the page, so server and client can't disagree on it
+      val: this.uid,
     });
     props.children?.forEach((p) => context.newScope(p, context, this));
   }
@@ -129,13 +156,36 @@ export class CoreScope {
     }
   }
 
+  /**
+   * Where name resolution continues when this scope doesn't have the value.
+   *
+   * Normally the structural parent -- scopes nest lexically, so that's the
+   * same thing. A custom-tag instance is the exception: it sits wherever it
+   * was used (so `:for-each` replicates it, and its DOM is found inside its
+   * container) while resolving names from the page root, because a
+   * definition must see only what was visible where it was DEFINED. Without
+   * the split, a component would silently read a value the call site
+   * happened to declare -- compiling clean, and reactive, but wrong.
+   */
+  lexicalParent(): CoreScope | undefined {
+    return this.props.template ? this.rootScope() : this.parent;
+  }
+
+  private rootScope(): CoreScope | undefined {
+    let scope: CoreScope | undefined = this;
+    while (scope.parent && scope.parent !== this.ctx.global) {
+      scope = scope.parent;
+    }
+    return scope === this ? this.parent : scope;
+  }
+
   lookup(prop: string | symbol): CoreValue<any> | undefined {
     let scope: CoreScope | undefined = this;
     let value = scope.cache.get(prop);
     while (scope && !value) {
       value = scope.values[prop];
       value && this.cache.set(prop, value);
-      scope = scope.parent;
+      scope = scope.lexicalParent();
     }
     return value;
   }
@@ -163,7 +213,12 @@ export class CoreScope {
     props: CoreValueProps<any>,
     allValues?: { [key: string]: CoreValueProps<any> },
   ): CoreValue<any> {
-    const ret = new CoreValue(props, this, key);
+    // a usage-site value evaluates against the scope the custom tag was
+    // written in -- `this.parent`, since an instance sits where it was used.
+    // Its callbacks still act on THIS scope: WebScope.newValue's closures
+    // capture the instance, so `<my-card id=${x}/>` sets the attribute on
+    // the instance's element while reading `x` from the call site
+    const ret = new CoreValue(props, props.callSite ? this.parent ?? this : this, key);
     if (key === RT_FOR_EACH_VALUE) {
       ret.setCB(CoreScope.foreachCB);
       return ret;
@@ -249,6 +304,7 @@ export class CoreScope {
       children: this.props.children,
       values: this.props.values,
       cloned: true,
+      replicaIndex: index,
     }, this.ctx, this);
     this.clones!.push(clone);
     return clone;

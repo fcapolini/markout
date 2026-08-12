@@ -219,8 +219,17 @@ function expandDefine(page: Page, defineEl: ServerElement): ServerElement | unde
 function expandCustomTagUsages(page: Page): void {
   if (page.customTags.size === 0 || !page.main) return;
   const usages: ServerElement[] = [];
+  // a <template> holds either a :for-each stencil or a <:define> body, and
+  // both get stamped out repeatedly. Its content is invisible to a plain
+  // childNodes walk, which is how usages in there used to be skipped in
+  // silence -- leaving the custom tag itself in the served markup, rendering
+  // nothing, with no error to explain it
   const collect = (e: ServerElement) => {
-    for (const child of [...e.childNodes]) {
+    const children =
+      e.tagName === 'TEMPLATE'
+        ? [...(e as ServerTemplateElement).content.childNodes]
+        : [...e.childNodes];
+    for (const child of children) {
       if (child.nodeType !== NodeType.ELEMENT) continue;
       const el = child as ServerElement;
       if (page.customTags.has(el.tagName.toLowerCase())) {
@@ -235,12 +244,16 @@ function expandCustomTagUsages(page: Page): void {
   for (const usageEl of usages) {
     const defScope = page.customTags.get(usageEl.tagName.toLowerCase())!;
     const loadedUsageScope = findScopeForElement(page.main, usageEl);
-    // reuses the definition's own values/children by reference: every
-    // instance is parented at the root 'page' scope (not wherever its
-    // usage physically sits), so a definition's own expressions can only
-    // ever see page/global, by construction -- no special runtime
-    // provisions needed for that, since it's just normal scope-tree nesting
-    const scope = new Scope(page, page.main);
+    // reuses the definition's own values/children by reference, and sits
+    // where the usage physically sits -- so a usage inside a :for-each is
+    // replicated with it, and one inside a <:define> comes along with every
+    // instance of the outer tag, at no extra cost.
+    //
+    // Its own expressions still resolve from the page root, NOT from here:
+    // scope.usesTemplate makes the runtime look names up lexically from
+    // there (CoreScope.lexicalParent()), which is what keeps a definition
+    // from reading whatever its call site happens to declare
+    const scope = new Scope(page, enclosingScope(page, usageEl, loadedUsageScope));
     scope.values = new Map(defScope.values);
     scope.textValues = defScope.textValues;
     scope.children = defScope.children;
@@ -255,10 +268,19 @@ function expandCustomTagUsages(page: Page): void {
     }
     if (loadedUsageScope) {
       scope.name = loadedUsageScope.name;
+      scope.callSiteValues = new Set();
       for (const [name, value] of loadedUsageScope.values) {
-        value.scope = scope;
+        // deliberately NOT reassigned to `scope`: `value.scope` is what both
+        // stage3/stage4 and the runtime resolve an expression against, and
+        // this one was written at the usage site, so it keeps resolving
+        // there -- `<my-card :title=${data.t} />` inside a :for-each has to
+        // see that loop's `data`
         scope.values.set(name, value);
+        scope.callSiteValues.add(name);
       }
+      // spliced out of the tree (the instance scope stands in for it), but
+      // its parent link stays intact -- that's the chain the values above
+      // still resolve through
       const index = loadedUsageScope.parent!.children.indexOf(loadedUsageScope);
       loadedUsageScope.parent!.children.splice(index, 1);
     }
@@ -272,6 +294,30 @@ function expandCustomTagUsages(page: Page): void {
     parent.insertBefore(marker, usageEl);
     parent.removeChild(usageEl);
   }
+}
+
+/**
+ * The scope a usage site physically sits in -- its own loaded scope's
+ * parent when the usage element got one (it had `:` or interpolated
+ * attributes), otherwise the nearest ancestor element that has one.
+ *
+ * Walking ancestors stops naturally at a stencil boundary: a `<template>`
+ * severs parentElement, so a usage inside a `:for-each` lands on that
+ * `:for-each`'s own scope rather than escaping to the page root.
+ */
+function enclosingScope(
+  page: Page,
+  usageEl: ServerElement,
+  loadedUsageScope: Scope | undefined
+): Scope {
+  if (loadedUsageScope?.parent) return loadedUsageScope.parent;
+  let e = usageEl.parentElement;
+  while (e) {
+    const scope = findScopeForElement(page.main, e);
+    if (scope) return scope;
+    e = e.parentElement;
+  }
+  return page.main!;
 }
 
 function findScopeForElement(scope: Scope | undefined, e: ServerElement): Scope | undefined {
