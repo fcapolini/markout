@@ -232,6 +232,49 @@ describe('stage1-loader', () => {
       expect(z?.value).toMatchObject({ type: 'Literal', value: 0 });
     });
 
+    it('should load a plain attribute with a ${} value as an attr$ value', () => {
+      const context = runLoaderFromMarkup(
+        '<html :n=${1}><body><a href=${`#${n}`} data-count=${n} rel="static">x</a></body></html>'
+      );
+      // children[0] is the implicit <head>
+      const body = getChildScope(getLoadedScope(context), 1);
+      const anchor = getChildScope(body, 0);
+
+      expect(anchor.values.has('attr$href')).toBe(true);
+      expect(anchor.values.has('attr$data-count')).toBe(true);
+      // a plain (non-interpolated) value stays a literal attribute
+      expect(anchor.values.has('attr$rel')).toBe(false);
+      expect(anchor.values.get('attr$data-count')?.value).toMatchObject({
+        type: 'Identifier',
+        name: 'n',
+      });
+    });
+
+    it('should give an element its own scope for a ${} attribute alone', () => {
+      // without one, the attr$ value would land on the enclosing scope and
+      // set the attribute on that scope's element instead of this one
+      const context = runLoaderFromMarkup(
+        '<html :n=${1}><body><span data-n=${n}>x</span><span>y</span></body></html>'
+      );
+      const body = getChildScope(getLoadedScope(context), 1);
+
+      expect(body.children.length).toBe(1);
+      expect(body.values.has('attr$data-n')).toBe(false);
+      expect(body.children[0].values.has('attr$data-n')).toBe(true);
+    });
+
+    it('should strip a ${} attribute from the served markup', () => {
+      // it holds an expression, not a string: serialized as-is it would emit
+      // an empty attribute, which the runtime then overwrites anyway
+      const context = runLoaderFromMarkup(
+        '<html :n=${1}><body><span data-n=${n} rel="static">x</span></body></html>'
+      );
+      const markup = context.source.doc.toString();
+
+      expect(markup).not.toContain('data-n');
+      expect(markup).toContain('rel="static"');
+    });
+
     it('should not load :aka, :class-*, :style-*, or :on-* as logic values', () => {
       const context = runLoaderFromMarkup(
         '<html :aka="pageName" :class-active="yes" :style-color="red" :on-click="fn" :x="ok"></html>'

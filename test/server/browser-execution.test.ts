@@ -23,6 +23,18 @@ describe("Browser execution (happy-dom)", () => {
         </body>
       </html>`
     );
+    fs.writeFileSync(
+      path.join(tempDir, "attributes.html"),
+      `<html :count=\${0}>
+        <body>
+          <button :on-click=\${() => count++}
+                  data-count=\${count}
+                  aria-label=\${'clicked ' + count}
+                  title=\${count > 0 ? 'yes' : null}
+                  type="button">click</button>
+        </body>
+      </html>`
+    );
 
     server = new Server({ docroot: tempDir });
     await server.start();
@@ -54,6 +66,32 @@ describe("Browser execution (happy-dom)", () => {
       button.dispatchEvent(new page.mainFrame.window.MouseEvent('click'));
       button.dispatchEvent(new page.mainFrame.window.MouseEvent('click'));
       expect(button.textContent?.replace(/\s+/g, ' ').trim()).toBe('Clicked 3 times');
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it('should keep plain attributes with ${} values in sync with their expression', async () => {
+    const browser = new Browser({ settings: { enableJavaScriptEvaluation: true } });
+    try {
+      const page = browser.newPage();
+      await page.goto(`http://127.0.0.1:${server.port}/attributes.html`);
+      await page.waitUntilComplete();
+
+      const button = page.mainFrame.document.querySelector('button')!;
+      // SSR already painted the initial values, so they're right before any
+      // client-side refresh has had a chance to run
+      expect(button.getAttribute('data-count')).toBe('0');
+      expect(button.getAttribute('aria-label')).toBe('clicked 0');
+      expect(button.getAttribute('type')).toBe('button');
+      // a null value means "no attribute", not the string "null"
+      expect(button.hasAttribute('title')).toBe(false);
+
+      button.dispatchEvent(new page.mainFrame.window.MouseEvent('click'));
+      expect(button.getAttribute('data-count')).toBe('1');
+      expect(button.getAttribute('aria-label')).toBe('clicked 1');
+      expect(button.getAttribute('title')).toBe('yes');
+      expect(button.getAttribute('type')).toBe('button');
     } finally {
       await browser.close();
     }
