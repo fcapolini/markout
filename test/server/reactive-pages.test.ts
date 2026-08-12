@@ -60,8 +60,8 @@ describe("Reactive page compilation", () => {
     expect(typeof body.values['event$click'].exp.apply({ count: 5 })).toBe('function');
 
     const fakeScope = { count: 5, $value: () => ({}) };
-    expect(body.values['text$1'].exp.apply(fakeScope)).toBe(5);
-    expect(body.values['text$1'].deps[0].apply({ $value: (key: string) => key })).toBe('count');
+    expect(body.values['text$0'].exp.apply(fakeScope)).toBe(5);
+    expect(body.values['text$0'].deps[0].apply({ $value: (key: string) => key })).toBe('count');
   });
 
   it('should server-render the actual interpolated value into the markup, not a blank gap', async () => {

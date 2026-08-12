@@ -317,11 +317,11 @@ describe('stage7-generate full pipeline: nested :for-each', () => {
     renderPage(p);
     const markup = p.source.doc.body!.toString();
 
-    expect(markup).toContain('<!---t1-->1<!---/-->');
-    expect(markup).toContain('<!---t1-->2<!---/-->');
-    expect(markup).toContain('<!---t1-->3<!---/-->');
-    expect(markup).toContain('<!---t1-->4<!---/-->');
-    expect(markup).toContain('<!---t1-->5<!---/-->');
+    expect(markup).toContain('<!---t0-->1<!---/-->');
+    expect(markup).toContain('<!---t0-->2<!---/-->');
+    expect(markup).toContain('<!---t0-->3<!---/-->');
+    expect(markup).toContain('<!---t0-->4<!---/-->');
+    expect(markup).toContain('<!---t0-->5<!---/-->');
   });
 
   it('still shadows correctly when both levels use the same custom :for-as alias', () => {
@@ -337,11 +337,11 @@ describe('stage7-generate full pipeline: nested :for-each', () => {
     renderPage(p);
     const markup = p.source.doc.body!.toString();
 
-    expect(markup).toContain('<!---t1-->1<!---/-->');
-    expect(markup).toContain('<!---t1-->2<!---/-->');
-    expect(markup).toContain('<!---t1-->3<!---/-->');
-    expect(markup).toContain('<!---t1-->4<!---/-->');
-    expect(markup).toContain('<!---t1-->5<!---/-->');
+    expect(markup).toContain('<!---t0-->1<!---/-->');
+    expect(markup).toContain('<!---t0-->2<!---/-->');
+    expect(markup).toContain('<!---t0-->3<!---/-->');
+    expect(markup).toContain('<!---t0-->4<!---/-->');
+    expect(markup).toContain('<!---t0-->5<!---/-->');
   });
 });
 
