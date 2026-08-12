@@ -2,11 +2,14 @@
   "name": "markout",
   "version": "0.4.0",
   "description": "",
+  "bin": {
+    "markout": "dist/index.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json && npm run build:runtime",
     "build:runtime": "node scripts/build-runtime.mjs",
     "clean": "rm -rf dist",
-    "dev": "tsx src/index.ts",
+    "dev": "tsx src/index.ts ./demo",
     "test": "vitest run",
     "test:watch": "vitest",
     "test-coverage": "vitest run --coverage",

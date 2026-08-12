@@ -15,12 +15,9 @@ async function main() {
 
   program
     .name('markout')
-    .description('Markout CLI - https://github.com/fcapolini/markout')
-    .version(packageJson.version);
-
-  program
-    .command('serve')
-    .description('serve a Markout project')
+    .description(`Markout v${packageJson.version} - https://github.com/fcapolini/markout`)
+    .version(packageJson.version)
+    .helpOption('-h, --help', 'display help for command')
     .argument('<pathname>', 'path to directory containing HTML files (docroot)')
     .option('-p, --port <number>', 'port number, default: 3000')
     .action((pathname, options) => {
@@ -29,6 +26,10 @@ async function main() {
       const port = Number.parseInt(options.port) || 3000;
       new Server({ docroot, port }).start();
     });
+
+  if (process.argv.length === 2) {
+    program.help();
+  }
 
   program.parse();
 }

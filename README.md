@@ -46,6 +46,22 @@ simplification, it's deferred, compounding complexity: better to always
 type a couple more characters than to hide behavior that depends on
 context.
 
+## CLI
+
+Build the project, then serve a directory containing Markout HTML files:
+
+```sh
+npm run build
+npx markout ./demo
+```
+
+The CLI accepts an optional port with `-p` or `--port` and uses port `3000` by
+default:
+
+```sh
+npx markout ./demo --port 8080
+```
+
 ## Integrated reactivity example
 
 ```html
