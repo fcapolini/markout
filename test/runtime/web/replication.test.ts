@@ -49,11 +49,11 @@ describe('replication: DOM cloning/reuse', () => {
     const html =
       '<html data-markout="0"><ul>' +
       '<template><li data-markout="1"></li></template>' +
-      '<li data-markout="1#0"></li>' +
+      '<li data-markout="1-0"></li>' +
       '</ul></html>';
     const source = parse(html, 'test');
     const ul = findByTag(source.doc, 'UL');
-    const preexisting = ul.childNodes.find((n: any) => n.getAttribute?.('data-markout') === '1#0');
+    const preexisting = ul.childNodes.find((n: any) => n.getAttribute?.('data-markout') === '1-0');
 
     const context = new WebContext({
       doc: source.doc,

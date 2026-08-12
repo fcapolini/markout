@@ -36,6 +36,27 @@ describe("Browser execution (happy-dom)", () => {
       </html>`
     );
 
+    fs.writeFileSync(
+      path.join(tempDir, "ids.htm"),
+      // :_id anchors the id on the component root, so every descendant
+      // referring to it gets the SAME one -- a bare ${$id} down there would
+      // be that descendant's own scope id instead
+      `<lib><:define tag="my-w:div" :_id=\${$id}>` +
+        `<span data-id="w-\${_id}">w</span><span data-id="x-\${_id}">x</span>` +
+        `</:define></lib>`
+    );
+    fs.writeFileSync(
+      path.join(tempDir, "ids.html"),
+      `<html :count=\${0} :items=\${[1, 2]}>
+        <head><:import src="ids.htm" /></head>
+        <body>
+          <my-w /><my-w />
+          <ul><li :for-each=\${items} data-id="i-\${$id}" id="i-\${$id}">\${data}</li></ul>
+          <button :on-click=\${() => items = [...items, items.length + 1]}>grow</button>
+        </body>
+      </html>`
+    );
+
     server = new Server({ docroot: tempDir });
     await server.start();
   });
@@ -92,6 +113,56 @@ describe("Browser execution (happy-dom)", () => {
       expect(button.getAttribute('aria-label')).toBe('clicked 1');
       expect(button.getAttribute('title')).toBe('yes');
       expect(button.getAttribute('type')).toBe('button');
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it('should give each $id instance a distinct, SSR-agreeing id', async () => {
+    const browser = new Browser({ settings: { enableJavaScriptEvaluation: true } });
+    try {
+      const page = browser.newPage();
+      await page.goto(`http://127.0.0.1:${server.port}/ids.html`);
+      await page.waitUntilComplete();
+
+      const read = () =>
+        [...page.mainFrame.document.querySelectorAll('[data-id]')].map(e =>
+          e.getAttribute('data-id')
+        );
+      const hydrated = read();
+
+      // each usage instance gets its own id, and both spans within one
+      // instance agree on it -- that's what makes aria-controls/for wiring work
+      const w = hydrated.filter(v => v!.startsWith('w-'));
+      const x = hydrated.filter(v => v!.startsWith('x-'));
+      expect(new Set(w).size).toBe(2);
+      expect(w.map(v => v!.slice(2))).toEqual(x.map(v => v!.slice(2)));
+
+      // :for-each replicas each get their own too
+      const items = hydrated.filter(v => v!.startsWith('i-'));
+      expect(new Set(items).size).toBe(2);
+
+      // and the result stays usable as an HTML id: pages feed $id straight
+      // into aria-controls / data-bs-target / a label's `for`, all of which
+      // are resolved with a selector. A replica id containing `#` would be
+      // legal markup that no selector can ever match
+      for (const id of items) {
+        expect(page.mainFrame.document.querySelector(`#${id}`)).not.toBeNull();
+      }
+
+      // the id comes from the compiled props rather than being re-derived, so
+      // the served markup must already carry exactly what hydration produces
+      const served = await (await fetch(`http://127.0.0.1:${server.port}/ids.html`)).text();
+      for (const id of hydrated) {
+        expect(served).toContain(`data-id="${id}"`);
+      }
+
+      // growing the list client-side must not renumber what's already there
+      const button = page.mainFrame.document.querySelector('button')!;
+      button.dispatchEvent(new page.mainFrame.window.MouseEvent('click'));
+      const grown = read();
+      expect(grown.slice(0, hydrated.length)).toEqual(hydrated);
+      expect(new Set(grown).size).toBe(grown.length);
     } finally {
       await browser.close();
     }
