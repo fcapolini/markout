@@ -39,6 +39,8 @@ import {
   SLOT_NAME_ATTR,
   SLOT_TARGET_ATTR,
   DEFAULT_SLOT_NAME,
+  PRESENCE_VALUE_ATTR_PREFIX,
+  PRESENCE_VALUE_PREFIX,
 } from '../ir/Page';
 import { NodeType } from '../../html/dom';
 import { ATOMIC_TEXT_TAGS } from '../../html/parser';
@@ -740,7 +742,12 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     // here "for expressiveness" and kept dash-case verbatim in the
     // compiled name (stage7-generate quotes value keys, so a dash is fine)
     let allowDash = false;
-    if (name.startsWith(CLASS_VALUE_ATTR_PREFIX)) {
+    if (name.startsWith(PRESENCE_VALUE_ATTR_PREFIX)) {
+      prefix = PRESENCE_VALUE_ATTR_PREFIX;
+      compiledPrefix = PRESENCE_VALUE_PREFIX;
+      // attribute names are conventionally dash-case (`aria-hidden`)
+      allowDash = true;
+    } else if (name.startsWith(CLASS_VALUE_ATTR_PREFIX)) {
       prefix = CLASS_VALUE_ATTR_PREFIX;
       compiledPrefix = CLASS_VALUE_PREFIX;
       allowDash = true;

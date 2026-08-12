@@ -290,6 +290,25 @@ describe('stage1-loader', () => {
       expect(loadedScope.values.has('aka')).toBe(false);
     });
 
+    it('should load :attr-* as a presence value, distinct from a valued one', () => {
+      // `x=${...}` sets the attribute's value; `:attr-x` decides whether it
+      // is there at all. Two intents, two spellings -- rather than inferring
+      // which was meant from the shape of the value
+      const context = runLoaderFromMarkup(
+        '<html :n=${1}><body><b :attr-open=${true} :attr-aria-busy title=${n}>x</b></body></html>'
+      );
+      const body = getChildScope(getLoadedScope(context), 1);
+      const b = getChildScope(body, 0);
+
+      expect(context.errors).toStrictEqual([]);
+      expect(b.values.has('flag$open')).toBe(true);
+      expect(b.values.has('flag$aria-busy')).toBe(true);
+      expect(b.values.has('attr$title')).toBe(true);
+      // not a scope value called `open`, and not the valued form either
+      expect(b.values.has('open')).toBe(false);
+      expect(b.values.has('attr$open')).toBe(false);
+    });
+
     it('should allow dashed class-/style-/on- suffixes and keep them dash-case verbatim', () => {
       const context = runLoaderFromMarkup(
         '<html :style-background-color="red" :class-is-active=${true} :on-item-selected=${() => {}}></html>'

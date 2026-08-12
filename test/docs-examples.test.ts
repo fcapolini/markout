@@ -49,6 +49,21 @@ describe('docs/concepts/values.md', () => {
     expect(result.body).toContain('aria-label="Go to Top"');
   });
 
+  it('renders the presence-not-value example', () => {
+    const result = render(
+      '<html :isOpen=${false} :canSubmit=${false}><body>' +
+        '<sl-dialog :attr-open=${isOpen}>x</sl-dialog>' +
+        '<button :attr-disabled=${!canSubmit}>Send</button>' +
+        '<input :attr-required>' +
+        '</body></html>'
+    );
+
+    expectClean(result);
+    expect(result.body).not.toContain('open');
+    expect(result.body).toContain('disabled=""');
+    expect(result.body).toContain('required=""');
+  });
+
   it('removes an attribute whose expression is null', () => {
     const result = render(
       '<html :count=${0}><body>' +

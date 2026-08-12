@@ -96,6 +96,46 @@ describe('style$', () => {
   });
 });
 
+describe('flag$', () => {
+  it('adds and removes an attribute rather than writing its value', () => {
+    // an HTML boolean attribute means true by being present at all, so
+    // writing "false" would read as true -- the whole reason this family
+    // exists alongside `x=${...}`
+    const { context, markup } = setup(ROOT, {
+      id: '0',
+      values: { 'flag$hidden': { val: false } },
+    });
+    assert.notInclude(markup(), 'hidden');
+
+    context.root.proxy['flag$hidden'] = true;
+    assert.include(markup(), 'hidden=""');
+
+    context.root.proxy['flag$hidden'] = false;
+    assert.notInclude(markup(), 'hidden');
+  });
+
+  it('keeps a dashed attribute name verbatim', () => {
+    const { markup } = setup(ROOT, {
+      id: '0',
+      values: { 'flag$aria-busy': { val: true } },
+    });
+    assert.include(markup(), 'aria-busy=""');
+  });
+
+  it('reports having no element to toggle on', () => {
+    const errors: RuntimeError[] = [];
+    setup(
+      ROOT,
+      { id: '0', values: {}, children: [{ id: 'gone', values: { 'flag$open': { val: true } } }] },
+      errors
+    );
+    assert.deepEqual(
+      errors.map(e => e.message),
+      ['unbound binding: no element to toggle "open" on']
+    );
+  });
+});
+
 describe('text$', () => {
   const MARKED =
     '<html data-markout="0"><body>' +

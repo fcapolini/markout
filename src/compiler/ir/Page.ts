@@ -7,6 +7,13 @@ import { Value } from './Value';
 
 export const SPECIAL_ATTR_PREFIX = ':';
 export const SCOPE_NAME_ATTR = 'aka';
+// `:attr-x` toggles the PRESENCE of attribute x, the way `:class-x` toggles a
+// class. Distinct from `x=${...}`, which sets its VALUE: HTML boolean
+// attributes and custom-element ones mean true by being there at all, so
+// `x=${false}` writing "false" reads as true. Which of the two is meant can't
+// be told from the value (`aria-expanded="false"` is a real, required
+// setting), so the author says which rather than the compiler guessing.
+export const PRESENCE_VALUE_ATTR_PREFIX = 'attr-';
 export const CLASS_VALUE_ATTR_PREFIX = 'class-';
 export const STYLE_VALUE_ATTR_PREFIX = 'style-';
 export const EVENT_VALUE_ATTR_PREFIX = 'on-';
@@ -17,6 +24,8 @@ export const TEXT_VALUE_PREFIX = 't$';
 export const CLASS_VALUE_PREFIX = 'class$';
 export const STYLE_VALUE_PREFIX = 'style$';
 export const ATTR_VALUE_PREFIX = 'attr$';
+// deliberately not `attr$`: that one is already the value-setting form
+export const PRESENCE_VALUE_PREFIX = 'flag$';
 export const EVENT_VALUE_PREFIX = 'on$';
 export const DID_VALUE_PREFIX = 'did$';
 export const WILL_VALUE_PREFIX = 'will$';

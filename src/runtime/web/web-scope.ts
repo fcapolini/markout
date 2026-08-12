@@ -18,6 +18,8 @@ import {
 } from './web-context';
 
 export const RT_ATTR_VALUE_PREFIX = 'attr$';
+/** `:attr-x`: presence of the attribute, not its value */
+export const RT_PRESENCE_VALUE_PREFIX = 'flag$';
 export const RT_CLASS_VALUE_PREFIX = 'class$';
 export const RT_STYLE_VALUE_PREFIX = 'style$';
 export const RT_TEXT_VALUE_PREFIX = 'text$';
@@ -192,6 +194,16 @@ export class WebScope extends CoreScope {
         } else {
           this.dom.setAttribute(name, `${val}`);
         }
+      });
+      return ret;
+    }
+    if (key.startsWith(RT_PRESENCE_VALUE_PREFIX)) {
+      const name = key.slice(RT_PRESENCE_VALUE_PREFIX.length);
+      ret.setCB((_, val) => {
+        if (!this.dom) return this.unbound(ret, `no element to toggle "${name}" on`);
+        // empty string, not "true": an HTML boolean attribute means true by
+        // being present at all, and that is the form every browser writes
+        val ? this.dom.setAttribute(name, '') : this.dom.removeAttribute(name);
       });
       return ret;
     }
