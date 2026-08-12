@@ -18,6 +18,8 @@ import {
 } from './web-context';
 
 export const RT_ATTR_VALUE_PREFIX = 'attr$';
+/** `:prop-x`: the element's JS property, for what an attribute can't carry */
+export const RT_PROP_VALUE_PREFIX = 'prop$';
 /** `:attr-x`: presence of the attribute, not its value */
 export const RT_PRESENCE_VALUE_PREFIX = 'flag$';
 export const RT_CLASS_VALUE_PREFIX = 'class$';
@@ -194,6 +196,17 @@ export class WebScope extends CoreScope {
         } else {
           this.dom.setAttribute(name, `${val}`);
         }
+      });
+      return ret;
+    }
+    if (key.startsWith(RT_PROP_VALUE_PREFIX)) {
+      const name = key.slice(RT_PROP_VALUE_PREFIX.length);
+      ret.setCB((_, val) => {
+        // nothing to serialize: a property is state on an element instance,
+        // so a server-rendered page can't carry one and skipping is right
+        if ((this.ctx.props as WebContextProps).server) return;
+        if (!this.dom) return this.unbound(ret, `no element to set property "${name}" on`);
+        (this.dom as unknown as Record<string, unknown>)[name] = val;
       });
       return ret;
     }

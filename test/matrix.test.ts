@@ -50,6 +50,14 @@ const BINDINGS = [
     read: (el: any) => el.getAttribute('title'),
   },
   {
+    // browser-only by nature (a property isn't markup), so the oracle reads
+    // it off the element rather than out of the served HTML -- what's being
+    // checked here is that it reaches the RIGHT element in every container
+    name: 'property',
+    markup: '<b data-probe="1" :prop-probeProp=${v}>x</b>',
+    read: (el: any) => el.probeProp,
+  },
+  {
     name: 'attribute presence',
     markup: '<b data-probe="1" :attr-flagged=${v === "A"}>x</b>',
     read: (el: any) => (el.getAttribute('flagged') === null ? 'B' : 'A'),

@@ -35,6 +35,15 @@ export interface WebContextProps extends CoreContextProps {
   doc: Document;
   /** dev mode: also paint runtime errors into the page itself */
   dev?: boolean;
+  /**
+   * Server rendering rather than the browser.
+   *
+   * Only property bindings care: a property is object state, not markup, so
+   * there is nothing for a served page to carry. Skipping them here is the
+   * correct outcome rather than a failure, which is why it can't be left to
+   * the unbound-binding report.
+   */
+  server?: boolean;
 }
 
 export class WebContext extends CoreContext {

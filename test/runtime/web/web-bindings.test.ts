@@ -96,6 +96,59 @@ describe('style$', () => {
   });
 });
 
+describe('prop$', () => {
+  it('assigns the element property, writing nothing into the markup', () => {
+    const items = ['a', 'b'];
+    const { context, scope, markup } = setup(ROOT, {
+      id: '0',
+      values: { 'prop$items': { val: items } },
+    });
+    // what an attribute can't carry: the array arrives by reference
+    assert.strictEqual((scope.dom as any).items, items);
+    assert.notInclude(markup(), 'items');
+
+    context.root.proxy['prop$items'] = ['c'];
+    assert.deepEqual((scope.dom as any).items, ['c']);
+  });
+
+  it('keeps the property name verbatim rather than dashing it', () => {
+    const { scope } = setup(ROOT, {
+      id: '0',
+      values: { 'prop$maxLength': { val: 5 } },
+    });
+    assert.strictEqual((scope.dom as any).maxLength, 5);
+  });
+
+  it('does nothing when server rendering, and does not report it', () => {
+    // a property is state on an element instance: there is nothing for a
+    // served page to carry, so skipping is the right outcome, not a failure
+    const errors: RuntimeError[] = [];
+    const source = parse(ROOT, 'test');
+    const context = new WebContext({
+      doc: source.doc,
+      root: { id: '0', values: { 'prop$items': { val: ['a'] } } },
+      server: true,
+      onError: (e: RuntimeError) => errors.push(e),
+    }).refresh();
+
+    assert.isUndefined((context.root as WebScope).dom['items' as any]);
+    assert.deepEqual(errors, []);
+  });
+
+  it('reports having no element to set the property on', () => {
+    const errors: RuntimeError[] = [];
+    setup(
+      ROOT,
+      { id: '0', values: {}, children: [{ id: 'gone', values: { 'prop$items': { val: [] } } }] },
+      errors
+    );
+    assert.deepEqual(
+      errors.map(e => e.message),
+      ['unbound binding: no element to set property "items" on']
+    );
+  });
+});
+
 describe('flag$', () => {
   it('adds and removes an attribute rather than writing its value', () => {
     // an HTML boolean attribute means true by being present at all, so
