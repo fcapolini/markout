@@ -4,6 +4,8 @@ import { PageError } from '../../html/parser';
 import type { Page } from '../ir/Page';
 import {
   ATTR_VALUE_PREFIX,
+  PRESENCE_VALUE_PREFIX,
+  PRESENCE_VALUE_ATTR_PREFIX,
   CLASS_VALUE_ATTR_PREFIX,
   CLASS_VALUE_PREFIX,
   DID_VALUE_ATTR_PREFIX,
@@ -29,6 +31,8 @@ import { Value } from '../ir/Value';
 // built outside of stage1) before checking for a user-introduced '$'.
 const KNOWN_VALUE_PREFIXES = [
   ATTR_VALUE_PREFIX,
+  PRESENCE_VALUE_PREFIX,
+  PRESENCE_VALUE_ATTR_PREFIX,
   CLASS_VALUE_PREFIX,
   STYLE_VALUE_PREFIX,
   EVENT_VALUE_PREFIX,

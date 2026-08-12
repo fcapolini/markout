@@ -31,8 +31,10 @@ rules:
 - `:` names what HTML has no name for: scope values, class and style
   toggles, events, lifecycle, replication. Everything else is plain HTML.
 - `:name=${expr}` on a tag declares a reactive value in that tag's scope.
-- `:on-x` binds an event, `:class-x` toggles a CSS class (presence implies
-  `true`), always the same way.
+- `:on-x` binds an event, `:class-x` toggles a CSS class, `:attr-x` toggles
+  whether an attribute is *present* — as boolean and custom-element
+  attributes need, since `open=${false}` would write `open="false"`, which
+  reads as true. Presence implies `true`, always the same way.
 - `:for-each=${expr}` repeats a tag once per element (`null`/`undefined`
   means zero), binding each element as `data` unless renamed with
   `:for-as`; `:for-data=${expr}` renders a tag once if `expr` isn't

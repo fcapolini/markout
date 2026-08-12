@@ -86,10 +86,33 @@ way it reads.
 change one class or one property without touching the rest, use `:class-x` and
 `:style-x` below.
 
+### Presence, not value
+
+Some attributes mean something by being *there at all*: HTML's `disabled`,
+`open`, `checked`, and most attributes on custom elements. For those, writing
+a value is wrong — `open=${false}` produces `open="false"`, and an attribute
+that is present reads as true whatever it says.
+
+`:attr-x` toggles presence, the way `:class-x` toggles a class:
+
+```html
+<sl-dialog :attr-open=${isOpen}>...</sl-dialog>
+<button :attr-disabled=${!canSubmit}>Send</button>
+<input :attr-required>
+```
+
+Truthy adds the attribute, falsy removes it, and a bare `:attr-x` means
+`true` — the same rule as a bare `:class-x`.
+
+Which of the two you want can't be told from the value, which is why you say
+rather than the compiler guessing: `aria-expanded="false"` is a real and
+required setting, so `aria-expanded=${...}` has to keep writing the string.
+
 ## Special binding prefixes
 
 Some prefixes change how a value behaves at runtime:
 
+- `:attr-x` toggles whether an attribute is present.
 - `:class-x` toggles a CSS class.
 - `:style-x` writes a CSS property.
 - `:on-x` binds an event handler.

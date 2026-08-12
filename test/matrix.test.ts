@@ -50,6 +50,11 @@ const BINDINGS = [
     read: (el: any) => el.getAttribute('title'),
   },
   {
+    name: 'attribute presence',
+    markup: '<b data-probe="1" :attr-flagged=${v === "A"}>x</b>',
+    read: (el: any) => (el.getAttribute('flagged') === null ? 'B' : 'A'),
+  },
+  {
     name: 'class',
     markup: '<b data-probe="1" :class-on=${v === "A"}>x</b>',
     read: (el: any) => (el.getAttribute('class') ?? '').includes('on') ? 'A' : 'B',
