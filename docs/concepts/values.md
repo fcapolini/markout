@@ -67,6 +67,25 @@ the scope instead would give you a binding that renders once and then never
 updates. An error you see at build time is better than a page that quietly goes
 stale, so the compiler refuses rather than guesses.
 
+## Attributes
+
+A plain HTML attribute holding a `${...}` expression is reactive too. It needs
+no `:` prefix, because the attribute already has a name — the interpolation
+alone is what makes it live, exactly as in text and CSS:
+
+```html
+<a href=${'#' + section.id} aria-label=${'Go to ' + section.title}>...</a>
+```
+
+The attribute is written whenever the expression changes. A `null` or
+`undefined` result removes the attribute rather than writing the string
+`"null"`, which is what makes `title=${count > 0 ? 'yes' : null}` behave the
+way it reads.
+
+`class` and `style` follow the same rule and are *overwritten*, not merged. To
+change one class or one property without touching the rest, use `:class-x` and
+`:style-x` below.
+
 ## Special binding prefixes
 
 Some prefixes change how a value behaves at runtime:
