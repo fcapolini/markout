@@ -1,7 +1,7 @@
 import { generate } from 'escodegen';
 import type { Expression, Node, ObjectExpression, Property } from 'estree';
 import { ServerText } from '../../html/server-dom';
-import { PROPS_GLOBAL } from '../../runtime/core/core-context';
+import { DEV_GLOBAL, PROPS_GLOBAL } from '../../runtime/core/core-context';
 import { EVENT_VALUE_PREFIX, TEXT_VALUE_PREFIX } from '../ir/Page';
 import type { Page } from '../ir/Page';
 import type { Scope } from '../ir/Scope';
@@ -35,17 +35,21 @@ export const DEFAULT_RUNTIME_SRC = '/.markout.js';
  * itself from that global (no explicit entry-point call needed).
  */
 
-export function stage7generate(page: Page, runtimeSrc = DEFAULT_RUNTIME_SRC) {
+export function stage7generate(
+  page: Page,
+  runtimeSrc = DEFAULT_RUNTIME_SRC,
+  dev = false
+) {
   const root = page.global.children[0];
   if (root) {
     page.propsAST = generateScope(root);
     page.propsString = generate(page.propsAST);
-    injectBootstrapScripts(page, runtimeSrc);
+    injectBootstrapScripts(page, runtimeSrc, dev);
   }
   return page;
 }
 
-function injectBootstrapScripts(page: Page, runtimeSrc: string) {
+function injectBootstrapScripts(page: Page, runtimeSrc: string, dev: boolean) {
   const doc = page.source.doc;
   const body = doc.body;
   if (!body || !page.propsString) {
@@ -56,7 +60,10 @@ function injectBootstrapScripts(page: Page, runtimeSrc: string) {
   propsScript.appendChild(
     new ServerText(
       doc,
-      `window.${PROPS_GLOBAL} = ${escapeScriptClose(page.propsString)};`,
+      `window.${PROPS_GLOBAL} = ${escapeScriptClose(page.propsString)};` +
+        // tells the browser runtime to surface expression errors in the page
+        // the same way SSR just did, instead of only logging them
+        (dev ? `window.${DEV_GLOBAL} = true;` : ''),
       body.loc,
       false
     )

@@ -233,3 +233,41 @@ notified once. `applyPending()` — invoked once `refreshLevel`/`pushLevel`
 drops back to zero — runs every pending callback exactly once and clears
 the set, so a single user action or refresh that touches many values still
 only notifies observers once per value, after everything has settled.
+
+## Error handling
+
+Every runtime failure funnels through `CoreContext.onError(phase, err, value?)`
+— the single place that decides what "an error happened" means. Nothing in the
+runtime may catch and ignore instead of calling it. A swallowed failure doesn't
+stop a page; it produces a binding that renders once and is wrong forever,
+which is far harder to diagnose than a message would have been.
+
+The phases separate three genuinely different things that used to share one
+`catch`:
+
+- **`update`** — a user expression threw (`${user.name}` before the data
+  arrives). Expected during normal operation, and must never break the page.
+  The value becomes `undefined` — *always*, never whatever it held before.
+  Keeping the previous value would make a binding's contents depend on which
+  earlier evaluations happened to succeed, and would present stale data as if
+  it were current.
+- **`link`** — a `dep` resolved to nothing. The compiler contract above says
+  this can't happen, so reaching it means the *compiler* is broken, not the
+  page. Reported unconditionally.
+- **`callback`**, **`propagate`**, **`refresh`** — internal phases. Each
+  callback in `applyPending()` is guarded individually, so one failing observer
+  can't cost the rest of the batch their notification, and the batch is drained
+  in a `finally` so it can't leak into the next cycle.
+
+Errors are de-duplicated per `(phase, scope, key, message)`: an expression that
+throws on every cycle is reported once, not once per cycle. Each carries the
+owning scope's id and the value's key, so a message names the binding at fault
+(`markout [update] s3.text$0: ...`) rather than pointing into runtime internals.
+
+`props.onError` replaces the default console reporting — the server uses it to
+collect errors for logging. `WebContext` additionally paints them into the page
+when built with `dev: true`, appending to a `<ul id="markout-errors">` panel.
+That's written against the shared DOM interface, so the *same* code runs during
+SSR (where it serializes into the served markup) and in the browser after
+hydration; entries are keyed so a failure both halves hit lands in one row
+rather than two. Outside dev mode nothing reaches the markup.

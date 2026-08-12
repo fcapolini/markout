@@ -3,10 +3,39 @@ import { CoreScope, CoreScopeProps } from './core-scope';
 import { CoreValue, CoreValueProps } from './core-value';
 
 export const PROPS_GLOBAL = '__MARKOUT_PROPS';
+/** set alongside PROPS_GLOBAL when the page was compiled in dev mode */
+export const DEV_GLOBAL = '__MARKOUT_DEV';
+
+/** which part of the reactive cycle an error came out of */
+export type RuntimeErrorPhase =
+  | 'link'
+  | 'update'
+  | 'propagate'
+  | 'callback'
+  | 'refresh';
+
+export interface RuntimeError {
+  phase: RuntimeErrorPhase;
+  /** id of the scope owning the value involved, when there is one */
+  scope?: string;
+  /** the value's key within that scope, when there is one */
+  key?: string;
+  message: string;
+}
+
+export function formatRuntimeError(e: RuntimeError): string {
+  const where = e.scope ? ` ${e.scope}${e.key ? `.${e.key}` : ''}` : '';
+  return `markout [${e.phase}]${where}: ${e.message}`;
+}
 
 export interface CoreContextProps {
   root: CoreScopeProps;
   addedGlobals?: { [key: string | symbol]: CoreValueProps<any> };
+  /**
+   * Receives every runtime error, replacing the default console logging.
+   * Used by the server to collect them for the dev-mode overlay.
+   */
+  onError?: (e: RuntimeError) => void;
 }
 
 export class CoreContext {
@@ -33,7 +62,7 @@ export class CoreContext {
       scope.linkValues();
       scope.updateValues();
     } catch (err) {
-      console.error('Context.refresh()', err);
+      this.onError('refresh', err);
     }
     if (--this.refreshLevel < 1) {
       this.applyPending();
@@ -55,14 +84,67 @@ export class CoreContext {
   }
 
   // ===========================================================================
+  // error reporting
+  // ===========================================================================
+
+  /**
+   * Every runtime failure funnels through here, so there's exactly one place
+   * deciding what "an error happened" means — the console by default, or
+   * whatever `props.onError` wants (the dev overlay, a server log, a reporter).
+   *
+   * Nothing in the runtime may swallow an error instead of calling this. A
+   * caught-and-ignored failure doesn't stop a page, it produces a binding that
+   * renders once and is wrong forever, which is far harder to diagnose than a
+   * message would have been.
+   */
+  onError(phase: RuntimeErrorPhase, err: unknown, value?: CoreValue): void {
+    const e: RuntimeError = {
+      phase,
+      scope: value?.scope.props.id,
+      key: value?.key,
+      message: err instanceof Error ? err.message : `${err}`,
+    };
+    // a broken expression re-evaluates on every cycle, so report each
+    // distinct problem once instead of once per cycle
+    const seen = `${e.phase}|${e.scope}|${e.key}|${e.message}`;
+    if (this.reported.has(seen)) {
+      return;
+    }
+    // bounded: a page generating endless distinct messages shouldn't also
+    // leak memory through the de-duplication set
+    this.reported.size < 1000 && this.reported.add(seen);
+    this.reportError(e);
+  }
+
+  /** where a (de-duplicated) error actually goes; WebContext extends this to
+   * additionally paint it into the page when running in dev mode */
+  protected reportError(e: RuntimeError): void {
+    this.props.onError
+      ? this.props.onError(e)
+      : console.error(formatRuntimeError(e));
+  }
+
+  protected reported = new Set<string>();
+
+  // ===========================================================================
   // changes batching
   // ===========================================================================
   pending = new Set<CoreValue>();
 
   applyPending() {
-    this.pending.forEach(v => {
-      v.cb!(v.scope, v.value);
-    });
-    this.pending.clear();
+    try {
+      this.pending.forEach(v => {
+        try {
+          v.cb!(v.scope, v.value);
+        } catch (err) {
+          // one failing callback must not cost the rest of the batch their
+          // notification -- they're unrelated values that happened to change
+          // in the same cycle
+          this.onError('callback', err, v);
+        }
+      });
+    } finally {
+      this.pending.clear();
+    }
   }
 }

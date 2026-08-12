@@ -13,6 +13,8 @@ export interface CoreValueProps<T> {
 export class CoreValue<T = any> {
   props: CoreValueProps<T>;
   scope: CoreScope;
+  /** this value's key in its scope -- carried purely so errors can name it */
+  key?: string;
   cb?: ValueCallback<T>;
   src: Set<CoreValue>;
   dst: Set<CoreValue>;
@@ -23,10 +25,12 @@ export class CoreValue<T = any> {
   constructor(
     props: CoreValueProps<T>,
     scope: CoreScope,
+    key?: string,
     cb?: ValueCallback<T>
   ) {
     this.props = props;
     this.scope = scope;
+    this.key = key;
     this.cb = cb;
     this.src = new Set();
     this.dst = new Set();
@@ -44,9 +48,18 @@ export class CoreValue<T = any> {
     this.props.deps?.forEach(dep => {
       try {
         const o = dep.apply(this.scope.proxy);
+        if (!o) {
+          // the compiler guarantees every dep resolves to a real value (see
+          // CORE.md's compiler contract). Reaching here means it emitted one
+          // pointing at nothing -- a markout bug, not a page bug. Left silent,
+          // its only symptom is a binding that never updates again
+          throw new Error('unresolved dependency');
+        }
         o.dst.add(this);
         this.src.add(o);
-      } catch (ignored) {}
+      } catch (err) {
+        this.scope.ctx.onError('link', err, this);
+      }
     });
   }
 
@@ -89,7 +102,12 @@ export class CoreValue<T = any> {
     try {
       this.value = this.exp!.apply(this.scope.proxy);
     } catch (err) {
-      console.error(err);
+      // a failed expression yields `undefined`, always -- never whatever it
+      // happened to hold before. Keeping the old value would make the result
+      // depend on which evaluations previously succeeded, and would show
+      // stale data as though it were current
+      this.value = undefined;
+      this.scope.ctx.onError('update', err, this);
     }
     if (old == null ? this.value != null : this.value !== old) {
       this.cb && this.scope.ctx.pending.add(this);
@@ -105,9 +123,15 @@ export class CoreValue<T = any> {
     ctx.pushLevel++;
     try {
       this.dst.forEach(v => v.get());
-    } catch (ignored) {}
-    if (--ctx.pushLevel < 1) {
-      ctx.applyPending();
+    } catch (err) {
+      // get() already handles a failing expression, so this is a backstop for
+      // internal breakage rather than user code -- report it rather than
+      // swallow it, and keep pushLevel balanced either way
+      ctx.onError('propagate', err, this);
+    } finally {
+      if (--ctx.pushLevel < 1) {
+        ctx.applyPending();
+      }
     }
   }
 }
