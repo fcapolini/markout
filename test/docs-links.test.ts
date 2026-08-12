@@ -12,6 +12,21 @@ import { describe, expect, it } from 'vitest';
 const ROOT = path.resolve(__dirname, '..');
 const SKIP = new Set(['node_modules', '.git', 'coverage', 'dist']);
 const LINK = /\[[^\]]*\]\(([^)\s]+)\)/g;
+const HEADING = /^#{1,6}\s+(.*)$/gm;
+
+/** GitHub's heading slug: lowercased, punctuation dropped, spaces hyphenated */
+function slug(heading: string): string {
+  return heading
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-');
+}
+
+function anchorsOf(file: string): Set<string> {
+  const text = fs.readFileSync(file, 'utf8');
+  return new Set([...text.matchAll(HEADING)].map(m => slug(m[1])));
+}
 
 function markdownFiles(dir: string): string[] {
   const found: string[] = [];
@@ -37,11 +52,19 @@ describe('documentation links', () => {
       const text = fs.readFileSync(file, 'utf8');
       const dead: string[] = [];
       for (const match of text.matchAll(LINK)) {
-        // strip any #fragment; badges and external docs aren't ours to check
-        const target = match[1].split('#')[0];
-        if (!target || /^(https?:|mailto:)/.test(target)) continue;
+        if (/^(https?:|mailto:)/.test(match[1])) continue;
+        const [target, fragment] = match[1].split('#');
+        if (!target) continue;
         const resolved = path.resolve(path.dirname(file), target);
-        fs.existsSync(resolved) || dead.push(target);
+        if (!fs.existsSync(resolved)) {
+          dead.push(target);
+          continue;
+        }
+        // a heading that got renamed leaves the link resolving to the right
+        // file and the wrong place in it, which is quieter still
+        if (fragment && resolved.endsWith('.md') && !anchorsOf(resolved).has(fragment)) {
+          dead.push(`${target}#${fragment}`);
+        }
       }
       expect(dead).toStrictEqual([]);
     });

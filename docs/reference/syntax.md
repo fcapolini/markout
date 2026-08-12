@@ -41,7 +41,7 @@ something an attribute could never carry:
 NOTE: "on its own" is literal — whitespace is text like any other, so
 `:x=" ${expr}"` interpolates and yields a string.
 
-## Value and binding directives
+## Values
 
 | Syntax | Meaning |
 | --- | --- |
@@ -71,7 +71,7 @@ function:
 The ban on classic functions is wider than these three: one may not appear
 anywhere inside any `${...}`, for the same reason.
 
-## Replication directives
+## Replication
 
 | Syntax | Meaning |
 | --- | --- |
@@ -80,7 +80,7 @@ anywhere inside any `${...}`, for the same reason.
 | `:for-key=${expr}` | Reserved for keyed reconciliation. |
 | `:for-data=${expr}` | Optional single-item rendering. Designed, **not implemented** — a compile error today. |
 
-## Module directives
+## Modules
 
 | Syntax | Meaning |
 | --- | --- |
