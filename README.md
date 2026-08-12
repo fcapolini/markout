@@ -1,3 +1,18 @@
+# Markout
+
+[
+  ![Build](https://github.com/fcapolini/markout/actions/workflows/build.yml/badge.svg?branch=main)
+](https://github.com/fcapolini/markout/actions/workflows/build.yml)
+[
+  ![Test](https://github.com/fcapolini/markout/actions/workflows/test.yml/badge.svg?branch=main)
+](https://github.com/fcapolini/markout/actions/workflows/test.yml)
+[
+  ![Coverage](https://github.com/fcapolini/markout/actions/workflows/coverage.yml/badge.svg?branch=main)
+](https://github.com/fcapolini/markout/actions/workflows/coverage.yml)
+[
+  ![CodeQL](https://github.com/fcapolini/markout/actions/workflows/codeql.yml/badge.svg?branch=main)
+](https://github.com/fcapolini/markout/actions/workflows/codeql.yml)
+
 HTML-first reactive web framework, aiming at presenting developers with the
 equivalent of a natively modular and reactive HTML. It is isomorphic: the same
 scope/value model runs on the server and in the browser, so SSR comes for
