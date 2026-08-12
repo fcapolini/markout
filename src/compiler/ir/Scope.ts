@@ -24,6 +24,20 @@ export class Scope {
    * definition's own expressions must not see the call site at all.
    */
   callSiteValues?: Set<string>;
+  /**
+   * Set on markup slotted into a custom tag: it lives under the instance
+   * (that's where its DOM ends up) but was WRITTEN at the usage site, so it
+   * resolves names from there -- the same rule `callSiteValues` applies to a
+   * single value, applied to a whole subtree.
+   */
+  slotted?: boolean;
+  /** where name resolution continues; the structural parent unless slotted */
+  lexicalParent?: Scope;
+
+  /** the scope this one's expressions resolve against */
+  lexical(): Scope | undefined {
+    return this.lexicalParent ?? this.parent;
+  }
 
   constructor(page: Page, parent?: Scope, e?: ServerElement, name?: string) {
     this.page = page;

@@ -81,7 +81,9 @@ function resolvesToKnownValue(scope: Scope, key: string): boolean {
   while (s) {
     if (s.values.has(key)) return true;
     if (s.children.some(c => c.name === key)) return true;
-    s = s.parent;
+    // lexical, not structural: slotted markup and custom-tag instances sit
+    // where their DOM belongs but resolve where they were written
+    s = s.lexical();
   }
   return false;
 }
@@ -202,7 +204,7 @@ function validated(
  */
 function navigate(scope: Scope, name: string): { isNavigation: boolean; scope?: Scope } {
   if (name === RT_PARENT_VALUE_KEY) {
-    return { isNavigation: true, scope: scope.parent };
+    return { isNavigation: true, scope: scope.lexical() };
   }
   const target = findNavigableScope(scope, name);
   return { isNavigation: !!target, scope: target };
@@ -241,7 +243,7 @@ function findNavigableScope(scope: Scope, name: string): Scope | undefined {
     const child = s.children.find(c => c.name === name);
     if (child) return child;
     if (s.values.has(name)) return undefined;
-    s = s.parent;
+    s = s.lexical();
   }
   return undefined;
 }

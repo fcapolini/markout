@@ -94,3 +94,139 @@ describe('custom tags inside replicated markup', () => {
     expect(body).toContain('>99<');
   });
 });
+
+// `<:slot>` marks where a definition takes the children written at a usage
+// site. They used to be dropped in silence.
+describe('slots', () => {
+  it('puts a usage site content where the definition asks for it', () => {
+    const { errors, runtimeErrors, body } = render(
+      '<html><head><:define tag="my-box:div" class="box">' +
+        '<h5>head</h5><div class="body"><:slot /></div></:define></head>' +
+        '<body><my-box><p>slotted</p></my-box></body></html>'
+    );
+
+    expect(errors).toStrictEqual([]);
+    expect(runtimeErrors).toStrictEqual([]);
+    expect(body).toContain('<div class="body"><p>slotted</p></div>');
+  });
+
+  it('falls back to the slot own content when a usage supplies none', () => {
+    const { errors, body } = render(
+      '<html><head><:define tag="my-box:div"><:slot>nothing here</:slot></:define></head>' +
+        '<body><my-box /></body></html>'
+    );
+
+    expect(errors).toStrictEqual([]);
+    expect(body).toContain('nothing here');
+    // the directive tag itself never reaches the page
+    expect(body).not.toContain(':slot');
+  });
+
+  it('resolves slotted markup against the call site, not the definition', () => {
+    // `label` exists on both: the slot content was written in the page, so it
+    // must read the page's -- otherwise moving markup into a component would
+    // silently change what it means
+    const { errors, runtimeErrors, body } = render(
+      '<html :label=${"page"}><head>' +
+        '<:define tag="my-box:div" :label=${"definition"}><:slot /></:define>' +
+        '</head><body><my-box>${label}</my-box></body></html>'
+    );
+
+    expect(errors).toStrictEqual([]);
+    expect(runtimeErrors).toStrictEqual([]);
+    expect(body).toContain('>page<');
+    expect(body).not.toContain('definition');
+  });
+
+  it('binds bare interpolated text alongside the definition own text', () => {
+    // text is bound by POSITION within a scope's territory, so slotted text
+    // landing between the definition's own has to be re-keyed in document
+    // order or every binding after it shifts
+    const { errors, runtimeErrors, body } = render(
+      '<html :who=${"world"}><head>' +
+        '<:define tag="my-box:div" :top=${"T"} :tail=${"E"}>' +
+        '${top}<:slot />${tail}</:define>' +
+        '</head><body><my-box>-hello ${who}-</my-box></body></html>'
+    );
+
+    expect(errors).toStrictEqual([]);
+    expect(runtimeErrors).toStrictEqual([]);
+    expect(body.replace(/<!--.*?-->/g, '')).toContain('T-hello world-E');
+  });
+
+  it('gives every :for-each replica its own slotted content', () => {
+    const { errors, runtimeErrors, body } = render(
+      '<html><head><:define tag="my-box:div" class="box"><:slot /></:define></head>' +
+        '<body><ul><li :for-each=${[1, 2]}><my-box>item ${data}</my-box></li></ul></body></html>'
+    );
+
+    expect(errors).toStrictEqual([]);
+    expect(runtimeErrors).toStrictEqual([]);
+    const live = body.slice(body.indexOf('</template>'));
+    expect(live).toContain('item <!---t0-->1');
+    expect(live).toContain('item <!---t0-->2');
+  });
+
+  it('reports content given to a definition with no <:slot>', () => {
+    const { errors } = render(
+      '<html><head><:define tag="my-box:div">x</:define></head>' +
+        '<body><my-box>dropped</my-box></body></html>'
+    );
+
+    expect(errors.length).toBe(1);
+    expect(errors[0].msg).toContain('my-box');
+    expect(errors[0].msg).toContain(':slot');
+  });
+});
+
+// `<:slot name="x" />` in the definition, `:slot="x"` on a usage child. An
+// attribute rather than a wrapper element, so filling a slot adds no markup.
+describe('named slots', () => {
+  const PANEL =
+    '<:define tag="my-panel:section" class="panel" :title="T">' +
+    '<header><:slot name="header">${title}</:slot></header>' +
+    '<div class="body"><:slot /></div>' +
+    '<footer><:slot name="footer">(none)</:slot></footer>' +
+    '</:define>';
+
+  it('routes each child to the slot it names, and the rest to the default', () => {
+    const { errors, runtimeErrors, body } = render(
+      `<html :who=\${"world"}><head>${PANEL}</head><body>` +
+        '<my-panel :title="T"><h2 :slot="header">Custom ${who}</h2>' +
+        'body ${who}<p>more</p></my-panel></body></html>'
+    );
+
+    expect(errors).toStrictEqual([]);
+    expect(runtimeErrors).toStrictEqual([]);
+    const clean = body.replace(/<!--.*?-->/g, '');
+    expect(clean).toContain('<header><h2>Custom world</h2></header>');
+    expect(clean).toContain('body world<p>more</p>');
+    // the routing attribute is consumed, not emitted
+    expect(body).not.toContain(':slot');
+    expect(body).not.toContain('slot=');
+  });
+
+  it('falls back per slot, independently', () => {
+    const { errors, runtimeErrors, body } = render(
+      `<html><head>${PANEL}</head><body>` +
+        '<my-panel :title="mine"><p :slot="footer">bye</p></my-panel></body></html>'
+    );
+
+    expect(errors).toStrictEqual([]);
+    expect(runtimeErrors).toStrictEqual([]);
+    const clean = body.replace(/<!--.*?-->/g, '');
+    // header keeps its fallback, footer takes the supplied content
+    expect(clean).toContain('<header>mine</header>');
+    expect(clean).toContain('<footer><p>bye</p></footer>');
+  });
+
+  it('reports content addressed to a slot the definition has not got', () => {
+    const { errors } = render(
+      `<html><head>${PANEL}</head><body>` +
+        '<my-panel :title="T"><p :slot="sidebar">x</p></my-panel></body></html>'
+    );
+
+    expect(errors.length).toBe(1);
+    expect(errors[0].msg).toContain('sidebar');
+  });
+});
