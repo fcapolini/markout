@@ -323,5 +323,25 @@ describe('stage7-generate full pipeline: nested :for-each', () => {
     expect(markup).toContain('<!---t1-->4<!---/-->');
     expect(markup).toContain('<!---t1-->5<!---/-->');
   });
+
+  it('still shadows correctly when both levels use the same custom :for-as alias', () => {
+    // shadowKeyFor() must use the SCOPE'S OWN resolved alias (whatever
+    // :for-as says), not a hardcoded 'data' -- verify that holds even when
+    // the outer and inner :for-each deliberately reuse the same alias name
+    const p = compilePage(
+      '<html><body><ul :for-each=${[[1, 2, 3], [4, 5]]} :for-as="item">' +
+        '<li :for-each=${item} :for-as="item">Item ${item}</li></ul></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+
+    renderPage(p);
+    const markup = p.source.doc.body!.toString();
+
+    expect(markup).toContain('<!---t1-->1<!---/-->');
+    expect(markup).toContain('<!---t1-->2<!---/-->');
+    expect(markup).toContain('<!---t1-->3<!---/-->');
+    expect(markup).toContain('<!---t1-->4<!---/-->');
+    expect(markup).toContain('<!---t1-->5<!---/-->');
+  });
 });
 
