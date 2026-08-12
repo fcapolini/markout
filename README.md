@@ -21,48 +21,30 @@ free.
 ## Design philosophy
 
 The objective is to remove as much needless complexity as possible from
-reactive web development. The whole language is meant to stay a handful of
-rules:
+reactive web development. The whole language is a handful of rules:
 
-- `${...}` is the only interpolation syntax, in attributes, text and CSS:
-  it's plain JavaScript, no separate expression language to learn. Anything
-  holding one is reactive, so `href=${data.link}` needs no further marking —
-  the attribute already has a name.
-- `:` names what HTML has no name for: scope values, class and style
-  toggles, events, lifecycle, replication. Everything else is plain HTML.
-- `:name=${expr}` on a tag declares a reactive value in that tag's scope.
-- `:on-x` binds an event, `:class-x` toggles a CSS class, `:style-x` writes
-  a CSS property — presence implies `true`, always the same way.
-- `:attr-x` toggles whether an attribute is *present*, as boolean and
-  custom-element attributes need: `open=${false}` writes `open="false"`,
-  and an attribute that is there reads as true whatever it says.
-- `:prop-x` assigns an element property, for what an attribute can't carry
-  (objects, arrays, functions). Browser-only, since a property is state on
-  an element rather than part of the document.
-- `:for-each=${expr}` repeats a tag once per element (`null`/`undefined`
-  means zero), binding each element as `data` unless renamed with
-  `:for-as`; `:for-data=${expr}` renders a tag once if `expr` isn't
-  `null`/`undefined`, zero times otherwise — two different intents, so two
-  different attributes, rather than one guessing which you meant from the
-  shape of the value.
-- `:did-x`/`:will-x` bind lifecycle delegate methods (e.g. `:did-init`,
-  `:will-dispose`), called when a scope reaches/leaves that phase.
-- Scopes nest lexically, like variables: a named scope is visible from any
-  of its descendants with no separate wiring (no `provide`/`inject`, no
-  `Context`).
-- `<html>`, `<head>`, `<body>` are scopes named `page`, `head`, `body` by
-  default.
-- `<:import>` splices a fragment in place; `<:define>` declares a custom
-  tag; a fragment's root attributes become defaults at its import site.
-- `<:slot>` marks where a custom tag takes the content written at its usage
-  site, `<:slot name="x">` when there's more than one; a child picks its
-  slot with `:slot="x"`, and a slot's own content is the fallback.
-- An expression resolves where it was WRITTEN: a definition's body sees the
-  definition's scope, a usage site's attributes and content see the call
-  site. That one rule is what lets a component be dropped anywhere without
-  its meaning changing.
-- `$id` is the current scope's identifier, unique per page — what a
-  component builds `id`/`aria-controls`/`for` out of.
+- HTML is the syntax. Anything without a `${...}` or a `:` is plain markup
+  and stays plain markup.
+- `${...}` is the only expression syntax — plain JavaScript, in text,
+  attributes and CSS, with no separate expression language to learn.
+  Anything holding one is reactive, so `href=${data.link}` needs no
+  further marking.
+- `:` names what HTML has no name for, always in the same `:family-name`
+  shape: `:class-`, `:style-`, `:attr-`, `:prop-`, `:on-`, `:did-`/`:will-`,
+  `:for-`, `:slot` — plus `:name=${...}` to declare a value and `:aka` to
+  name a scope.
+- Scopes nest lexically, like variables: a value is visible to every
+  descendant with no separate wiring — no `provide`/`inject`, no `Context`.
+- An expression resolves where it was *written*. A custom tag's body sees
+  the scope it was defined in; what you pass at a usage site sees yours.
+  That is what lets a component be moved without its meaning changing.
+- Two intents get two spellings rather than one guessing from the shape of
+  a value: `title=${v}` sets an attribute's value, `:attr-title=${v}` sets
+  whether it is there at all.
+
+The full syntax is a single page: **[directive
+reference](docs/reference/directives.md)**. The reasoning behind each part
+is in **[docs/](docs/)**.
 
 Compare that to what's required to be productive in most other frameworks
 (hooks and dependency arrays, `computed` vs `watch`, whole directive sets,
@@ -273,7 +255,7 @@ rendered) and otherwise expects an iterable; it never guesses at a scalar
 meaning "one", since that would make its meaning depend on the incidental
 shape of the value rather than being one fixed rule
 
-## Optional rendering
+## Optional rendering — designed, not yet implemented
 
 ```html
 <html :user=${undefined}>
@@ -283,10 +265,15 @@ shape of the value rather than being one fixed rule
 </html>
 ```
 
-NOTE: `:for-data=${expr}` renders its tag once if `expr` is neither `null`
-nor `undefined`, and not at all otherwise — the same `data`/`:for-as`
-binding as `:for-each`, but for an optional single item rather than a
-list, e.g. `:for-data=${isLoggedIn ? user : undefined}`
+`:for-data=${expr}` is intended to render its tag once if `expr` is neither
+`null` nor `undefined`, and not at all otherwise — the same `data`/`:for-as`
+binding as `:for-each`, but for an optional single item rather than a list,
+e.g. `:for-data=${isLoggedIn ? user : undefined}`.
+
+It is designed but **not implemented**: writing it today is a compile error.
+It appears here because it explains why `:for-each` doesn't quietly accept a
+non-iterable and render it once — two intents, two attributes, rather than
+one inferring which you meant from the shape of the value.
 
 ## Data-binding
 

@@ -34,7 +34,7 @@ forms.
 | `:for-each=${expr}` | Repeat once per item in an iterable. `null`/`undefined` means zero items. |
 | `:for-as="name"` | Rename the per-item binding from the default `data`. |
 | `:for-key=${expr}` | Reserved for keyed reconciliation. |
-| `:for-data=${expr}` | Planned optional single-item rendering primitive. |
+| `:for-data=${expr}` | Optional single-item rendering. Designed, **not implemented** — a compile error today. |
 
 ## Module directives
 
@@ -47,6 +47,12 @@ forms.
 | `<:slot />` | In a definition: where a usage site's content goes. Its own content is the fallback. |
 | `<:slot name="x" />` | A named slot. |
 | `:slot="x"` | On a usage site's child: which slot it fills. Unaddressed content fills the unnamed one. |
+
+## Default scope names
+
+`<html>`, `<head>` and `<body>` always have scopes of their own, named
+`page`, `head` and `body`, so shared state has an obvious home that any
+descendant can read.
 
 ## Runtime-supplied values
 
