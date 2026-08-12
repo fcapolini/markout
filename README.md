@@ -1,16 +1,16 @@
 # Markout
 
 [
-  ![Build](https://github.com/fcapolini/markout/actions/workflows/build.yml/badge.svg?branch=main)
+  ![Build](https://github.com/fcapolini/markout/actions/workflows/build.yml/badge.svg?branch=main&event=push)
 ](https://github.com/fcapolini/markout/actions/workflows/build.yml)
 [
-  ![Test](https://github.com/fcapolini/markout/actions/workflows/test.yml/badge.svg?branch=main)
+  ![Test](https://github.com/fcapolini/markout/actions/workflows/test.yml/badge.svg?branch=main&event=push)
 ](https://github.com/fcapolini/markout/actions/workflows/test.yml)
 [
-  ![Coverage](https://github.com/fcapolini/markout/actions/workflows/coverage.yml/badge.svg?branch=main)
+  ![Coverage](https://github.com/fcapolini/markout/actions/workflows/coverage.yml/badge.svg?branch=main&event=push)
 ](https://github.com/fcapolini/markout/actions/workflows/coverage.yml)
 [
-  ![CodeQL](https://github.com/fcapolini/markout/actions/workflows/codeql.yml/badge.svg?branch=main)
+  ![CodeQL](https://github.com/fcapolini/markout/actions/workflows/codeql.yml/badge.svg?branch=main&event=push)
 ](https://github.com/fcapolini/markout/actions/workflows/codeql.yml)
 
 HTML-first reactive web framework, aiming at presenting developers with the
