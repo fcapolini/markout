@@ -16,6 +16,14 @@ export class Scope {
   usesTemplate?: string;
   /** plain attributes supplied at a custom-tag usage site */
   attributes?: Map<string, string | null>;
+  /**
+   * Names in `values` that were written at the usage site rather than in the
+   * <:define> body (`<my-card :title=${data.t} />`). They live here so the
+   * definition can read them, but an expression evaluates where it was
+   * written -- this one has to see the call site's `data`, while the
+   * definition's own expressions must not see the call site at all.
+   */
+  callSiteValues?: Set<string>;
 
   constructor(page: Page, parent?: Scope, e?: ServerElement, name?: string) {
     this.page = page;

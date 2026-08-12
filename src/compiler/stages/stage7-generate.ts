@@ -85,7 +85,12 @@ function escapeScriptClose(js: string): string {
 function generateScope(scope: Scope): ObjectExpression {
   const valueProps: Property[] = [];
   for (const [name, value] of scope.values) {
-    valueProps.push(valueProperty(toRuntimeKey(name), generateValueProps(value)));
+    valueProps.push(
+      valueProperty(
+        toRuntimeKey(name),
+        generateValueProps(value, scope.callSiteValues?.has(name))
+      )
+    );
   }
   for (const [name, value] of scope.textValues) {
     valueProps.push(valueProperty(toRuntimeKey(name), generateValueProps(value)));
@@ -119,11 +124,15 @@ function generateScope(scope: Scope): ObjectExpression {
   return objectExpression(props);
 }
 
-function generateValueProps(value: Value): ObjectExpression {
-  return objectExpression([
+function generateValueProps(value: Value, callSite?: boolean): ObjectExpression {
+  const props = [
     property('exp', functionExpression(generateExpBody(value))),
     property('deps', arrayExpression(value.deps.map(makeDep))),
-  ]);
+  ];
+  // written at a custom-tag usage site: evaluated against the scope the tag
+  // was written in, not against the instance (see CoreScope.newValue)
+  callSite && props.push(property('callSite', literal(true)));
+  return objectExpression(props);
 }
 
 function generateExpBody(value: Value): Expression {

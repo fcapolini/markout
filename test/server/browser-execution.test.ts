@@ -57,6 +57,23 @@ describe("Browser execution (happy-dom)", () => {
       </html>`
     );
 
+    fs.writeFileSync(
+      path.join(tempDir, "cards.htm"),
+      `<lib><:define tag="my-card:div" class="card" :label="none" :_id=\${$id}>` +
+        `<span data-card="\${label}" data-cid="\${_id}">\${label}</span>` +
+        `</:define></lib>`
+    );
+    fs.writeFileSync(
+      path.join(tempDir, "cards.html"),
+      `<html :items=\${['a', 'b']}>
+        <head><:import src="cards.htm" /></head>
+        <body>
+          <ul><li :for-each=\${items}><my-card :label=\${data} /></li></ul>
+          <button :on-click=\${() => items = [...items, 'c']}>grow</button>
+        </body>
+      </html>`
+    );
+
     server = new Server({ docroot: tempDir });
     await server.start();
   });
@@ -163,6 +180,37 @@ describe("Browser execution (happy-dom)", () => {
       const grown = read();
       expect(grown.slice(0, hydrated.length)).toEqual(hydrated);
       expect(new Set(grown).size).toBe(grown.length);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it('should instantiate a component per :for-each replica, and on growth', async () => {
+    const browser = new Browser({ settings: { enableJavaScriptEvaluation: true } });
+    try {
+      const page = browser.newPage();
+      await page.goto(`http://127.0.0.1:${server.port}/cards.html`);
+      await page.waitUntilComplete();
+
+      const doc = page.mainFrame.document;
+      const cards = () =>
+        [...doc.querySelectorAll('[data-card]')].map(e => e.getAttribute('data-card'));
+      const ids = () =>
+        [...doc.querySelectorAll('[data-cid]')].map(e => e.getAttribute('data-cid'));
+
+      // one instance per replica, each reading its own item: the usage-site
+      // expression evaluates at the call site, inside the loop
+      expect(cards()).toEqual(['a', 'b']);
+      // and each instance's own $id is distinct, so ids it builds don't collide
+      expect(new Set(ids()).size).toBe(2);
+      expect(doc.querySelector('my-card')).toBeNull();
+
+      // a replica added client-side gets an instance of its own too
+      doc.querySelector('button')!.dispatchEvent(
+        new page.mainFrame.window.MouseEvent('click')
+      );
+      expect(cards()).toEqual(['a', 'b', 'c']);
+      expect(new Set(ids()).size).toBe(3);
     } finally {
       await browser.close();
     }

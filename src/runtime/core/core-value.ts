@@ -8,6 +8,13 @@ export interface CoreValueProps<T> {
   val?: T;
   exp?: () => T;
   deps?: ValueDep[];
+  /**
+   * This value belongs to a custom-tag instance but was written at the usage
+   * site, so it evaluates against the scope containing that site rather than
+   * against the instance -- an expression resolves where it was written. It
+   * still LIVES on the instance, so the definition can read it.
+   */
+  callSite?: boolean;
 }
 
 export class CoreValue<T = any> {
