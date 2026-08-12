@@ -9,7 +9,7 @@ render HTML, and the browser runtime can hydrate the same result.
 The broad flow is:
 
 1. Parse HTML into the compiler's internal representation.
-2. Collect scopes, values, directives, and dependencies.
+2. Collect scopes, values, bindings, and dependencies.
 3. Generate a runtime-ready props object.
 4. On the server, execute that props object against the server DOM.
 5. In the browser, load the runtime bundle and hydrate the same tree.

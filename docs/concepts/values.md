@@ -45,7 +45,7 @@ In practice, that means:
 `:on-*`, `:did-*` and `:will-*` go further: the expression has to *be* an
 arrow function, written there. `${handler}` is refused even when `handler`
 holds one — see the [syntax
-reference](../reference/syntax.md#value-and-binding-directives).
+reference](../reference/syntax.md#values).
 
 ## Reference chains
 
