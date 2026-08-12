@@ -281,3 +281,52 @@ describe('custom tags inside slotted content', () => {
     expect(clean).not.toContain('page');
   });
 });
+
+// a <:define> whose slot sits inside its own :for-each -- the interaction
+// between per-usage slotting and per-replica stamping
+describe('a slot inside the definition own :for-each', () => {
+  const LIST =
+    '<:define tag="my-list:ul" :items=${["a", "b"]}>' +
+    '<li :for-each=${items}><:slot>item ${data}</:slot></li>' +
+    '</:define>';
+
+  it('replicates the slot fallback once per item', () => {
+    const { errors, runtimeErrors, body } = render(
+      `<html><head>${LIST}</head><body><my-list /></body></html>`
+    );
+
+    expect(errors).toStrictEqual([]);
+    expect(runtimeErrors).toStrictEqual([]);
+    // past the inert stencil, which renders too but never reaches the page
+    const live = body.slice(body.indexOf('</template>'));
+    expect(live).toContain('item <!---t0-->a');
+    expect(live).toContain('item <!---t0-->b');
+  });
+
+  it('reports a usage that tries to fill it', () => {
+    // the content would be stamped out per replica, but there is only one
+    // set of scopes for it -- so this is refused rather than expanded wrong.
+    // The message has to name the real problem: the slot IS there, and
+    // saying otherwise sends the author looking in the wrong place
+    const { errors } = render(
+      `<html><head>${LIST}</head><body><my-list><b>x</b></my-list></body></html>`
+    );
+
+    expect(errors.length).toBe(1);
+    expect(errors[0].msg).toContain(':for-each');
+    expect(errors[0].msg).not.toContain('has no');
+  });
+
+  it('reports it for a named slot too', () => {
+    const { errors } = render(
+      '<html><head><:define tag="my-list:ul" :items=${[1]}>' +
+        '<li :for-each=${items}><:slot name="row" /></li>' +
+        '</:define></head>' +
+        '<body><my-list><b :slot="row">x</b></my-list></body></html>'
+    );
+
+    expect(errors.length).toBe(1);
+    expect(errors[0].msg).toContain('"row"');
+    expect(errors[0].msg).toContain(':for-each');
+  });
+});

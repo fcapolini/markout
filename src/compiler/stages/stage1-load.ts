@@ -381,21 +381,30 @@ function slotUsage(
     groups.set(name, [...(groups.get(name) ?? []), child as ServerNode]);
   }
 
-  let missing = false;
+  let unusable = false;
   for (const name of groups.keys()) {
-    if (defSlots.has(name)) continue;
-    missing = true;
+    const site = defSlots.get(name);
+    if (site && !site.replicated) continue;
+    unusable = true;
     addError(
       page,
-      name === DEFAULT_SLOT_NAME
-        ? `<${usageEl.tagName.toLowerCase()}> was given content but its ` +
-            `<${DEFINE_DIRECTIVE_TAG.toLowerCase()}> has no ` +
-            `<${SLOT_DIRECTIVE_TAG.toLowerCase()}> to put it in`
-        : `<${usageEl.tagName.toLowerCase()}> has no "${name}" slot`,
+      site?.replicated
+        ? // the content would be spliced into a :for-each stencil and stamped
+          // out per replica, but there is only one set of scopes for it --
+          // every replica would fight over the same ones. Reported rather
+          // than expanded wrong (see the note in slotUsage's doc comment)
+          `<${usageEl.tagName.toLowerCase()}>'s ` +
+            `${name === DEFAULT_SLOT_NAME ? 'slot' : `"${name}" slot`} ` +
+            `is inside a :for-each and can't be filled yet`
+        : name === DEFAULT_SLOT_NAME
+          ? `<${usageEl.tagName.toLowerCase()}> was given content but its ` +
+              `<${DEFINE_DIRECTIVE_TAG.toLowerCase()}> has no ` +
+              `<${SLOT_DIRECTIVE_TAG.toLowerCase()}> to put it in`
+          : `<${usageEl.tagName.toLowerCase()}> has no "${name}" slot`,
       usageEl.loc
     );
   }
-  if (missing) return defScope.id;
+  if (unusable) return defScope.id;
 
   const doc = usageEl.ownerDocument;
   const stencil = defEl.clone(doc, null) as ServerElement;
@@ -407,7 +416,7 @@ function slotUsage(
 
   const slots = findSlots(stencil);
   for (const [name, nodes] of groups) {
-    const target = slots.get(name)!;
+    const target = slots.get(name)!.el;
     const host = target.parentElement!;
     for (const child of nodes) {
       usageEl.removeChild(child);
@@ -538,18 +547,38 @@ function orderedTexts(e: ServerElement): { marker: ServerComment; text: ServerTe
   return out;
 }
 
-/** every `<:slot>` in a definition body, by name (the default one is `''`) */
-function findSlots(e: ServerElement, into = new Map<string, ServerElement>()): Map<string, ServerElement> {
-  for (const child of e.childNodes) {
+interface SlotSite {
+  el: ServerElement;
+  /** inside a `:for-each` stencil within the definition (see inLoop below) */
+  replicated: boolean;
+}
+
+/**
+ * Every `<:slot>` in a definition body, by name (the default one is `''`).
+ *
+ * Descends into `<template>` content, which is where load() has already moved
+ * any `:for-each` element -- a slot in there is reported rather than missed,
+ * so a usage trying to fill it gets told what's actually wrong.
+ */
+function findSlots(
+  e: ServerElement,
+  into = new Map<string, SlotSite>(),
+  inLoop = false
+): Map<string, SlotSite> {
+  const isStencil = e.tagName === 'TEMPLATE';
+  const children = isStencil
+    ? [...(e as ServerTemplateElement).content.childNodes]
+    : [...e.childNodes];
+  for (const child of children) {
     if (child.nodeType !== NodeType.ELEMENT) continue;
     const el = child as ServerElement;
     if (el.tagName === SLOT_DIRECTIVE_TAG) {
       // first one wins, so a duplicate name can't silently steal content
       const name = `${el.getAttribute(SLOT_NAME_ATTR) ?? DEFAULT_SLOT_NAME}`;
-      into.has(name) || into.set(name, el);
+      into.has(name) || into.set(name, { el, replicated: inLoop || isStencil });
       continue;
     }
-    findSlots(el, into);
+    findSlots(el, into, inLoop || isStencil);
   }
   return into;
 }
