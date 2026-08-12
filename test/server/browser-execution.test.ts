@@ -74,6 +74,24 @@ describe("Browser execution (happy-dom)", () => {
       </html>`
     );
 
+    fs.writeFileSync(
+      path.join(tempDir, "slots.htm"),
+      `<lib>` +
+        `<:define tag="my-badge:span" class="badge" :label="B">\${label}</:define>` +
+        `<:define tag="my-card:div" class="card"><:slot /></:define>` +
+        `</lib>`
+    );
+    fs.writeFileSync(
+      path.join(tempDir, "slots.html"),
+      `<html :who=\${'world'}>
+        <head><:import src="slots.htm" /></head>
+        <body>
+          <my-card><my-badge :label=\${who} /><b>\${who}</b></my-card>
+          <button :on-click=\${() => who = 'again'}>go</button>
+        </body>
+      </html>`
+    );
+
     server = new Server({ docroot: tempDir });
     await server.start();
   });
@@ -180,6 +198,36 @@ describe("Browser execution (happy-dom)", () => {
       const grown = read();
       expect(grown.slice(0, hydrated.length)).toEqual(hydrated);
       expect(new Set(grown).size).toBe(grown.length);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it('should hydrate a component slotted into another, staying reactive', async () => {
+    const browser = new Browser({ settings: { enableJavaScriptEvaluation: true } });
+    try {
+      const page = browser.newPage();
+      await page.goto(`http://127.0.0.1:${server.port}/slots.html`);
+      await page.waitUntilComplete();
+
+      const doc = page.mainFrame.document;
+      const card = doc.querySelector('.card')!;
+      const badge = () => doc.querySelector('.badge')!.textContent?.trim();
+      const bold = () => doc.querySelector('b')!.textContent?.trim();
+
+      // the nested tag expanded, inside the outer instance's DOM
+      expect(doc.querySelector('my-badge')).toBeNull();
+      expect(card.querySelector('.badge')).not.toBeNull();
+      // both read the page's `who`, through two levels of scoping
+      expect(badge()).toBe('world');
+      expect(bold()).toBe('world');
+
+      // and the call-site binding stays live after hydration
+      doc.querySelector('button')!.dispatchEvent(
+        new page.mainFrame.window.MouseEvent('click')
+      );
+      expect(badge()).toBe('again');
+      expect(bold()).toBe('again');
     } finally {
       await browser.close();
     }

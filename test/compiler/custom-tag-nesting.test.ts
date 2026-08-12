@@ -230,3 +230,54 @@ describe('named slots', () => {
     expect(errors[0].msg).toContain('sidebar');
   });
 });
+
+// slotted content can name custom tags of its own; collect() used to stop
+// descending at a usage site, so those were left unexpanded and silent
+describe('custom tags inside slotted content', () => {
+  const LIB =
+    '<:define tag="my-badge:span" class="badge" :label="B">${label}</:define>' +
+    '<:define tag="my-card:div" class="card"><:slot /></:define>';
+
+  it('expands a component slotted into another component', () => {
+    const { errors, runtimeErrors, body } = render(
+      `<html :who=\${"world"}><head>${LIB}</head><body>` +
+        '<my-card><my-badge :label=${who} /> and ${who}</my-card></body></html>'
+    );
+
+    expect(errors).toStrictEqual([]);
+    expect(runtimeErrors).toStrictEqual([]);
+    // the nested tag's own usage-site value resolves at the OUTER call site,
+    // not against the instance it happens to sit inside
+    const clean = body.replace(/<!--.*?-->/g, '').replace(/ data-markout="[^"]*"/g, '');
+    expect(clean).toContain('<span class="badge">world</span> and world');
+    expect(body).not.toContain('<my-badge');
+  });
+
+  it('resolves through two levels of slotting', () => {
+    const { errors, runtimeErrors, body } = render(
+      `<html :who=\${"deep"}><head>${LIB}</head><body>` +
+        '<my-card><my-card><my-badge :label=${who} /></my-card></my-card>' +
+        '</body></html>'
+    );
+
+    expect(errors).toStrictEqual([]);
+    expect(runtimeErrors).toStrictEqual([]);
+    const clean = body.replace(/<!--.*?-->/g, '').replace(/ data-markout="[^"]*"/g, '');
+    expect(clean).toContain('<span class="badge">deep</span>');
+  });
+
+  it('keeps the nested definition reading its own scope', () => {
+    // `label` is declared on the page too: the badge's own body was written
+    // in the definition, so it must still read the definition's default
+    const { errors, runtimeErrors, body } = render(
+      `<html :label=\${"page"}><head>${LIB}</head><body>` +
+        '<my-card><my-badge /></my-card></body></html>'
+    );
+
+    expect(errors).toStrictEqual([]);
+    expect(runtimeErrors).toStrictEqual([]);
+    const clean = body.replace(/<!--.*?-->/g, '').replace(/ data-markout="[^"]*"/g, '');
+    expect(clean).toContain('<span class="badge">B</span>');
+    expect(clean).not.toContain('page');
+  });
+});

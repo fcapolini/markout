@@ -171,12 +171,27 @@ export class CoreScope {
    * happened to declare -- compiling clean, and reactive, but wrong.
    */
   lexicalParent(): CoreScope | undefined {
+    // an instance's OWN values come from its definition, so they resolve
+    // from the root whether or not the tag itself sits in someone's slot
     if (this.props.template) return this.rootScope();
     // markup slotted into a custom tag: its DOM is inside the instance, but
     // it was written OUTSIDE it, so it resolves from there -- skipping the
     // instance entirely rather than reading the definition's values
-    if (this.props.slotted) return this.enclosingInstance()?.parent ?? this.parent;
+    if (this.props.slotted) return this.callSiteScope();
     return this.parent;
+  }
+
+  /**
+   * The scope this one was WRITTEN in, which is where its call-site values
+   * evaluate (see newValue). Normally the structural parent; for anything
+   * slotted, the scope the enclosing instance's own tag was written in --
+   * recursively, so a component slotted into a component slotted into a
+   * page still reads the page.
+   */
+  callSiteScope(): CoreScope | undefined {
+    if (!this.props.slotted) return this.parent;
+    const instance = this.enclosingInstance();
+    return instance ? instance.callSiteScope() : this.parent;
   }
 
   private enclosingInstance(): CoreScope | undefined {
@@ -232,7 +247,7 @@ export class CoreScope {
     // Its callbacks still act on THIS scope: WebScope.newValue's closures
     // capture the instance, so `<my-card id=${x}/>` sets the attribute on
     // the instance's element while reading `x` from the call site
-    const ret = new CoreValue(props, props.callSite ? this.parent ?? this : this, key);
+    const ret = new CoreValue(props, props.callSite ? this.callSiteScope() ?? this : this, key);
     if (key === RT_FOR_EACH_VALUE) {
       ret.setCB(CoreScope.foreachCB);
       return ret;

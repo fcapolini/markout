@@ -66,6 +66,10 @@ export class Page {
   values: Map<string, Value>;
   /** `:slot` targets, kept aside by stage1 before it strips `:` attributes */
   slotTargets: Map<ServerElement, string>;
+  /** nodes moved into a custom-tag instance's slot -> that instance. A
+   * stencil clone isn't in the scope tree, so this is the only way a usage
+   * site nested in slotted content can find what it now sits inside */
+  slottedInto: Map<object, Scope>;
   main?: Scope;
   errors: PageError[] = [];
   nextValueId = 0;
@@ -83,6 +87,7 @@ export class Page {
     }
     this.customTags = new Map();
     this.slotTargets = new Map();
+    this.slottedInto = new Map();
     this.definitionScopes = new Set();
     this.values = new Map();
   }

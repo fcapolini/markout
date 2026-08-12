@@ -265,8 +265,11 @@ function expandCustomTagUsages(page: Page): void {
       const el = child as ServerElement;
       if (page.customTags.has(el.tagName.toLowerCase())) {
         usages.push(el);
-        continue; // usage sites don't (yet) support light-DOM children
       }
+      // descends into a usage site too: its children are slotted content,
+      // which can name custom tags of its own. Document order matters -- an
+      // outer usage is expanded first, moving these nodes into its stencil,
+      // and the inner one is then found wherever they landed
       collect(el);
     }
   };
@@ -285,6 +288,17 @@ function expandCustomTagUsages(page: Page): void {
     // there (CoreScope.lexicalParent()), which is what keeps a definition
     // from reading whatever its call site happens to declare
     const scope = new Scope(page, enclosingScope(page, usageEl, loadedUsageScope));
+    // the tag itself was written in someone else's slot: the instance
+    // inherits that, so its usage-site values keep resolving out there
+    // rather than against the instance it happens to sit inside
+    const host = slottedHost(page, usageEl);
+    if (loadedUsageScope?.slotted) {
+      scope.slotted = true;
+      scope.lexicalParent = loadedUsageScope.lexicalParent;
+    } else if (host) {
+      scope.slotted = true;
+      scope.lexicalParent = host.slotted ? host.lexicalParent : host.parent;
+    }
     scope.values = new Map(defScope.values);
     scope.textValues = defScope.textValues;
     // copied, not shared: a usage supplying slotted content adds its own
@@ -398,6 +412,7 @@ function slotUsage(
     for (const child of nodes) {
       usageEl.removeChild(child);
       host.insertBefore(child, target);
+      page.slottedInto.set(child, scope);
     }
     // only the ones that were filled: an untouched slot keeps its own
     // content, which unwrapSlots() leaves behind as the fallback
@@ -572,15 +587,31 @@ function contains(root: ServerNode, e: ServerElement): boolean {
  * severs parentElement, so a usage inside a `:for-each` lands on that
  * `:for-each`'s own scope rather than escaping to the page root.
  */
+/** the custom-tag instance whose slot this element was moved into, if any */
+function slottedHost(page: Page, e: ServerElement): Scope | undefined {
+  let n: ServerElement | null = e;
+  while (n) {
+    const host = page.slottedInto.get(n);
+    if (host) return host;
+    n = n.parentElement;
+  }
+  return undefined;
+}
+
 function enclosingScope(
   page: Page,
   usageEl: ServerElement,
   loadedUsageScope: Scope | undefined
 ): Scope {
   if (loadedUsageScope?.parent) return loadedUsageScope.parent;
-  let e = usageEl.parentElement;
+  let e: ServerElement | null = usageEl;
   while (e) {
-    const scope = findScopeForElement(page.main, e);
+    // checked first: once a node has been slotted into an instance it lives
+    // in a stencil clone, which no scope's element ever points at, so the
+    // lookup below can't see it
+    const host = page.slottedInto.get(e);
+    if (host) return host;
+    const scope = e !== usageEl ? findScopeForElement(page.main, e) : undefined;
     if (scope) return scope;
     e = e.parentElement;
   }
