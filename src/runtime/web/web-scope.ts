@@ -28,7 +28,8 @@ export class WebScope extends CoreScope {
   // during super()) sets these; a real class field would instead
   // re-initialize them to undefined right after super() returns
   declare dom: Element;
-  declare texts: Text[];
+  /** interpolated text nodes of this scope's own territory, by marker id */
+  declare texts: Map<number, Text>;
   declare domListeners?: { name: string; listener: EventListener }[];
   // the <template> this scope's stencil lives inside, if any -- also set
   // during init(), so it needs the same `declare` treatment as above
@@ -45,7 +46,7 @@ export class WebScope extends CoreScope {
 
   override init() {
     super.init();
-    this.texts = [];
+    this.texts = new Map();
     const templateId = this.props.template;
     const view = this.cloned
       ? (this.parent as WebScope)?.pendingCloneDom
@@ -58,27 +59,38 @@ export class WebScope extends CoreScope {
       return;
     }
     this.dom = view;
+    // keyed by the id the marker carries, never by how many came before it:
+    // a text node's binding must not depend on the document order of its
+    // siblings, or anything that inserts or moves markup within a scope's
+    // territory (slotted content, most of all) silently shifts every
+    // binding after it onto the wrong node
     const f = (e: Element) => {
       const childNodes = [...e.childNodes];
       childNodes.forEach((n, i) => {
         if (n.nodeType === NodeType.ELEMENT && (n as Element).getAttribute(DOM_ID_ATTR) === null) {
-          if (DOM_ATOMIC_TEXT_TAGS.has((n as Element).tagName)) {
-            // holds its whole interpolated content as one marker-less text
-            // child (see stage1-load.ts's load()); push it directly, in the
-            // same document-order position a marker-delimited entry would
-            // occupy, so text$N indices stay aligned either way
-            const only = (n as Element).childNodes[0];
-            only?.nodeType === NodeType.TEXT && this.texts.push(only as Text);
-            return;
+          if (!DOM_ATOMIC_TEXT_TAGS.has((n as Element).tagName)) {
+            f(n as Element);
           }
-          return f(n as Element);
+          return;
         }
         if (
-          n.nodeType === NodeType.COMMENT &&
-          (n as Comment).textContent.startsWith(DOM_TEXT_MARKER1)
+          n.nodeType !== NodeType.COMMENT ||
+          !(n as Comment).textContent.startsWith(DOM_TEXT_MARKER1)
         ) {
-          this.texts.push(childNodes[i + 1] as Text);
+          return;
         }
+        const id = Number.parseInt((n as Comment).textContent.slice(DOM_TEXT_MARKER1.length));
+        const next = childNodes[i + 1];
+        if (!next) return;
+        // an atomic-text container (<style>/<title>) can't hold the marker
+        // inside it, so the marker sits just before the element and the
+        // binding target is its one text child
+        const target =
+          next.nodeType === NodeType.ELEMENT &&
+          DOM_ATOMIC_TEXT_TAGS.has((next as Element).tagName)
+            ? (next as Element).childNodes[0]
+            : next;
+        target?.nodeType === NodeType.TEXT && this.texts.set(id, target as Text);
       });
     };
     f(this.dom);
@@ -205,7 +217,7 @@ export class WebScope extends CoreScope {
     }
     if (key.startsWith(RT_TEXT_VALUE_PREFIX)) {
       const textIndex = Number.parseInt(key.slice(RT_TEXT_VALUE_PREFIX.length));
-      const t = this.texts[textIndex];
+      const t = this.texts.get(textIndex);
 
       //TODO: atomic text (<style>, <title>) is parsed as a single node
       //holding one concatenated expression, so changing any interpolated
