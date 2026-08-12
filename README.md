@@ -60,6 +60,9 @@ context.
     <button :on-click=${() => count++}>
       Clicked ${count} time${count !== 1 ? 's' : ''}
     </button>
+    <button :on-click=${() => light = !light}>
+      Switch theme
+    </button>
   </body>
 </html>
 ```
