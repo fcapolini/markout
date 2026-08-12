@@ -69,7 +69,8 @@ function stripKnownPrefix(name: string): string {
 
 /**
  * Stage 2: Validate reactive expressions:
- * - Event handlers (in `:on-*` attributes) must be arrow functions
+ * - Callbacks (`:on-*`, `:did-*`, `:will-*`) must be arrow functions written
+ *   at that spot -- not a reference to one, and not a classic function
  * - No function nested anywhere in any expression may be a classic function
  * - Declared identifier names (value names) must not include '$' (reserved for language features)
  *   Note: identifier accesses within expressions are unrestricted
@@ -77,7 +78,7 @@ function stripKnownPrefix(name: string): string {
  * Recursively walks through all scopes and their values, validating that:
  * 1. Declared value names don't contain '$' (reserved for language features)
  *    Identifier accesses within expressions are allowed to use '$'
- * 2. Event handler expressions are arrow functions
+ * 2. Callback expressions (`:on-*`, `:did-*`, `:will-*`) are arrow functions
  * 3. No nested classic `function` shows up anywhere in a `${...}` expression
  *
  * A plain (non-`${...}`) attribute value is a static literal, not an
@@ -127,12 +128,13 @@ function validateValue(page: Page, name: string, value: Value) {
   }
   const ast = expression as unknown as Node;
 
-  // Validate event/lifecycle handlers must themselves be arrow functions
+  // event and lifecycle callbacks must themselves be arrow functions: a
+  // classic one would rebind `this`, which is how the scope is reached
   if (CALLBACK_VALUE_PREFIXES.some(p => name.startsWith(p))) {
     if (ast.type !== 'ArrowFunctionExpression') {
       addError(
         page,
-        `Event handler "${name}" must be an arrow function, got ${ast.type}`,
+        `Callback "${name}" must be an arrow function, got ${ast.type}`,
         value.node.loc || undefined
       );
     }
