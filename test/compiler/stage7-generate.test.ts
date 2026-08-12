@@ -124,6 +124,8 @@ describe('stage7-generate', () => {
   });
 
   it('should compile deps into functions resolving via $value/$parent.$value', () => {
+    addValue(root, 'count', null);
+    addValue(page.global, 'count', null);
     addValue(root, 'doubled', parseExpr('this.count * 2'));
     addValue(root, 'fromParent', parseExpr('this.$parent.count * 2'));
 
