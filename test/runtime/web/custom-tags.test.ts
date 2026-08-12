@@ -33,7 +33,12 @@ describe('custom tags: usage-site DOM instantiation', () => {
       id: '0',
       values: {},
       children: [
-        { id: 'use', template: 'def', values: { 'class$active': { val: true } } },
+        {
+          id: 'use',
+          template: 'def',
+          attributes: { class: 'override', id: 'instance' },
+          values: { 'class$active': { val: true } },
+        },
       ],
     });
 
@@ -41,8 +46,10 @@ describe('custom tags: usage-site DOM instantiation', () => {
     const button = body.childNodes.find((n: any) => n.tagName === 'BUTTON');
     assert.isDefined(button);
     assert.equal(button.getAttribute('data-markout'), 'use');
-    assert.include(button.className, 'action');
+    assert.notInclude(button.className, 'action');
+    assert.include(button.className, 'override');
     assert.include(button.className, 'active');
+    assert.equal(button.getAttribute('id'), 'instance');
     // the marker comment is gone, replaced in place
     const stillHasMarker = body.childNodes.some(
       (n: any) => n.nodeType === 8 && n.textContent === '-uuse'

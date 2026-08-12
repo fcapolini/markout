@@ -222,16 +222,32 @@ function expandCustomTagUsages(page: Page): void {
 
   for (const usageEl of usages) {
     const defScope = page.customTags.get(usageEl.tagName.toLowerCase())!;
+    const loadedUsageScope = findScopeForElement(page.main, usageEl);
     // reuses the definition's own values/children by reference: every
     // instance is parented at the root 'page' scope (not wherever its
     // usage physically sits), so a definition's own expressions can only
     // ever see page/global, by construction -- no special runtime
     // provisions needed for that, since it's just normal scope-tree nesting
     const scope = new Scope(page, page.main);
-    scope.values = defScope.values;
+    scope.values = new Map(defScope.values);
     scope.textValues = defScope.textValues;
     scope.children = defScope.children;
     scope.usesTemplate = defScope.id;
+    scope.attributes = new Map(
+      usageEl
+        .getAttributeNames()
+        .filter(name => !name.startsWith(SPECIAL_ATTR_PREFIX) && name !== DOM_ID_ATTR)
+        .map(name => [name, usageEl.getAttribute(name)])
+    );
+    if (loadedUsageScope) {
+      scope.name = loadedUsageScope.name;
+      for (const [name, value] of loadedUsageScope.values) {
+        value.scope = scope;
+        scope.values.set(name, value);
+      }
+      const index = loadedUsageScope.parent!.children.indexOf(loadedUsageScope);
+      loadedUsageScope.parent!.children.splice(index, 1);
+    }
 
     const parent = usageEl.parentElement!;
     const marker = new ServerComment(
@@ -242,6 +258,16 @@ function expandCustomTagUsages(page: Page): void {
     parent.insertBefore(marker, usageEl);
     parent.removeChild(usageEl);
   }
+}
+
+function findScopeForElement(scope: Scope | undefined, e: ServerElement): Scope | undefined {
+  if (!scope) return undefined;
+  if (scope.e === e) return scope;
+  for (const child of scope.children) {
+    const found = findScopeForElement(child, e);
+    if (found) return found;
+  }
+  return undefined;
 }
 
 function extractValues(page: Page, scope: Scope, e: ServerElement) {
