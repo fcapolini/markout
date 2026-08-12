@@ -9,19 +9,19 @@ tree, where only "active" DOM elements are represented.
 
 ## Building blocks
 
-- **`CoreContext`** ([core-context.ts](./core-context.ts)) — the root object
+- **`CoreContext`** ([core-context.ts](./core/core-context.ts)) — the root object
   of an application instance. It owns the `global` scope, the `root` scope,
   and the counters (`cycle`, `refreshLevel`, `pushLevel`) that drive the
   push/pull reactive system described below. It also collects and flushes
   the batch of pending value-change callbacks (see "Change batching").
-- **`CoreGlobal`** ([core-global.ts](./core-global.ts)) — a `CoreScope`
+- **`CoreGlobal`** ([core-global.ts](./core/core-global.ts)) — a `CoreScope`
   subclass with no parent, sitting above `root`. It hosts globals/built-ins
   (e.g. window-like values) that every scope can see.
-- **`CoreScope`** ([core-scope.ts](./core-scope.ts)) — a node in the scope
+- **`CoreScope`** ([core-scope.ts](./core/core-scope.ts)) — a node in the scope
   tree. Each scope owns a map of `CoreValue`s (`values`), a child list, and a
   `proxy` object used to read/write those values (and any inherited from
   ancestor scopes) using plain property access.
-- **`CoreValue`** ([core-value.ts](./core-value.ts)) — a single reactive
+- **`CoreValue`** ([core-value.ts](./core/core-value.ts)) — a single reactive
   slot. It either holds a plain value (`val`) or a reactive expression
   (`exp` + `deps`), and tracks the other `CoreValue`s it depends on (`src`)
   and the ones that depend on it (`dst`).
@@ -162,7 +162,7 @@ The DOM-specific half of this — turning a for-each host's own compiled
 element into that inert `<template>` stencil, and turning `clone()` into
 "reuse an already-present element by id, or `cloneNode(true)` the stencil
 and insert it" — lives in `WebScope` (see
-[web-scope.ts](../web/web-scope.ts)). Because SSR
+[web-scope.ts](./web/web-scope.ts)). Because SSR
 (`src/server/render.ts`) runs this exact runtime against a
 `ServerDocument`, replication produces real, literal markup during server
 rendering too, with no SSR-specific logic at all; hydration is then just

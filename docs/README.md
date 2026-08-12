@@ -29,7 +29,7 @@ calls that out explicitly.
   the current status of optional/keyed list behavior.
 - [Rendering](concepts/rendering.md) - how the compiler, server renderer, and
   browser runtime fit together.
-- [Directive reference](reference/directives.md) - a compact syntax summary.
+- [Syntax reference](reference/syntax.md) - the whole language on one page.
 
 ## Mental model
 

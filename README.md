@@ -42,9 +42,9 @@ reactive web development. The whole language is a handful of rules:
   a value: `title=${v}` sets an attribute's value, `:attr-title=${v}` sets
   whether it is there at all.
 
-The full syntax is a single page: **[directive
-reference](docs/reference/directives.md)**. The reasoning behind each part
-is in **[docs/](docs/)**.
+The full syntax is a single page: **[syntax
+reference](docs/reference/syntax.md)**. The reasoning behind each part is in
+**[docs/](docs/)**.
 
 Compare that to what's required to be productive in most other frameworks
 (hooks and dependency arrays, `computed` vs `watch`, whole directive sets,
