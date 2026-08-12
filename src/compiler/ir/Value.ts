@@ -2,9 +2,13 @@ import { NodeType } from '../../html/dom';
 import { ServerAttribute, ServerText } from '../../html/server-dom';
 import type { Scope } from './Scope';
 
-/** a `this.foo` (viaParent: false) or `this.$parent.foo` (viaParent: true) reference found by stage4 */
+/**
+ * A `this.foo` (own scope) or `this.<via>.foo` reference found by stage4,
+ * where `<via>` navigates to another scope -- `$parent`, or a named child
+ * scope's `:aka` name.
+ */
 export interface ValueDepRef {
-  viaParent: boolean;
+  via?: string;
   key: string;
 }
 

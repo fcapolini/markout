@@ -4,6 +4,7 @@ import {
   SourceLocation,
   ServerText,
   ServerComment,
+  ServerTemplateElement,
 } from '../../html/server-dom';
 import { TEXT_VALUE_PREFIX } from '../ir/Page';
 import { Value } from '../ir/Value';
@@ -28,6 +29,7 @@ import {
   FOR_EACH_VALUE,
   FOR_AS_VALUE,
   FOR_KEY_VALUE,
+  FOR_DATA_DEFAULT_NAME,
 } from '../ir/Page';
 import { NodeType } from '../../html/dom';
 import { DOM_ID_ATTR, DOM_TEXT_MARKER1, DOM_TEXT_MARKER2 } from '../../runtime/web/web-context';
@@ -69,7 +71,11 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string) {
   for (const child of [...e.childNodes]) {
     i++;
     if (child.nodeType === NodeType.ELEMENT) {
-      load(page, scope, child as ServerElement);
+      const childEl = child as ServerElement;
+      // the stencil for each instance WebScope.clone() creates/reuses at
+      // runtime; :for-each's element itself is never a live instance
+      if (hasForEachAttr(childEl)) wrapInTemplate(childEl);
+      load(page, scope, childEl);
       continue;
     }
     if (child.nodeType === NodeType.TEXT) {
@@ -106,6 +112,19 @@ function needsScope(e: ServerElement): boolean {
     if (attr.name.startsWith(SPECIAL_ATTR_PREFIX)) return true;
   }
   return false;
+}
+
+function hasForEachAttr(e: ServerElement): boolean {
+  const name = `${SPECIAL_ATTR_PREFIX}${FOR_EACH_ATTR}`;
+  return (e.attributes as ServerAttribute[]).some(attr => attr.name === name);
+}
+
+function wrapInTemplate(e: ServerElement): void {
+  const parent = e.parentElement!;
+  const template = new ServerTemplateElement(e.ownerDocument, e.loc);
+  parent.insertBefore(template, e);
+  parent.removeChild(e);
+  template.appendChild(e);
 }
 
 function extractValues(page: Page, scope: Scope, e: ServerElement) {
@@ -174,6 +193,15 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
   e.attributes = e.attributes.filter(
     attr => !attr.name.startsWith(SPECIAL_ATTR_PREFIX)
   );
+  if (scope.values.has(FOR_EACH_VALUE)) {
+    // ordinary value, not a for$-prefixed one: stage3-qualify already turns
+    // any bare identifier into `this.<name>` with no scope-aware special
+    // casing, so the per-item binding only resolves correctly if it's keyed
+    // under the exact name authors reference (`data`, or :for-as's choice)
+    const alias = (scope.values.get(FOR_AS_VALUE)?.value as string) || FOR_DATA_DEFAULT_NAME;
+    const dataAttr = new ServerAttribute(e.ownerDocument, null, alias, null, e.loc);
+    scope.values.set(alias, new Value(alias, dataAttr, scope, page.createValueId()));
+  }
 }
 
 // a plain (non-prefixed) value or scope name must be a clean JS identifier:

@@ -3,6 +3,7 @@ import { Source, parse } from '../../src/html/parser';
 import {
     ServerDocument,
     ServerElement,
+    ServerTemplateElement,
     SourceLocation
 } from '../../src/html/server-dom';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -317,12 +318,13 @@ describe('stage1-loader', () => {
       const bodyScope = getChildScope(htmlScope, 1);
       const liScope = getChildScope(bodyScope, 0);
 
-      expect(liScope.values.size).toBe(1);
+      expect(liScope.values.size).toBe(2);
       expect(liScope.values.has('for$each')).toBe(true);
       expect(liScope.values.get('for$each')?.value).toMatchObject({
         type: 'Identifier',
         name: 'items',
       });
+      expect(liScope.values.has('data')).toBe(true);
     });
 
     it('should load :for-as and :for-key alongside :for-each', () => {
@@ -333,12 +335,14 @@ describe('stage1-loader', () => {
       const bodyScope = getChildScope(htmlScope, 1);
       const liScope = getChildScope(bodyScope, 0);
 
-      expect(liScope.values.size).toBe(3);
+      expect(liScope.values.size).toBe(4);
       expect(liScope.values.has('for$each')).toBe(true);
       expect(liScope.values.get('for$as')?.value).toBe('item');
       expect(liScope.values.get('for$key')?.value).toMatchObject({
         type: 'MemberExpression',
       });
+      expect(liScope.values.has('item')).toBe(true);
+      expect(liScope.values.has('data')).toBe(false);
     });
 
     it('should remove :for-each/:for-as/:for-key from the DOM element, keeping only data-markout', () => {
@@ -346,9 +350,20 @@ describe('stage1-loader', () => {
         '<html><body><li :for-each=${items} :for-as="item" :for-key=${item.id}></li></body></html>'
       );
       const body = context.source.doc.body!;
-      const li = body.childNodes[0] as ServerElement;
+      const template = body.childNodes[0] as ServerTemplateElement;
+      const li = template.content.childNodes[0] as ServerElement;
 
+      expect(template.tagName).toBe('TEMPLATE');
       expect(li.attributes.map(a => a.name)).toStrictEqual(['data-markout']);
+    });
+
+    it('should wrap the :for-each element in a <template>, leaving it as an inert stencil', () => {
+      const context = runLoaderFromMarkup(
+        '<html><body><li :for-each=${items}></li></body></html>'
+      );
+      const body = context.source.doc.body!;
+
+      expect(body.childNodes.map((n: any) => n.tagName)).toStrictEqual(['TEMPLATE']);
     });
   });
 

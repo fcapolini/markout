@@ -115,10 +115,12 @@ function generateExpBody(value: Value): Expression {
 }
 
 function makeDep(dep: ValueDepRef): Expression {
-  // `function () { return this.$value("key"); }` or, via parent,
-  // `function () { return this.$parent.$value("key"); }`
-  const target: Expression = dep.viaParent
-    ? memberExpression(thisMember('$parent'), identifier('$value'))
+  // `function () { return this.$value("key"); }` or, via another scope,
+  // `function () { return this.<via>.$value("key"); }` -- `via` is a plain
+  // property (either $parent, or a named child scope's :aka name), unlike
+  // $value which takes no argument to call with
+  const target: Expression = dep.via
+    ? memberExpression(thisMember(dep.via), identifier('$value'))
     : thisMember('$value');
   return functionExpression(callExpression(target, [literal(dep.key)]));
 }

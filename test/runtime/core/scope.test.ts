@@ -36,8 +36,7 @@ describe('proxy', () => {
       },
     });
     const inner = ctx.root.children[0];
-    // $parent is a function value, like $value
-    assert.equal(inner.proxy.$parent().v, 1);
+    assert.equal(inner.proxy.$parent.v, 1);
   });
 
   it('refuses to set an unknown key', () => {

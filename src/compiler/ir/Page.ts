@@ -25,6 +25,10 @@ export const FOR_KEY_ATTR = 'for-key';
 export const FOR_EACH_VALUE = 'for$each';
 export const FOR_AS_VALUE = 'for$as';
 export const FOR_KEY_VALUE = 'for$key';
+// the per-item value's runtime key defaults to this (`:for-as` overrides it);
+// it's compiled as an ordinary value, not a `for$`-prefixed one, so bare
+// `${data}` references qualify to `this.data` with no special-casing needed
+export const FOR_DATA_DEFAULT_NAME = 'data';
 
 export class Page {
   source: Source;

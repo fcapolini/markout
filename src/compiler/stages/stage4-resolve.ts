@@ -17,31 +17,31 @@ const CALLBACK_VALUE_PREFIXES = [EVENT_VALUE_PREFIX, DID_VALUE_PREFIX, WILL_VALU
  * Stage 4: Resolve value references at compile time.
  *
  * Walks each value's qualified expression (from stage3) and records every
- * `this.foo`/`this.$parent.foo` reference it makes as a `ValueDepRef` on
+ * `this.foo`/`this.<via>.foo` reference it makes as a `ValueDepRef` on
  * `Value.deps`, mirroring the runtime's `CoreValueProps.deps` contract.
  */
 
 export function stage4resolve(page: Page) {
   for (const child of page.global.children) {
-    resolveScope(child);
+    resolveScope(child, page);
   }
-  page.main && resolveScope(page.main);
+  page.main && resolveScope(page.main, page);
   return page;
 }
 
-function resolveScope(scope: Scope) {
+function resolveScope(scope: Scope, page: Page) {
   for (const [name, value] of scope.values) {
-    resolveValue(name, value);
+    resolveValue(name, value, page);
   }
   for (const [name, value] of scope.textValues) {
-    resolveValue(name, value);
+    resolveValue(name, value, page);
   }
   for (const child of scope.children) {
-    resolveScope(child);
+    resolveScope(child, page);
   }
 }
 
-function resolveValue(name: string, value: Value) {
+function resolveValue(name: string, value: Value, page: Page) {
   const expression = value.value;
   if (!expression || typeof expression === 'string') {
     // a static literal has no dependencies
@@ -55,16 +55,16 @@ function resolveValue(name: string, value: Value) {
     (ast.type === 'ArrowFunctionExpression' || ast.type === 'FunctionExpression');
   // a callback's own body isn't evaluated until it's invoked, so its
   // references aren't dependencies of the callback value itself
-  value.deps = isCallback ? [] : collectDeps(ast);
+  value.deps = isCallback ? [] : collectDeps(ast, page);
 }
 
-function collectDeps(ast: Node): ValueDepRef[] {
+function collectDeps(ast: Node, page: Page): ValueDepRef[] {
   const deps = new Map<string, ValueDepRef>();
   estraverse.traverse(ast, {
     enter(node) {
-      const dep = matchDep(node);
+      const dep = matchDep(node, page);
       if (dep) {
-        deps.set(`${dep.viaParent}:${dep.key}`, dep);
+        deps.set(`${dep.via}:${dep.key}`, dep);
         this.skip();
       }
     },
@@ -72,7 +72,15 @@ function collectDeps(ast: Node): ValueDepRef[] {
   return [...deps.values()];
 }
 
-function matchDep(node: Node): ValueDepRef | undefined {
+// a segment navigates to another scope only if it's the reserved $parent, or
+// a known `:aka`-named scope -- anything else is just a regular value whose
+// own runtime shape we can't (and shouldn't) peek into at compile time (e.g.
+// `this.items.filter` isn't a dependency on some scope named "items")
+function isNavigableScopeName(name: string, page: Page): boolean {
+  return name === RT_PARENT_VALUE_KEY || page.defines.has(name);
+}
+
+function matchDep(node: Node, page: Page): ValueDepRef | undefined {
   if (node.type !== 'MemberExpression' || node.computed) {
     return undefined;
   }
@@ -81,16 +89,16 @@ function matchDep(node: Node): ValueDepRef | undefined {
   }
   const object = node.object;
   if (object.type === 'ThisExpression') {
-    return { viaParent: false, key: node.property.name };
+    return { key: node.property.name };
   }
   if (
     object.type === 'MemberExpression' &&
     !object.computed &&
     object.object.type === 'ThisExpression' &&
     object.property.type === 'Identifier' &&
-    object.property.name === RT_PARENT_VALUE_KEY
+    isNavigableScopeName(object.property.name, page)
   ) {
-    return { viaParent: true, key: node.property.name };
+    return { via: object.property.name, key: node.property.name };
   }
   return undefined;
 }

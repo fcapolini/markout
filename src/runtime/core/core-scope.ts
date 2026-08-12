@@ -9,13 +9,18 @@ export const RT_FOR_EACH_VALUE = 'for$each';
 export const RT_FOR_OFFSET_VALUE = 'for$offset';
 export const RT_FOR_LENGTH_VALUE = 'for$length';
 export const RT_FOR_AS_VALUE = 'for$as';
-export const RT_FOR_DATA_VALUE = 'for$data';
+// the per-item value's key defaults to this, same as compiler-side
+// FOR_DATA_DEFAULT_NAME in ir/Page.ts (duplicated rather than imported: this
+// is runtime code, kept independent of the compiler)
+const FOR_DATA_DEFAULT_NAME = 'data';
 
 export interface CoreScopeProps {
   id: string;
   name?: string;
   children?: CoreScopeProps[];
   values?: { [key: string]: CoreValueProps<any> };
+  /** set by CoreScope.clone() on a replica's own props; read during init() */
+  cloned?: boolean;
 }
 
 export class CoreScope {
@@ -30,6 +35,7 @@ export class CoreScope {
   constructor(props: CoreScopeProps, context: CoreContext, parent?: CoreScope) {
     this.props = props;
     this.ctx = context;
+    this.cloned = !!props.cloned;
     this.children = [];
     this.cache = new Map();
     this.values = {};
@@ -59,7 +65,9 @@ export class CoreScope {
         val: (key: string) => this.lookup(key),
       });
       this.values[RT_PARENT_VALUE_KEY] = this.newValue(RT_PARENT_VALUE_KEY, {
-        val: () => this.parent?.proxy,
+        // a direct value, not `exp`/a callable: parent is already fixed by
+        // this point (linked above, before init()) and never changes again
+        val: this.parent?.proxy,
       });
     }
     props.children?.forEach((p) => context.newScope(p, context, this));
@@ -150,6 +158,8 @@ export class CoreScope {
       return;
     }
 
+    const alias = (that.values[RT_FOR_AS_VALUE]?.get() as string) || FOR_DATA_DEFAULT_NAME;
+
     let offset = 0, length = vv.length;
     try {
       if (that.values[RT_FOR_OFFSET_VALUE]) {
@@ -166,29 +176,28 @@ export class CoreScope {
     length < 0 && (length = vv.length);
     (offset + length) >= vv.length && (length = vv.length - offset);
 
+    // the original scope always binds to the window's first item (matching
+    // its position as the first instance in source order); clones cover the
+    // rest, in source order, and are created/updated/removed below
+    that.values[alias].set(length > 0 ? vv[offset] : null);
+
     // create/update clones
-    let ci = 0, di = offset;
+    let ci = 0, di = offset + 1;
     that.clones || (that.clones = []);
-    for (; di < (offset + length - 1); ci++, di++) {
+    for (; di < offset + length; ci++, di++) {
       if (ci < that.clones.length) {
         // update
-        that.clones[ci].proxy[RT_FOR_DATA_VALUE] = vv[di];
+        that.clones[ci].proxy[alias] = vv[di];
       } else {
         // create
         const clone = that.clone(ci);
-        clone.values[RT_FOR_DATA_VALUE].props.val = vv[di];
+        clone.values[alias].set(vv[di]);
         that.ctx.refresh(clone);
       }
     }
 
     // remove excess clones
     CoreScope.removeExcessClones(that, Math.max(0, length - 1));
-    // refine data for the original scope
-    if (di < (offset + length)) {
-      that.values[RT_FOR_DATA_VALUE].props.val = vv[di];
-    } else {
-      that.values[RT_FOR_DATA_VALUE].props.val = null;
-    }
   }
 
   static removeExcessClones(that: CoreScope, i: number) {
@@ -204,8 +213,8 @@ export class CoreScope {
       // name: this.props.name,
       children: this.props.children,
       values: this.props.values,
+      cloned: true,
     }, this.ctx, this);
-    clone.cloned = true;
     this.clones!.push(clone);
     return clone;
   }

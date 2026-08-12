@@ -29,6 +29,14 @@ export class WebScope extends CoreScope {
   declare dom: Element;
   declare texts: Text[];
   declare domListeners?: { name: string; listener: EventListener }[];
+  // the <template> this scope's stencil lives inside, if any -- also set
+  // during init(), so it needs the same `declare` treatment as above
+  declare templateEl?: Element;
+  // set by clone() right before constructing a new clone scope, so that
+  // clone's own init() (running during its super()) can pick up the DOM
+  // node clone() already resolved for it; not itself touched during any
+  // super() call, so it needs no such declare treatment
+  private pendingCloneDom?: Element;
 
   constructor(props: CoreScopeProps, context: WebContext, parent?: CoreScope) {
     super(props, context, parent);
@@ -37,9 +45,9 @@ export class WebScope extends CoreScope {
   override init() {
     super.init();
     this.texts = [];
-    const parentView =
-      this.parent instanceof WebScope ? this.parent.dom : undefined;
-    const view = this.lookupView(parentView);
+    const view = this.cloned
+      ? (this.parent as WebScope)?.pendingCloneDom
+      : this.lookupView(this.parent instanceof WebScope ? this.parent.dom : undefined);
     if (!view) {
       // Root scope or other scopes without corresponding DOM elements
       // should not try to perform DOM operations
@@ -80,19 +88,22 @@ export class WebScope extends CoreScope {
       parentView ?? (this.ctx.props as WebContextProps).doc;
     if (!container) return undefined;
     const childNodesOf = (e: Element | Document): NodeList =>
-      (e as Element).tagName === "TEMPLATE"
+      (e as Element).tagName === 'TEMPLATE'
         ? (e as unknown as TemplateElement).content.childNodes
         : e.childNodes;
-    const lookup = (childNodes: NodeList): Element | undefined => {
+    const lookup = (childNodes: NodeList, template?: Element): Element | undefined => {
       for (const n of childNodes) {
         if (n.nodeType !== NodeType.ELEMENT) continue;
         const e = n as Element;
         const v = e.getAttribute(DOM_ID_ATTR);
         if (v !== null) {
-          if (v === id) return e;
+          if (v === id) {
+            this.templateEl = template;
+            return e;
+          }
           continue;
         }
-        const ret = lookup(childNodesOf(e));
+        const ret = lookup(childNodesOf(e), e.tagName === 'TEMPLATE' ? e : template);
         if (ret) return ret;
       }
       return undefined;
@@ -105,6 +116,9 @@ export class WebScope extends CoreScope {
       this.dom?.removeEventListener(name, listener);
     });
     this.domListeners = [];
+    // a stencil's own dom (inside a <template>) has no parentElement (a
+    // DocumentFragment isn't an Element), so this is a no-op for it
+    this.dom?.parentElement?.removeChild(this.dom);
     super.dispose();
   }
 
@@ -213,13 +227,47 @@ export class WebScope extends CoreScope {
     return s.replace(/([a-z][A-Z])/g, (g) => g[0] + "-" + g[1].toLowerCase());
   }
 
-  override clone(ci: number): WebScope {
-    const ret = super.clone(ci) as WebScope;
+  override clone(index: number): WebScope {
+    // resolved before construction, so the clone's own init() (running
+    // during super()) can pick it up via pendingCloneDom
+    this.pendingCloneDom = this.acquireCloneDom(`${this.props.id}#${index}`);
+    const clone = super.clone(index) as WebScope;
+    this.pendingCloneDom = undefined;
+    return clone;
+  }
 
-    //FIXME
-    ret.dom = this.dom;
-    ret.texts = this.texts;
+  /**
+   * Finds an already-existing element for a clone id (e.g. one SSR already
+   * rendered) among the template's siblings, reusing it if present; failing
+   * that, stamps out a new one from the template's stencil and inserts it
+   * right after the last existing clone (or the template itself, if this is
+   * the first). Returns undefined if this scope has no template to clone
+   * from at all (e.g. a scope with no matching DOM element in the first
+   * place, or one whose :for-each host never resolved one).
+   */
+  private acquireCloneDom(id: string): Element | undefined {
+    const anchor = this.templateEl;
+    const container = anchor?.parentElement;
+    if (!anchor || !container) return undefined;
 
-    return ret;
+    const siblings = [...container.childNodes];
+    const existing = siblings.find(
+      n => n.nodeType === NodeType.ELEMENT && (n as Element).getAttribute(DOM_ID_ATTR) === id
+    ) as Element | undefined;
+    if (existing) return existing;
+
+    const stencil = [...(anchor as unknown as TemplateElement).content.childNodes].find(
+      n => n.nodeType === NodeType.ELEMENT
+    ) as Element | undefined;
+    if (!stencil) return undefined;
+
+    const node = stencil.cloneNode(true) as unknown as Element;
+    node.setAttribute(DOM_ID_ATTR, id);
+    const prevClone = this.clones?.at(-1) as WebScope | undefined;
+    const ref = prevClone?.dom ?? anchor;
+    const refIndex = siblings.indexOf(ref);
+    const insertBeforeNode = refIndex >= 0 ? siblings[refIndex + 1] ?? null : null;
+    container.insertBefore(node, insertBeforeNode);
+    return node;
   }
 }

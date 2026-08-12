@@ -60,7 +60,7 @@ describe('stage4-resolve', () => {
     const value = addValue(scope, 'x', 'this.count + 1');
 
     stage4resolve(page);
-    expect(value.deps).toStrictEqual([{ viaParent: false, key: 'count' }]);
+    expect(value.deps).toStrictEqual([{ key: 'count' }]);
   });
 
   it('should record a this.$parent.foo reference as a parent dependency', () => {
@@ -68,7 +68,17 @@ describe('stage4-resolve', () => {
     const value = addValue(scope, 'x', 'this.$parent.count + 1');
 
     stage4resolve(page);
-    expect(value.deps).toStrictEqual([{ viaParent: true, key: 'count' }]);
+    expect(value.deps).toStrictEqual([{ via: '$parent', key: 'count' }]);
+  });
+
+  it('should record a this.foo.bar reference as a named-scope dependency when foo is a known :aka scope', () => {
+    const scope = new Scope(page, page.global);
+    const namedScope = new Scope(page, page.global, undefined, 'foo');
+    page.defines.set('foo', namedScope);
+    const value = addValue(scope, 'x', 'this.foo.bar + 1');
+
+    stage4resolve(page);
+    expect(value.deps).toStrictEqual([{ via: 'foo', key: 'bar' }]);
   });
 
   it('should dedupe repeated references to the same dependency', () => {
@@ -76,7 +86,7 @@ describe('stage4-resolve', () => {
     const value = addValue(scope, 'x', 'this.count + this.count * 2');
 
     stage4resolve(page);
-    expect(value.deps).toStrictEqual([{ viaParent: false, key: 'count' }]);
+    expect(value.deps).toStrictEqual([{ key: 'count' }]);
   });
 
   it('should record multiple distinct dependencies', () => {
@@ -86,8 +96,8 @@ describe('stage4-resolve', () => {
     stage4resolve(page);
     expect(value.deps).toEqual(
       expect.arrayContaining([
-        { viaParent: false, key: 'a' },
-        { viaParent: true, key: 'b' },
+        { key: 'a' },
+        { via: '$parent', key: 'b' },
       ])
     );
     expect(value.deps).toHaveLength(2);
@@ -116,8 +126,8 @@ describe('stage4-resolve', () => {
     stage4resolve(page);
     expect(value.deps).toEqual(
       expect.arrayContaining([
-        { viaParent: false, key: 'items' },
-        { viaParent: false, key: 'offset' },
+        { key: 'items' },
+        { key: 'offset' },
       ])
     );
     expect(value.deps).toHaveLength(2);
@@ -131,7 +141,7 @@ describe('stage4-resolve', () => {
     scope.textValues.set('t$0', textValue);
 
     stage4resolve(page);
-    expect(textValue.deps).toStrictEqual([{ viaParent: false, key: 'count' }]);
+    expect(textValue.deps).toStrictEqual([{ key: 'count' }]);
   });
 
   it('should recurse into child scopes', () => {
@@ -140,6 +150,6 @@ describe('stage4-resolve', () => {
     const value = addValue(child, 'x', 'this.count');
 
     stage4resolve(page);
-    expect(value.deps).toStrictEqual([{ viaParent: false, key: 'count' }]);
+    expect(value.deps).toStrictEqual([{ key: 'count' }]);
   });
 });
