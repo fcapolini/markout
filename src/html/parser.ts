@@ -533,12 +533,18 @@ function parseAtomicText(
       break;
     }
     const exp = parseExpression(src, j1, errors);
-    j1 = exp.end;
-    j1 = skipBlanks(s, j1);
-    if (s.charCodeAt(j1) === REXP) {
-      j1++;
-    }
+    j1 = skipBlanks(s, exp.end);
+    // an expression not followed by `}` is malformed; without saying so the
+    // leftover source would just spill into the page as literal text
+    const terminated = s.charCodeAt(j1) === REXP;
+    terminated && j1++;
     exps.push(exp);
+    if (!terminated) {
+      errors.push(
+        new PageError('error', 'Unterminated expression', src.loc(j1, j1))
+      );
+      break;
+    }
   }
   // ensure first expression is a string literal so '+' will mean concatenation
   if (exps[0].type !== 'Literal' || typeof exps[0].value !== 'string') {
@@ -624,12 +630,17 @@ function parseSplittableText(
       break;
     }
     const exp = parseExpression(src, j1, errors);
-    j1 = exp.end;
-    j1 = skipBlanks(s, j1);
-    if (s.charCodeAt(j1) === REXP) {
-      j1++;
-    }
+    j1 = skipBlanks(s, exp.end);
+    // see parseAtomicText: a missing `}` must be reported, not walked past
+    const terminated = s.charCodeAt(j1) === REXP;
+    terminated && j1++;
     p.appendChild(new dom.ServerText(p.ownerDocument, exp, src.loc(j0, j1)));
+    if (!terminated) {
+      errors.push(
+        new PageError('error', 'Unterminated expression', src.loc(j1, j1))
+      );
+      break;
+    }
   }
 }
 
@@ -642,18 +653,56 @@ function parseExpression(
   let s = src.s;
   len && (s = s.substring(0, len));
   try {
+    // `preserveParens` keeps any wrapping parentheses inside the parsed
+    // node's own range. Without it acorn reports the INNER expression's end,
+    // so `${(1 + 2)}` leaves the caller looking at `)` where it expects `}`
     const exp = acorn.parseExpressionAt(s, i1, {
       ecmaVersion: 'latest',
       sourceType: 'script',
       locations: true,
       sourceFile: src.fname,
+      preserveParens: true,
     });
-    return exp;
+    return unwrapParens(exp);
   } catch (err) {
     errors.push(new PageError('error', `${err}`, src.loc(i1, i1)));
     // abort parsing
     throw new ParseAbort();
   }
+}
+
+/**
+ * `ParenthesizedExpression` is an acorn extension, not ESTree: estraverse has
+ * no visitor keys for it and escodegen couldn't print it. Now that the
+ * outermost one has told us where the expression really ends, drop the
+ * wrappers again -- keeping that range on the expression itself, since that's
+ * what the caller reads to find the closing `}`.
+ */
+function unwrapParens(exp: acorn.Expression): acorn.Expression {
+  const { start, end, loc } = exp;
+  const inner = stripParens(exp) as acorn.Expression;
+  inner.start = start;
+  inner.end = end;
+  loc && (inner.loc = loc);
+  return inner;
+}
+
+function stripParens(node: any): any {
+  if (Array.isArray(node)) {
+    for (let i = 0; i < node.length; i++) {
+      node[i] = stripParens(node[i]);
+    }
+    return node;
+  }
+  if (node && typeof node === 'object' && typeof node.type === 'string') {
+    if (node.type === 'ParenthesizedExpression') {
+      return stripParens(node.expression);
+    }
+    for (const key of Object.keys(node)) {
+      key === 'loc' || (node[key] = stripParens(node[key]));
+    }
+  }
+  return node;
 }
 
 // =============================================================================
