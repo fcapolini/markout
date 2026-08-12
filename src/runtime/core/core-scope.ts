@@ -176,13 +176,12 @@ export class CoreScope {
     length < 0 && (length = vv.length);
     (offset + length) >= vv.length && (length = vv.length - offset);
 
-    // the original scope always binds to the window's first item (matching
-    // its position as the first instance in source order); clones cover the
-    // rest, in source order, and are created/updated/removed below
-    that.values[alias].set(length > 0 ? vv[offset] : null);
-
-    // create/update clones
-    let ci = 0, di = offset + 1;
+    // every item becomes a clone -- the host scope's own element lives
+    // inside an inert <template> stencil (see WebScope), so it can never
+    // itself be a visible instance; this also means an empty/absent array
+    // naturally results in zero visible replicas, with no separate
+    // "hide the host" step needed
+    let ci = 0, di = offset;
     that.clones || (that.clones = []);
     for (; di < offset + length; ci++, di++) {
       if (ci < that.clones.length) {
@@ -197,7 +196,7 @@ export class CoreScope {
     }
 
     // remove excess clones
-    CoreScope.removeExcessClones(that, Math.max(0, length - 1));
+    CoreScope.removeExcessClones(that, length);
   }
 
   static removeExcessClones(that: CoreScope, i: number) {

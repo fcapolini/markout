@@ -38,13 +38,14 @@ describe('replication: DOM cloning/reuse', () => {
     const liTags = ul.childNodes.filter((n: any) => n.tagName === 'TEMPLATE' || n.tagName === 'LI');
 
     assert.equal(liTags[0].tagName, 'TEMPLATE');
-    assert.equal(liTags.length, 3, 'template + 2 real clone <li>s');
-    assert.equal(host.clones?.length, 2);
+    assert.equal(liTags.length, 4, 'template stencil + 3 real clone <li>s');
+    assert.equal(host.clones?.length, 3);
   });
 
   it('reuses an already-present element by id instead of creating a new one', () => {
-    // simulates SSR: the second <li> already exists in the document,
-    // stamped with the id clone(0) would use
+    // simulates SSR: the FIRST <li> already exists in the document,
+    // stamped with the id clone(0) would use (the host's own stencil
+    // never represents item 0 -- clone(0) always covers it)
     const html =
       '<html data-markout="0"><ul>' +
       '<template><li data-markout="1"></li></template>' +
@@ -60,7 +61,7 @@ describe('replication: DOM cloning/reuse', () => {
         id: '0',
         values: {},
         children: [
-          { id: '1', values: { [RT_FOR_EACH_VALUE]: { val: [10, 20] }, data: {} } },
+          { id: '1', values: { [RT_FOR_EACH_VALUE]: { val: [10] }, data: {} } },
         ],
       },
     }).refresh();
@@ -78,13 +79,13 @@ describe('replication: DOM cloning/reuse', () => {
         { id: '1', values: { [RT_FOR_EACH_VALUE]: { val: [10, 20] }, data: {} } },
       ],
     });
-    assert.equal(host.clones?.length, 1);
+    assert.equal(host.clones?.length, 2);
 
     host.proxy[RT_FOR_EACH_VALUE] = [10, 20, 30, 40];
-    assert.equal(host.clones?.length, 3);
+    assert.equal(host.clones?.length, 4);
 
     const markup = source.doc.toString().replace(/ data-markout="[^"]*"/g, '');
-    assert.equal(markup.match(/<li>/g)?.length, 4, 'template stencil + 3 real clones');
+    assert.equal(markup.match(/<li>/g)?.length, 5, 'template stencil + 4 real clones');
   });
 
   it('removes a clone\'s DOM element when the array shrinks', () => {
@@ -95,9 +96,26 @@ describe('replication: DOM cloning/reuse', () => {
         { id: '1', values: { [RT_FOR_EACH_VALUE]: { val: [10, 20, 30] }, data: {} } },
       ],
     });
-    assert.equal(host.clones?.length, 2);
+    assert.equal(host.clones?.length, 3);
 
     host.proxy[RT_FOR_EACH_VALUE] = [10];
+    assert.equal(host.clones?.length, 1);
+
+    const markup = source.doc.toString().replace(/ data-markout="[^"]*"/g, '');
+    assert.equal(markup.match(/<li>/g)?.length, 2, 'inert stencil + the one remaining real clone');
+  });
+
+  it('removes ALL clones when the array becomes null/undefined, leaving nothing visible', () => {
+    const { source, host } = setup({
+      id: '0',
+      values: {},
+      children: [
+        { id: '1', values: { [RT_FOR_EACH_VALUE]: { val: [10, 20, 30] }, data: {} } },
+      ],
+    });
+    assert.equal(host.clones?.length, 3);
+
+    host.proxy[RT_FOR_EACH_VALUE] = null;
     assert.equal(host.clones?.length, 0);
 
     const markup = source.doc.toString().replace(/ data-markout="[^"]*"/g, '');
@@ -120,7 +138,9 @@ describe('replication: DOM cloning/reuse', () => {
       ],
     });
 
-    assert.equal(host.proxy.item, 'a');
-    assert.equal((host.clones![0] as WebScope).proxy.item, 'b');
+    assert.deepEqual(
+      (host.clones as WebScope[]).map(c => c.proxy.item),
+      ['a', 'b']
+    );
   });
 });

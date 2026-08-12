@@ -133,28 +133,33 @@ A scope whose `values` include `for$each` (`RT_FOR_EACH_VALUE`) is a
 push/pull machinery like any other value with a callback — several array
 changes within one batch still only reconcile once.
 
-`foreachCB` computes the effective `(offset, length)` window (from
-`for$offset`/`for$length`, if present), then binds items across the host
-scope and *clones*:
+The host scope's own compiled element is turned into an inert `<template>`
+stencil at compile time (see below), so it's never itself a visible
+instance — in a real browser, `<template>` content isn't part of the
+rendered document at all, not just hidden. `foreachCB` reflects that:
+*every* item, including the first, is represented by a **clone**
+(`CoreScope.clone(index)`), never by the host directly. Concretely:
 
-- the **host scope's own** per-item value (named `data` by default, or
-  whatever `:for-as` renamed it to) is set directly to the *first* item in
-  the window — the host is never a separate "extra" instance, it's simply
-  where item 0 lives;
-- one **clone** (`CoreScope.clone(index)`) is created/updated/removed per
-  remaining item. A clone is a full scope reusing the host's own
+- `foreachCB` computes the effective `(offset, length)` window (from
+  `for$offset`/`for$length`, if present), then creates/updates/removes one
+  clone per item in that window, binding each clone's own per-item value
+  (named `data` by default, or whatever `:for-as` renamed it to) to its
+  item;
+- a clone is a full scope reusing the host's own
   `props.values`/`props.children` (so it gets independent `CoreValue`s
   from the exact same declarations), with id `${hostId}#${index}` and
   `cloned: true` set on its props — read into `this.cloned` as the very
   first constructor statement, before `init()` runs, so a subclass can
   already tell it's building a clone while constructing it.
   `foreachCB` returns early for a scope with `this.cloned` set: only the
-  host scope drives reconciliation, clones ignore their own `for$each`.
+  host scope drives reconciliation, clones ignore their own `for$each`;
 - shrinking the array disposes excess clones (`removeExcessClones`) the
-  same way any scope teardown works (`dispose()`).
+  same way any scope teardown works (`dispose()`); an empty/null/undefined
+  array simply means zero clones, with no separate "hide the host" step
+  needed, since the host was never visible to begin with.
 
 The DOM-specific half of this — turning a for-each host's own compiled
-element into an inert `<template>` stencil, and turning `clone()` into
+element into that inert `<template>` stencil, and turning `clone()` into
 "reuse an already-present element by id, or `cloneNode(true)` the stencil
 and insert it" — lives in `WebScope` (see
 [web-scope.ts](../web/web-scope.ts)). Because SSR

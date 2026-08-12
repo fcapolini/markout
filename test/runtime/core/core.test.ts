@@ -262,7 +262,7 @@ it(`should call value callback (2)`, () => {
 //   });
 // });
 
-it(`replicates a scope for each array item, first item on the host itself`, () => {
+it(`replicates a scope for each array item as clones -- the host itself never represents one`, () => {
   const context = new CoreContext({
     root: {
       id: '0',
@@ -273,15 +273,14 @@ it(`replicates a scope for each array item, first item on the host itself`, () =
     },
   }).refresh();
 
-  assert.equal(context.root.proxy.data, 10);
-  assert.equal(context.root.clones?.length, 2);
+  assert.equal(context.root.clones?.length, 3);
   assert.deepEqual(
     context.root.clones?.map(c => c.proxy.data),
-    [20, 30]
+    [10, 20, 30]
   );
 });
 
-it(`treats null/undefined as zero items, removing any existing clones`, () => {
+it(`treats null/undefined as zero items, removing all clones`, () => {
   const context = new CoreContext({
     root: {
       id: '0',
@@ -291,17 +290,10 @@ it(`treats null/undefined as zero items, removing any existing clones`, () => {
       },
     },
   }).refresh();
-  assert.equal(context.root.clones?.length, 2);
+  assert.equal(context.root.clones?.length, 3);
 
   context.root.proxy[RT_FOR_EACH_VALUE] = null;
   assert.equal(context.root.clones?.length, 0);
-  // KNOWN GAP: the host's own per-item value is never reset (stays 1, the
-  // last real item) when the array becomes null/undefined -- foreachCB's
-  // "not an array" branch only removes clones, it never touches the
-  // host's own alias value or hides the host's own DOM contribution. The
-  // language rule ("null/undefined means zero elements, nothing rendered")
-  // isn't actually honored for the host's own instance yet.
-  assert.equal(context.root.proxy.data, 1);
 });
 
 it(`grows and shrinks clones as the array changes, reusing existing ones in place`, () => {
@@ -317,12 +309,12 @@ it(`grows and shrinks clones as the array changes, reusing existing ones in plac
   const firstClone = context.root.clones![0];
 
   context.root.proxy[RT_FOR_EACH_VALUE] = [1, 2, 3, 4, 5];
-  assert.equal(context.root.clones?.length, 4);
+  assert.equal(context.root.clones?.length, 5);
   assert.equal(context.root.clones![0], firstClone, 'existing clone identity is reused, not recreated');
 
   context.root.proxy[RT_FOR_EACH_VALUE] = [1];
-  assert.equal(context.root.clones?.length, 0);
-  assert.equal(context.root.proxy.data, 1);
+  assert.equal(context.root.clones?.length, 1);
+  assert.equal(context.root.clones![0].proxy.data, 1);
 });
 
 it(`honors a custom :for-as-style alias name`, () => {
@@ -337,10 +329,9 @@ it(`honors a custom :for-as-style alias name`, () => {
     },
   }).refresh();
 
-  assert.equal(context.root.proxy.item, 'a');
   assert.deepEqual(
     context.root.clones?.map(c => c.proxy.item),
-    ['b']
+    ['a', 'b']
   );
 });
 
