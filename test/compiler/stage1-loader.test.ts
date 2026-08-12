@@ -503,6 +503,18 @@ describe('stage1-loader', () => {
       expect(defScope.values.has('class$active')).toBe(true);
     });
 
+    it('registers a static definition without special attributes', () => {
+      const page = runLoaderFromMarkup(
+        `<html><head><:define tag="site-nav:nav" class="navbar">Navigation</:define></head>` +
+        `<body><site-nav></site-nav></body></html>`
+      );
+      expect(page.errors).toStrictEqual([]);
+      const defScope = page.customTags.get('site-nav')!;
+      expect(defScope.e?.tagName).toBe('NAV');
+      expect(page.definitionScopes.has(defScope)).toBe(true);
+      expect(page.main!.children.some(c => c.usesTemplate === defScope.id)).toBe(true);
+    });
+
     it('places a usage instance as a direct child of the root page scope', () => {
       const page = runLoaderFromMarkup(
         `<html><head><:define tag="theme-switcher:button" :class-active>Switch</:define></head>` +

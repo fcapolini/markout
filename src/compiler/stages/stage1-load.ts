@@ -67,7 +67,8 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
   if (tagName === 'HTML') name = 'page';
   if (tagName === 'HEAD') name = 'head';
   if (tagName === 'BODY') name = 'body';
-  const scope = name || needsScope(e) ? new Scope(page, parent, e, name) : parent;
+  const isDefinition = e.getAttribute(DEFINE_NAME_MARKER) !== null;
+  const scope = name || isDefinition || needsScope(e) ? new Scope(page, parent, e, name) : parent;
   if (scope.e === e) {
     // so WebScope.lookupView() can find this element's DOM node at runtime
     e.setAttribute(DOM_ID_ATTR, scope.id);
