@@ -1,10 +1,13 @@
 {
   "name": "markout",
   "version": "0.4.0",
-  "description": "",
+  "description": "HTML-first reactive web framework: lexically scoped values on the DOM tree, compile-time dependency extraction, and isomorphic SSR",
   "bin": {
     "markout": "dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json && npm run build:runtime",
     "build:runtime": "node scripts/build-runtime.mjs",
@@ -15,9 +18,19 @@
     "test-coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "html",
+    "reactive",
+    "web-framework",
+    "framework",
+    "ssr",
+    "isomorphic",
+    "hydration",
+    "templating",
+    "compiler"
+  ],
+  "author": "Fabrizio Capolini <fabrizio.capolini@gmail.com>",
+  "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
     "@types/escodegen": "^0.0.10",
