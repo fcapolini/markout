@@ -3,6 +3,7 @@ import type { Node } from 'estree';
 import { PageError } from '../../html/parser';
 import type { Page } from '../ir/Page';
 import {
+  ATTR_VALUE_PREFIX,
   CLASS_VALUE_ATTR_PREFIX,
   CLASS_VALUE_PREFIX,
   DID_VALUE_ATTR_PREFIX,
@@ -27,6 +28,7 @@ import { Value } from '../ir/Value';
 // invalid; strip a known prefix (compiled or raw, the latter for values
 // built outside of stage1) before checking for a user-introduced '$'.
 const KNOWN_VALUE_PREFIXES = [
+  ATTR_VALUE_PREFIX,
   CLASS_VALUE_PREFIX,
   STYLE_VALUE_PREFIX,
   EVENT_VALUE_PREFIX,

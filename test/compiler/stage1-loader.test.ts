@@ -555,6 +555,16 @@ describe('stage1-loader', () => {
       );
     });
 
+    it('compiles dynamic usage plain attributes into attribute values', () => {
+      const page = runLoaderFromMarkup(
+        '<html :navId=${"main-nav"}><head><:define tag="site-nav:nav" id="default-nav">Navigation</:define></head>' +
+        '<body><site-nav id=${navId}></site-nav></body></html>'
+      );
+      const usage = page.main!.children.find(c => c.usesTemplate)!;
+      expect(usage.attributes).toEqual(new Map());
+      expect(usage.values.get('attr$id')!.value).toMatchObject({ type: 'Identifier', name: 'navId' });
+    });
+
     it('replaces the usage element with a comment marker in the DOM', () => {
       const page = runLoaderFromMarkup(
         `<html><head><:define tag="theme-switcher:button" :class-active>Switch</:define></head>` +

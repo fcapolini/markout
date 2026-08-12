@@ -37,7 +37,7 @@ describe('custom tags: usage-site DOM instantiation', () => {
           id: 'use',
           template: 'def',
           attributes: { class: 'override', id: 'instance' },
-          values: { 'class$active': { val: true } },
+          values: { 'class$active': { val: true }, 'attr$id': { val: 'dynamic-instance' } },
         },
       ],
     });
@@ -49,7 +49,7 @@ describe('custom tags: usage-site DOM instantiation', () => {
     assert.notInclude(button.className, 'action');
     assert.include(button.className, 'override');
     assert.include(button.className, 'active');
-    assert.equal(button.getAttribute('id'), 'instance');
+    assert.equal(button.getAttribute('id'), 'dynamic-instance');
     // the marker comment is gone, replaced in place
     const stillHasMarker = body.childNodes.some(
       (n: any) => n.nodeType === 8 && n.textContent === '-uuse'

@@ -21,6 +21,7 @@ import {
   WILL_VALUE_ATTR_PREFIX,
   CLASS_VALUE_PREFIX,
   STYLE_VALUE_PREFIX,
+  ATTR_VALUE_PREFIX,
   EVENT_VALUE_PREFIX,
   DID_VALUE_PREFIX,
   WILL_VALUE_PREFIX,
@@ -233,12 +234,17 @@ function expandCustomTagUsages(page: Page): void {
     scope.textValues = defScope.textValues;
     scope.children = defScope.children;
     scope.usesTemplate = defScope.id;
-    scope.attributes = new Map(
-      usageEl
-        .getAttributeNames()
-        .filter(name => !name.startsWith(SPECIAL_ATTR_PREFIX) && name !== DOM_ID_ATTR)
-        .map(name => [name, usageEl.getAttribute(name)])
-    );
+    scope.attributes = new Map();
+    for (const name of usageEl.getAttributeNames()) {
+      if (name.startsWith(SPECIAL_ATTR_PREFIX) || name === DOM_ID_ATTR) continue;
+      const attr = usageEl.getAttributeNode(name) as ServerAttribute | null;
+      if (attr && typeof attr.value !== 'string' && attr.value !== null) {
+        const valueName = `${ATTR_VALUE_PREFIX}${name}`;
+        scope.values.set(valueName, new Value(valueName, attr, scope, page.createValueId()));
+        continue;
+      }
+      scope.attributes.set(name, usageEl.getAttribute(name));
+    }
     if (loadedUsageScope) {
       scope.name = loadedUsageScope.name;
       for (const [name, value] of loadedUsageScope.values) {
