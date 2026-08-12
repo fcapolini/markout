@@ -97,6 +97,32 @@ describe('text$', () => {
     '<!---t0-->&#8203;<!---/--> <!---t1-->&#8203;<!---/-->' +
     '</body></html>';
 
+  it('binds by the id the marker carries, not by document order', () => {
+    // the whole point of putting an id in the marker: a binding must not
+    // depend on how many markers happen to precede it, or anything that
+    // inserts or reorders markup in a scope's territory (slotted content,
+    // above all) silently shifts every later binding onto the wrong node
+    const { context, markup } = setup(
+      '<html data-markout="0"><body>' +
+        '<!---t1-->&#8203;<!---/--> <!---t0-->&#8203;<!---/-->' +
+        '</body></html>',
+      { id: '0', values: { text$0: { val: 'zero' }, text$1: { val: 'one' } } }
+    );
+    assert.include(markup(), '<!---t1-->one<!---/--> <!---t0-->zero<!---/-->');
+    context.root.proxy.text$0 = 'changed';
+    assert.include(markup(), '<!---t0-->changed<!---/-->');
+  });
+
+  it('leaves a binding alone when its id is absent from the DOM', () => {
+    const { context, markup } = setup(
+      '<html data-markout="0"><body><!---t0-->&#8203;<!---/--></body></html>',
+      { id: '0', values: { text$0: { val: 'a' }, text$7: { val: 'b' } } }
+    );
+    context.root.proxy.text$7 = 'c';
+    assert.include(markup(), '<!---t0-->a<!---/-->');
+    assert.notInclude(markup(), 'c<');
+  });
+
   it('addresses marked text nodes by index', () => {
     const { context, markup } = setup(MARKED, {
       id: '0',
@@ -107,12 +133,13 @@ describe('text$', () => {
     assert.include(markup(), '<!---t1-->c<!---/-->');
   });
 
-  it('addresses an atomic-text container (<style>/<title>) directly, unmarked', () => {
-    // <style>'s whole interpolated content is one marker-less text child
-    // (see parser.ts's parseAtomicText); text$0 here is head's own first
-    // (and only) text value, resolved via style's container, not a marker
+  it('reads through a marker sitting before an atomic-text container', () => {
+    // <style>'s whole interpolated content is one text child, and a comment
+    // can't survive inside a raw text element -- so stage1 puts the marker
+    // immediately BEFORE the container and the binding reads through to it
     const { context, markup } = setup(
-      '<html data-markout="0"><head data-markout="1"><style>placeholder</style></head></html>',
+      '<html data-markout="0"><head data-markout="1">' +
+        '<!---t0--><style>placeholder</style></head></html>',
       {
         id: '0',
         values: {},

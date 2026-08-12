@@ -140,13 +140,16 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
       const id = scope.textCount++;
       const name = `${TEXT_VALUE_PREFIX}${id}`;
       scope.textValues.set(name, new Value(name, text, scope, page.createValueId()));
-      // atomic-text containers (<style>/<title>) always hold exactly this
-      // one text child (see parser.ts's parseAtomicText) -- comments can't
-      // survive as siblings inside them (raw text elements, HTML spec
-      // 13.2.5.1), so markers would corrupt the served content and desync
-      // WebScope's marker-scanned text index; WebScope locates it directly
-      // via the container instead (see web-scope.ts's init())
+      // atomic-text containers (<style>/<title>) always hold exactly this one
+      // text child (see parser.ts's parseAtomicText), and comments can't
+      // survive inside them (raw text elements, HTML spec 13.2.5.1) -- so the
+      // marker goes immediately BEFORE the container, in the same scope's
+      // territory, and WebScope reads through to the child (see init())
       if (ATOMIC_TEXT_TAGS.has(e.tagName)) {
+        e.parentElement?.insertBefore(
+          new ServerComment(e.ownerDocument, `${DOM_TEXT_MARKER1}${id}`, text.loc),
+          e
+        );
         continue;
       }
       // `-` prefixed, like a triple-dash "private" comment (see
@@ -448,7 +451,6 @@ function slotUsage(
     defScope,
     scope,
     loadedUsageScope ?? scope.parent!,
-    !loadedUsageScope,
     stencil,
     children as ServerNode[]
   );
@@ -474,7 +476,6 @@ function rehomeSlottedText(
   defScope: Scope,
   scope: Scope,
   callScope: Scope,
-  rekeyCallScope: boolean,
   stencil: ServerElement,
   moved: ServerNode[]
 ): void {
@@ -491,38 +492,37 @@ function rehomeSlottedText(
   scope.callSiteValues ??= new Set();
   let index = 0;
   for (const { marker, text } of orderedTexts(stencil)) {
-    const key = `${TEXT_VALUE_PREFIX}${index++}`;
+    // the definition's ids and the call site's are allocated from separate
+    // counters and would collide here, so the instance gets its own run of
+    // them -- and the marker is rewritten to match, since that id is what
+    // the runtime binds by (see WebScope.init())
+    const id = index++;
+    const key = `${TEXT_VALUE_PREFIX}${id}`;
     const fromCallSite = movedText.get(text);
+    const value =
+      fromCallSite !== undefined
+        ? callScope.textValues.get(fromCallSite)
+        : defScope.textValues.get(
+            // a clone of one of the definition's own still carries the id it
+            // had there, which is the key it kept in defScope
+            `${TEXT_VALUE_PREFIX}${marker.textContent.slice(DOM_TEXT_MARKER1.length)}`
+          );
+    if (!value) continue;
+    marker.textContent = `${DOM_TEXT_MARKER1}${id}`;
+    textValues.set(key, value);
     if (fromCallSite !== undefined) {
-      textValues.set(key, callScope.textValues.get(fromCallSite)!);
       scope.callSiteValues.add(key);
       callScope.textValues.delete(fromCallSite);
-      continue;
     }
-    // a clone of one of the definition's own: its marker still carries the
-    // index it had there, which is the key it kept in defScope
-    const defKey = `${TEXT_VALUE_PREFIX}${marker.textContent.slice(DOM_TEXT_MARKER1.length)}`;
-    const value = defScope.textValues.get(defKey);
-    value && textValues.set(key, value);
   }
   scope.textValues = textValues;
-
-  // only when the text came from a scope that survives: a usage element's
-  // own scope is spliced out of the tree, so nothing is left to re-key
-  if (!rekeyCallScope) return;
-  // the call-site scope's own keys are positional too, so closing the gaps
-  // the moved ones left is not cosmetic
-  const remaining = [...callScope.textValues.values()];
-  callScope.textValues = new Map(
-    remaining.map((value, i) => [`${TEXT_VALUE_PREFIX}${i}`, value])
-  );
-  callScope.textCount = remaining.length;
 }
 
 /**
- * The marker/text pairs of an element's own territory, in the order
- * WebScope.init() collects them -- descending only into elements that don't
- * carry a scope id of their own.
+ * The marker/text pairs of an element's own territory, found the way
+ * WebScope.init() finds them -- descending only into elements that don't
+ * carry a scope id of their own, and reading through an atomic-text
+ * container to the child its preceding marker stands for.
  */
 function orderedTexts(e: ServerElement): { marker: ServerComment; text: ServerText }[] {
   const out: { marker: ServerComment; text: ServerText }[] = [];
@@ -530,17 +530,26 @@ function orderedTexts(e: ServerElement): { marker: ServerComment; text: ServerTe
     const children = [...host.childNodes];
     children.forEach((n, i) => {
       if (n.nodeType === NodeType.ELEMENT) {
-        (n as ServerElement).getAttribute(DOM_ID_ATTR) === null && walk(n as ServerElement);
+        const el = n as ServerElement;
+        el.getAttribute(DOM_ID_ATTR) === null &&
+          !ATOMIC_TEXT_TAGS.has(el.tagName) &&
+          walk(el);
         return;
       }
       if (
-        n.nodeType === NodeType.COMMENT &&
-        `${(n as ServerComment).textContent}`.startsWith(DOM_TEXT_MARKER1)
+        n.nodeType !== NodeType.COMMENT ||
+        !`${(n as ServerComment).textContent}`.startsWith(DOM_TEXT_MARKER1)
       ) {
-        const text = children[i + 1];
-        text?.nodeType === NodeType.TEXT &&
-          out.push({ marker: n as ServerComment, text: text as ServerText });
+        return;
       }
+      const next = children[i + 1];
+      const text =
+        next?.nodeType === NodeType.ELEMENT &&
+        ATOMIC_TEXT_TAGS.has((next as ServerElement).tagName)
+          ? (next as ServerElement).childNodes[0]
+          : next;
+      text?.nodeType === NodeType.TEXT &&
+        out.push({ marker: n as ServerComment, text: text as ServerText });
     });
   };
   walk(e);
