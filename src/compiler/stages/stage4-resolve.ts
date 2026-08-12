@@ -36,10 +36,13 @@ const CALLBACK_VALUE_PREFIXES = [EVENT_VALUE_PREFIX, DID_VALUE_PREFIX, WILL_VALU
  */
 
 export function stage4resolve(page: Page) {
+  // `page.main` is itself one of `page.global`'s children (stage1-load builds
+  // it with global as its parent), so walking it separately would resolve the
+  // whole tree a second time -- harmless for `deps`, which get reassigned, but
+  // it reported every error twice
   for (const child of page.global.children) {
     resolveScope(child, page);
   }
-  page.main && resolveScope(page.main, page);
   return page;
 }
 

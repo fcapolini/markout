@@ -20,10 +20,11 @@ const RT_PARENT_VALUE_KEY = '$parent';
  */
 
 export function stage3qualify(page: Page) {
+  // see stage4-resolve: `page.main` is already among `page.global`'s children,
+  // so walking it separately just qualified everything twice
   for (const child of page.global.children) {
     qualifyScope(child);
   }
-  page.main && qualifyScope(page.main);
   return page;
 }
 
