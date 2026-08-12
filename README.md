@@ -225,6 +225,30 @@ NOTE: since a custom tag is just a tag, the rest of the page stays plain
 HTML: you lift out what is boilerplate and leave your content alone, rather
 than rewriting the page into a template language
 
+## Two decisions, not one
+
+Choosing a framework today usually settles a second question at the same
+time: which UI components you get to use. Ant Design and MUI mean React,
+Vuetify means Vue, PrimeNG means Angular. Teams routinely adopt a framework
+they have no particular opinion about because the component library they
+need exists only there — and from then on neither decision can be revisited
+without the other.
+
+Those are separable concerns. A CSS framework is a markup convention; a web
+component library is a set of custom elements. Neither needs a framework at
+all. What they need is a way to pass values in, set properties that aren't
+strings, and listen to events — which is what `:attr-x`, `:prop-x` and
+`:on-x` are. (It's also why React needed wrapper packages to consume custom
+elements for most of its life.)
+
+So Markout wrapped around Bootstrap, Tailwind or Shoelace keeps both choices
+open: change how the page is put together without touching the components,
+or change the components without touching the logic.
+
+NOTE: the honest cost — the framework-neutral component ecosystem is
+smaller and shallower than React's. Decoupling buys freedom at the price of
+reach, and that trade is only worth it if the components you need exist
+
 ## Replication
 
 ```html
