@@ -24,6 +24,8 @@ export interface CoreScopeProps {
   /** a custom-tag usage instance: the id of the <:define> scope/template it
    * instantiates its DOM from -- DOM-specific, so only WebScope acts on it */
   template?: string;
+  /** plain attributes from a custom-tag usage site, applied to its stencil clone */
+  attributes?: { [key: string]: string };
 }
 
 export class CoreScope {

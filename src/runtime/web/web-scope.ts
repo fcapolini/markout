@@ -104,6 +104,9 @@ export class WebScope extends CoreScope {
 
     const node = stencil.cloneNode(true) as unknown as Element;
     node.setAttribute(DOM_ID_ATTR, id);
+    for (const [name, value] of Object.entries(this.props.attributes ?? {})) {
+      node.setAttribute(name, value);
+    }
     const container = marker.parentElement!;
     container.insertBefore(node, marker);
     container.removeChild(marker);

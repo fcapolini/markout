@@ -100,6 +100,16 @@ function generateScope(scope: Scope): ObjectExpression {
     // named <:define> stencil if no already-rendered element is found
     props.push(property('template', literal(scope.usesTemplate)));
   }
+  if (scope.attributes?.size) {
+    props.push(
+      property(
+        'attributes',
+        objectExpression(
+          [...scope.attributes].map(([name, value]) => valueProperty(name, literal(value ?? '')))
+        )
+      )
+    );
+  }
   props.push(property('values', objectExpression(valueProps)));
   // a <:define> scope is never itself live at its own (natural, nested)
   // position -- only usage-site instances of it are, elsewhere in the tree

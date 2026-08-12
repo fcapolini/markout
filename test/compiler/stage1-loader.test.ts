@@ -529,6 +529,32 @@ describe('stage1-loader', () => {
       expect(usage!.values.has('class$active')).toBe(true);
     });
 
+    it('lets usage logic attributes override definition logic attributes', () => {
+      const page = runLoaderFromMarkup(
+        `<html><head><:define tag="theme-switcher:button" :class-active>Switch</:define></head>` +
+        '<body><theme-switcher :class-active=${false}></theme-switcher></body></html>'
+      );
+      const usage = page.main!.children.find(c => c.usesTemplate)!;
+      expect(usage.values.get('class$active')!.value).toMatchObject({
+        type: 'Literal',
+        value: false,
+      });
+    });
+
+    it('lets usage plain attributes override definition plain attributes', () => {
+      const page = runLoaderFromMarkup(
+        '<html><head><:define tag="site-nav:nav" class="navbar" id="default-nav">Navigation</:define></head>' +
+        '<body><site-nav class="navbar-dark" id="main-nav"></site-nav></body></html>'
+      );
+      const usage = page.main!.children.find(c => c.usesTemplate)!;
+      expect(usage.attributes).toEqual(
+        new Map([
+          ['class', 'navbar-dark'],
+          ['id', 'main-nav'],
+        ])
+      );
+    });
+
     it('replaces the usage element with a comment marker in the DOM', () => {
       const page = runLoaderFromMarkup(
         `<html><head><:define tag="theme-switcher:button" :class-active>Switch</:define></head>` +

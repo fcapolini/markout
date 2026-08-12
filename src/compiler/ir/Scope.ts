@@ -14,6 +14,8 @@ export class Scope {
   name?: string;
   /** set for a custom-tag usage scope: the id of the <:define> scope it instantiates from */
   usesTemplate?: string;
+  /** plain attributes supplied at a custom-tag usage site */
+  attributes?: Map<string, string | null>;
 
   constructor(page: Page, parent?: Scope, e?: ServerElement, name?: string) {
     this.page = page;
