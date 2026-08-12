@@ -320,28 +320,34 @@ describe('stage1-loader', () => {
       expect(loadedScope.values.has('on$item-selected')).toBe(true);
     });
 
+    // reported rather than thrown: an exception would escape the compiler,
+    // and the server can only build its error page from page.errors
     it('should reject a dash in a plain value name', () => {
-      expect(() => runLoaderFromMarkup('<html :my-value="a"></html>')).toThrow(
-        'Invalid name: my-value'
-      );
+      const page = runLoaderFromMarkup('<html :my-value="a"></html>');
+      expect(page.errors.map(e => e.msg)).toStrictEqual(['Invalid name: "my-value"']);
     });
 
     it('should reject a dash in a :did-*/:will-* suffix', () => {
-      expect(() =>
-        runLoaderFromMarkup('<html :did-my-thing=${() => {}}></html>')
-      ).toThrow('Invalid name: my-thing');
+      const page = runLoaderFromMarkup('<html :did-my-thing=${() => {}}></html>');
+      expect(page.errors.map(e => e.msg)).toStrictEqual(['Invalid name: "my-thing"']);
     });
 
     it('should reject a dollar sign even inside a dash-allowed class-/style-/on- suffix', () => {
-      expect(() => runLoaderFromMarkup('<html :class-a$b=${true}></html>')).toThrow(
-        'Invalid name: a$b'
-      );
+      const page = runLoaderFromMarkup('<html :class-a$b=${true}></html>');
+      expect(page.errors.map(e => e.msg)).toStrictEqual(['Invalid name: "a$b"']);
     });
 
     it('should reject a dash in an :aka scope name', () => {
-      expect(() =>
-        runLoaderFromMarkup('<html><body><div :aka="my-name"></div></body></html>')
-      ).toThrow('Invalid name: my-name');
+      const page = runLoaderFromMarkup('<html><body><div :aka="my-name"></div></body></html>');
+      expect(page.errors.map(e => e.msg)).toStrictEqual(['Invalid name: "my-name"']);
+    });
+
+    it('should report every bad name, not just the first', () => {
+      const page = runLoaderFromMarkup('<html :a-b="1"><body :c-d="2"></body></html>');
+      expect(page.errors.map(e => e.msg)).toStrictEqual([
+        'Invalid name: "a-b"',
+        'Invalid name: "c-d"',
+      ]);
     });
 
     it('should remove special attributes from the root element DOM', () => {

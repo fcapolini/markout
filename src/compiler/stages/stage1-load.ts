@@ -812,8 +812,13 @@ function validateName(
   name = name ? `${name}` : '';
   const invalid = allowDash ? /[^a-zA-Z0-9_-]/ : /[^a-zA-Z0-9_]/;
   if (!name || invalid.test(name)) {
+    // recorded, not thrown: an exception escapes the compiler entirely, so
+    // the server answers a bad name with a 500 and a stack trace instead of
+    // the error page it already knows how to build from page.errors. Loading
+    // continues so a page with several bad names reports all of them at
+    // once; nothing downstream runs, since the later stages are skipped
+    // while page.errors is non-empty
     addError(page, `Invalid name: "${name}"`, loc);
-    throw new Error(`Invalid name: ${name}`);
   }
   return name;
 }
