@@ -24,6 +24,9 @@ export function renderPage(page: Page): RuntimeError[] {
     root,
     doc: page.source.doc,
     onError: e => errors.push(e),
+    // property bindings have nothing to write into a served page (see
+    // WebContextProps.server); everything else renders as usual
+    server: true,
   }).refresh();
   return errors;
 }

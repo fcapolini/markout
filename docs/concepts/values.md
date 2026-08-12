@@ -108,11 +108,36 @@ Which of the two you want can't be told from the value, which is why you say
 rather than the compiler guessing: `aria-expanded="false"` is a real and
 required setting, so `aria-expanded=${...}` has to keep writing the string.
 
+### Properties
+
+An attribute can only carry a string. Custom elements often want an object,
+an array or a function instead — a Shoelace-style `<sl-select>` taking its
+options, say. `:prop-x` assigns the JS property directly:
+
+```html
+<sl-select :prop-options=${choices} :prop-maxLength=${3}>...</sl-select>
+```
+
+The name is written exactly as the property is spelled, `maxLength` and all.
+
+This one is **browser-only**, and unavoidably so: a property is state on an
+element instance, not part of the document, so there is nothing a served page
+could carry. Server rendering skips these bindings deliberately — it isn't
+treated as a failure — and they apply when the page runs. Prefer an attribute
+whenever the component mirrors one, and keep `:prop-` for what an attribute
+genuinely can't express, or the affected markup will visibly change on
+hydration.
+
+NOTE: a property set on a custom element *before* it upgrades can be shadowed
+by the class's own accessor and lost. Components built on Lit (Shoelace among
+them) handle this; hand-rolled ones often don't.
+
 ## Special binding prefixes
 
 Some prefixes change how a value behaves at runtime:
 
 - `:attr-x` toggles whether an attribute is present.
+- `:prop-x` assigns an element property (browser-only).
 - `:class-x` toggles a CSS class.
 - `:style-x` writes a CSS property.
 - `:on-x` binds an event handler.

@@ -11,6 +11,7 @@ forms.
 | `${expr}` in CSS | Reactive stylesheet content. |
 | `attr=${expr}` | Reactive plain attribute; no `:` needed. `null`/`undefined` removes it. |
 | `:attr-name=${expr}` | Toggles whether attribute `name` is PRESENT, for boolean/custom-element attributes. |
+| `:prop-name=${expr}` | Assigns the element's JS property `name`, for what an attribute can't carry. Browser-only. |
 
 ## Value and binding directives
 
@@ -19,6 +20,7 @@ forms.
 | `:name=${expr}` | Declares a reactive value on the current scope. |
 | `:aka="name"` | Names the current scope so descendants can reference it. |
 | `:attr-name` | Toggles the presence of attribute `name` (see above). |
+| `:prop-name=${expr}` | Assigns an element property; skipped when server rendering. |
 | `:class-name` | Toggles the `name` CSS class. |
 | `:style-name` | Writes the `name` CSS property. |
 | `:on-click=${fn}` | Binds an event handler. |

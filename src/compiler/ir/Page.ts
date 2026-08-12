@@ -14,6 +14,11 @@ export const SCOPE_NAME_ATTR = 'aka';
 // be told from the value (`aria-expanded="false"` is a real, required
 // setting), so the author says which rather than the compiler guessing.
 export const PRESENCE_VALUE_ATTR_PREFIX = 'attr-';
+// `:prop-x` assigns the JS property x on the element, for what an attribute
+// can't carry: objects, arrays, functions. The name is written verbatim
+// (`:prop-maxLength`), since a property name is a JS identifier and this
+// parser preserves attribute case.
+export const PROP_VALUE_ATTR_PREFIX = 'prop-';
 export const CLASS_VALUE_ATTR_PREFIX = 'class-';
 export const STYLE_VALUE_ATTR_PREFIX = 'style-';
 export const EVENT_VALUE_ATTR_PREFIX = 'on-';
@@ -26,6 +31,7 @@ export const STYLE_VALUE_PREFIX = 'style$';
 export const ATTR_VALUE_PREFIX = 'attr$';
 // deliberately not `attr$`: that one is already the value-setting form
 export const PRESENCE_VALUE_PREFIX = 'flag$';
+export const PROP_VALUE_PREFIX = 'prop$';
 export const EVENT_VALUE_PREFIX = 'on$';
 export const DID_VALUE_PREFIX = 'did$';
 export const WILL_VALUE_PREFIX = 'will$';
