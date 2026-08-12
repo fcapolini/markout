@@ -3,6 +3,14 @@
 This page is a compact summary of the main Markout directives and special tag
 forms.
 
+## Interpolation
+
+| Syntax | Meaning |
+| --- | --- |
+| `${expr}` in text | Reactive text content. |
+| `${expr}` in CSS | Reactive stylesheet content. |
+| `attr=${expr}` | Reactive plain attribute; no `:` needed. `null`/`undefined` removes it. |
+
 ## Value and binding directives
 
 | Syntax | Meaning |
@@ -32,10 +40,28 @@ forms.
 | `<:include src="file.txt" as="pre" />` | Includes a file as a literal element named `pre` containing its text. |
 | `<:import src="file.htm" />` | Splices a fragment into the page; each file is only imported once per page. |
 | `<:define tag="x-y:button">...</:define>` | Declares a reusable custom tag. |
+| `<:slot />` | In a definition: where a usage site's content goes. Its own content is the fallback. |
+| `<:slot name="x" />` | A named slot. |
+| `:slot="x"` | On a usage site's child: which slot it fills. Unaddressed content fills the unnamed one. |
+
+## Runtime-supplied values
+
+Available on every scope; not declared, and reserved from user code.
+
+| Name | Meaning |
+| --- | --- |
+| `$id` | This scope's identifier, unique in the page. For building HTML ids. |
+| `$parent` | The enclosing scope. |
+| `$value("key")` | Looks a value up by key. |
 
 ## Notes
 
-- `${...}` is the only expression syntax.
+- `${...}` is the only expression syntax, and anything containing one is
+  reactive — `:` names things HTML has no name for, rather than marking
+  reactivity by itself.
+- An expression resolves where it was WRITTEN. A definition's body sees the
+  definition's scope; a usage site's attributes and slotted content see the
+  call site.
 - The compiler is responsible for qualification and dependency extraction.
 - The runtime executes the generated graph; it does not discover dependencies on
   its own.

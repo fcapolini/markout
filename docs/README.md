@@ -29,8 +29,10 @@ calls that out explicitly.
 Markout stays intentionally small:
 
 - HTML is the base syntax.
-- `${...}` is the only interpolation syntax.
-- `:` marks reactive or compiled behavior.
+- `${...}` is the only interpolation syntax, and anything holding one is
+  reactive — text, CSS, and plain attributes alike.
+- `:` names the things HTML has no name for: scope values, class and style
+  toggles, events, lifecycle, replication.
 - Scopes nest lexically, like variables in code.
 - The compiler discovers dependencies once; the runtime executes them.
 

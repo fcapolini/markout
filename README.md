@@ -25,9 +25,11 @@ reactive web development. The whole language is meant to stay a handful of
 rules:
 
 - `${...}` is the only interpolation syntax, in attributes, text and CSS:
-  it's plain JavaScript, no separate expression language to learn.
-- `:` marks anything compiled/reactive, on tags or attributes; everything
-  else is plain HTML.
+  it's plain JavaScript, no separate expression language to learn. Anything
+  holding one is reactive, so `href=${data.link}` needs no further marking —
+  the attribute already has a name.
+- `:` names what HTML has no name for: scope values, class and style
+  toggles, events, lifecycle, replication. Everything else is plain HTML.
 - `:name=${expr}` on a tag declares a reactive value in that tag's scope.
 - `:on-x` binds an event, `:class-x` toggles a CSS class (presence implies
   `true`), always the same way.
@@ -46,6 +48,15 @@ rules:
   default.
 - `<:import>` splices a fragment in place; `<:define>` declares a custom
   tag; a fragment's root attributes become defaults at its import site.
+- `<:slot>` marks where a custom tag takes the content written at its usage
+  site, `<:slot name="x">` when there's more than one; a child picks its
+  slot with `:slot="x"`, and a slot's own content is the fallback.
+- An expression resolves where it was WRITTEN: a definition's body sees the
+  definition's scope, a usage site's attributes and content see the call
+  site. That one rule is what lets a component be dropped anywhere without
+  its meaning changing.
+- `$id` is the current scope's identifier, unique per page — what a
+  component builds `id`/`aria-controls`/`for` out of.
 
 Compare that to what's required to be productive in most other frameworks
 (hooks and dependency arrays, `computed` vs `watch`, whole directive sets,
@@ -195,6 +206,10 @@ NOTE: the kit itself is plain HTML too — see
 the original Bootstrap one with `:for-each=${options}` and a few
 `:class-x=${...}` attributes added; there's no component API to learn
 beyond the rules above
+
+NOTE: the toggler/collapse wiring is built from `$id`, so each `<bs-nav>`
+gets ids of its own — the reason a component carrying internal `id`/`aria-*`
+references can be used more than once on a page at all
 
 NOTE: fragments compose — `all.htm` imports `parts/base.htm` and
 `parts/nav.htm`, so a page can pull in the whole kit or just the parts it
