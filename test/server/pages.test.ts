@@ -84,7 +84,8 @@ describe("Page Serving", () => {
   describe("Directory index resolution", () => {
     it("should return 200 on GET /subdir", async () => {
       const res = await request(app).get("/subdir");
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(301);
+      expect(res.headers.location).toBe("/subdir/");
     });
 
     it("should return 200 on GET /subdir/", async () => {
@@ -93,7 +94,7 @@ describe("Page Serving", () => {
     });
 
     it("should serve index.html from subdirectory", async () => {
-      const res = await request(app).get("/subdir");
+      const res = await request(app).get("/subdir/");
       const window = new Window();
       window.document.write(res.text);
       const heading = window.document.querySelector("h1");
