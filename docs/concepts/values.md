@@ -42,6 +42,11 @@ In practice, that means:
   `this`;
 - arrow functions are the safe syntax.
 
+`:on-*`, `:did-*` and `:will-*` go further: the expression has to *be* an
+arrow function, written there. `${handler}` is refused even when `handler`
+holds one — see the [syntax
+reference](../reference/syntax.md#value-and-binding-directives).
+
 ## Reference chains
 
 A reference can walk through as many named scopes as you like. Each segment is

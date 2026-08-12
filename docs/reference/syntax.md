@@ -51,9 +51,25 @@ NOTE: "on its own" is literal — whitespace is text like any other, so
 | `:prop-name=${expr}` | Assigns the element's JS property `name`, for what an attribute can't carry. Browser-only: skipped when server rendering. |
 | `:class-name` | Toggles the `name` CSS class. |
 | `:style-name` | Writes the `name` CSS property. |
-| `:on-click=${fn}` | Binds an event handler. |
-| `:did-init=${fn}` | Runs a lifecycle callback when the scope reaches a phase. |
-| `:will-dispose=${fn}` | Runs a lifecycle callback before teardown. |
+| `:on-click=${() => ...}` | Binds an event handler. |
+| `:did-init=${() => ...}` | Runs a lifecycle callback when the scope reaches a phase. |
+| `:will-dispose=${() => ...}` | Runs a lifecycle callback before teardown. |
+
+The three callback families take a **literal arrow function**, written at
+that spot. A classic `function` is refused because it would rebind `this`,
+which is how the surrounding scope is reached; and for now a reference to
+one is refused too, so `${handler}` is an error even where `handler` holds a
+function:
+
+```html
+<button :on-click=${() => count++}>          <!-- yes -->
+<button :on-click=${async () => save()}>     <!-- yes: still an arrow -->
+<button :on-click=${handler}>                <!-- error -->
+<button :on-click=${function () { ... }}>    <!-- error -->
+```
+
+The ban on classic functions is wider than these three: one may not appear
+anywhere inside any `${...}`, for the same reason.
 
 ## Replication directives
 

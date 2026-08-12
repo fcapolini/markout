@@ -128,6 +128,32 @@ describe('docs/reference/syntax.md', () => {
     expect(v['plain']).toBe('literal');
   });
 
+  it('takes a literal arrow for callbacks, and nothing else', () => {
+    // the yes/error block under the binding table. Covered per-rule in
+    // stage2-validate.test.ts against hand-built values; this checks the
+    // documented markup itself, including the lifecycle families
+    const ok = (body: string) =>
+      compile(`<html :count=\${0} :handler=\${() => 1}><body>${body}</body></html>`)
+        .errors.map(e => e.msg);
+
+    expect(ok('<b :on-click=${() => count++}>x</b>')).toStrictEqual([]);
+    expect(ok('<b :on-click=${async () => { await count; }}>x</b>')).toStrictEqual([]);
+    expect(ok('<b :did-init=${() => count++}>x</b>')).toStrictEqual([]);
+
+    for (const bad of [
+      '<b :on-click=${handler}>x</b>',
+      '<b :on-click=${function () {}}>x</b>',
+      '<b :did-init=${handler}>x</b>',
+      '<b :will-dispose=${handler}>x</b>',
+    ]) {
+      expect(ok(bad).join(' ')).toContain('must be an arrow function');
+    }
+
+    // and the wider rule: no classic function anywhere inside any expression
+    expect(ok('<b :x=${() => { const f = function () {}; return f; }}>x</b>').join(' '))
+      .toContain('Nested functions must be arrow functions');
+  });
+
   it('passes an array through :prop- when the expression fills the value', () => {
     const page = compile(
       '<html :items=${["a", "b"]}><body>' +
