@@ -1,0 +1,19 @@
+<lib :light=${true}>
+
+  <style>
+    body {
+      color: ${light ? 'black' : 'white'};
+      background-color: ${light ? 'white' : 'black'};
+    }
+
+    .theme-switcher {
+      font-size: bold;
+    }
+  </style>
+
+  <:define tag="theme-switcher:button"
+           :class-theme-switcher
+           :on-click=${() => head.light = !head.light}>
+      Switch theme
+  </:define>
+</lib>
