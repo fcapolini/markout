@@ -6,6 +6,13 @@ logic in web pages, easy reuse through parametric markup blocks, minimal
 ceremony, and easy understanding. It is isomorphic: the same runtime model
 powers both server rendering and browser hydration, so SSR comes for free.
 
+It is also deliberately not an application framework. Markout covers
+presentation logic — turning values into markup — and leaves the components
+themselves to CSS frameworks and web component libraries, which are
+framework-neutral by construction. Picking one of those and picking Markout
+stay independent decisions; see "Two decisions, not one" in the repository
+README.
+
 The goal of this documentation set is to explain the language from the user's
 point of view, while staying aligned with the current codebase and tests.
 
