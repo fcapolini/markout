@@ -50,7 +50,7 @@ export class CoreValue<T = any> {
         const o = dep.apply(this.scope.proxy);
         if (!o) {
           // the compiler guarantees every dep resolves to a real value (see
-          // CORE.md's compiler contract). Reaching here means it emitted one
+          // RUNTIME.md's compiler contract). Reaching here means it emitted one
           // pointing at nothing -- a markout bug, not a page bug. Left silent,
           // its only symptom is a binding that never updates again
           throw new Error('unresolved dependency');
