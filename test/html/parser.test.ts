@@ -419,3 +419,79 @@ it('should parse template tags', () => {
   const root = s.doc.documentElement;
   assert.instanceOf(root, ServerTemplateElement);
 });
+
+// acorn drops parentheses by default, reporting the INNER expression's end.
+// That left the caller looking at `)` where it expected `}`, so a
+// parenthesized attribute expression failed to parse and a parenthesized
+// text one spilled the leftover `)}` into the page as literal text.
+describe('parser: parenthesized expressions', () => {
+  function evaluate(exp: acorn.Expression): any {
+    return new Function(`return (${generate(exp)});`)();
+  }
+
+  function findByTag(node: any, tag: string): dom.Element | undefined {
+    for (const n of node.childNodes ?? []) {
+      if ((n as ServerElement).tagName === tag) return n as dom.Element;
+      const found = findByTag(n, tag);
+      if (found) return found;
+    }
+    return undefined;
+  }
+
+  function onlyChild(html: string, tag: string): dom.Text {
+    const source = parser.parse(html, 'test');
+    assert.deepEqual(source.errors.map(e => e.msg), []);
+    const el = findByTag(source.doc.documentElement, tag)!;
+    // exactly one child: the expression. A stray `)}` would show up as an
+    // extra literal text node right after it
+    assert.equal(el.childNodes.length, 1);
+    return el.childNodes[0] as dom.Text;
+  }
+
+  it('parses a parenthesized text interpolation without leaking the closer', () => {
+    const text = onlyChild('<html><body><p>${(1 + 2)}</p></body></html>', 'P');
+    assert.equal(evaluate(text.textContent as acorn.Expression), 3);
+  });
+
+  it('parses a parenthesized interpolation in atomic text', () => {
+    const text = onlyChild('<html><style>${("a" + "b")}</style></html>', 'STYLE');
+    assert.equal(evaluate(text.textContent as acorn.Expression), 'ab');
+  });
+
+  it('parses a parenthesized unquoted attribute expression', () => {
+    const source = parser.parse('<html :a=${(1 + 2)}></html>', 'test');
+    assert.deepEqual(source.errors.map(e => e.msg), []);
+    const a = source.doc.documentElement!.getAttributeNode(':a')!;
+    assert.equal(evaluate(a.value as acorn.Expression), 3);
+  });
+
+  it('parses a parenthesized object literal, the form that reads most naturally', () => {
+    const source = parser.parse('<html :a=${({b: 1})}></html>', 'test');
+    assert.deepEqual(source.errors.map(e => e.msg), []);
+    const a = source.doc.documentElement!.getAttributeNode(':a')!;
+    assert.deepEqual(evaluate(a.value as acorn.Expression), { b: 1 });
+  });
+
+  it('handles nested and repeated parentheses', () => {
+    const text = onlyChild('<html><body><p>${((1) + ((2)))}</p></body></html>', 'P');
+    assert.equal(evaluate(text.textContent as acorn.Expression), 3);
+  });
+
+  it('leaves no ParenthesizedExpression nodes in the tree', () => {
+    const text = onlyChild('<html><body><p>${((1) + (2))}</p></body></html>', 'P');
+    const json = JSON.stringify(text.textContent);
+    // it isn't ESTree: estraverse has no visitor keys for it and escodegen
+    // couldn't print it, so the wrappers must be gone by now
+    assert.notInclude(json, 'ParenthesizedExpression');
+  });
+
+  it('reports an unterminated text expression instead of walking past it', () => {
+    const source = parser.parse('<html><body><p>${1 + 2)}</p></body></html>', 'test');
+    assert.include(source.errors.map(e => e.msg), 'Unterminated expression');
+  });
+
+  it('reports an unterminated atomic-text expression', () => {
+    const source = parser.parse('<html><style>${1 + 2)}</style></html>', 'test');
+    assert.include(source.errors.map(e => e.msg), 'Unterminated expression');
+  });
+});
