@@ -421,10 +421,10 @@ function slotUsage(
   // the definition's own scopes inside a slot that got filled: their markup
   // was just replaced, so the instance must not carry values still pointing
   // at it (see rehomeSlottedText for the text half of the same problem)
-  const filled = [...groups.keys()].map(name => defSlots.get(name)!.el);
-  scope.children = scope.children.filter(
-    child => !child.e || !filled.some(slot => contains(slot as ServerNode, child.e!))
+  const filled = descendantsOf(
+    [...groups.keys()].map(name => defSlots.get(name)!.el as unknown as ServerNode)
   );
+  scope.children = scope.children.filter(child => !child.e || !filled.has(child.e));
   for (const [name, nodes] of groups) {
     const target = slots.get(name)!.el;
     const host = target.parentElement!;
@@ -486,10 +486,11 @@ function rehomeSlottedText(
   stencil: ServerElement,
   moved: ServerNode[]
 ): void {
+  const within = descendantsOf(moved);
   const movedText = new Map<ServerText, string>();
   for (const [name, value] of callScope.textValues) {
     const node = value.node as ServerText;
-    if (node.nodeType === NodeType.TEXT && moved.some(n => contains(n, node as any))) {
+    if (node.nodeType === NodeType.TEXT && within.has(node)) {
       movedText.set(node, name);
     }
   }
@@ -604,9 +605,10 @@ function findSlots(
 
 /** the scopes rooted inside `nodes`, without descending past the first one found */
 function outermostScopesIn(page: Page, nodes: ServerNode[]): Scope[] {
+  const within = descendantsOf(nodes);
   const found: Scope[] = [];
   const visit = (scope: Scope) => {
-    if (scope.e && nodes.some(n => contains(n, scope.e!))) {
+    if (scope.e && within.has(scope.e)) {
       found.push(scope);
       return;
     }
@@ -616,14 +618,29 @@ function outermostScopesIn(page: Page, nodes: ServerNode[]): Scope[] {
   return found;
 }
 
-function contains(root: ServerNode, e: ServerElement): boolean {
-  if (root === (e as unknown as ServerNode)) return true;
-  let p = e.parentElement;
-  while (p) {
-    if ((p as unknown as ServerNode) === root) return true;
-    p = p.parentElement;
-  }
-  return false;
+/**
+ * Everything inside `nodes`, themselves included, descending into
+ * `<template>` content.
+ *
+ * Membership rather than a walk up from the element: ServerTemplateElement
+ * severs parentElement when it takes a child, so an element inside a
+ * `:for-each` stencil has no way back up to the subtree it belongs to. A
+ * scope missed here keeps a parent outside the instance its DOM ends up in,
+ * and then can't find that DOM at all.
+ */
+function descendantsOf(nodes: ServerNode[]): Set<object> {
+  const found = new Set<object>();
+  const walk = (n: ServerNode) => {
+    if (found.has(n)) return;
+    found.add(n);
+    const children =
+      (n as ServerElement).tagName === 'TEMPLATE'
+        ? (n as ServerTemplateElement).content.childNodes
+        : (n as ServerElement).childNodes;
+    for (const child of children ?? []) walk(child as ServerNode);
+  };
+  nodes.forEach(walk);
+  return found;
 }
 
 /**
