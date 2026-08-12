@@ -7,6 +7,7 @@ import { stage4resolve } from '../src/compiler/stages/stage4-resolve';
 import { stage7generate } from '../src/compiler/stages/stage7-generate';
 import { parse } from '../src/html/parser';
 import { renderPage } from '../src/server/render';
+import { WebContext } from '../src/runtime/web/web-context';
 
 // Every example in docs/ that a reader would type in, compiled and rendered.
 // Documentation that doesn't run is worse than none: it costs the reader the
@@ -73,6 +74,77 @@ describe('docs/concepts/values.md', () => {
 
     expectClean(result);
     expect(result.body).not.toContain('title');
+  });
+});
+
+describe('docs/reference/syntax.md', () => {
+  // the table under "Attribute values and quoting": quoting doesn't decide
+  // the type, filling the value on its own does
+  function compile(html: string) {
+    const page = new Page(parse(html, 'docs.html'));
+    stage1load(page);
+    stage2validate(page);
+    stage3qualify(page);
+    stage4resolve(page);
+    stage7generate(page);
+    return page;
+  }
+
+  function valuesOf(html: string) {
+    const page = compile(html);
+    expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+    const ctx = new WebContext({
+      root: new Function(`return (${page.propsString});`)(),
+      doc: page.source.doc,
+      server: true,
+      onError: e => {
+        throw new Error(e.message);
+      },
+    }).refresh();
+    return ctx.root.proxy;
+  }
+
+  it('keeps the type of an expression that fills the value, quoted or not', () => {
+    const v = valuesOf(
+      '<html :bare=${{ a: 1 }} :dq="${{ a: 1 }}" :sq=\'${{ a: 1 }}\'' +
+        ' :num=${42} :dqNum="${42}"></html>'
+    );
+    expect(v['bare']).toStrictEqual({ a: 1 });
+    expect(v['dq']).toStrictEqual({ a: 1 });
+    expect(v['sq']).toStrictEqual({ a: 1 });
+    expect(v['num']).toBe(42);
+    expect(v['dqNum']).toBe(42);
+  });
+
+  it('interpolates to a string once anything else is in the value', () => {
+    const v = valuesOf(
+      '<html :mixed="n=${1}" :two="${1}${2}" :spaced=" ${1}"' +
+        ' :plain="literal"></html>'
+    );
+    expect(v['mixed']).toBe('n=1');
+    expect(v['two']).toBe('12');
+    // whitespace is literal text like any other
+    expect(v['spaced']).toBe(' 1');
+    expect(v['plain']).toBe('literal');
+  });
+
+  it('passes an array through :prop- when the expression fills the value', () => {
+    const page = compile(
+      '<html :items=${["a", "b"]}><body>' +
+        '<sl-select :prop-options="${items}" :prop-label="one of ${items.length}">' +
+        '</sl-select></body></html>'
+    );
+    expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+    const ctx = new WebContext({
+      root: new Function(`return (${page.propsString});`)(),
+      doc: page.source.doc,
+      onError: e => {
+        throw new Error(e.message);
+      },
+    }).refresh();
+    const select = ctx.root.children[1].children[0] as any;
+    expect(select.dom.options).toStrictEqual(['a', 'b']);
+    expect(select.dom.label).toBe('one of 2');
   });
 });
 
