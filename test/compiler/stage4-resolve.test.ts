@@ -207,16 +207,36 @@ describe('stage4-resolve: unknown reference validation', () => {
     return p;
   }
 
+  // asserted as the WHOLE error list, not with `toContain`: these used to be
+  // reported twice each, because `page.main` is itself one of `page.global`'s
+  // children and both were walked -- which a containment check can't see
   it('reports an error for a reference to an undeclared value', () => {
     const p = compile('<html><body><div :count=${0}><p>${bar}</p></div></body></html>');
-    expect(p.errors.map(e => e.msg)).toContain('Unknown reference: "bar"');
+    expect(p.errors.map(e => e.msg)).toStrictEqual(['Unknown reference: "bar"']);
   });
 
   it('reports an error for an undeclared property on a known named scope', () => {
     const p = compile(
       '<html><body><div :aka="foo" :x=${1}></div><p>${foo.nope}</p></body></html>'
     );
-    expect(p.errors.map(e => e.msg)).toContain('Unknown reference: "foo.nope"');
+    expect(p.errors.map(e => e.msg)).toStrictEqual(['Unknown reference: "foo.nope"']);
+  });
+
+  it('reports an unknown reference in <head> exactly once', () => {
+    const p = compile(
+      '<html><head><title>Demo ${pippo}</title></head><body></body></html>'
+    );
+    expect(p.errors.map(e => e.msg)).toStrictEqual(['Unknown reference: "pippo"']);
+  });
+
+  it('reports each distinct unknown reference once, and separately', () => {
+    const p = compile(
+      '<html><body><p>${alpha}</p><p>${beta}</p></body></html>'
+    );
+    expect(p.errors.map(e => e.msg)).toStrictEqual([
+      'Unknown reference: "alpha"',
+      'Unknown reference: "beta"',
+    ]);
   });
 
   it('does not error for a same-scope reference', () => {
