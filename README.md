@@ -154,6 +154,56 @@ NOTE: `:class-` prefixes "class attributes", which dynamically add/remove a CSS 
 
 NOTE: `<:import>` is only allowed in page `<head>` (or recursively in imported fragments), so imported fragments can rely on their root attributes being available as `head` scope values
 
+## Componentization
+
+Reactivity aside, `<:define>` alone is enough to turn recurring markup into
+a tag: no build step, no component base class, no separate file format —
+a fragment of HTML, given a name.
+
+[`demo/bootstrap/index.html`](demo/bootstrap/index.html) and
+[`demo/bootstrap/index-plain.html`](demo/bootstrap/index-plain.html) render
+the same page and are byte-identical from `<main>` down. All the difference
+is in the first 35 lines. Plain Bootstrap needs 5 lines of `<head>`
+boilerplate (charset, viewport, CDN links with their integrity hashes) and
+23 lines of navbar (nested `nav > div > ul > li > a`, a toggler button,
+`data-bs-target` matched by hand to the collapse `id`, four ARIA
+attributes). With a kit of Markout fragments, the same thing is:
+
+```html
+<head>
+  <:import src="/bootstrap-kit/all.htm" />
+  <title>Northstar Studio | Product Design for Growing Teams</title>
+</head>
+
+<body>
+  <bs-nav :title="Northstar Studio" :options=${[
+    { name: 'Services', link: '#services' },
+    { name: 'Our work', link: '#work' },
+    { name: 'Insights', link: '#insights' },
+    { name: 'Start a project', link: '#contact', button: true, primary: true},
+  ]} />
+```
+
+The markup that was only ever mechanical becomes data. The pinned Bootstrap
+version, the integrity hashes, the toggler/collapse `id` wiring and the
+accessibility attributes are written once in
+[`demo/bootstrap-kit/`](demo/bootstrap-kit/) and can't drift from page to
+page.
+
+NOTE: the kit itself is plain HTML too — see
+[`parts/nav.htm`](demo/bootstrap-kit/parts/nav.htm), where the `<li>` is
+the original Bootstrap one with `:for-each=${options}` and a few
+`:class-x=${...}` attributes added; there's no component API to learn
+beyond the rules above
+
+NOTE: fragments compose — `all.htm` imports `parts/base.htm` and
+`parts/nav.htm`, so a page can pull in the whole kit or just the parts it
+needs
+
+NOTE: since a custom tag is just a tag, the rest of the page stays plain
+HTML: you lift out what is boilerplate and leave your content alone, rather
+than rewriting the page into a template language
+
 ## Replication
 
 ```html
