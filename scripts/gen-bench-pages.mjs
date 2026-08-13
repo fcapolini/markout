@@ -17,6 +17,11 @@ for (const [file, modelCount] of Object.entries(variants)) {
   const literal = '[' + models.map(m => `'${m}'`).join(', ') + ']';
   const out = src
     .replace(/:models=\$\{\[[^\]]*\]\}/, `:models=\${${literal}}`)
+    // the id formula spaces categories by `10 models * 5 finishes`; scale
+    // that spacing too, or ids collide across categories once models.length
+    // != 10, which starves :for-key of a real key and forces spurious
+    // dispose/recreate churn on every reorder
+    .replace('const n = c * 50 + m * 5 + f;', `const n = c * (${modelCount} * 5) + m * 5 + f;`)
     // largest page-size chip becomes "show everything", to benchmark a full mount
     .replace(':for-each=${[12, 24, 48, 300]}', `:for-each=\${[12, 24, 48, ${rows}]}`)
     .replace('<title>Medium | Catalog benchmark</title>', `<title>Medium bench (${rows} rows)</title>`);
