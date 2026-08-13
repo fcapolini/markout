@@ -1,4 +1,7 @@
 import * as acorn from 'acorn';
+// the HTML5 character-reference table, for the same reason acorn parses the
+// JS: it is spec data, and a hand-kept subset of it is a standing bug
+import { decodeHTML, decodeHTMLAttribute } from 'entities';
 import {
   Attribute,
   ClassProp,
@@ -640,23 +643,31 @@ function escape(text: string, chars = ''): string {
 }
 
 /**
- * Numeric references are decoded before named ones, so an escaped literal
- * like `&amp;#8203;` decodes to the text `&#8203;` rather than to the
- * character it names.
+ * Decodes character references in text content, the whole HTML5 set of them.
  *
- * Named references outside this set (`&nbsp;`, `&copy;`, …) are not decoded,
- * and since serialization escapes `&`, they come back out as `&amp;nbsp;`.
- * Write those as numeric references or literal characters.
+ * A parsed text node holds CHARACTERS, never references: interpolation
+ * splices computed strings into these same nodes, and the runtime writes
+ * `textContent` directly, so anything left encoded here would be a stray
+ * `&amp;nbsp;` on the page rather than the character it names.
+ *
+ * Escaped literals survive as themselves -- `&amp;#8203;` decodes to the
+ * text `&#8203;`, not to a zero-width space -- because decoding is a single
+ * left-to-right pass rather than a sequence of replacements that could
+ * re-read their own output.
  */
 export function unescapeText(str: string): string {
-  return str
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) =>
-      String.fromCodePoint(parseInt(hex, 16))
-    )
-    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&');
+  return decodeHTML(str);
+}
+
+/**
+ * The same, for an attribute value, where HTML5 deliberately decodes LESS.
+ *
+ * A reference missing its semicolon is left alone here, which is what keeps
+ * query strings working: `href="?a=1&copy=2"` has to stay `&copy=2` rather
+ * than becoming `©=2`. In text the very same characters do decode, because
+ * there is no URL to protect there -- so the two contexts genuinely need
+ * different functions, not one with a flag defaulted the convenient way.
+ */
+export function unescapeAttribute(str: string): string {
+  return decodeHTMLAttribute(str);
 }

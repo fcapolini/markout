@@ -10,6 +10,11 @@ import { parse } from '../../src/html/parser';
  * - escapable raw text (title): entities are decoded and re-emitted
  * - normal elements: same as escapable raw text
  * - attribute values: `&`, `<` and the quote character are escaped
+ *
+ * Decoding covers the whole HTML5 character-reference set, and follows the
+ * spec's split between the two contexts: in text a legacy reference decodes
+ * even without its semicolon (`&notit;` is `¬it;`), while in an attribute it
+ * does not — which is what keeps `?a=1&copy=2` from becoming `?a=1©=2`.
  */
 
 function docFor(tag: string, content: string): string {
@@ -134,6 +139,62 @@ describe('numeric character references', () => {
   it('decodes references in attribute values', () => {
     const out = serialize(`<html a="x&#8203;y"></html>`);
     assert.include(out, 'a="x​y"');
+  });
+});
+
+describe('named character references', () => {
+  // the whole HTML5 set, not a hand-kept subset: an undecoded reference
+  // reaches the page as literal `&amp;nbsp;` text, so every name a page
+  // author can reasonably write has to resolve to its character
+  ESCAPED_TEXT_TAGS.forEach(tag => {
+    it(`<${tag}> decodes names beyond the markup-critical few`, () => {
+      const out = serialize(docFor(tag, 'a&nbsp;b&mdash;c&uarr;d'));
+      assert.equal(contentOf(tag, out), 'a b—c↑d');
+    });
+  });
+
+  it('leaves an unknown name alone, rather than guessing', () => {
+    const out = serialize(docFor('p', 'a&zzz;b'));
+    assert.equal(contentOf('p', out), 'a&amp;zzz;b');
+  });
+
+  it('applies the legacy no-semicolon rule in text, as a browser does', () => {
+    // the HTML5 spec's own example: `&notit;` is `&not` followed by `it;`,
+    // because a handful of old references decode without their semicolon.
+    // Surprising, but matching the browser is the whole point -- markout
+    // serializes this back out for a browser to re-parse
+    const out = serialize(docFor('p', '&notit;'));
+    assert.equal(contentOf('p', out), '¬it;');
+  });
+
+  it('does NOT apply that rule in an attribute, which is why URLs survive', () => {
+    const out = serialize(`<html a="&notit;"></html>`);
+    assert.include(out, 'a="&amp;notit;"');
+  });
+
+  it('keeps an escaped name literal', () => {
+    // `&amp;nbsp;` is the text "&nbsp;", not a non-breaking space -- decoding
+    // is one left-to-right pass, so it never re-reads its own output
+    const out = serialize(docFor('p', 'a&amp;nbsp;b'));
+    assert.equal(contentOf('p', out), 'a&amp;nbsp;b');
+  });
+
+  it('decodes them in attribute values too', () => {
+    const out = serialize(`<html a="x&nbsp;y"></html>`);
+    assert.include(out, 'a="x y"');
+  });
+
+  it('leaves a semicolon-less reference alone in an attribute, keeping URLs intact', () => {
+    // the rule that makes attributes decode LESS than text: `&copy=2` in a
+    // query string must stay put. Decoding it would rewrite a working link
+    // into `?a=1©=2`
+    const out = serialize(`<html a="?a=1&copy=2&sort=x"></html>`);
+    assert.include(out, 'a="?a=1&amp;copy=2&amp;sort=x"');
+  });
+
+  it('still decodes one that does carry its semicolon, in an attribute', () => {
+    const out = serialize(`<html a="?a=1&copy;=2"></html>`);
+    assert.include(out, 'a="?a=1©=2"');
   });
 });
 

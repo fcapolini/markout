@@ -324,7 +324,7 @@ function parseLiteralValue(
       i2++;
       j++;
     }
-    a.value = dom.unescapeText(s.substring(i1, i2));
+    a.value = dom.unescapeAttribute(s.substring(i1, i2));
     i1 = i2 + term.length;
     a.loc.end = src.pos(i1);
     a.loc.i2 = i1;
@@ -362,7 +362,7 @@ function parseQuotedValueExpression(
         start: j1,
         end: i2,
         loc: src.loc(j1, i2),
-        value: dom.unescapeText(s.substring(j1, i2)),
+        value: dom.unescapeAttribute(s.substring(j1, i2)),
       });
       break;
     }
@@ -370,7 +370,7 @@ function parseQuotedValueExpression(
       start: j1,
       end: j2,
       loc: src.loc(j1, j2),
-      value: dom.unescapeText(s.substring(j1, j2)),
+      value: dom.unescapeAttribute(s.substring(j1, j2)),
     });
     j1 = skipBlanks(s, j2 + LEXP.length);
     const exp = parseExpression(src, j1, errors, i2);
