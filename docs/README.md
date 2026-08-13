@@ -23,6 +23,8 @@ calls that out explicitly.
 
 - [Scopes](concepts/scopes.md) - how lexical visibility maps onto the DOM tree.
 - [Values](concepts/values.md) - reactive slots, expressions, and bindings.
+- [State](concepts/state.md) - what belongs in data, what belongs to the DOM,
+  and how long each needs to last.
 - [Modules and components](concepts/modules-and-components.md) - `<:import>`,
   `<:define>`, and reusable custom tags.
 - [Replication](concepts/replication.md) - `:for-each`, aliases, clones, and
