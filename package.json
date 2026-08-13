@@ -31,7 +31,7 @@
     "templating",
     "compiler"
   ],
-  "author": "Fabrizio Capolini <fabrizio.capolini@gmail.com>",
+  "author": "Fabrizio Capolini",
   "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
