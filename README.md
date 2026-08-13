@@ -298,3 +298,14 @@ one inferring which you meant from the shape of the value.
   </body>
 </html>
 ```
+
+> **`:did-init` and `:will-dispose` are designed but not implemented.** This
+> example compiles and renders `Ticks 0`, and then never ticks: the two
+> callbacks are parsed, validated and compiled into the page, and nothing
+> calls them. It is here for the shape — a value's whole life expressed on
+> the element that owns it, with `:_timer` private to that scope — which is
+> what the pair are for once the runtime side exists. `:on-` handlers are
+> the working way to run code today.
+>
+> Note it fails differently from `:for-data` above, which is refused
+> outright. These are accepted and silent.

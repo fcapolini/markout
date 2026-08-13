@@ -52,8 +52,8 @@ NOTE: "on its own" is literal — whitespace is text like any other, so
 | `:class-name` | Toggles the `name` CSS class. |
 | `:style-name` | Writes the `name` CSS property. |
 | `:on-click=${() => ...}` | Binds an event handler. The name is the event type verbatim, so `.` and `:` are allowed for the sake of `shown.bs.modal`, `click.mine` and the like. |
-| `:did-init=${() => ...}` | Runs a lifecycle callback when the scope reaches a phase. |
-| `:will-dispose=${() => ...}` | Runs a lifecycle callback before teardown. |
+| `:did-init=${() => ...}` | Lifecycle callback for when a scope reaches a phase. Designed, **not implemented** — see below. |
+| `:will-dispose=${() => ...}` | Lifecycle callback for before teardown. Designed, **not implemented** — see below. |
 
 ### Naming a value
 
@@ -80,6 +80,16 @@ class names, CSS properties and JS properties, and additionally `.` and `:`
 for `:attr-` and `:on-`, whose names reach `setAttribute` and
 `addEventListener` exactly as written. `$` stays out everywhere, being the
 runtime's own prefix.
+
+### Lifecycle, and how it is unfinished
+
+`:did-init` and `:will-dispose` are designed but not implemented, and they
+fail more quietly than `:for-data` does. That one is refused outright. These
+two are parsed, validated as callbacks, and compiled into the page — and
+then nothing ever calls them. A page using one gets no error and no effect.
+
+Until the runtime half exists, treat them as reserved. `:on-` handlers are
+the working way to run code.
 
 The three callback families take a **literal arrow function**, written at
 that spot. A classic `function` is refused because it would rebind `this`,
