@@ -52,6 +52,7 @@ NOTE: "on its own" is literal — whitespace is text like any other, so
 | `:class-name` | Toggles the `name` CSS class. |
 | `:style-name` | Writes the `name` CSS property. |
 | `:on-click=${() => ...}` | Binds an event handler. The name is the event type verbatim, so `.` and `:` are allowed for the sake of `shown.bs.modal`, `click.mine` and the like. |
+| `:handle-name=${(v) => ...}` | Runs when value `name` changes, and once at start, with its value. For driving the view imperatively; browser-only. |
 | `:did-init=${() => ...}` | Lifecycle callback for when a scope reaches a phase. Designed, **not implemented** — see below. |
 | `:will-dispose=${() => ...}` | Lifecycle callback for before teardown. Designed, **not implemented** — see below. |
 
@@ -91,7 +92,31 @@ then nothing ever calls them. A page using one gets no error and no effect.
 Until the runtime half exists, treat them as reserved. `:on-` handlers are
 the working way to run code.
 
-The three callback families take a **literal arrow function**, written at
+### Handlers, and the imperative corner
+
+Almost everything is declarative: state what a thing should be, and the
+runtime keeps it that way. Some of the DOM isn't reachable that way, because
+it is a verb rather than a value — `focus()`, `showModal()`, `play()`.
+
+`:handle-name` is the door. It runs when `name` changes, and once at start,
+receiving the value; `$dom` is the element it belongs to:
+
+```html
+<dialog :open=${false} :handle-open=${(v) => v ? $dom.showModal() : $dom.close()}>
+  ...
+</dialog>
+```
+
+Both are browser-only. A served page has no element to drive, so `$dom` is
+absent and handlers do not run while server rendering. Anything that *should*
+show up in the served markup therefore belongs in a value rather than in a
+handler — a handler is for the part of the view that markup can't express.
+
+A handler depends on the value it names, and only that. References inside
+its body are not dependencies, so it does not re-run because something it
+happens to touch changed.
+
+The four callback families take a **literal arrow function**, written at
 that spot. A classic `function` is refused because it would rebind `this`,
 which is how the surrounding scope is reached; and for now a reference to
 one is refused too, so `${handler}` is an error even where `handler` holds a
@@ -178,6 +203,7 @@ Available on every scope; not declared, and reserved from user code.
 | `$id` | This scope's identifier, unique in the page. For building HTML ids. |
 | `$parent` | The enclosing scope. |
 | `$value("key")` | Looks a value up by key. |
+| `$dom` | This scope's own element, or nothing if it has none. Browser-only. |
 
 ## Notes
 

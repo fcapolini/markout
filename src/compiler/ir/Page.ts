@@ -24,6 +24,10 @@ export const STYLE_VALUE_ATTR_PREFIX = 'style-';
 export const EVENT_VALUE_ATTR_PREFIX = 'on-';
 export const DID_VALUE_ATTR_PREFIX = 'did-';
 export const WILL_VALUE_ATTR_PREFIX = 'will-';
+// `:handle-x=${(v) => ...}`: run this when value `x` changes. Sugar for a
+// value whose expression CALLS the arrow with x, so the dependency on x
+// falls out of the ordinary extraction and needs no runtime of its own
+export const HANDLE_VALUE_ATTR_PREFIX = 'handle-';
 export const TEXT_VALUE_PREFIX = 't$';
 // compiled form of the ATTR prefixes above, as stored in Scope.values keys
 export const CLASS_VALUE_PREFIX = 'class$';
@@ -35,6 +39,7 @@ export const PROP_VALUE_PREFIX = 'prop$';
 export const EVENT_VALUE_PREFIX = 'on$';
 export const DID_VALUE_PREFIX = 'did$';
 export const WILL_VALUE_PREFIX = 'will$';
+export const HANDLE_VALUE_PREFIX = 'handle$';
 // `:for-each`/`:for-as`/`:for-key` are fixed (non-prefixed) attribute names,
 // not open-ended `prefix-name` families like class-/style-/on-/did-/will-
 export const FOR_EACH_ATTR = 'for-each';
