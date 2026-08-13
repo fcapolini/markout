@@ -134,6 +134,26 @@ describe("Browser execution (happy-dom)", () => {
       </html>`
     );
 
+    // a component that IS the replica: :for-each on the usage site itself,
+    // keyed, with an <input> so the DOM holds state the data never sees
+    fs.writeFileSync(
+      path.join(tempDir, "rows.htm"),
+      `<lib><:define tag="my-row:div" class="row" :label="none" :note="Notes">` +
+        `<span class="label">\${label}</span><label class="note">\${note}<input></label>` +
+        `</:define></lib>`
+    );
+    fs.writeFileSync(
+      path.join(tempDir, "rows.html"),
+      `<html :rows=\${[{ id: 'a', n: 'Alpha' }, { id: 'b', n: 'Beta' }, { id: 'c', n: 'Gamma' }]}>
+        <head><:import src="rows.htm" /></head>
+        <body>
+          <div class="list"><my-row :for-each=\${rows} :for-key=\${data.id}
+            :label=\${data.n} :note=\${'Notes for ' + data.n} /></div>
+          <button id="rot" :on-click=\${() => rows = [rows[2], rows[0], rows[1]]}>rotate</button>
+        </body>
+      </html>`
+    );
+
     server = new Server({ docroot: tempDir });
     await server.start();
   });
@@ -417,6 +437,44 @@ describe("Browser execution (happy-dom)", () => {
       // plain: the element stayed in slot 1 and the data was rewritten over
       // it, so the typing now sits on the row showing item a
       expect(typed('plain')).toEqual(['', 'mine', '']);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it('should hydrate and reorder a component that carries :for-each itself', async () => {
+    // no wrapper element around the tag: the instance IS the replica, and the
+    // attributes beside the :for-each read the name it declares
+    const browser = new Browser({ settings: { enableJavaScriptEvaluation: true } });
+    try {
+      const page = browser.newPage();
+      await page.goto(`http://127.0.0.1:${server.port}/rows.html`);
+      await page.waitUntilComplete();
+
+      const doc = page.mainFrame.document;
+      const rows = () => [...doc.querySelectorAll('.row')];
+      const labels = () => rows().map(r => r.querySelector('.label')!.textContent);
+      const notes = () => rows().map(r => r.querySelector('.note')!.textContent!.trim());
+      const typed = () => rows().map(r => (r.querySelector('input') as any).value);
+
+      // the tag expanded once per item, each instance reading its own
+      expect(doc.querySelector('my-row')).toBeNull();
+      expect(labels()).toEqual(['Alpha', 'Beta', 'Gamma']);
+      expect(notes()).toEqual([
+        'Notes for Alpha', 'Notes for Beta', 'Notes for Gamma',
+      ]);
+
+      const beta = rows()[1];
+      (beta.querySelector('input') as any).value = 'mine';
+
+      doc.querySelector('#rot')!.dispatchEvent(
+        new page.mainFrame.window.MouseEvent('click')
+      );
+
+      expect(labels()).toEqual(['Gamma', 'Alpha', 'Beta']);
+      // keyed, so Beta's instance moved rather than being rewritten over
+      expect(rows()[2]).toBe(beta);
+      expect(typed()).toEqual(['', '', 'mine']);
     } finally {
       await browser.close();
     }

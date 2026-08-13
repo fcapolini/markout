@@ -48,22 +48,72 @@ describe('custom tags inside replicated markup', () => {
     expect(body).not.toContain('<my-card');
   });
 
-  it('refuses :for-each ON a custom tag, naming the way round it', () => {
-    // this used to be an unhandled TypeError out of stage1: wrapInTemplate
-    // moves the usage into a <template>, and a fragment's children have no
-    // parentElement for the expansion to splice against. Even reaching the
-    // runtime it could not work -- a replica owns the per-item binding while
-    // a usage site's attributes resolve where the tag was written, so
-    // `:title=${data}` here would reach into the very instance it configures
-    const { errors } = render(
+  it('replicates a custom tag that carries :for-each itself', () => {
+    // no wrapper element: the tag IS the replica. `:for-each` declares the
+    // per-item name where the instance scope is defined -- at the usage site
+    // -- so the attribute written beside it reads that name like any other
+    // call-site expression
+    const { errors, runtimeErrors, body } = render(
       '<html><head><:define tag="my-card:div" class="card" :title="T">' +
         '<h5>${title}</h5></:define></head>' +
         '<body><my-card :for-each=${["a", "b"]} :title=${data} /></body></html>'
     );
 
-    expect(errors.map((e: any) => e.msg)).toStrictEqual([
-      ':for-each cannot go on a custom tag (<my-card>); put it on an element around it instead',
-    ]);
+    expect(errors).toStrictEqual([]);
+    expect(runtimeErrors).toStrictEqual([]);
+    expect(body).not.toContain('<my-card');
+    const live = body.slice(body.indexOf('</template>'));
+    expect(live).toContain('>a<');
+    expect(live).toContain('>b<');
+    expect(live.match(/class="card"/g)!.length).toBe(2);
+  });
+
+  it('keeps the definition blind to the name :for-each introduced', () => {
+    // only the loop's alias crosses to the usage site. A definition resolves
+    // where it was DEFINED, so `data` in its body is the page's value, never
+    // the caller's item -- otherwise a component would silently read its
+    // call site just by naming something the caller happened to loop over
+    const { errors, runtimeErrors, body } = render(
+      '<html :data=${"page-data"}><head>' +
+        '<:define tag="my-card:div" class="card">${data}</:define></head>' +
+        '<body><my-card :for-each=${["a", "b"]} /></body></html>'
+    );
+
+    expect(errors).toStrictEqual([]);
+    expect(runtimeErrors).toStrictEqual([]);
+    const live = body.slice(body.indexOf('</template>'));
+    expect(live).toContain('page-data');
+    expect(live).not.toContain('>a<');
+  });
+
+  it('does not let a usage-site value resolve to itself', () => {
+    // the alias is the ONLY name the loop adds at the usage site: passing a
+    // page value through under its own name still means the page's, not this
+    // attribute and not the definition's default
+    const { errors, runtimeErrors, body } = render(
+      '<html :title=${"from-page"}><head>' +
+        '<:define tag="my-card:div" class="card" :title="definition">${title}</:define>' +
+        '</head><body><my-card :for-each=${[1]} :title=${title} /></body></html>'
+    );
+
+    expect(errors).toStrictEqual([]);
+    expect(runtimeErrors).toStrictEqual([]);
+    const live = body.slice(body.indexOf('</template>'));
+    expect(live).toContain('from-page');
+    expect(live).not.toContain('definition');
+  });
+
+  it('does not yet let slotted content see that name', () => {
+    // markup slotted INTO a replicated tag is written at the usage site too,
+    // so by the same rule it should see the alias. It does not yet: the alias
+    // reaches the tag's own attributes only. Pinned so that finishing the job
+    // has to come here and say so
+    const { errors } = render(
+      '<html><head><:define tag="my-card:div" class="card"><:slot /></:define></head>' +
+        '<body><my-card :for-each=${["a", "b"]}><i data-v=${data}>x</i></my-card></body></html>'
+    );
+
+    expect(errors.map((e: any) => e.msg)).toStrictEqual(['Unknown reference: "data"']);
   });
 
   it('still expands a custom tag that merely sits inside a stencil', () => {

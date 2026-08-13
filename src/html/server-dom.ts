@@ -54,22 +54,23 @@ export abstract class ServerNode implements Node {
    * its way to match. Compiler code that has to move a node still needs the
    * container it is actually in, and this is it. Kept server-side rather
    * than added to the shared DOM interface: only the compiler relocates
-   * nodes, and the runtime is written against what both DOMs offer.
+   * nodes. Named as the browser names it, so runtime code that has to reach
+   * a node's container reads the same way against either DOM.
    */
-  parent: ServerContainerNode | null;
+  parentNode: ServerContainerNode | null;
   nodeType: number;
   loc: SourceLocation;
 
   constructor(doc: ServerDocument | null, type: number, loc: SourceLocation) {
     this.ownerDocument = doc;
     this.parentElement = null;
-    this.parent = null;
+    this.parentNode = null;
     this.nodeType = type;
     this.loc = loc;
   }
 
   unlink(): this {
-    this.parent?.removeChild(this);
+    this.parentNode?.removeChild(this);
     return this;
   }
 
@@ -269,7 +270,7 @@ export abstract class ServerContainerNode extends ServerNode {
     i = i < 0 ? this.childNodes.length : i;
     this.childNodes.splice(i, 0, n);
     n.parentElement = this as any;
-    (n as ServerNode).parent = this;
+    (n as ServerNode).parentNode = this;
     return n;
   }
 
@@ -277,7 +278,7 @@ export abstract class ServerContainerNode extends ServerNode {
     const i = this.childNodes.indexOf(n);
     i >= 0 && this.childNodes.splice(i, 1);
     n.parentElement = null;
-    (n as ServerNode).parent = null;
+    (n as ServerNode).parentNode = null;
     return n;
   }
 
@@ -479,7 +480,7 @@ export class ServerTemplateElement
   override appendChild(n: Node): Node {
     const ret = this.content.insertBefore(n, null);
     // as in the browser: a template's children hang off its content
-    // fragment, and a fragment is not an element. `parent` keeps pointing at
+    // fragment, and a fragment is not an element. `parentNode` keeps pointing at
     // that fragment, so a node in here can still be found and relocated
     ret.parentElement = null;
     return ret;

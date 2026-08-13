@@ -37,7 +37,7 @@ describe('parser', () => {
           const cleanup = (n: ServerNode) => {
             // both upward links, or JSON.stringify walks straight back up
             delete (n as any).parentElement;
-            delete (n as any).parent;
+            delete (n as any).parentNode;
             delete (n as any).ownerDocument;
             if (n.nodeType === dom.NodeType.DOCUMENT) {
               cleanup((n as ServerDocument).documentElement as ServerNode);

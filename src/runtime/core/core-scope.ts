@@ -132,6 +132,7 @@ export class CoreScope {
       // from the page, so server and client can't disagree on it
       val: this.uid,
     });
+    this.relocateLoopAlias();
     props.children?.forEach((p) => context.newScope(p, context, this));
   }
 
@@ -193,6 +194,58 @@ export class CoreScope {
     if (!this.props.slotted) return this.parent;
     const instance = this.enclosingInstance();
     return instance ? instance.callSiteScope() : this.parent;
+  }
+
+  /**
+   * Where THIS scope's own usage-site values resolve.
+   *
+   * Normally just callSiteScope(): the tag was written there, so that is what
+   * its attributes see. A `:for-each` on the tag changes it, because that
+   * DECLARES a name rather than passing a value, and declares it where the
+   * instance scope is defined -- at the usage site. So in
+   * `<my-card :for-each=${rows} :title=${data.n} />` both attributes are
+   * written in one place, and the name one introduces is visible to the other.
+   *
+   * Only the loop's alias joins them. `:title=${title}` must go on meaning
+   * "the title from out here" rather than resolving to itself, and the
+   * definition's own names stay invisible from the call site as always.
+   */
+  usageSiteScope(): CoreScope {
+    if (!this.props.values?.[RT_FOR_EACH_VALUE]) return this.callSiteScope() ?? this;
+    return (this.loopSite ??= new LoopSiteScope(this));
+  }
+  private loopSite?: CoreScope;
+
+  /** the per-item name this scope's `:for-each` introduces */
+  aliasName(): string {
+    return (this.values[RT_FOR_AS_VALUE]?.get() as string) || FOR_DATA_DEFAULT_NAME;
+  }
+
+  /** the CoreValue holding this replica's item, wherever it ended up living */
+  aliasValue(): CoreValue<any> | undefined {
+    const alias = this.aliasName();
+    return this.values[alias] ?? this.loopSite?.values[alias];
+  }
+
+  /**
+   * Moves a usage-site `:for-each`'s per-item value into that usage-site
+   * scope, before any child of this one is built.
+   *
+   * Left in place it would sit in the instance's own namespace, which is what
+   * the DEFINITION resolves against -- so a component whose body happened to
+   * say `${data}` would read its caller's loop item instead of its own
+   * scope's value. The name belongs to the usage site alone. A `:for-each` on
+   * an ordinary element is untouched: there the alias is not a usage-site
+   * value, and the scope's own namespace is exactly where it belongs.
+   */
+  private relocateLoopAlias(): void {
+    if (!this.props.values?.[RT_FOR_EACH_VALUE]) return;
+    const alias = this.aliasName();
+    if (!this.props.values[alias]?.callSite) return;
+    const value = this.values[alias];
+    if (!value) return;
+    this.usageSiteScope().values[alias] = value;
+    delete this.values[alias];
   }
 
   private enclosingInstance(): CoreScope | undefined {
@@ -257,7 +310,7 @@ export class CoreScope {
     if (key === RT_FOR_KEY_VALUE) {
       return new CoreValue({}, this, key);
     }
-    const ret = new CoreValue(props, props.callSite ? this.callSiteScope() ?? this : this, key);
+    const ret = new CoreValue(props, props.callSite ? this.usageSiteScope() : this, key);
     if (key === RT_FOR_EACH_VALUE) {
       // `this`, not the callback's own scope argument: those differ for a
       // usage-site value, whose CoreValue resolves against the call site
@@ -374,11 +427,11 @@ export class CoreScope {
     for (; di < offset + length; ci++, di++) {
       if (ci < that.clones!.length) {
         // update
-        that.clones![ci].proxy[alias] = vv[di];
+        that.clones![ci].aliasValue()?.set(vv[di]);
       } else {
         // create
         const clone = that.clone(ci);
-        clone.values[alias].set(vv[di]);
+        clone.aliasValue()?.set(vv[di]);
         that.ctx.refresh(clone);
       }
     }
@@ -448,14 +501,14 @@ export class CoreScope {
       if (clone) {
         reused.add(clone);
         clone.replicaKey = key;
-        clone.proxy[alias] = item;
+        clone.aliasValue()?.set(item);
       } else {
         clone = that.clone(that.nextReplicaIndex++);
         // before the data lands and before the refresh: both propagate, and
         // a replica that is not yet answering for its key is a replica the
         // next pass would fail to recognise and would build a second time
         clone.replicaKey = key;
-        clone.values[alias].set(item);
+        clone.aliasValue()?.set(item);
         that.ctx.refresh(clone);
       }
       ordered.push(clone);
@@ -491,5 +544,43 @@ export class CoreScope {
     }, this.ctx, this);
     this.clones!.push(clone);
     return clone;
+  }
+}
+
+/**
+ * The resolution scope for the usage-site values of a REPLICATED custom tag:
+ * the loop's alias, then the scope the tag was written in.
+ *
+ * A scope of its own rather than a rule on the instance, because the instance
+ * also holds the definition's values and those must stay invisible from the
+ * call site. Only the alias crosses over -- see usageSiteScope().
+ */
+class LoopSiteScope extends CoreScope {
+  private owner: CoreScope;
+
+  constructor(owner: CoreScope) {
+    // no parent: linking would put it in someone's children and give it a
+    // life cycle it has no use for
+    super({ id: `${owner.props.id}$site`, values: {} }, owner.ctx);
+    this.owner = owner;
+  }
+
+  override lookup(prop: string | symbol): CoreValue<any> | undefined {
+    const owner = this.owner;
+    // the compiler emits every dependency as `this.$value(name)`, so this has
+    // to be OUR $value: delegated away, deps would resolve against the call
+    // site and the alias would come back unresolved. $id and $parent still
+    // mean what they mean out there
+    if (prop === RT_VALUE_FN_KEY) return this.values[RT_VALUE_FN_KEY];
+    // read per lookup rather than cached: a replica's alias holds whatever
+    // the current pass just set, and `:for-as` is itself a value
+    if (prop === owner.aliasName()) return owner.aliasValue();
+    // a replica's structural parent is the HOST instance, not a call site.
+    // Resolving from there would continue through the host's own
+    // lexicalParent -- the page root, for an instance -- losing everything
+    // declared in between, `<body>` included. The tag was written where the
+    // host was
+    const site = owner.cloned ? owner.parent?.callSiteScope() : owner.callSiteScope();
+    return (site ?? owner).lookup(prop);
   }
 }
