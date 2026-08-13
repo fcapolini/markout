@@ -1,10 +1,10 @@
 <lib>
   <:import src="base.htm" />
+  <:import src="button.htm" />
 
   <:define tag="bs-nav:nav"
            class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top"
            
-           :title="Title"
            :options=${[
             { name: 'link1', link: '#link1' },
             { name: 'link2', link: '#link2' },
@@ -18,7 +18,7 @@
   >
     <div class="container py-2">
       <a class="navbar-brand fw-bold text-primary"
-         href="#top">${title}</a>
+         href="#top"><:slot /></a>
       <button class="navbar-toggler"
               type="button"
               data-bs-toggle="collapse"
@@ -38,6 +38,12 @@
                :class-btn=${data.button}
                :class-btn-primary=${data.primary}
                href=${data.link}>${data.name}</a>
+            <bs-button :href=${data.link}
+                       :variant=${data.primary ? 'primary' : 'link'}
+                       :size=${'md'}
+                       >
+              ${data.name}
+            </bs-button>
           </li>
         </ul>
       </div>
