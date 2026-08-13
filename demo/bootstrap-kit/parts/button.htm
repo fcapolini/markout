@@ -1,0 +1,25 @@
+<lib :bsBtnRadius="0.5rem">
+  <:import src="base.htm" />
+
+  <style>
+    .btn {
+      border-radius: ${bsBtnRadius};
+    }
+  </style>
+
+  <:define tag="bs-button:a"
+
+           // parameters
+           :href=${null}
+           :variant=${null}
+           :outline=${null}
+           :size=${'md'}
+
+           // private
+           class="btn btn-${size}${variant ? ` btn-${variant}` : ''}${outline ? ` btn-outline-${variant}` : ''}"
+           :class-btn-primary=${data.primary}
+           :attr-href=${href}
+
+  ><:slot /></:define>
+
+</lib>
