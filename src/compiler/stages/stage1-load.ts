@@ -299,12 +299,22 @@ function expandCustomTagUsages(page: Page): void {
     const scope = new Scope(page, enclosingScope(page, usageEl, loadedUsageScope));
     // the tag itself was written in someone else's slot: the instance
     // inherits that, so its usage-site values keep resolving out there
-    // rather than against the instance it happens to sit inside
+    // rather than against the instance it happens to sit inside.
+    //
+    // Only when it sits DIRECTLY in that slot, though -- `scope.parent`
+    // is the host itself exactly when nothing in between has a scope of its
+    // own. Slotted content is a whole subtree, and a scope inside it is
+    // already relocated (see slotUsage), so a usage nested under one resolves
+    // against THAT, normally. Marking it slotted too made it skip straight
+    // past to the outer call site, losing everything the slotted markup
+    // declared on the way -- `<my-box><div :total=${x}><my-probe
+    // :count=${total}/></div></my-box>` compiled clean and then failed to
+    // link `total` at runtime
     const host = slottedHost(page, usageEl);
     if (loadedUsageScope?.slotted) {
       scope.slotted = true;
       scope.lexicalParent = loadedUsageScope.lexicalParent;
-    } else if (host) {
+    } else if (host && scope.parent === host) {
       scope.slotted = true;
       scope.lexicalParent = host.slotted ? host.lexicalParent : host.parent;
     }
@@ -695,13 +705,16 @@ function enclosingScope(
   if (loadedUsageScope?.parent) return loadedUsageScope.parent;
   let e: ServerElement | null = usageEl;
   while (e) {
-    // checked first: once a node has been slotted into an instance it lives
-    // in a stencil clone, which no scope's element ever points at, so the
-    // lookup below can't see it
-    const host = page.slottedInto.get(e);
-    if (host) return host;
     const scope = e !== usageEl ? findScopeForElement(page.main, e) : undefined;
     if (scope) return scope;
+    // after the scope lookup, not before it: a slotted element can have a
+    // scope of its own (`<my-box><div :total=${x}>...`), and that scope is
+    // the enclosing one for anything under it. Falling back to the host
+    // instead skipped it entirely. Still needed as a fallback, since a node
+    // with no scope of its own now lives in a stencil clone that no scope's
+    // element points at, so the lookup above can't reach it
+    const host = page.slottedInto.get(e);
+    if (host) return host;
     e = e.parentElement;
   }
   return page.main!;
