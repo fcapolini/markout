@@ -7,16 +7,12 @@
     }
   </style>
 
-  <:define tag="bs-button:a"
+  <:define tag="bs-link:a"
 
            // parameters
            :href=${null}
-           :variant=${null}
-           :outline=${null}
-           :size=${'md'}
 
            // private
-           class="btn btn-${size}${variant ? ` btn-${variant}` : ''}${outline ? ` btn-outline-${variant}` : ''}"
            :attr-href=${href}
 
   >

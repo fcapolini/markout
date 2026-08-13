@@ -183,12 +183,14 @@ attributes). With a kit of Markout fragments, the same thing is:
 </head>
 
 <body>
-  <bs-nav :title="Northstar Studio" :options=${[
+  <bs-nav :options=${[
     { name: 'Services', link: '#services' },
     { name: 'Our work', link: '#work' },
     { name: 'Insights', link: '#insights' },
     { name: 'Start a project', link: '#contact', button: true, primary: true},
-  ]} />
+  ]}>
+    Northstar Studio
+  </bs-nav>
 ```
 
 The markup that was only ever mechanical becomes data. The pinned Bootstrap
