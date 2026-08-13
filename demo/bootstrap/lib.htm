@@ -1,0 +1,14 @@
+<lib>
+  <:import src="/bootstrap-kit/parts/base.htm" />
+
+  <style>
+    .app-article {
+      border-radius: ${bsCardRadius};
+    }
+  </style>
+
+  <:define tag="app-article:article"
+           class="app-article h-100 p-4"
+           ><:slot /></:define>
+
+</lib>
