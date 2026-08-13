@@ -13,7 +13,11 @@ import { Server } from '../../src/server';
  *
  * What it has to prove is composition under replication: components nested
  * two deep, slotted content whose expressions resolve at the call site, and
- * a keyed list carrying DOM state the framework never sees.
+ * a keyed list whose rows are moved rather than rebuilt.
+ *
+ * A cue note is part of its track, not state stranded in an <input>, so the
+ * assertions come in pairs: what the element shows, and what the data holds.
+ * Only the second would survive being saved.
  */
 describe('demo/setlist', () => {
   let server: Server;
@@ -44,6 +48,15 @@ describe('demo/setlist', () => {
       names: () => [...doc.querySelectorAll('.row h3')].map(n => n.textContent),
       positions: () => [...doc.querySelectorAll('.row .pos')].map(n => n.textContent),
       notes: () => [...doc.querySelectorAll('.row input')].map(i => (i as any).value),
+      // what the DATA holds, as opposed to what the user typed into the
+      // element: the attribute is written by the binding, so it only says
+      // this once the note has been round-tripped through `tracks`
+      stored: () =>
+        [...doc.querySelectorAll('.row input')].map(i => i.getAttribute('value')),
+      type: (el: any, text: string) => {
+        (el as any).value = text;
+        el.dispatchEvent(new page.mainFrame.window.Event('input', { bubbles: true }));
+      },
       click: (el: any) => el.dispatchEvent(new page.mainFrame.window.MouseEvent('click')),
     };
   }
@@ -79,12 +92,14 @@ describe('demo/setlist', () => {
   });
 
   it('moves a row and its typed-in note together, and renumbers around them', async () => {
-    const { browser, doc, names, positions, notes, rows, click } = await open();
+    const { browser, names, positions, notes, stored, rows, type, click } = await open();
     try {
-      // a note lives only in the DOM -- nothing in `tracks` knows about it
+      // typing folds the note into `tracks`, so it is the song's, not the
+      // element's -- the written-back attribute is the proof of the round trip
       const ferryRow = rows()[2];
-      (ferryRow.querySelector('input') as any).value = 'capo 3';
+      type(ferryRow.querySelector('input'), 'capo 3');
       expect(notes()).toEqual(['', '', 'capo 3', '']);
+      expect(stored()).toEqual(['', '', 'capo 3', '']);
 
       // move Last Ferry up one
       click(ferryRow.querySelectorAll('.row-actions button')[0]);
@@ -95,6 +110,8 @@ describe('demo/setlist', () => {
       // the very same element, moved rather than rewritten
       expect(rows()[1]).toBe(ferryRow);
       expect(notes()).toEqual(['', 'capo 3', '', '']);
+      // and it moved because the DATA moved, not because the element did
+      expect(stored()).toEqual(['', 'capo 3', '', '']);
       // positions are derived from the array, so they renumber in place
       expect(positions()).toEqual(['1', '2', '3', '4']);
     } finally {
@@ -103,10 +120,10 @@ describe('demo/setlist', () => {
   });
 
   it('survives reversing the whole list', async () => {
-    const { browser, doc, names, notes, rows, click } = await open();
+    const { browser, doc, names, notes, stored, rows, type, click } = await open();
     try {
       const galeRow = rows()[3];
-      (galeRow.querySelector('input') as any).value = 'ends cold';
+      type(galeRow.querySelector('input'), 'ends cold');
 
       click(doc.querySelector('.panel-actions .ghost')!);
 
@@ -115,6 +132,7 @@ describe('demo/setlist', () => {
       ]);
       expect(rows()[0]).toBe(galeRow);
       expect(notes()).toEqual(['ends cold', '', '', '']);
+      expect(stored()).toEqual(['ends cold', '', '', '']);
     } finally {
       await browser.close();
     }
