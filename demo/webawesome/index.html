@@ -1,0 +1,24 @@
+<html lang="en">
+<head>
+  <:import src="/webawesome-kit/all.htm" />
+  <title>Night Shift | Release queue</title>
+  <link rel="stylesheet" href="/webawesome/app.css">
+</head>
+<body :activeGenre=${'All'}
+      :queue=${[]}
+      :selected=${{ title: 'Fever Window', artist: 'Solene Park', length: '4:18', genre: 'Ambient pop' }}
+      :releases=${[
+        { id: 'fever', title: 'Fever Window', artist: 'Solene Park', genre: 'Ambient', length: '4:18', image: 'https://images.unsplash.com/photo-1461360228754-6e81c478b882?auto=format&fit=crop&w=900&q=80' },
+        { id: 'water', title: 'Low Water', artist: 'Marching Lines', genre: 'Post-rock', length: '5:02', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=900&q=80' },
+        { id: 'bloom', title: 'Static Bloom', artist: 'Yara Vale', genre: 'Electronic', length: '3:41', image: 'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?auto=format&fit=crop&w=900&q=80' },
+        { id: 'arc', title: 'Long Arc', artist: 'Tern', genre: 'Ambient', length: '6:09', image: 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=900&q=80' },
+      ]}>
+  <header class="app-header"><a class="brand" href="#top">Night Shift <span>Records</span></a><div class="queue-count">Queue: ${queue.length}</div></header>
+  <main id="top" class="app-shell">
+    <section class="dashboard-header"><div><p class="kicker">Listening room</p><h1>A queue for the curious.</h1><p>Preview a release, add it to your queue, and make a small night of it.</p></div><wa-card class="now-playing"><p class="kicker">Now previewing</p><h2>${selected.title}</h2><p>${selected.artist} <span>${selected.length}</span></p><wa-badge variant="brand" pill>${selected.genre}</wa-badge></wa-card></section>
+    <section class="workspace"><div class="catalog"><div class="catalog-header"><div><p class="kicker">Release desk</p><h2>Pick a direction.</h2></div><div class="filters"><wa-button :for-each=${['All', 'Ambient', 'Post-rock', 'Electronic']} variant=${activeGenre === data ? 'brand' : 'neutral'} appearance=${activeGenre === data ? 'filled' : 'outlined'} size="s" :on-click=${() => activeGenre = data}>${data}</wa-button></div></div>
+      <div class="release-grid"><wa-card :for-each=${releases.filter(release => activeGenre === 'All' || release.genre === activeGenre)} class="release-card"><img slot="media" src=${data.image} alt=${data.title + ' cover art'}><div class="release-top"><wa-badge variant="neutral" pill>${data.genre}</wa-badge><span>${data.length}</span></div><h3>${data.title}</h3><p>${data.artist}</p><div class="card-actions"><wa-button variant="neutral" appearance="plain" size="s" :on-click=${() => selected = data}>Preview</wa-button><wa-button variant="brand" size="s" :attr-disabled=${queue.some(release => release.id === data.id)} :on-click=${() => queue = queue.some(release => release.id === data.id) ? queue : [...queue, data]}>${queue.some(release => release.id === data.id) ? 'Queued' : 'Add'}</wa-button></div></wa-card></div>
+    </div><aside class="queue-panel"><div class="queue-heading"><div><p class="kicker">Up next</p><h2>${queue.length === 0 ? 'The queue is quiet.' : queue.length + ' release' + (queue.length === 1 ? '' : 's') + ' waiting.'}</h2></div><wa-button :on-click=${() => queue = []} :attr-disabled=${queue.length === 0} variant="neutral" appearance="plain" size="s">Clear</wa-button></div><p class="queue-summary">${queue.length === 0 ? 'Add a release from the desk. Your listening queue will build here.' : queue.map(release => release.title + ' - ' + release.artist + ' (' + release.length + ')').join(' / ')}</p><wa-progress-bar value=${queue.length * 25} aria-label="Queue length"></wa-progress-bar><small class="queue-note">${queue.length === 0 ? 'Four picks makes a full set.' : (queue.length >= 4 ? 0 : 4 - queue.length) + ' more for a full set.'}</small></aside></section>
+  </main>
+</body>
+</html>
