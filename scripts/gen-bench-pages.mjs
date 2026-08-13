@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { makeModels, FINISHES } from '../bench/shared/catalog.mjs';
 
 const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../demo/medium');
 const src = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
@@ -12,8 +13,8 @@ const src = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
 const variants = { 'bench-1000.html': 34, 'bench-10000.html': 334 };
 
 for (const [file, modelCount] of Object.entries(variants)) {
-  const rows = modelCount * 30;
-  const models = Array.from({ length: modelCount }, (_, i) => `Model${String(i + 1).padStart(4, '0')}`);
+  const rows = modelCount * 6 * FINISHES.length;
+  const models = makeModels(modelCount);
   const literal = '[' + models.map(m => `'${m}'`).join(', ') + ']';
   const out = src
     .replace(/:models=\$\{\[[^\]]*\]\}/, `:models=\${${literal}}`)
