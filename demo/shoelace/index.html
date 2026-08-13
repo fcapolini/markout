@@ -1,0 +1,27 @@
+<html lang="en">
+<head>
+  <:import src="/shoelace-kit/all.htm" />
+  <title>Seasonal Table | Market basket</title>
+  <link rel="stylesheet" href="/shoelace/app.css">
+</head>
+<body :activeSeason=${'All'}
+      :basket=${[]}
+      :items=${[
+        { id: 'peas', name: 'Snap peas', farm: 'Dockside Growers', season: 'Spring', price: 4, image: 'https://images.unsplash.com/photo-1567375698348-5d9d5ae99de0?auto=format&fit=crop&w=900&q=80' },
+        { id: 'tomatoes', name: 'Heritage tomatoes', farm: 'South Field', season: 'Summer', price: 6, image: 'https://images.unsplash.com/photo-1546094096-0df4bcaaa337?auto=format&fit=crop&w=900&q=80' },
+        { id: 'mushrooms', name: 'Chestnut mushrooms', farm: 'Cedar Hollow', season: 'Autumn', price: 5, image: 'https://images.unsplash.com/photo-1504545102780-26774c1bb073?auto=format&fit=crop&w=900&q=80' },
+        { id: 'citrus', name: 'Blood oranges', farm: 'Sunward Grove', season: 'Winter', price: 7, image: 'https://images.unsplash.com/photo-1547514701-42782101795e?auto=format&fit=crop&w=900&q=80' },
+        { id: 'asparagus', name: 'Wild asparagus', farm: 'Riverbend', season: 'Spring', price: 8, image: 'https://images.unsplash.com/photo-1652803072914-9f6119191238?auto=format&fit=crop&w=900&q=80' },
+        { id: 'peaches', name: 'White peaches', farm: 'South Field', season: 'Summer', price: 5, image: 'https://images.unsplash.com/photo-1692561796478-3c43d6656e42?auto=format&fit=crop&w=900&q=80' },
+      ]}>
+  <header class="app-header"><a class="brand" href="#top">Seasonal Table</a><div class="header-basket"><span>${basket.length} items</span><strong>$${basket.reduce((total, item) => total + item.price, 0)}</strong></div></header>
+  <main id="top" class="app-shell">
+    <section class="intro"><div><p class="eyebrow">Saturday market</p><h1>Build a basket that follows the season.</h1><p>Choose a few ingredients, then take the total to the stall. Nothing gets lost between the market and dinner.</p></div>
+      <sl-card class="basket-card"><div class="basket-card__heading"><div><p class="eyebrow">Your basket</p><h2>${basket.length === 0 ? 'Start with something fresh.' : basket.length + ' good things, ready to go.'}</h2></div><sl-button :on-click=${() => basket = []} :attr-disabled=${basket.length === 0} variant="text" size="small">Clear</sl-button></div><p class="selection-summary">${basket.length === 0 ? 'Add market ingredients and this list will stay with you while you shop.' : basket.map(item => item.name + ' - $' + item.price).join(' / ')}</p><sl-divider></sl-divider><div class="basket-total"><span>Total</span><strong>$${basket.reduce((total, item) => total + item.price, 0)}</strong></div><sl-progress-bar value=${basket.length >= 5 ? 100 : basket.length * 20} aria-label="Basket progress"></sl-progress-bar><small>${basket.length === 0 ? 'Add five ingredients for a full week of ideas.' : (basket.length >= 5 ? 0 : 5 - basket.length) + ' more ingredient' + (basket.length === 4 ? '' : 's') + ' for a full week.'}</small></sl-card>
+    </section>
+    <section class="market-panel" aria-labelledby="market-heading"><div class="market-toolbar"><div><p class="eyebrow">Market board</p><h2 id="market-heading">What looks good today?</h2></div><div class="filter-row" aria-label="Filter by season"><sl-button :for-each=${['All', 'Spring', 'Summer', 'Autumn', 'Winter']} variant=${activeSeason === data ? 'primary' : 'default'} size="small" :on-click=${() => activeSeason = data}>${data}</sl-button></div></div>
+      <div class="item-grid"><sl-card :for-each=${items.filter(item => activeSeason === 'All' || item.season === activeSeason)} class="item-card"><img slot="image" src=${data.image} alt=${data.name}><div class="item-meta"><sl-badge variant="success" pill>${data.season}</sl-badge><span>$${data.price}</span></div><h3>${data.name}</h3><p>${data.farm}</p><sl-button :on-click=${() => basket = basket.some(item => item.id === data.id) ? basket : [...basket, data]} :attr-disabled=${basket.some(item => item.id === data.id)} variant="primary" size="small">${basket.some(item => item.id === data.id) ? 'In basket' : 'Add to basket'}</sl-button></sl-card></div>
+    </section>
+  </main>
+</body>
+</html>
