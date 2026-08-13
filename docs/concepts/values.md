@@ -150,7 +150,9 @@ Some prefixes change how a value behaves at runtime:
 - `:class-x` toggles a CSS class.
 - `:style-x` writes a CSS property.
 - `:on-x` binds an event handler.
-- `:did-x` and `:will-x` bind lifecycle hooks.
+- `:did-x` and `:will-x` bind lifecycle hooks — designed but **not
+  implemented**: they compile and are never called (see the
+  [syntax reference](../reference/syntax.md#lifecycle-and-how-it-is-unfinished)).
 
 These are still values. They just have side effects instead of being pure logic values.
 
