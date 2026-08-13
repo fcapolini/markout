@@ -22,6 +22,8 @@ import {
   TEXT_VALUE_PREFIX,
   WILL_VALUE_ATTR_PREFIX,
   WILL_VALUE_PREFIX,
+  HANDLE_VALUE_ATTR_PREFIX,
+  HANDLE_VALUE_PREFIX,
 } from '../ir/Page';
 import { Scope } from '../ir/Scope';
 import { Value } from '../ir/Value';
@@ -42,6 +44,7 @@ const KNOWN_VALUE_PREFIXES = [
   EVENT_VALUE_PREFIX,
   DID_VALUE_PREFIX,
   WILL_VALUE_PREFIX,
+  HANDLE_VALUE_PREFIX,
   FOR_EACH_VALUE,
   FOR_AS_VALUE,
   FOR_KEY_VALUE,
@@ -60,6 +63,8 @@ const CALLBACK_VALUE_PREFIXES = [
   DID_VALUE_ATTR_PREFIX,
   WILL_VALUE_PREFIX,
   WILL_VALUE_ATTR_PREFIX,
+  HANDLE_VALUE_PREFIX,
+  HANDLE_VALUE_ATTR_PREFIX,
 ];
 
 function stripKnownPrefix(name: string): string {
@@ -131,10 +136,16 @@ function validateValue(page: Page, name: string, value: Value) {
   // event and lifecycle callbacks must themselves be arrow functions: a
   // classic one would rebind `this`, which is how the scope is reached
   if (CALLBACK_VALUE_PREFIXES.some(p => name.startsWith(p))) {
-    if (ast.type !== 'ArrowFunctionExpression') {
+    // `:handle-x` has already been desugared into a call that passes `x`, so
+    // what the author actually wrote is the callee
+    const fn =
+      name.startsWith(HANDLE_VALUE_PREFIX) && ast.type === 'CallExpression'
+        ? ((ast as unknown as { callee: Node }).callee)
+        : ast;
+    if (fn.type !== 'ArrowFunctionExpression') {
       addError(
         page,
-        `Callback "${name}" must be an arrow function, got ${ast.type}`,
+        `Callback "${name}" must be an arrow function, got ${fn.type}`,
         value.node.loc || undefined
       );
     }

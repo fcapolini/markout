@@ -1,13 +1,15 @@
 import * as estraverse from 'estraverse';
 import type { Node } from 'estree';
 import type { Page } from '../ir/Page';
-import { DID_VALUE_PREFIX, EVENT_VALUE_PREFIX, WILL_VALUE_PREFIX } from '../ir/Page';
+import { DID_VALUE_PREFIX, EVENT_VALUE_PREFIX, HANDLE_VALUE_PREFIX, WILL_VALUE_PREFIX } from '../ir/Page';
 import type { Scope } from '../ir/Scope';
 import type { Value, ValueDepRef } from '../ir/Value';
 
 const RT_PARENT_VALUE_KEY = '$parent';
 const RT_VALUE_FN_KEY = '$value';
 const RT_ID_VALUE_KEY = '$id';
+// DOM-side, but the resolver only needs to know it is always there
+const RT_DOM_VALUE_KEY = '$dom';
 
 // values whose top-level expression is itself a callback (an event/lifecycle
 // handler): its body only runs later, when invoked, not as part of
@@ -71,9 +73,28 @@ function resolveValue(name: string, value: Value, page: Page) {
   const isCallback =
     CALLBACK_VALUE_PREFIXES.some(p => name.startsWith(p)) &&
     (ast.type === 'ArrowFunctionExpression' || ast.type === 'FunctionExpression');
-  // a callback's own body isn't evaluated until it's invoked, so its
-  // references aren't dependencies of the callback value itself
-  value.deps = isCallback ? [] : collectDeps(ast, value, page);
+  if (isCallback) {
+    // a callback's own body isn't evaluated until it's invoked, so its
+    // references aren't dependencies of the callback value itself
+    value.deps = [];
+    return;
+  }
+  // `:handle-x` is that same callback, wrapped by stage1 in a call that
+  // passes `x`. The call runs on every evaluation, so the argument IS a
+  // dependency -- but the body still isn't, and picking references out of it
+  // would re-run the handler whenever anything it happens to touch changed,
+  // which is not what "handle changes to x" says
+  if (name.startsWith(HANDLE_VALUE_PREFIX) && ast.type === 'CallExpression') {
+    const deps = new Map<string, ValueDepRef>();
+    for (const arg of ast.arguments) {
+      for (const dep of collectDeps(arg as Node, value, page)) {
+        deps.set([...(dep.via ?? []), dep.key].join('.'), dep);
+      }
+    }
+    value.deps = [...deps.values()];
+    return;
+  }
+  value.deps = collectDeps(ast, value, page);
 }
 
 function resolvesToKnownValue(scope: Scope, key: string): boolean {
@@ -188,7 +209,12 @@ function validated(
   page: Page
 ): ValueDepRef | undefined {
   // the runtime supplies these on every scope; there's nothing to declare
-  if (key !== RT_PARENT_VALUE_KEY && key !== RT_VALUE_FN_KEY && key !== RT_ID_VALUE_KEY) {
+  if (
+    key !== RT_PARENT_VALUE_KEY &&
+    key !== RT_VALUE_FN_KEY &&
+    key !== RT_ID_VALUE_KEY &&
+    key !== RT_DOM_VALUE_KEY
+  ) {
     if (!resolvesToKnownValue(target, key)) {
       addError(page, `Unknown reference: "${[...via, key].join('.')}"`, value.node.loc);
       return undefined;

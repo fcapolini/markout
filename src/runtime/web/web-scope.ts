@@ -26,6 +26,13 @@ export const RT_CLASS_VALUE_PREFIX = 'class$';
 export const RT_STYLE_VALUE_PREFIX = 'style$';
 export const RT_TEXT_VALUE_PREFIX = 'text$';
 export const RT_EVENT_VALUE_PREFIX = 'event$';
+export const RT_HANDLE_VALUE_PREFIX = 'handle$';
+/**
+ * `$dom`: this scope's own element, for the imperative corner a projection
+ * can't reach -- `focus()`, `showModal()`, `play()`. The only door from an
+ * expression to the view, which is what keeps such access greppable.
+ */
+export const RT_DOM_VALUE_KEY = '$dom';
 
 export class WebScope extends CoreScope {
   // `declare`: init() (invoked from within CoreScope's constructor, i.e.
@@ -57,6 +64,14 @@ export class WebScope extends CoreScope {
       : templateId
         ? this.acquireUsageDom(templateId)
         : this.lookupView(this.parent instanceof WebScope ? this.parent.dom : undefined);
+    // set even when there is no element, and never inherited: answering with
+    // an ANCESTOR's element would be the plausible-but-wrong kind of failure
+    // that is hardest to notice (the same reason $id is unconditional).
+    // Browser-only, like `:prop-`: a served page has no element to drive,
+    // and a ServerElement would field method calls it does not have
+    if (!(this.ctx.props as WebContextProps).server) {
+      this.values[RT_DOM_VALUE_KEY] = new CoreValue({ val: view }, this, RT_DOM_VALUE_KEY);
+    }
     if (!view) {
       // Root scope or other scopes without corresponding DOM elements
       // should not try to perform DOM operations
@@ -213,6 +228,17 @@ export class WebScope extends CoreScope {
     props: CoreValueProps<any>,
     allValues?: { [key: string]: CoreValueProps<any> },
   ) {
+    // a handler runs for its effect on the view, and a served page has no
+    // view to drive -- `$dom` is not there either. Inert rather than merely
+    // unbound: evaluating it is the whole point, so there is nothing to
+    // report, only nothing to do. Anything a handler would derive belongs in
+    // a value instead, or server and browser render different markup
+    if (
+      key.startsWith(RT_HANDLE_VALUE_PREFIX) &&
+      (this.ctx.props as WebContextProps).server
+    ) {
+      return new CoreValue({}, this, key);
+    }
     const ret = super.newValue(key, props, allValues);
     if (ret.cb) return ret;
     if (key.startsWith(RT_ATTR_VALUE_PREFIX)) {

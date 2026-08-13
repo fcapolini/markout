@@ -21,12 +21,14 @@ import {
   EVENT_VALUE_ATTR_PREFIX,
   DID_VALUE_ATTR_PREFIX,
   WILL_VALUE_ATTR_PREFIX,
+  HANDLE_VALUE_ATTR_PREFIX,
   CLASS_VALUE_PREFIX,
   STYLE_VALUE_PREFIX,
   ATTR_VALUE_PREFIX,
   EVENT_VALUE_PREFIX,
   DID_VALUE_PREFIX,
   WILL_VALUE_PREFIX,
+  HANDLE_VALUE_PREFIX,
   FOR_EACH_ATTR,
   FOR_AS_ATTR,
   FOR_KEY_ATTR,
@@ -788,6 +790,9 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     } else if (name.startsWith(WILL_VALUE_ATTR_PREFIX)) {
       prefix = WILL_VALUE_ATTR_PREFIX;
       compiledPrefix = WILL_VALUE_PREFIX;
+    } else if (name.startsWith(HANDLE_VALUE_ATTR_PREFIX)) {
+      prefix = HANDLE_VALUE_ATTR_PREFIX;
+      compiledPrefix = HANDLE_VALUE_PREFIX;
     }
     const loc = {
       ...attr.loc,
@@ -796,8 +801,12 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
         column: attr.loc.start.column + prefix.length,
       },
     };
-    const suffix = validateName(page, name.slice(prefix.length), loc, extra, prefix === '');
+    // a `:handle-x` suffix names the value being handled, so unlike the
+    // element-facing families it has to be something an expression can say
+    const referenced = prefix === '' || prefix === HANDLE_VALUE_ATTR_PREFIX;
+    const suffix = validateName(page, name.slice(prefix.length), loc, extra, referenced);
     name = compiledPrefix + suffix;
+    prefix === HANDLE_VALUE_ATTR_PREFIX && desugarHandler(attr, suffix);
     scope.values.set(name, new Value(name, attr, scope, page.createValueId()));
   }
   // both families are now scope values: leaving them behind would serialize
@@ -820,6 +829,34 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
 // a plain (non-prefixed) value or scope name must be a clean JS identifier:
 // no dash (reserved for our own class-/style-/on- families, for
 // expressiveness there), no dollar sign (reserved for system values)
+/**
+ * Rewrites `:handle-x=${(v) => ...}` into `((v) => ...)(x)`.
+ *
+ * That is the whole feature. The wrapped call is an ordinary expression, so
+ * the dependency on `x` comes out of the normal extraction, `x` is resolved
+ * like any other reference -- `:handle-typo` is a compile error rather than
+ * a handler that never runs -- and the runtime needs to know nothing about
+ * it: a value is re-evaluated when what it depends on changes, and this one
+ * happens to be evaluated for its effect rather than its result.
+ */
+function desugarHandler(attr: ServerAttribute, target: string): void {
+  const exp = attr.value;
+  // a plain string isn't an expression; stage2 reports it as no arrow
+  if (!exp || typeof exp === 'string') return;
+  const node = exp as unknown as acorn.Expression;
+  attr.value = {
+    type: 'CallExpression',
+    callee: node,
+    arguments: [
+      { type: 'Identifier', name: target, start: node.start, end: node.end, loc: node.loc },
+    ],
+    optional: false,
+    start: node.start,
+    end: node.end,
+    loc: node.loc,
+  } as unknown as acorn.Expression;
+}
+
 /**
  * Whether `name` can be written as a bare reference in an expression.
  *

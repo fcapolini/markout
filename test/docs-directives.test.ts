@@ -242,6 +242,31 @@ const CASES: Record<string, Case> = {
       expect(readout()).toBe('1');
     },
   },
+  ':handle-name=${(v) => ...}': {
+    works: async () => {
+      // an effect, so what it does has to be observed somewhere the runtime
+      // isn't managing: a dataset entry nothing else writes
+      const { window, doc } = await runInBrowser(
+        '<html><body><div :n=${0} :handle-n=${(v) => { $dom.dataset.seen = v; }}>' +
+          '<button :on-click=${() => n++}>go</button></div></body></html>'
+      );
+      const div = doc.querySelector('div')!;
+      // fires once at start, with the initial value
+      expect(div.getAttribute('data-seen')).toBe('0');
+      doc.querySelector('button')!.dispatchEvent(new window.MouseEvent('click'));
+      expect(div.getAttribute('data-seen')).toBe('1');
+    },
+  },
+  $dom: {
+    works: async () => {
+      const { doc } = await runInBrowser(
+        '<html><body><div id="probe" :n=${1} :handle-n=${(v) => { $dom.dataset.tag = $dom.tagName; }}>' +
+          'x</div></body></html>'
+      );
+      // this scope's OWN element, not an ancestor's
+      expect(doc.querySelector('#probe')!.getAttribute('data-tag')).toBe('DIV');
+    },
+  },
   ':did-init=${() => ...}': {
     unimplemented: async () => {
       const g = globalThis as any;

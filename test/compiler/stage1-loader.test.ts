@@ -9,6 +9,8 @@ import {
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Page } from '../../src/compiler/ir/Page';
 import { stage1load } from '../../src/compiler/stages/stage1-load';
+import { stage3qualify } from '../../src/compiler/stages/stage3-qualify';
+import { stage4resolve } from '../../src/compiler/stages/stage4-resolve';
 
 const LOC: SourceLocation = {
   start: { line: 0, column: 0 },
@@ -330,6 +332,40 @@ describe('stage1-loader', () => {
     it('should reject a dash in a :did-*/:will-* suffix', () => {
       const page = runLoaderFromMarkup('<html :did-my-thing=${() => {}}></html>');
       expect(page.errors.map(e => e.msg)).toStrictEqual(['Invalid name: "my-thing"']);
+    });
+
+    it('should desugar :handle-x into a call that passes x', () => {
+      // the whole feature: the wrapped call makes the dependency on `x` fall
+      // out of ordinary extraction, so the runtime needs to know nothing
+      const context = runLoaderFromMarkup(
+        '<html><body><div :count=${0} :handle-count=${(n) => n}></div></body></html>'
+      );
+      const html = getLoadedScope(context);
+      const div = getChildScope(getChildScope(html, 1), 0);
+      expect(div.values.has('handle$count')).toBe(true);
+      const exp = div.values.get('handle$count')!.value as any;
+      expect(exp.type).toBe('CallExpression');
+      expect(exp.callee.type).toBe('ArrowFunctionExpression');
+      expect(exp.arguments.map((a: any) => a.name)).toStrictEqual(['count']);
+    });
+
+    it('should reject a :handle- suffix that names nothing', () => {
+      // a handler for a value that does not exist is dead code, and the
+      // desugaring turns it into an ordinary unresolved reference
+      const page = runLoaderFromMarkup(
+        '<html><body><div :count=${0} :handle-conut=${(n) => n}></div></body></html>'
+      ) as any;
+      stage3qualify(page);
+      stage4resolve(page);
+      expect(page.errors.map((e: any) => e.msg)).toStrictEqual([
+        'Unknown reference: "conut"',
+      ]);
+    });
+
+    it('should require a :handle- suffix that could be a reference', () => {
+      const page = runLoaderFromMarkup('<html><div :handle-if=${(n) => n}></div></html>');
+      expect(page.errors.length).toBe(1);
+      expect(page.errors[0].msg).toContain('"if"');
     });
 
     it('should accept the punctuation real event names use', () => {
