@@ -1,0 +1,39 @@
+<lib>
+
+  <:define tag="mk-facet:div" class="facet"
+
+           // parameters
+           :label=""
+           :options=${[]}
+           :active=""
+           :pick=${(value) => value}>
+    <p class="facet-label">${label}</p>
+    <div class="facet-options">
+      <button :for-each=${options}
+              class="chip"
+              :class-chip-on=${data === active}
+              :on-click=${() => pick(data)}>${data}</button>
+    </div>
+  </:define>
+
+  <:define tag="mk-search:label" class="search"
+
+           // parameters
+           :label="Search"
+           :value=""
+           :hits=${0}
+           :change=${(value) => value}
+
+           // private
+           :_id="search-${$id}">
+    <span class="facet-label" id=${_id}>${label}</span>
+    <input type="search"
+           placeholder="Filter by name or brand"
+           value=${value}
+           :prop-value=${value}
+           aria-labelledby=${_id}
+           :on-input=${(e) => change(e.target.value)}>
+    <span class="search-hits">${hits} matching</span>
+  </:define>
+
+</lib>

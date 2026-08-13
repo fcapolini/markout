@@ -1,0 +1,52 @@
+<lib>
+
+  <:define tag="mk-header:header" class="app-header"
+
+           // parameters
+           :brand="Markout"
+           :count=${0}
+           :total=${0}>
+    <div class="brand-block">
+      <span class="brand">${brand}</span>
+      <span class="tagline"><:slot name="tagline" /></span>
+    </div>
+    <div class="header-actions">
+      <:slot />
+      <span class="header-cart"><strong>${count}</strong> in cart &middot; <strong>$${total}</strong></span>
+    </div>
+  </:define>
+
+  <:define tag="mk-section:section" class="panel"
+
+           // parameters
+           :kicker=""
+           :heading="">
+    <header class="panel-head">
+      <div><p class="kicker">${kicker}</p><h2>${heading}</h2></div>
+      <div class="panel-actions"><:slot name="actions" /></div>
+    </header>
+    <:slot />
+  </:define>
+
+  <:define tag="mk-stat:div" class="stat"
+
+           // parameters
+           :label=""
+           :value=""
+           :hint="">
+    <span class="stat-label">${label}</span>
+    <strong class="stat-value">${value}</strong>
+    <span class="stat-hint">${hint}</span>
+  </:define>
+
+  <:define tag="mk-pager:nav" class="pager"
+
+           // parameters
+           :current=${1}
+           :count=${1}>
+    <:slot name="prev" />
+    <span class="pager-label">Page ${current} of ${count}</span>
+    <:slot name="next" />
+  </:define>
+
+</lib>

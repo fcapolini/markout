@@ -1,0 +1,88 @@
+:root {
+  --ink: #16202b;
+  --accent: #2f5d8a;
+  --mist: #eef1f5;
+  --paper: #ffffff;
+  --line: #d8dee6;
+  --muted: #62707f;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--mist); color: var(--ink); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; margin: 0; }
+button { font: inherit; }
+.ghost { background: transparent; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); cursor: pointer; padding: .35rem .7rem; }
+.ghost:hover:not([disabled]) { border-color: var(--accent); color: var(--accent); }
+.ghost[disabled] { color: #a7b1bb; cursor: default; }
+
+.app-header { align-items: center; background: var(--paper); border-bottom: 1px solid var(--line); display: flex; gap: 1.5rem; justify-content: space-between; padding: 1rem clamp(1rem, 4vw, 3rem); position: sticky; top: 0; z-index: 5; }
+.brand-block { display: flex; flex-direction: column; }
+.brand { color: var(--accent); font-size: 1.25rem; font-weight: 700; }
+.tagline, .stat-hint, .card-brand, .cart-line-meta { color: var(--muted); font-size: .8rem; }
+.header-actions { align-items: center; display: flex; gap: 1rem; }
+.header-cart strong { color: var(--accent); }
+
+.app-shell { margin: 0 auto; max-width: 92rem; padding: clamp(1rem, 3vw, 2.5rem); }
+.board { display: grid; gap: 1rem; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 1.5rem; }
+.stat { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; gap: .15rem; padding: .9rem 1rem; }
+.stat-label { color: var(--muted); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; }
+.stat-value { font-size: 1.6rem; line-height: 1.1; }
+
+.layout { align-items: start; display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr) 21rem; }
+.panel { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: clamp(1rem, 2vw, 1.75rem); }
+.panel-head { align-items: end; display: flex; gap: 1.5rem; justify-content: space-between; margin-bottom: 1.25rem; }
+.panel-head h2 { font-size: 1.6rem; margin: 0; }
+.kicker { color: var(--accent); font-size: .7rem; font-weight: 700; letter-spacing: .1em; margin: 0 0 .2rem; text-transform: uppercase; }
+.sizes, .facet-options { display: flex; flex-wrap: wrap; gap: .35rem; }
+
+.filters { border-bottom: 1px solid var(--line); display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 1.25rem; padding-bottom: 1.25rem; }
+.facet-label { color: var(--muted); font-size: .7rem; font-weight: 700; letter-spacing: .08em; margin: 0 0 .4rem; text-transform: uppercase; }
+.chip { background: var(--mist); border: 1px solid transparent; border-radius: 999px; cursor: pointer; padding: .3rem .75rem; }
+.chip-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.search { display: block; }
+.search input { border: 1px solid var(--line); border-radius: 6px; font: inherit; padding: .45rem .6rem; width: 100%; }
+.search-hits { color: var(--muted); display: block; font-size: .75rem; margin-top: .3rem; }
+
+.grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
+.card-media { position: relative; }
+.card-media img { aspect-ratio: 1.4; display: block; object-fit: cover; width: 100%; }
+.card-tag { background: rgba(22, 32, 43, .78); border-radius: 999px; color: #fff; font-size: .7rem; left: .6rem; padding: .15rem .55rem; position: absolute; top: .6rem; }
+.card-body { display: flex; flex: 1; flex-direction: column; gap: .35rem; padding: .85rem; }
+.card-brand { margin: 0; }
+.card-title { font-size: 1.05rem; margin: 0; }
+.rating { align-items: center; display: flex; gap: .15rem; }
+.star { color: #cbd3dc; }
+.star-on { color: #e0a422; }
+.rating-count { color: var(--muted); font-size: .75rem; margin-left: .35rem; }
+.card-specs { color: var(--muted); font-size: .75rem; list-style: none; margin: 0; padding: 0; }
+.card-stock { font-size: .75rem; margin: 0; }
+.card-stock-low { color: #b4562a; }
+.card-foot { align-items: center; display: flex; justify-content: space-between; margin-top: auto; padding-top: .5rem; }
+.card-price { font-size: 1.15rem; font-weight: 700; }
+.buy { background: var(--accent); border: 1px solid var(--accent); border-radius: 6px; color: #fff; cursor: pointer; padding: .35rem .9rem; }
+.buy[disabled] { background: var(--mist); border-color: var(--line); color: var(--muted); cursor: default; }
+.empty { color: var(--muted); padding: 2rem 0; text-align: center; }
+
+.pager { align-items: center; display: flex; gap: .75rem; justify-content: center; margin-top: 1.5rem; }
+.pager-label { color: var(--muted); font-size: .85rem; }
+
+.cart { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 1rem; position: sticky; top: 5rem; }
+.cart-head { align-items: center; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; margin-bottom: .75rem; padding-bottom: .75rem; }
+.cart-head h2 { font-size: 1.2rem; margin: 0; }
+.cart-empty { color: var(--muted); font-size: .85rem; }
+.cart-lines { list-style: none; margin: 0; max-height: 26rem; overflow-y: auto; padding: 0; }
+.cart-line { align-items: center; border-bottom: 1px solid var(--mist); display: grid; gap: .35rem; grid-template-columns: 1fr auto; padding: .55rem 0; }
+.cart-line-main { display: flex; flex-direction: column; }
+.cart-line-name { font-size: .9rem; }
+.cart-line-qty { align-items: center; display: flex; gap: .2rem; }
+.cart-line-qty .ghost { padding: .1rem .4rem; }
+.qty { min-width: 1.5rem; text-align: center; }
+.cart-line-total { font-weight: 700; grid-column: 2; text-align: right; }
+.cart-foot { align-items: baseline; display: flex; justify-content: space-between; padding-top: .75rem; }
+.cart-foot strong { color: var(--accent); font-size: 1.25rem; }
+
+@media (max-width: 980px) {
+  .layout, .filters { grid-template-columns: 1fr; }
+  .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cart { position: static; }
+}

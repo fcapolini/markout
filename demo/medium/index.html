@@ -1,0 +1,141 @@
+<html lang="en"
+
+      // seed data, combined into the catalog below
+      :categories=${['Audio', 'Lighting', 'Desk', 'Outdoor', 'Kitchen', 'Studio']}
+      :brands=${['Northwind', 'Bellhaven', 'Kestrel', 'Marlowe', 'Orrery', 'Tundra']}
+      :models=${['Atlas', 'Beacon', 'Cirrus', 'Delta', 'Ember', 'Fathom', 'Grove', 'Halcyon', 'Iris', 'Juniper']}
+      :finishes=${['Ash', 'Brass', 'Cobalt', 'Slate', 'Terracotta']}
+      :images=${[
+        'https://images.unsplash.com/photo-1567375698348-5d9d5ae99de0?auto=format&fit=crop&w=900&q=80',
+        'https://images.unsplash.com/photo-1546094096-0df4bcaaa337?auto=format&fit=crop&w=900&q=80',
+        'https://images.unsplash.com/photo-1504545102780-26774c1bb073?auto=format&fit=crop&w=900&q=80',
+        'https://images.unsplash.com/photo-1547514701-42782101795e?auto=format&fit=crop&w=900&q=80',
+        'https://images.unsplash.com/photo-1652803072914-9f6119191238?auto=format&fit=crop&w=900&q=80',
+        'https://images.unsplash.com/photo-1692561796478-3c43d6656e42?auto=format&fit=crop&w=900&q=80',
+      ]}>
+<head>
+  <:import src="/medium-kit/all.htm" />
+  <title>Medium | Catalog benchmark</title>
+  <link rel="stylesheet" href="/medium/app.css">
+</head>
+<body
+
+      // 6 categories x 10 models x 5 finishes = 300 items
+      :catalog=${categories.flatMap((category, c) => models.flatMap((model, m) => finishes.map((finish, f) => {
+        const n = c * 50 + m * 5 + f;
+        return {
+          id: 'p' + n,
+          name: model + ' ' + finish,
+          category: category,
+          brand: brands[(m + f) % brands.length],
+          price: 18 + (n * 7) % 180,
+          rating: 3 + ((n * 3) % 20) / 10,
+          reviews: 12 + (n * 13) % 400,
+          stock: (n * 5) % 40,
+          image: images[n % images.length],
+          specs: ['Finish: ' + finish, 'Ships in ' + (1 + n % 5) + ' days', 'Warranty ' + (1 + n % 3) + ' yr'],
+        };
+      })))}
+
+      // view state -- every filter change resets the page, so it stays in range
+      :query=${''}
+      :activeCategory=${'All'}
+      :activeBrand=${'All'}
+      :sort=${'Featured'}
+      :page=${1}
+      :pageSize=${24}
+      :cart=${[]}
+
+      // actions
+      :add=${(item) => cart = cart.some(line => line.id === item.id)
+        ? cart
+        : [...cart, { id: item.id, name: item.name, brand: item.brand, price: item.price, qty: 1 }]}
+      :bump=${(id, step) => cart = cart
+        .map(line => line.id === id ? { ...line, qty: line.qty + step } : line)
+        .filter(line => line.qty > 0)}
+      :drop=${(id) => cart = cart.filter(line => line.id !== id)}
+      :reset=${() => { query = ''; activeCategory = 'All'; activeBrand = 'All'; sort = 'Featured'; page = 1; }}>
+
+  <mk-header :count=${cart.reduce((total, line) => total + line.qty, 0)}
+             :total=${cart.reduce((total, line) => total + line.price * line.qty, 0)}>
+    <span :slot="tagline">${catalog.length} items, one page, no framework</span>
+    <button class="ghost" :on-click=${() => reset()}>Reset view</button>
+  </mk-header>
+
+  <main class="app-shell"
+
+        // derived from the view state above
+        :matches=${catalog.filter(item =>
+          (activeCategory === 'All' || item.category === activeCategory) &&
+          (activeBrand === 'All' || item.brand === activeBrand) &&
+          (query === '' || (item.name + ' ' + item.brand).toLowerCase().includes(query.toLowerCase())))}
+        :sorted=${sort === 'Price up' ? [...matches].sort((a, b) => a.price - b.price)
+          : sort === 'Price down' ? [...matches].sort((a, b) => b.price - a.price)
+          : sort === 'Rating' ? [...matches].sort((a, b) => b.rating - a.rating)
+          : sort === 'Name' ? [...matches].sort((a, b) => a.name.localeCompare(b.name))
+          : matches}
+        :pages=${(((sorted.length + pageSize - 1) / pageSize) | 0) || 1}
+        :shown=${sorted.slice((page - 1) * pageSize, page * pageSize)}>
+
+    <section class="board">
+      <mk-stat :label="Catalog" :value=${catalog.length} :hint="items generated at load"></mk-stat>
+      <mk-stat :label="Matching" :value=${matches.length} :hint="after filters"></mk-stat>
+      <mk-stat :label="Average price"
+               :value=${'$' + (matches.length === 0 ? 0 : (matches.reduce((t, i) => t + i.price, 0) / matches.length) | 0)}
+               :hint="across the current filter"></mk-stat>
+      <mk-stat :label="Low stock" :value=${matches.filter(item => item.stock < 8).length} :hint="fewer than 8 left"></mk-stat>
+    </section>
+
+    <div class="layout">
+      <mk-section class="catalog" :kicker="Inventory" :heading="Browse the catalog">
+
+        <div :slot="actions" class="sizes">
+          <button :for-each=${[12, 24, 48, 300]}
+                  class="chip"
+                  :class-chip-on=${data === pageSize}
+                  :on-click=${() => { pageSize = data; page = 1; }}>${data}/page</button>
+        </div>
+
+        <div class="filters">
+          <mk-search :value=${query}
+                     :hits=${matches.length}
+                     :change=${(value) => { query = value; page = 1; }}></mk-search>
+          <mk-facet :label="Category"
+                    :options=${['All', ...categories]}
+                    :active=${activeCategory}
+                    :pick=${(value) => { activeCategory = value; page = 1; }}></mk-facet>
+          <mk-facet :label="Brand"
+                    :options=${['All', ...brands]}
+                    :active=${activeBrand}
+                    :pick=${(value) => { activeBrand = value; page = 1; }}></mk-facet>
+          <mk-facet :label="Sort"
+                    :options=${['Featured', 'Price up', 'Price down', 'Rating', 'Name']}
+                    :active=${sort}
+                    :pick=${(value) => sort = value}></mk-facet>
+        </div>
+
+        <div class="catalog-body">
+          <p class="empty" :for-each=${sorted.length === 0 ? [0] : []}>Nothing matches those filters.</p>
+          <div class="grid">
+            <mk-card :for-each=${shown}
+                     :for-key=${data.id}
+                     :item=${data}
+                     :inCart=${cart.some(line => line.id === data.id)}
+                     :buy=${add}></mk-card>
+          </div>
+          <mk-pager :current=${page} :count=${pages}>
+            <button :slot="prev" class="ghost" :attr-disabled=${page <= 1} :on-click=${() => page = page - 1}>Previous</button>
+            <button :slot="next" class="ghost" :attr-disabled=${page >= pages} :on-click=${() => page = page + 1}>Next</button>
+          </mk-pager>
+        </div>
+      </mk-section>
+
+      <mk-cart :lines=${cart}
+               :total=${cart.reduce((total, line) => total + line.price * line.qty, 0)}
+               :step=${bump}
+               :remove=${drop}
+               :clear=${() => cart = []}></mk-cart>
+    </div>
+  </main>
+</body>
+</html>
