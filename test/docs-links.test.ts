@@ -20,7 +20,12 @@ function slug(heading: string): string {
     .trim()
     .toLowerCase()
     .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-');
+    // one hyphen per space, not one per run of them. GitHub drops the
+    // punctuation first, so `Optional rendering — designed` is left holding
+    // two spaces and slugs to `...rendering--designed`. Collapsing here
+    // would have this file quietly disagree with the thing it links to,
+    // passing a link that 404s and failing one that works
+    .replace(/\s/g, '-');
 }
 
 function anchorsOf(file: string): Set<string> {
@@ -54,9 +59,11 @@ describe('documentation links', () => {
       for (const match of text.matchAll(LINK)) {
         if (/^(https?:|mailto:)/.test(match[1])) continue;
         const [target, fragment] = match[1].split('#');
-        if (!target) continue;
-        const resolved = path.resolve(path.dirname(file), target);
-        if (!fs.existsSync(resolved)) {
+        // no target means the link points into THIS file. Skipping those left
+        // the commonest kind of link in a long page -- a contents entry --
+        // as the one kind nothing checked
+        const resolved = target ? path.resolve(path.dirname(file), target) : file;
+        if (target && !fs.existsSync(resolved)) {
           dead.push(target);
           continue;
         }
