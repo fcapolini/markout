@@ -19,6 +19,11 @@ function median(nums: number[]) {
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 }
 
+function toMarkdownTable(headers: string[], rows: string[][]): string {
+  const line = (cells: string[]) => `| ${cells.join(' | ')} |`;
+  return [line(headers), line(headers.map(() => '---')), ...rows.map(line)].join('\n');
+}
+
 interface Timings {
   mount: number;
   filter: number;
@@ -106,22 +111,15 @@ async function main() {
   await browser.close();
   await server.stop();
 
-  console.log(`\n${REPEATS} timed repeats per size (+1 discarded warm-up), median ms:\n`);
-  console.table(
-    Object.fromEntries(
-      Object.entries(results).map(([label, m]) => [
-        label,
-        crashed[label]
-          ? { 'mount all (ms)': 'CRASHED', 'filter (ms)': '-', 'sort (ms)': '-', '20x add-to-cart (ms)': '-' }
-          : {
-              'mount all (ms)': median(m.mount).toFixed(1),
-              'filter (ms)': median(m.filter).toFixed(1),
-              'sort (ms)': median(m.sort).toFixed(1),
-              '20x add-to-cart (ms)': median(m.cart).toFixed(1),
-            },
-      ])
-    )
+  const headers = ['Rows', 'Mount all (ms)', 'Filter (ms)', 'Sort (ms)', '20x add-to-cart (ms)'];
+  const rows = Object.entries(results).map(([label, m]) =>
+    crashed[label]
+      ? [label, 'CRASHED', '-', '-', '-']
+      : [label, median(m.mount).toFixed(1), median(m.filter).toFixed(1), median(m.sort).toFixed(1), median(m.cart).toFixed(1)],
   );
+
+  console.log(`\n${REPEATS} timed repeats per size (+1 discarded warm-up), median ms:\n`);
+  console.log(toMarkdownTable(headers, rows));
 }
 
 main().catch(err => {
