@@ -322,6 +322,41 @@ describe('docs/concepts/modules-and-components.md', () => {
   });
 });
 
+describe('docs/concepts/state.md', () => {
+  it('renders the durable-app-state example', () => {
+    // the point of the snippet is that typing folds the note back into
+    // `tracks` rather than leaving it in the element, so the assertion is on
+    // the written-back attribute: that is the half a datasource could save
+    const result = render(
+      "<html><body :tracks=${[{ id: 'lantern', name: 'Lantern Season', note: 'capo 3' }]}>" +
+        '<ol><li :for-each=${tracks} :for-key=${data.id}>' +
+        '<input value=${data.note} :on-input=${e => tracks = tracks.map(t =>' +
+        ' t.id === data.id ? { ...t, note: e.target.value } : t)}>' +
+        '</li></ol></body></html>'
+    );
+
+    expectClean(result);
+    const live = result.body.slice(result.body.indexOf('</template>'));
+    expect(live).toContain('value="capo 3"');
+  });
+
+  it('renders the ephemeral-view-state example', () => {
+    const result = render(
+      "<html><body :activeSeason=${'All'}>" +
+        "<button :for-each=${['All', 'Spring']} :on-click=${() => activeSeason = data}>" +
+        '${data}</button><p>${activeSeason}</p></body></html>'
+    );
+
+    expectClean(result);
+    // server-rendered from the values alone, which is the reason it has to be
+    // data at all rather than something the DOM remembers
+    expect(result.body).toContain('<p>All</p>');
+    const live = result.body.slice(result.body.indexOf('</template>'));
+    expect(live).toContain('>All<');
+    expect(live).toContain('>Spring<');
+  });
+});
+
 describe('docs/concepts/replication.md', () => {
   it('renders the :for-key example', () => {
     const result = render(
