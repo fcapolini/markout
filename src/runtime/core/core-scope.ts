@@ -1,5 +1,5 @@
 import { CoreContext } from './core-context';
-import { CoreValue, CoreValueProps } from './core-value';
+import { CoreValue, CoreValueProps, ValueExp } from './core-value';
 
 //TODO: make sure compiler rejects logic values with $ in name
 
@@ -25,6 +25,7 @@ export const RT_FOR_EACH_VALUE = 'for$each';
 export const RT_FOR_OFFSET_VALUE = 'for$offset';
 export const RT_FOR_LENGTH_VALUE = 'for$length';
 export const RT_FOR_AS_VALUE = 'for$as';
+export const RT_FOR_KEY_VALUE = 'for$key';
 // the per-item value's key defaults to this, same as compiler-side
 // FOR_DATA_DEFAULT_NAME in ir/Page.ts (duplicated rather than imported: this
 // is runtime code, kept independent of the compiler)
@@ -247,6 +248,15 @@ export class CoreScope {
     // Its callbacks still act on THIS scope: WebScope.newValue's closures
     // capture the instance, so `<my-card id=${x}/>` sets the attribute on
     // the instance's element while reading `x` from the call site
+    // `:for-key` describes how to derive an item's key; it is not a value
+    // this scope has. Replication applies the expression itself, against the
+    // item being considered -- so left live here it would evaluate the
+    // per-item alias exactly where no current item exists (the host), which
+    // at best wastes a pass and at worst reports a spurious error for markup
+    // that is entirely correct
+    if (key === RT_FOR_KEY_VALUE) {
+      return new CoreValue({}, this, key);
+    }
     const ret = new CoreValue(props, props.callSite ? this.callSiteScope() ?? this : this, key);
     if (key === RT_FOR_EACH_VALUE) {
       ret.setCB(CoreScope.foreachCB);
@@ -260,6 +270,20 @@ export class CoreScope {
   // ===========================================================================
   cloned?: boolean;
   clones?: CoreScope[];
+  /** replicas of a keyed `:for-each`: the key this one currently stands for,
+   * which is what the next pass matches it by */
+  replicaKey?: unknown;
+  /**
+   * Keyed replication hands out replica indices in creation order rather
+   * than by position, so a replica keeps the id it was born with when the
+   * list reorders. That is the whole point of the id: pages build HTML ids
+   * out of `$id` (`aria-controls`, a label's `for`), and those must go on
+   * pointing at the same item after a move. Only ever incremented, so a
+   * replica created later can never collide with a live one.
+   */
+  private nextReplicaIndex = 0;
+  /** guards against a nested pass over the same host: see foreachCB */
+  private replicating = false;
 
   static foreachCB(that: CoreScope, vv?: any[]) {
     if (!Array.isArray(vv)) {
@@ -273,7 +297,25 @@ export class CoreScope {
       // clones ignore array data
       return;
     }
+    // Creating a replica refreshes it, and that refresh drains the pending
+    // queue -- which still holds THIS callback, since applyPending only
+    // clears once it returns. So a pass re-enters itself once per replica it
+    // creates. Index replication happens to survive that (a nested pass
+    // updates the same slots and creates the next one, so it converges), but
+    // keyed replication cannot: each level captured its own "what existed
+    // before" snapshot, and unwinding, every outer level would recreate what
+    // a deeper one already made and dispose what it no longer recognises.
+    // The outermost pass is the authoritative one and finishes the job
+    if (that.replicating) return;
+    that.replicating = true;
+    try {
+      CoreScope.replicate(that, vv);
+    } finally {
+      that.replicating = false;
+    }
+  }
 
+  private static replicate(that: CoreScope, vv: any[]) {
     const alias = (that.values[RT_FOR_AS_VALUE]?.get() as string) || FOR_DATA_DEFAULT_NAME;
 
     let offset = 0, length = vv.length;
@@ -301,12 +343,32 @@ export class CoreScope {
     // itself be a visible instance; this also means an empty/absent array
     // naturally results in zero visible replicas, with no separate
     // "hide the host" step needed
-    let ci = 0, di = offset;
     that.clones || (that.clones = []);
+    // `:for-key` makes a replica belong to an ITEM rather than to a
+    // position. Without it, replica N always shows item N and only the data
+    // moves, which is cheaper and perfectly correct for a list that is
+    // rendered from scratch -- but it means a reorder rewrites every replica
+    // in place, so anything the DOM itself holds (focus, scroll offset, an
+    // input's typed value, a running animation, a media element's playhead)
+    // stays where it was while the data slides out from under it
+    const keyExp = that.props.values?.[RT_FOR_KEY_VALUE]?.exp;
+    keyExp
+      ? CoreScope.replicateByKey(that, vv, offset, length, alias, keyExp)
+      : CoreScope.replicateByIndex(that, vv, offset, length, alias);
+  }
+
+  private static replicateByIndex(
+    that: CoreScope,
+    vv: any[],
+    offset: number,
+    length: number,
+    alias: string
+  ) {
+    let ci = 0, di = offset;
     for (; di < offset + length; ci++, di++) {
-      if (ci < that.clones.length) {
+      if (ci < that.clones!.length) {
         // update
-        that.clones[ci].proxy[alias] = vv[di];
+        that.clones![ci].proxy[alias] = vv[di];
       } else {
         // create
         const clone = that.clone(ci);
@@ -318,6 +380,92 @@ export class CoreScope {
     // remove excess clones
     CoreScope.removeExcessClones(that, length);
   }
+
+  private static replicateByKey(
+    that: CoreScope,
+    vv: any[],
+    offset: number,
+    length: number,
+    alias: string,
+    keyExp: ValueExp<any>
+  ) {
+    // A key expression is written against the per-item alias
+    // (`:for-key=${item.id}`), but it has to be evaluated for an INCOMING
+    // item, before that item has a replica to be evaluated against. Hence a
+    // probe: the alias answers with the item being considered, everything
+    // else falls through to the host, so a key is free to mix in outer
+    // values. One probe for the whole pass rather than one per item
+    let probed: any;
+    const probe = new Proxy({}, {
+      get: (_target, prop) => (prop === alias ? probed : that.proxy[prop]),
+    });
+    const keyOf = (item: any) => {
+      probed = item;
+      try {
+        return keyExp.apply(probe);
+      } catch (err) {
+        that.ctx.onError('update', err, that.values[RT_FOR_KEY_VALUE]);
+        return undefined;
+      }
+    };
+
+    // snapshot: clone() appends to that.clones as replicas are created, and
+    // what still counts as "already there" must not grow underneath us
+    const previous = [...that.clones!];
+    const byKey = new Map<unknown, CoreScope>();
+    previous.forEach(c => byKey.has(c.replicaKey) || byKey.set(c.replicaKey, c));
+
+    const ordered: CoreScope[] = [];
+    const reused = new Set<CoreScope>();
+    // keys claimed by this pass: a duplicate is most often two copies of one
+    // item in the SAME array, which `byKey` cannot see -- it only knows what
+    // the previous pass left behind
+    const claimed = new Set<unknown>();
+    for (let di = offset; di < offset + length; di++) {
+      const item = vv[di];
+      const key = keyOf(item);
+      let clone = claimed.has(key) ? undefined : byKey.get(key);
+      if (claimed.has(key) || (clone && reused.has(clone))) {
+        // two items claiming one identity: the second can't have the first's
+        // replica, so it gets a fresh one and the list still renders. Worth
+        // reporting even so -- with a duplicate key nothing keyed
+        // reconciliation promises holds, and the symptom (one item's DOM
+        // state following the wrong row) reads as a framework bug
+        that.ctx.onError(
+          'update',
+          new Error(`duplicate :for-key ${JSON.stringify(key) ?? key}`),
+          that.values[RT_FOR_KEY_VALUE]
+        );
+        clone = undefined;
+      }
+      claimed.add(key);
+      if (clone) {
+        reused.add(clone);
+        clone.replicaKey = key;
+        clone.proxy[alias] = item;
+      } else {
+        clone = that.clone(that.nextReplicaIndex++);
+        // before the data lands and before the refresh: both propagate, and
+        // a replica that is not yet answering for its key is a replica the
+        // next pass would fail to recognise and would build a second time
+        clone.replicaKey = key;
+        clone.values[alias].set(item);
+        that.ctx.refresh(clone);
+      }
+      ordered.push(clone);
+    }
+
+    previous.forEach(c => reused.has(c) || c.dispose());
+    that.clones = ordered;
+    that.reorderClones();
+  }
+
+  /**
+   * Puts the replicas' DOM back in array order after a keyed pass.
+   * DOM-specific, so it does nothing here and WebScope overrides it -- and
+   * nothing at all for index replication, where a replica never moves.
+   */
+  reorderClones() {}
 
   static removeExcessClones(that: CoreScope, i: number) {
     while (that.clones!.length > i) {

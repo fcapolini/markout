@@ -274,3 +274,21 @@ describe('docs/concepts/modules-and-components.md', () => {
     expect(result.body).not.toContain('definition');
   });
 });
+
+describe('docs/concepts/replication.md', () => {
+  it('renders the :for-key example', () => {
+    const result = render(
+      '<html :rows=${[{ id: "a", label: "One" }, { id: "b", label: "Two" }]}>' +
+        '<body><ul><li :for-each=${rows} :for-key=${data.id}>' +
+        '<input> ${data.label}' +
+        '</li></ul></body></html>'
+    );
+
+    expectClean(result);
+    // one replica per row, each reading its own item -- a key changes which
+    // replica an item belongs to, never what gets rendered
+    const live = result.body.slice(result.body.indexOf('</template>'));
+    expect(live).toContain('One');
+    expect(live).toContain('Two');
+  });
+});

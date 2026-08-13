@@ -1,6 +1,12 @@
 import { parse } from '../../../src/html/parser';
 import { assert, describe, it } from 'vitest';
-import { CoreScopeProps, RT_FOR_EACH_VALUE, RT_FOR_AS_VALUE } from '../../../src/runtime/core/core-scope';
+import {
+  CoreScopeProps,
+  RT_FOR_EACH_VALUE,
+  RT_FOR_AS_VALUE,
+  RT_FOR_KEY_VALUE,
+} from '../../../src/runtime/core/core-scope';
+import type { RuntimeError } from '../../../src/runtime/core/core-context';
 import { WebContext } from '../../../src/runtime/web/web-context';
 import { WebScope } from '../../../src/runtime/web/web-scope';
 
@@ -9,10 +15,43 @@ import { WebScope } from '../../../src/runtime/web/web-scope';
 const HTML =
   '<html data-markout="0"><ul><template><li data-markout="1"></li></template></ul></html>';
 
-function setup(root: CoreScopeProps, html = HTML) {
+function setup(root: CoreScopeProps, html = HTML, onError?: RuntimeError[]) {
   const source = parse(html, 'test');
-  const context = new WebContext({ doc: source.doc, root }).refresh();
+  const context = new WebContext({
+    doc: source.doc,
+    root,
+    ...(onError ? { onError: (e: RuntimeError) => onError.push(e) } : {}),
+  }).refresh();
   return { source, context, host: context.root.children[0] as WebScope };
+}
+
+/** a `:for-key=${data.id}` host, i.e. what the compiler emits for it */
+function keyedSetup(items: any[], onError?: RuntimeError[]) {
+  return setup(
+    {
+      id: '0',
+      values: {},
+      children: [
+        {
+          id: '1',
+          values: {
+            [RT_FOR_EACH_VALUE]: { val: items },
+            data: {},
+            [RT_FOR_KEY_VALUE]: { exp: function (this: any) { return this.data.id; } },
+          },
+        },
+      ],
+    },
+    HTML,
+    onError
+  );
+}
+
+/** the replica ids in document order, which is what a reorder has to fix */
+function domOrder(source: any): string[] {
+  return [...findByTag(source.doc, 'UL').childNodes]
+    .filter((n: any) => n.tagName === 'LI' && n.getAttribute('data-markout') !== '1')
+    .map((n: any) => n.getAttribute('data-markout'));
 }
 
 function findByTag(root: any, tagName: string): any {
@@ -150,6 +189,101 @@ describe('replication: DOM cloning/reuse', () => {
 
     const markup = source.doc.toString().replace(/ data-markout="[^"]*"/g, '');
     assert.equal(markup.match(/<li>/g)?.length, 1, 'only the inert stencil remains');
+  });
+
+  it('keeps a replica, and its element, with its item when a keyed list reorders', () => {
+    // the point of the whole feature: reordering must MOVE replicas, not
+    // rewrite each one in place, or everything the DOM itself holds stays
+    // behind while the data slides out from under it
+    const { source, host } = keyedSetup([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+    const before = [...(host.clones as WebScope[])];
+    const nodes = before.map(c => c.dom);
+    assert.deepEqual(domOrder(source), ['1-0', '1-1', '1-2']);
+
+    host.proxy[RT_FOR_EACH_VALUE] = [{ id: 'c' }, { id: 'a' }, { id: 'b' }];
+
+    const after = host.clones as WebScope[];
+    assert.deepEqual(after, [before[2], before[0], before[1]], 'same scopes, new order');
+    assert.deepEqual(after.map(c => c.dom), [nodes[2], nodes[0], nodes[1]], 'same elements');
+    assert.deepEqual(domOrder(source), ['1-2', '1-0', '1-1'], 'document order follows the array');
+  });
+
+  it('moves only the replicas that are actually out of place', () => {
+    const { source, host } = keyedSetup([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+    const ul = findByTag(source.doc, 'UL');
+    const insertBefore = ul.insertBefore.bind(ul);
+    let moves = 0;
+    ul.insertBefore = (n: any, ref: any) => {
+      moves++;
+      return insertBefore(n, ref);
+    };
+
+    // re-stating the same order must touch nothing at all
+    host.proxy[RT_FOR_EACH_VALUE] = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+    assert.equal(moves, 0, 'no reorder, no DOM writes');
+
+    // and rotating by one only needs `c` lifted to the front: re-inserting a
+    // node that already sits where it belongs is still a remove-and-reinsert,
+    // which is precisely what drops focus and restarts a transition
+    host.proxy[RT_FOR_EACH_VALUE] = [{ id: 'c' }, { id: 'a' }, { id: 'b' }];
+    assert.equal(moves, 1);
+    assert.deepEqual(domOrder(source), ['1-2', '1-0', '1-1']);
+  });
+
+  it('keeps a replica id with its item rather than with its position', () => {
+    // pages build HTML ids out of $id (aria-controls, a label's `for`), so an
+    // id that stayed with the slot would silently point at a different item
+    // after every move
+    const { host } = keyedSetup([{ id: 'a' }, { id: 'b' }]);
+    const idOfB = (host.clones![1] as WebScope).proxy.$id;
+    assert.equal(idOfB, '1-1');
+
+    host.proxy[RT_FOR_EACH_VALUE] = [{ id: 'b' }, { id: 'a' }];
+    assert.equal((host.clones![0] as WebScope).proxy.$id, idOfB, 'b kept its own id');
+  });
+
+  it('creates replicas for new keys and disposes the ones whose key is gone', () => {
+    const { source, host } = keyedSetup([{ id: 'a' }, { id: 'b' }]);
+    const a = host.clones![0] as WebScope;
+
+    host.proxy[RT_FOR_EACH_VALUE] = [{ id: 'a' }, { id: 'c' }];
+    assert.equal(host.clones!.length, 2);
+    assert.equal(host.clones![0], a, 'a survived untouched');
+    // a fresh index rather than the disposed replica's: reusing it would put
+    // b's old id on an unrelated item, which is what stable ids rule out
+    assert.deepEqual(domOrder(source), ['1-0', '1-2']);
+  });
+
+  it('reports a duplicate key, and still renders every item', () => {
+    const errors: RuntimeError[] = [];
+    const { source, host } = keyedSetup([{ id: 'a' }, { id: 'a' }], errors);
+
+    assert.equal(host.clones!.length, 2, 'both items rendered');
+    assert.deepEqual(domOrder(source), ['1-0', '1-1']);
+    assert.deepEqual(
+      errors.map(e => [e.scope, e.key, e.message]),
+      [['1', RT_FOR_KEY_VALUE, 'duplicate :for-key "a"']]
+    );
+  });
+
+  it('leaves an unkeyed list updating in place, as before', () => {
+    // the contrast that makes the keyed path worth having: without a key the
+    // replica belongs to the slot, so a reorder rewrites data into the same
+    // scopes and the same elements, in the same order
+    const { source, host } = setup({
+      id: '0',
+      values: {},
+      children: [
+        { id: '1', values: { [RT_FOR_EACH_VALUE]: { val: [10, 20, 30] }, data: {} } },
+      ],
+    });
+    const before = [...(host.clones as WebScope[])];
+
+    host.proxy[RT_FOR_EACH_VALUE] = [30, 10, 20];
+
+    assert.deepEqual(host.clones, before, 'same scopes in the same slots');
+    assert.deepEqual(domOrder(source), ['1-0', '1-1', '1-2'], 'nothing moved');
+    assert.deepEqual((host.clones as WebScope[]).map(c => c.proxy.data), [30, 10, 20]);
   });
 
   it('honors a custom :for-as-style alias name for the DOM-bound data too', () => {

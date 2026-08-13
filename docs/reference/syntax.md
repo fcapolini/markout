@@ -77,7 +77,7 @@ anywhere inside any `${...}`, for the same reason.
 | --- | --- |
 | `:for-each=${expr}` | Repeat once per item in an iterable. `null`/`undefined` means zero items. |
 | `:for-as="name"` | Rename the per-item binding from the default `data`. |
-| `:for-key=${expr}` | Reserved for keyed reconciliation. |
+| `:for-key=${expr}` | Give each item an identity, so reordering moves replicas instead of rewriting them. Evaluated per item, and may read the per-item binding. |
 | `:for-data=${expr}` | Optional single-item rendering. Designed, **not implemented** — a compile error today. |
 
 ## Modules and components

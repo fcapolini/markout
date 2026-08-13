@@ -120,6 +120,20 @@ describe("Browser execution (happy-dom)", () => {
       </html>`
     );
 
+    // the same rows rendered twice off one array: keyed on the left, plain on
+    // the right. One button rotates the array, so a single click shows what
+    // :for-key changes and what it leaves alone
+    fs.writeFileSync(
+      path.join(tempDir, "keyed.html"),
+      `<html :rows=\${[{ id: 'a' }, { id: 'b' }, { id: 'c' }]}>
+        <body>
+          <ul id="keyed"><li :for-each=\${rows} :for-key=\${data.id} data-row=\${data.id}><input></li></ul>
+          <ul id="plain"><li :for-each=\${rows} data-row=\${data.id}><input></li></ul>
+          <button id="rotate" :on-click=\${() => rows = [rows[2], rows[0], rows[1]]}>rotate</button>
+        </body>
+      </html>`
+    );
+
     server = new Server({ docroot: tempDir });
     await server.start();
   });
@@ -356,6 +370,51 @@ describe("Browser execution (happy-dom)", () => {
         new page.mainFrame.window.MouseEvent('click')
       );
       expect(note.textContent).toBe('now set');
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it('should move a keyed replica with its item, carrying DOM state along', async () => {
+    // state the DOM owns and the framework never sees -- here a typed-in
+    // value -- is the whole reason keyed replication exists. The unkeyed list
+    // beside it is rendered from the same array by the same click, and is
+    // what the keyed one is being measured against
+    const browser = new Browser({ settings: { enableJavaScriptEvaluation: true } });
+    try {
+      const page = browser.newPage();
+      await page.goto(`http://127.0.0.1:${server.port}/keyed.html`);
+      await page.waitUntilComplete();
+
+      const doc = page.mainFrame.document;
+      const rows = (list: string) =>
+        [...doc.querySelectorAll(`#${list} li`)] as HTMLElement[];
+      const order = (list: string) => rows(list).map(li => li.getAttribute('data-row'));
+      const typed = (list: string) =>
+        rows(list).map(li => (li.querySelector('input') as HTMLInputElement).value);
+
+      expect(order('keyed')).toEqual(['a', 'b', 'c']);
+      expect(order('plain')).toEqual(['a', 'b', 'c']);
+
+      // type into row b on both sides, and remember b's actual element
+      const keyedB = rows('keyed')[1];
+      (keyedB.querySelector('input') as HTMLInputElement).value = 'mine';
+      (rows('plain')[1].querySelector('input') as HTMLInputElement).value = 'mine';
+
+      doc.querySelector('#rotate')!.dispatchEvent(
+        new page.mainFrame.window.MouseEvent('click')
+      );
+
+      expect(order('keyed')).toEqual(['c', 'a', 'b']);
+      expect(order('plain')).toEqual(['c', 'a', 'b']);
+
+      // keyed: b's element was MOVED, so the typing is still b's
+      expect(rows('keyed')[2]).toBe(keyedB);
+      expect(typed('keyed')).toEqual(['', '', 'mine']);
+
+      // plain: the element stayed in slot 1 and the data was rewritten over
+      // it, so the typing now sits on the row showing item a
+      expect(typed('plain')).toEqual(['', 'mine', '']);
     } finally {
       await browser.close();
     }

@@ -327,6 +327,42 @@ export class WebScope extends CoreScope {
   }
 
   /**
+   * Puts the replicas' elements back in array order after a keyed pass.
+   *
+   * Only what is actually out of place moves. `insertBefore` on a node that
+   * already sits where it belongs is still a remove-and-reinsert, and the
+   * DOM state keyed replication exists to protect -- focus, a running
+   * transition, an <iframe>'s document, a playing video -- is exactly what
+   * that destroys, so reordering everything unconditionally would defeat
+   * the feature while appearing to work.
+   */
+  override reorderClones(): void {
+    const anchor = this.templateEl;
+    const container = anchor?.parentElement;
+    if (!anchor || !container || !this.clones?.length) return;
+    // a local mirror of childNodes, kept in step with each move: re-reading
+    // the live list per replica would make an untouched list quadratic
+    const nodes = [...container.childNodes];
+    const start = nodes.indexOf(anchor) + 1;
+    if (start < 1) return;
+    // replicas are inserted as a contiguous run right after the stencil (see
+    // acquireCloneDom), so "in array order" and "in consecutive slots after
+    // the anchor" are the same arrangement
+    (this.clones as WebScope[]).forEach((clone, i) => {
+      const node = clone.dom;
+      if (!node) return;
+      const at = start + i;
+      if (nodes[at] === node) return;
+      container.insertBefore(node, nodes[at] ?? null);
+      // slots before `at` already hold the right replicas, so the node can
+      // only have come from later in the list -- remove then re-insert
+      const from = nodes.indexOf(node);
+      from >= 0 && nodes.splice(from, 1);
+      nodes.splice(at, 0, node);
+    });
+  }
+
+  /**
    * Finds an already-existing element for a clone id (e.g. one SSR already
    * rendered) among the template's siblings, reusing it if present; failing
    * that, stamps out a new one from the template's stencil and inserts it
