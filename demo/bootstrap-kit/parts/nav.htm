@@ -1,6 +1,5 @@
 <lib>
   <:import src="base.htm" />
-  <:import src="button.htm" />
 
   <:define tag="bs-nav:nav"
            class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top"
@@ -38,12 +37,6 @@
                :class-btn=${data.button}
                :class-btn-primary=${data.primary}
                href=${data.link}>${data.name}</a>
-            <bs-button :href=${data.link}
-                       :variant=${data.primary ? 'primary' : 'link'}
-                       :size=${'md'}
-                       >
-              ${data.name}
-            </bs-button>
           </li>
         </ul>
       </div>

@@ -105,7 +105,12 @@ describe('README code quoted from the demo', () => {
       path.resolve(__dirname, '../demo/bootstrap/index.html'),
       'utf8'
     );
-    const quoted = /<bs-nav :title="[^"]*"/.exec(md);
+    // the whole call, not one attribute of it: pinning `:title="..."` meant
+    // the check only ever noticed drift in that one spot, and went red
+    // rather than informative when the demo dropped the attribute for a
+    // slot. Matched non-greedily to the first close, so it covers the
+    // self-closing form too
+    const quoted = /<bs-nav[\s\S]*?(?:\/>|<\/bs-nav>)/.exec(md);
     expect(quoted).not.toBeNull();
     expect(demo).toContain(quoted![0]);
     expect(demo).toContain('<:import src="/bootstrap-kit/all.htm" />');
