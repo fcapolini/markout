@@ -48,6 +48,40 @@ describe('custom tags inside replicated markup', () => {
     expect(body).not.toContain('<my-card');
   });
 
+  it('refuses :for-each ON a custom tag, naming the way round it', () => {
+    // this used to be an unhandled TypeError out of stage1: wrapInTemplate
+    // moves the usage into a <template>, and a fragment's children have no
+    // parentElement for the expansion to splice against. Even reaching the
+    // runtime it could not work -- a replica owns the per-item binding while
+    // a usage site's attributes resolve where the tag was written, so
+    // `:title=${data}` here would reach into the very instance it configures
+    const { errors } = render(
+      '<html><head><:define tag="my-card:div" class="card" :title="T">' +
+        '<h5>${title}</h5></:define></head>' +
+        '<body><my-card :for-each=${["a", "b"]} :title=${data} /></body></html>'
+    );
+
+    expect(errors.map((e: any) => e.msg)).toStrictEqual([
+      ':for-each cannot go on a custom tag (<my-card>); put it on an element around it instead',
+    ]);
+  });
+
+  it('still expands a custom tag that merely sits inside a stencil', () => {
+    // the containment fix must not over-reach: a usage nested anywhere in
+    // replicated markup is fine, it is only the host element that is refused
+    const { errors, runtimeErrors, body } = render(
+      '<html><head><:define tag="my-card:div" class="card" :title="T">' +
+        '<h5>${title}</h5></:define></head>' +
+        '<body><ul><li :for-each=${["a", "b"]}><span><my-card :title=${data} /></span></li></ul></body></html>'
+    );
+
+    expect(errors).toStrictEqual([]);
+    expect(runtimeErrors).toStrictEqual([]);
+    expect(body).not.toContain('<my-card');
+    expect(body).toContain('>a<');
+    expect(body).toContain('>b<');
+  });
+
   it('lets one component use another', () => {
     const { errors, runtimeErrors, body } = render(
       '<html><head>' +

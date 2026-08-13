@@ -259,7 +259,13 @@ export class CoreScope {
     }
     const ret = new CoreValue(props, props.callSite ? this.callSiteScope() ?? this : this, key);
     if (key === RT_FOR_EACH_VALUE) {
-      ret.setCB(CoreScope.foreachCB);
+      // `this`, not the callback's own scope argument: those differ for a
+      // usage-site value, whose CoreValue resolves against the call site
+      // while the thing it acts on is still THIS scope -- the same split
+      // WebScope's binding callbacks get by capturing `this`. Reading the
+      // host off the value instead made `<my-tag :for-each=${...}>`
+      // replicate whatever scope the tag was written in
+      ret.setCB((_, vv) => CoreScope.foreachCB(this, vv));
       return ret;
     }
     return ret;

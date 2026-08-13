@@ -208,6 +208,30 @@ describe('replication: DOM cloning/reuse', () => {
     assert.deepEqual(domOrder(source), ['1-2', '1-0', '1-1'], 'document order follows the array');
   });
 
+  it('replicates the scope that OWNS :for-each, not the one its expression resolves in', () => {
+    // a usage-site value resolves against the scope the tag was written in
+    // (props.callSite), and for$each is no different -- but what it ACTS on
+    // has to stay this scope. Taking the host from the value's own scope
+    // instead had a component with :for-each on it replicate the scope
+    // around the tag, which is not a list at all
+    const { host } = setup({
+      id: '0',
+      values: {},
+      children: [
+        {
+          id: '1',
+          values: {
+            [RT_FOR_EACH_VALUE]: { val: [10, 20, 30], callSite: true },
+            data: {},
+          },
+        },
+      ],
+    });
+
+    assert.equal(host.clones?.length, 3, 'the child replicated, not its parent');
+    assert.isUndefined((host.parent as WebScope).clones, 'the call-site scope was left alone');
+  });
+
   it('moves only the replicas that are actually out of place', () => {
     const { source, host } = keyedSetup([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
     const ul = findByTag(source.doc, 'UL');
