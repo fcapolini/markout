@@ -1,4 +1,4 @@
-// Combined perf comparison: Markout's demo/medium vs hand-written, idiomatic
+// Combined perf comparison: Markout's bench/medium vs hand-written, idiomatic
 // React and Svelte 5 ports of the exact same app (same components, same
 // catalog generator -- see bench/shared/catalog.mjs -- same CSS, same
 // interactions). Same MEASURE_SCRIPT as bench-medium.ts, run against all
@@ -126,7 +126,7 @@ async function measure(browser: Browser, url: string): Promise<Timings> {
 }
 
 async function main() {
-  const server = await new Server({ docroot: path.resolve(__dirname, '../demo'), port: 0, logger: () => {} }).start();
+  const server = await new Server({ docroot: path.resolve(__dirname, '../bench'), port: 0, logger: () => {} }).start();
   let reactProc: ChildProcessWithoutNullStreams | undefined;
   let svelteProc: ChildProcessWithoutNullStreams | undefined;
   try {

@@ -24,7 +24,7 @@ export function makeModels(modelCount) {
 
 /**
  * categories.length x models.length x finishes.length items, using the same
- * id/price/rating/reviews/stock/specs formulas as demo/medium/index.html.
+ * id/price/rating/reviews/stock/specs formulas as bench/medium/index.html.
  * The id's category spacing is `models.length * finishes.length` -- NOT a
  * hardcoded 50 -- so ids stay collision-free (and :for-key-equivalent
  * lookups stay correct) at any model count. See markout-authoring memory:
