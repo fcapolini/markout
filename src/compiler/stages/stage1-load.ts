@@ -284,22 +284,6 @@ function expandCustomTagUsages(page: Page): void {
   for (const usageEl of usages) {
     const defScope = page.customTags.get(usageEl.tagName.toLowerCase())!;
     const loadedUsageScope = findScopeForElement(page.main, usageEl);
-    // Replication and instantiation don't compose on one element. A replica
-    // owns the per-item binding, while a usage site's own attributes resolve
-    // where the tag was WRITTEN -- so `:label=${data.n}` here would be
-    // reaching for a name that lives inside the very instance it configures,
-    // and the two rules contradict each other. An element around the tag
-    // separates them: it owns the loop, and the usage sits inside it and
-    // reads the item like any other call-site expression
-    if (loadedUsageScope?.values.has(FOR_EACH_VALUE)) {
-      addError(
-        page,
-        `:${FOR_EACH_ATTR} cannot go on a custom tag (<${usageEl.tagName.toLowerCase()}>); ` +
-          `put it on an element around it instead`,
-        usageEl.loc
-      );
-      continue;
-    }
     // reuses the definition's own values/children by reference, and sits
     // where the usage physically sits -- so a usage inside a :for-each is
     // replicated with it, and one inside a <:define> comes along with every
@@ -356,11 +340,11 @@ function expandCustomTagUsages(page: Page): void {
 
     // read now, not when the usage was collected: expanding an outer usage
     // moves its slotted content into that instance's stencil, so an inner
-    // usage is very often no longer where it was found. `parent` rather than
+    // usage is very often no longer where it was found. `parentNode` rather than
     // `parentElement` because a `:for-each` usage has been wrapped in a
     // <template> by this point, and a fragment's children have no
     // parentElement -- which is where this used to throw
-    const parent = usageEl.parent!;
+    const parent = usageEl.parentNode!;
     const marker = new ServerComment(
       usageEl.ownerDocument,
       `${DOM_USE_MARKER}${scope.id}`,

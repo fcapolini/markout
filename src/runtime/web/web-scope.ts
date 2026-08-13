@@ -133,10 +133,17 @@ export class WebScope extends CoreScope {
     const id = `${this.props.id}`;
     const within = this.parent instanceof WebScope ? this.parent.dom : undefined;
     const existing = ctx.findElementById(id, within);
-    if (existing) return existing;
+    // a `:for-each` on the tag leaves this instance sitting in a stencil, and
+    // acquireCloneDom needs to know which one. Undefined for an ordinary
+    // usage, which is what it has always been
+    if (existing) {
+      this.templateEl = ctx.foundInTemplate;
+      return existing;
+    }
 
     const stencil = ctx.findElementById(templateId);
     const marker = ctx.findUseMarker(id, within);
+    const inTemplate = ctx.foundInTemplate;
     if (!stencil || !marker) return undefined;
 
     const node = stencil.cloneNode(true) as unknown as Element;
@@ -144,9 +151,12 @@ export class WebScope extends CoreScope {
     for (const [name, value] of Object.entries(this.props.attributes ?? {})) {
       node.setAttribute(name, value);
     }
-    const container = marker.parentElement!;
+    // parentNode, not parentElement: inside a stencil the marker's container
+    // is the template's content fragment, which is no element
+    const container = (marker as unknown as { parentNode: Element }).parentNode;
     container.insertBefore(node, marker);
     container.removeChild(marker);
+    this.templateEl = inTemplate;
     return node;
   }
 

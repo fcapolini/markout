@@ -70,24 +70,33 @@ Important rules:
 
 ## Replicating a component
 
-`:for-each` goes on an element *around* a custom tag, never on the tag
-itself:
+`:for-each` goes on a custom tag like it goes on anything else — no wrapper
+element needed:
 
 ```html
-<ul>
-  <li :for-each=${rows} :for-key=${row.id}>
-    <my-card :title=${data.name} />
-  </li>
-</ul>
+<my-card :for-each=${rows} :for-key=${data.id} :title=${data.name} />
 ```
 
-Putting it on the tag is a compile error, because the two features would
-contradict each other on one element. A replica owns the per-item binding,
-while a usage site's attributes resolve where the tag was *written* — so
-`<my-card :for-each=${rows} :title=${data.name} />` asks `data` to be both
-inside the instance and visible outside it. The element around the tag keeps
-the two apart: it owns the loop, and the usage reads the item from it like
-any other call-site expression.
+This works because `:for-each` *declares* a name rather than passing a
+value, and it declares it where the instance scope is defined: at the usage
+site. `:title=${data.name}` is written in that same place, so it reads that
+name like any other call-site expression.
+
+Only that one name crosses over. The definition still resolves where it was
+defined, so a component whose body says `${data}` reads its own scope's
+value rather than the caller's item — and `:title=${title}` at the usage
+site still means the *caller's* `title`, never the definition's or itself.
+
+One gap for now: markup **slotted into** a replicated tag can't see that
+name yet, only the tag's own attributes can. Referring to it there is a
+compile error. Until that is finished, put `:for-each` on an element around
+the tag when the slotted content needs the item:
+
+```html
+<li :for-each=${rows} :for-key=${data.id}>
+  <my-card :title=${data.name}>${data.note}</my-card>
+</li>
+```
 
 ## Optional rendering
 

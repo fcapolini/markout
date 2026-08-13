@@ -140,6 +140,17 @@ export class WebContext extends CoreContext {
   // tag's <:define> template and its usage sites aren't siblings under any
   // common scoped parent -- these searches cover the whole document instead
 
+  /**
+   * The `<template>` the last successful find*() matched inside, if any.
+   *
+   * A `:for-each` on a custom tag leaves the instance in a stencil, and the
+   * scope has to know which one to stamp replicas out of. The node cannot be
+   * asked: a template's content is a DocumentFragment, and no DOM links one
+   * back to its template. The walk down does know, so it records it here --
+   * read it straight after the call that set it.
+   */
+  foundInTemplate?: Element;
+
   private searchDocument<T>(
     match: (n: Node) => T | undefined,
     within?: Element
@@ -149,17 +160,22 @@ export class WebContext extends CoreContext {
       e.tagName === 'TEMPLATE'
         ? (e as unknown as TemplateElement).content.childNodes
         : e.childNodes;
-    const search = (childNodes: NodeList): T | undefined => {
+    const search = (childNodes: NodeList, template?: Element): T | undefined => {
       for (const n of childNodes) {
         const found = match(n);
-        if (found !== undefined) return found;
+        if (found !== undefined) {
+          this.foundInTemplate = template;
+          return found;
+        }
         if (n.nodeType === NodeType.ELEMENT) {
-          const deeper = search(childNodesOf(n as Element));
+          const e = n as Element;
+          const deeper = search(childNodesOf(e), e.tagName === 'TEMPLATE' ? e : template);
           if (deeper !== undefined) return deeper;
         }
       }
       return undefined;
     };
+    this.foundInTemplate = undefined;
     return search(within ? childNodesOf(within) : doc.childNodes);
   }
 
