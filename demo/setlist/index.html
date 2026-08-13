@@ -24,13 +24,12 @@
     <p class="lede">Cue notes live in the DOM, not in the data. Reorder the set and they travel with the song.</p>
     <rig-panel :kicker="Thursday rehearsal" :heading="Running order">
       <button :slot="actions" class="ghost" :on-click=${() => tracks = [...tracks].reverse()}>Reverse</button>
-      <ol class="rows"><li :for-each=${tracks} :for-key=${data.id}>
-        <rig-row :position=${tracks.indexOf(data) + 1} :label=${data.name} :meta=${data.players + ' / ' + data.minutes + ' min'}>
+      <ol class="rows"><rig-row :for-each=${tracks} :for-key=${data.id}
+          :position=${tracks.indexOf(data) + 1} :label=${data.name} :meta=${data.players + ' / ' + data.minutes + ' min'}>
           <rig-note :caption=${'Cue for ' + data.name}><input placeholder="stage note"></rig-note>
           <button :slot="actions" :on-click=${() => move(data.id, -1)} :attr-disabled=${tracks.indexOf(data) === 0} aria-label=${'Move ' + data.name + ' earlier'}>↑</button>
           <button :slot="actions" :on-click=${() => move(data.id, 1)} :attr-disabled=${tracks.indexOf(data) === tracks.length - 1} aria-label=${'Move ' + data.name + ' later'}>↓</button>
-        </rig-row>
-      </li></ol>
+      </rig-row></ol>
     </rig-panel>
   </main>
 </body>
