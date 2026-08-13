@@ -85,16 +85,34 @@ export class WebScope extends CoreScope {
         }
         const id = Number.parseInt((n as Comment).textContent.slice(DOM_TEXT_MARKER1.length));
         const next = childNodes[i + 1];
-        if (!next) return;
         // an atomic-text container (<style>/<title>) can't hold the marker
         // inside it, so the marker sits just before the element and the
         // binding target is its one text child
-        const target =
-          next.nodeType === NodeType.ELEMENT &&
+        if (
+          next?.nodeType === NodeType.ELEMENT &&
           DOM_ATOMIC_TEXT_TAGS.has((next as Element).tagName)
-            ? (next as Element).childNodes[0]
-            : next;
-        target?.nodeType === NodeType.TEXT && this.texts.set(id, target as Text);
+        ) {
+          const target = (next as Element).childNodes[0];
+          target?.nodeType === NodeType.TEXT && this.texts.set(id, target as Text);
+          return;
+        }
+        // otherwise the interpolation's own text node sits between the two
+        // markers -- except when there is none to sit there. An interpolation
+        // that rendered empty serializes to nothing at all, so what the
+        // browser parses back is the marker pair side by side. Every clone
+        // stamped from a <template> stencil begins like that (a stencil is
+        // never bound to data), which is why a `:for-each` that shrinks and
+        // grows again comes back with dead text bindings. Materializing the
+        // missing node costs one empty Text and keeps the binding live
+        this.texts.set(
+          id,
+          next?.nodeType === NodeType.TEXT
+            ? (next as Text)
+            : (e.insertBefore(
+                (this.ctx.props as WebContextProps).doc.createTextNode(''),
+                next ?? null
+              ) as Text)
+        );
       });
     };
     f(this.dom);

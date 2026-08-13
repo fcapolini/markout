@@ -88,6 +88,36 @@ describe('replication: DOM cloning/reuse', () => {
     assert.equal(markup.match(/<li>/g)?.length, 5, 'template stencil + 4 real clones');
   });
 
+  it('binds text in a clone stamped from a stencil whose markers sit side by side', () => {
+    // a stencil is never bound to data, so its interpolations render empty --
+    // and an empty text node serializes to nothing at all. What the browser
+    // parses back is the marker pair with no text node between them, and
+    // that is what every clone created after a shrink/grow is cloned from
+    const html =
+      '<html data-markout="0"><ul>' +
+      '<template><li data-markout="1"><!---t0--><!---/--></li></template>' +
+      '</ul></html>';
+    const { source, host } = setup(
+      {
+        id: '0',
+        values: {},
+        children: [
+          {
+            id: '1',
+            values: { [RT_FOR_EACH_VALUE]: { val: [10, 20] }, data: {}, text$0: {} },
+          },
+        ],
+      },
+      html
+    );
+
+    (host.clones as WebScope[]).forEach((c, i) => (c.proxy.text$0 = `item ${i}`));
+
+    const markup = source.doc.toString().replace(/ data-markout="[^"]*"/g, '');
+    assert.include(markup, '<li><!---t0-->item 0<!---/--></li>');
+    assert.include(markup, '<li><!---t0-->item 1<!---/--></li>');
+  });
+
   it('removes a clone\'s DOM element when the array shrinks', () => {
     const { source, host } = setup({
       id: '0',

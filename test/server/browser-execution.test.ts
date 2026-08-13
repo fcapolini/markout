@@ -92,6 +92,24 @@ describe("Browser execution (happy-dom)", () => {
       </html>`
     );
 
+    fs.writeFileSync(
+      path.join(tempDir, "filter.html"),
+      `<html :sel=\${'all'} :items=\${[
+        { name: 'peas', kind: 'spring' },
+        { name: 'tomatoes', kind: 'summer' },
+        { name: 'mushrooms', kind: 'autumn' },
+        { name: 'asparagus', kind: 'spring' },
+      ]}>
+        <body>
+          <ul><li :for-each=\${items.filter(i => sel === 'all' || i.kind === sel)}>
+            <span class="name">\${data.name}</span><span class="kind">\${data.kind}</span>
+          </li></ul>
+          <button id="narrow" :on-click=\${() => sel = 'spring'}>narrow</button>
+          <button id="widen" :on-click=\${() => sel = 'all'}>widen</button>
+        </body>
+      </html>`
+    );
+
     server = new Server({ docroot: tempDir });
     await server.start();
   });
@@ -259,6 +277,45 @@ describe("Browser execution (happy-dom)", () => {
       );
       expect(cards()).toEqual(['a', 'b', 'c']);
       expect(new Set(ids()).size).toBe(3);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it('should keep text bound in replicas re-created after the list shrank', async () => {
+    // the whole round trip matters here, which is why this is an end-to-end
+    // test rather than a runtime one: a replica the list outgrew is stamped
+    // out of the <template> stencil, and the stencil is never bound to data,
+    // so its interpolations serialize to nothing at all. The markup the
+    // browser parses back therefore has the two text markers side by side,
+    // with no text node between them for the binding to attach to
+    const browser = new Browser({ settings: { enableJavaScriptEvaluation: true } });
+    try {
+      const page = browser.newPage();
+      await page.goto(`http://127.0.0.1:${server.port}/filter.html`);
+      await page.waitUntilComplete();
+
+      const doc = page.mainFrame.document;
+      const window = page.mainFrame.window;
+      const read = (cls: string) =>
+        [...doc.querySelectorAll(`.${cls}`)].map(e => e.textContent);
+      const click = (id: string) =>
+        doc.querySelector(`#${id}`)!.dispatchEvent(new window.MouseEvent('click'));
+
+      const errors: string[] = [];
+      window.console.error = (...args: unknown[]) => errors.push(args.join(' '));
+
+      expect(read('name')).toEqual(['peas', 'tomatoes', 'mushrooms', 'asparagus']);
+
+      click('narrow');
+      expect(read('name')).toEqual(['peas', 'asparagus']);
+
+      // every replica beyond the first two is a fresh clone of the stencil,
+      // and each has to come back with its text, not blank
+      click('widen');
+      expect(read('name')).toEqual(['peas', 'tomatoes', 'mushrooms', 'asparagus']);
+      expect(read('kind')).toEqual(['spring', 'summer', 'autumn', 'spring']);
+      expect(errors).toEqual([]);
     } finally {
       await browser.close();
     }

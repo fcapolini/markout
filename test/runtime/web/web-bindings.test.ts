@@ -271,6 +271,19 @@ describe('text$', () => {
     assert.include(markup(), '<style>body{color:blue}</style>');
   });
 
+  it('materializes the text node when the marker pair arrived with nothing between it', () => {
+    // an interpolation that rendered to the empty string serializes to
+    // nothing, so the markup the browser re-parses has the two markers side
+    // by side and no text node to bind. Creating it here is what keeps the
+    // binding live rather than dead for the rest of the page's life
+    const { context, markup } = setup(
+      '<html data-markout="0"><body><!---t0--><!---/--></body></html>',
+      { id: '0', values: { text$0: { val: '' } } }
+    );
+    context.root.proxy.text$0 = 'now here';
+    assert.include(markup(), '<!---t0-->now here<!---/-->');
+  });
+
   it('renders a nullish value as a zero-width space', () => {
     const { context, markup } = setup(MARKED, {
       id: '0',
