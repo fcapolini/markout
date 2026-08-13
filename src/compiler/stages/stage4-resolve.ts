@@ -75,7 +75,13 @@ function resolveValue(name: string, value: Value, page: Page) {
     (ast.type === 'ArrowFunctionExpression' || ast.type === 'FunctionExpression');
   if (isCallback) {
     // a callback's own body isn't evaluated until it's invoked, so its
-    // references aren't dependencies of the callback value itself
+    // references aren't dependencies of the callback value itself.
+    //
+    // Safe here and ONLY here, because nothing can consume what these
+    // values hold: an event or lifetime handler is called by the DOM, never
+    // from inside another value's expression. See below for why that
+    // matters -- dropping the same references from an ordinary value would
+    // leave whatever calls it reading stale data, in silence.
     value.deps = [];
     return;
   }
@@ -94,6 +100,27 @@ function resolveValue(name: string, value: Value, page: Page) {
     value.deps = [...deps.values()];
     return;
   }
+  // Everything else keeps the references inside its function bodies, and
+  // that is deliberate rather than an oversight worth optimising away.
+  //
+  // A value holding a function -- `:fmt=${(n) => n + suffix}` -- is consumed
+  // by being CALLED, and its result then depends on `suffix`. But whatever
+  // calls it, `${fmt(count)}`, mentions only `fmt` and `count`; it has no
+  // way to depend on `suffix` itself. The only path from `suffix` to that
+  // text is: `suffix` changes, `fmt` re-evaluates, the new closure is a
+  // different object, and THAT propagates. Take the dependency away and the
+  // text keeps rendering yesterday's suffix with nothing reported.
+  //
+  // Two things follow, both load-bearing:
+  //  - the re-evaluation must actually produce a new object. Memoising a
+  //    closure that captures nothing, or hoisting one out, would break the
+  //    chain silently. test/function-values.test.ts pins it.
+  //  - references nested inside a function that IS invoked during evaluation
+  //    (`items.map(n => n + offset)`) are genuine dependencies for the
+  //    ordinary reason, and the two cases are indistinguishable from here.
+  //
+  // So this over-approximates: a consumer that merely stores the function
+  // gets re-notified for nothing. That is the cheap direction to be wrong in.
   value.deps = collectDeps(ast, value, page);
 }
 

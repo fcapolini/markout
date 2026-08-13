@@ -158,6 +158,44 @@ describe('stage4-resolve', () => {
     expect(value.deps).toStrictEqual([]);
   });
 
+  it('should record dependencies for a value that HOLDS a function', () => {
+    // deliberately not treated like a callback, even though it looks like
+    // one. Whatever calls `fmt` can observe `suffix` through it, and cannot
+    // depend on `suffix` itself -- re-evaluating `fmt` is the only path.
+    // See the note in stage4-resolve.ts, and function-values.test.ts for
+    // what breaks when this is "optimised"
+    const scope = new Scope(page, page.global);
+    addValue(scope, 'suffix', null);
+    const value = addValue(scope, 'fmt', '(n) => n + this.suffix');
+
+    stage4resolve(page);
+    expect(value.deps).toStrictEqual([{ key: 'suffix' }]);
+  });
+
+  it('should not record dependencies referenced only inside a will- hook body', () => {
+    // the sibling of the on$/did$ cases: same rule, and it had no test
+    const scope = new Scope(page, page.global);
+    const value = addValue(scope, 'will$dispose', '() => this.count++');
+
+    stage4resolve(page);
+    expect(value.deps).toStrictEqual([]);
+  });
+
+  it('should depend on what a :handle- names, and not on its body', () => {
+    // stage1 rewrites `:handle-x=${fn}` into `fn(x)`, so the argument is a
+    // dependency and the body is not: a handler observes the value it names.
+    // Safe for the callback reason -- nothing consumes a handler's result
+    const page2 = new Page(parse(
+      '<html><body :other=${1}><div :count=${0} :handle-count=${(n) => other}></div>' +
+        '</body></html>', 'test.html'));
+    stage1load(page2);
+    stage2validate(page2);
+    stage3qualify(page2);
+    stage4resolve(page2);
+    const div = page2.global.children[0].children[1].children[0];
+    expect(div.values.get('handle$count')!.deps).toStrictEqual([{ key: 'count' }]);
+  });
+
   it('should still record dependencies for a regular value containing a nested arrow function', () => {
     const scope = new Scope(page, page.global);
     addValue(scope, 'items', null);
