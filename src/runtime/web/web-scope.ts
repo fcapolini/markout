@@ -2,6 +2,7 @@ import {
   Comment,
   Document,
   Element,
+  Node,
   NodeList,
   NodeType,
   TemplateElement,
@@ -376,26 +377,19 @@ export class WebScope extends CoreScope {
     const anchor = this.templateEl;
     const container = anchor?.parentElement;
     if (!anchor || !container || !this.clones?.length) return;
-    // a local mirror of childNodes, kept in step with each move: re-reading
-    // the live list per replica would make an untouched list quadratic
-    const nodes = [...container.childNodes];
-    const start = nodes.indexOf(anchor) + 1;
-    if (start < 1) return;
-    // replicas are inserted as a contiguous run right after the stencil (see
-    // acquireCloneDom), so "in array order" and "in consecutive slots after
-    // the anchor" are the same arrangement
-    (this.clones as WebScope[]).forEach((clone, i) => {
+    // walks forward from the anchor comparing `nextSibling` directly, rather
+    // than mirroring childNodes into an array and doing indexOf()/splice()
+    // per replica -- those are O(n) each, which made a full reorder O(n^2)
+    // and measurably fell over past ~1k replicas
+    let ref: Node = anchor;
+    for (const clone of this.clones as WebScope[]) {
       const node = clone.dom;
-      if (!node) return;
-      const at = start + i;
-      if (nodes[at] === node) return;
-      container.insertBefore(node, nodes[at] ?? null);
-      // slots before `at` already hold the right replicas, so the node can
-      // only have come from later in the list -- remove then re-insert
-      const from = nodes.indexOf(node);
-      from >= 0 && nodes.splice(from, 1);
-      nodes.splice(at, 0, node);
-    });
+      if (!node) continue;
+      if (ref.nextSibling !== node) {
+        container.insertBefore(node, ref.nextSibling);
+      }
+      ref = node;
+    }
   }
 
   /**

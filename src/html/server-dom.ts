@@ -74,6 +74,22 @@ export abstract class ServerNode implements Node {
     return this;
   }
 
+  // no sibling pointers of our own -- derived from the parent's childNodes,
+  // the same source of truth insertBefore()/removeChild() already maintain
+  get nextSibling(): Node | null {
+    const siblings = this.parentNode?.childNodes;
+    if (!siblings) return null;
+    const i = siblings.indexOf(this);
+    return i < 0 ? null : siblings[i + 1] ?? null;
+  }
+
+  get previousSibling(): Node | null {
+    const siblings = this.parentNode?.childNodes;
+    if (!siblings) return null;
+    const i = siblings.indexOf(this);
+    return i <= 0 ? null : siblings[i - 1];
+  }
+
   toString(): string {
     const sb = new Array<string>();
     this.toMarkup(sb);

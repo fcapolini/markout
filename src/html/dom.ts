@@ -51,6 +51,8 @@ export interface Node {
   nodeType: unknown;
   /** source location; server-side only, absent on real DOM nodes */
   loc?: unknown;
+  nextSibling: Node | null;
+  previousSibling: Node | null;
 
   /** server-side only: real DOM nodes are detached via their parent */
   unlink?(): void;
