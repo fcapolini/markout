@@ -19,7 +19,8 @@
     "typecheck": "tsc --noEmit && npm run typecheck:test && npm run typecheck:dom",
     "typecheck:test": "tsc -p tsconfig.test.json",
     "typecheck:dom": "tsc -p tsconfig.dom.json",
-    "bench:medium": "node scripts/gen-bench-pages.mjs && tsx scripts/bench-medium.ts"
+    "bench:medium": "node scripts/gen-bench-pages.mjs && tsx scripts/bench-medium.ts",
+    "bench:compare": "tsx scripts/bench-compare.ts"
   },
   "keywords": [
     "html",
