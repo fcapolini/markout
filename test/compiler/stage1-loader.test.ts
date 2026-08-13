@@ -348,13 +348,27 @@ describe('stage1-loader', () => {
       expect(scope.values.has('on$my:event')).toBe(true);
     });
 
+    it('should accept the punctuation real attribute names use', () => {
+      // an attribute name reaches setAttribute verbatim, same as an event
+      // type reaches addEventListener: `data-x.y` and `xlink:href` are both
+      // legal HTML, and dash-case alone refused them
+      const page = runLoaderFromMarkup(
+        '<html><body><i :attr-data-x.y=${true} :attr-xlink:href=${true}></i></body></html>'
+      );
+      expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+    });
+
     it('should keep that punctuation out of the other families', () => {
-      // a dot is fine in an event type and meaningless in a CSS property or
-      // a class name, so the looser charset stays where it belongs
-      const page = runLoaderFromMarkup('<html :class-a.b=${true} :style-c.d=${1}></html>');
+      // a dot means something to the DOM in an attribute name or an event
+      // type, and nothing in a CSS property, a class name or a JS property,
+      // so the wider charset stays where it earns its place
+      const page = runLoaderFromMarkup(
+        '<html :class-a.b=${true} :style-c.d=${1} :prop-e.f=${2}></html>'
+      );
       expect(page.errors.map(e => e.msg)).toStrictEqual([
         'Invalid name: "a.b"',
         'Invalid name: "c.d"',
+        'Invalid name: "e.f"',
       ]);
     });
 

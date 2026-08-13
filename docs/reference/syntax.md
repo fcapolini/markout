@@ -47,7 +47,7 @@ NOTE: "on its own" is literal — whitespace is text like any other, so
 | --- | --- |
 | `:name=${expr}` | Declares a reactive value on the current scope. |
 | `:aka="name"` | Names the current scope so descendants can reference it. |
-| `:attr-name=${expr}` | Toggles whether attribute `name` is PRESENT, as boolean and custom-element attributes need. Bare `:attr-name` implies `true`. |
+| `:attr-name=${expr}` | Toggles whether attribute `name` is PRESENT, as boolean and custom-element attributes need. Bare `:attr-name` implies `true`. `.` and `:` are allowed, for `data-x.y` and `xlink:href`. |
 | `:prop-name=${expr}` | Assigns the element's JS property `name`, for what an attribute can't carry. Browser-only: skipped when server rendering. |
 | `:class-name` | Toggles the `name` CSS class. |
 | `:style-name` | Writes the `name` CSS property. |
@@ -76,9 +76,10 @@ expressed today).
 The names in the dash-case families are element-facing — CSS properties,
 attribute names, event types — so they keep their dashes and this rule
 doesn't apply to them. Each takes what its own world uses: dash-case for
-class, style, attribute and property names, and for `:on-` also `.` and `:`,
-since an event type is passed to `addEventListener` exactly as written. `$`
-stays out everywhere, being the runtime's own prefix.
+class names, CSS properties and JS properties, and additionally `.` and `:`
+for `:attr-` and `:on-`, whose names reach `setAttribute` and
+`addEventListener` exactly as written. `$` stays out everywhere, being the
+runtime's own prefix.
 
 The three callback families take a **literal arrow function**, written at
 that spot. A classic `function` is refused because it would rebind `this`,
