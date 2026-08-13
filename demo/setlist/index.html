@@ -21,7 +21,7 @@
       }}>
   <header class="app-header"><span class="brand">Setlist</span><span class="tally">${tracks.length} songs / ${tracks.reduce((total, t) => total + t.minutes, 0)} min</span></header>
   <main class="app-shell">
-    <p class="lede">Cue notes live in the DOM, not in the data. Reorder the set and they travel with the song.</p>
+    <p class="lede">Reorder the set and each row is moved, not rebuilt. A half-typed cue note stays with its song.</p>
     <rig-panel :kicker="Thursday rehearsal" :heading="Running order">
       <button :slot="actions" class="ghost" :on-click=${() => tracks = [...tracks].reverse()}>Reverse</button>
       <ol class="rows"><rig-row :for-each=${tracks} :for-key=${data.id}
