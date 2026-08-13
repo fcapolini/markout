@@ -1,0 +1,28 @@
+// Type-checks the test suite alongside src.
+//
+// tsconfig.json itself can't do this: it is the BUILD config, so it emits
+// into dist/ with rootDir src/ -- adding test/ there would both violate the
+// rootDir and ship the tests. Hence a check-only config that widens the
+// inputs and emits nothing.
+//
+// Vitest runs tests through esbuild, which strips types without checking
+// them, so without this pass nothing in the suite is type-checked at all.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "sourceMap": false,
+    "rootDir": ".",
+    // the suite is loaded by vitest (esbuild), not by node's CommonJS
+    // loader, so bundler resolution is what actually happens to it.
+    // Node16 here would reject every ESM-only devDependency the tests
+    // import -- happy-dom above all -- for a `require` that is never
+    // emitted. src/ keeps its Node16 check: `typecheck` runs that pass too
+    "module": "ESNext",
+    "moduleResolution": "bundler"
+  },
+  "include": ["src/**/*", "test/**/*"],
+  // needs lib.dom, so it has a config of its own (see tsconfig.dom.json)
+  "exclude": ["test/html/dom-conformance.ts"]
+}

@@ -387,19 +387,21 @@ describe("Browser execution (happy-dom)", () => {
       await page.waitUntilComplete();
 
       const doc = page.mainFrame.document;
-      const rows = (list: string) =>
-        [...doc.querySelectorAll(`#${list} li`)] as HTMLElement[];
+      const rows = (list: string) => [...doc.querySelectorAll(`#${list} li`)];
+      // happy-dom's own element types, not lib.dom's: this package compiles
+      // without lib.dom on purpose (see tsconfig.dom.json)
+      type Row = ReturnType<typeof rows>[number];
+      const field = (li: Row) => li.querySelector('input')!;
       const order = (list: string) => rows(list).map(li => li.getAttribute('data-row'));
-      const typed = (list: string) =>
-        rows(list).map(li => (li.querySelector('input') as HTMLInputElement).value);
+      const typed = (list: string) => rows(list).map(li => field(li).value);
 
       expect(order('keyed')).toEqual(['a', 'b', 'c']);
       expect(order('plain')).toEqual(['a', 'b', 'c']);
 
       // type into row b on both sides, and remember b's actual element
       const keyedB = rows('keyed')[1];
-      (keyedB.querySelector('input') as HTMLInputElement).value = 'mine';
-      (rows('plain')[1].querySelector('input') as HTMLInputElement).value = 'mine';
+      field(keyedB).value = 'mine';
+      field(rows('plain')[1]).value = 'mine';
 
       doc.querySelector('#rotate')!.dispatchEvent(
         new page.mainFrame.window.MouseEvent('click')

@@ -131,7 +131,10 @@ describe('prop$', () => {
       onError: (e: RuntimeError) => errors.push(e),
     }).refresh();
 
-    assert.isUndefined((context.root as WebScope).dom['items' as any]);
+    // read the way the binding writes it (see WebScope's prop$ callback):
+    // a property is state on the element instance, not an attribute
+    const el = (context.root as WebScope).dom as unknown as Record<string, unknown>;
+    assert.isUndefined(el['items']);
     assert.deepEqual(errors, []);
   });
 
