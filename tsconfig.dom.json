@@ -1,0 +1,17 @@
+// Type-checks test/html/dom-conformance.ts, and only that file, with lib.dom
+// switched on. The package itself is compiled WITHOUT lib.dom on purpose --
+// src/html/dom.ts deliberately reuses the names of the browser's DOM types,
+// and building against both at once is what that separation avoids. So the
+// conformance assertions need a config of their own rather than a place in
+// the normal typecheck.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"],
+    "noEmit": true,
+    "declaration": false,
+    "sourceMap": false,
+    "rootDir": "."
+  },
+  "include": ["test/html/dom-conformance.ts"]
+}
