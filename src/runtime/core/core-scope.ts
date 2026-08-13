@@ -108,6 +108,15 @@ export class CoreScope {
     this.init();
     if (props.values) {
       for (const [key, valProps] of Object.entries(props.values)) {
+        // a replica shares the host's props.values (so it gets its own
+        // CoreValues from the same declarations), but for$each is the
+        // host's OWN array to iterate, not the replica's -- foreachCB
+        // already no-ops for a cloned scope (see replicate()), so building
+        // this here just means every one of N replicas gets a needless
+        // CoreValue wired into the (possibly huge) source array's `dst`
+        // set: N wasted links, N wasted re-evaluations on every change of
+        // that array, purely additive cost that made a 10k-row mount OOM
+        if (key === RT_FOR_EACH_VALUE && this.cloned) continue;
         this.values[key] = this.newValue(key, valProps, props.values);
       }
       this.values[RT_VALUE_FN_KEY] = this.newValue(RT_VALUE_FN_KEY, {
