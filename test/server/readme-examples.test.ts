@@ -248,7 +248,7 @@ describe("README example: Source level modularity", () => {
       await page.waitUntilComplete();
 
       const document = page.mainFrame.document;
-      const button = document.querySelector('.theme-switcher');
+      const button = document.querySelector('.theme-switcher')!;
       const style = document.querySelector('style')!;
 
       expect(style.textContent).toContain('color: black');

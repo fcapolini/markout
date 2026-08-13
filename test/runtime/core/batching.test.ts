@@ -191,7 +191,7 @@ describe('DOM Update Batching', () => {
     expect(context.pending).toBeInstanceOf(Set);
 
     const callback = vi.fn();
-    const value = new CoreValue({ val: 'test' }, scope, callback);
+    const value = new CoreValue({ val: 'test' }, scope, 'test');
     value.setCB(callback);
 
     // Add same value multiple times
