@@ -26,7 +26,7 @@ calls that out explicitly.
 - [Modules and components](concepts/modules-and-components.md) - `<:import>`,
   `<:define>`, and reusable custom tags.
 - [Replication](concepts/replication.md) - `:for-each`, aliases, clones, and
-  the current status of optional/keyed list behavior.
+  `:for-key` for lists whose DOM holds state of its own.
 - [Rendering](concepts/rendering.md) - how the compiler, server renderer, and
   browser runtime fit together.
 - [Syntax reference](reference/syntax.md) - the whole language on one page.
