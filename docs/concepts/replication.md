@@ -68,6 +68,27 @@ Important rules:
   error and the item still renders, but nothing keys promise holds for it.
 - Removing an item disposes its replica; its id is never handed out again.
 
+## Replicating a component
+
+`:for-each` goes on an element *around* a custom tag, never on the tag
+itself:
+
+```html
+<ul>
+  <li :for-each=${rows} :for-key=${row.id}>
+    <my-card :title=${data.name} />
+  </li>
+</ul>
+```
+
+Putting it on the tag is a compile error, because the two features would
+contradict each other on one element. A replica owns the per-item binding,
+while a usage site's attributes resolve where the tag was *written* — so
+`<my-card :for-each=${rows} :title=${data.name} />` asks `data` to be both
+inside the instance and visible outside it. The element around the tag keeps
+the two apart: it owns the loop, and the usage reads the item from it like
+any other call-site expression.
+
 ## Optional rendering
 
 `:for-data` is the planned single-item counterpart to `:for-each`. It is not

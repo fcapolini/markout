@@ -45,18 +45,31 @@ export interface SourceLocation extends acorn.SourceLocation {
 export abstract class ServerNode implements Node {
   ownerDocument: ServerDocument | null;
   parentElement: ServerElement | null;
+  /**
+   * Whatever currently holds this node, element or DocumentFragment.
+   *
+   * `parentElement` cannot answer that: a `<template>`'s children live in a
+   * fragment, and a fragment is not an element, so theirs is null -- in the
+   * browser as much as here, which is why ServerTemplateElement goes out of
+   * its way to match. Compiler code that has to move a node still needs the
+   * container it is actually in, and this is it. Kept server-side rather
+   * than added to the shared DOM interface: only the compiler relocates
+   * nodes, and the runtime is written against what both DOMs offer.
+   */
+  parent: ServerContainerNode | null;
   nodeType: number;
   loc: SourceLocation;
 
   constructor(doc: ServerDocument | null, type: number, loc: SourceLocation) {
     this.ownerDocument = doc;
     this.parentElement = null;
+    this.parent = null;
     this.nodeType = type;
     this.loc = loc;
   }
 
   unlink(): this {
-    this.parentElement?.removeChild(this);
+    this.parent?.removeChild(this);
     return this;
   }
 
@@ -256,6 +269,7 @@ export abstract class ServerContainerNode extends ServerNode {
     i = i < 0 ? this.childNodes.length : i;
     this.childNodes.splice(i, 0, n);
     n.parentElement = this as any;
+    (n as ServerNode).parent = this;
     return n;
   }
 
@@ -263,6 +277,7 @@ export abstract class ServerContainerNode extends ServerNode {
     const i = this.childNodes.indexOf(n);
     i >= 0 && this.childNodes.splice(i, 1);
     n.parentElement = null;
+    (n as ServerNode).parent = null;
     return n;
   }
 
@@ -463,6 +478,9 @@ export class ServerTemplateElement
 
   override appendChild(n: Node): Node {
     const ret = this.content.insertBefore(n, null);
+    // as in the browser: a template's children hang off its content
+    // fragment, and a fragment is not an element. `parent` keeps pointing at
+    // that fragment, so a node in here can still be found and relocated
     ret.parentElement = null;
     return ret;
   }
