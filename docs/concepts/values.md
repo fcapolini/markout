@@ -162,6 +162,32 @@ When a dependency changes, Markout propagates updates through the dependency
 graph. Dependencies are updated when needed so that added or
 removed scopes and values stay in sync.
 
+### A value that holds a function
+
+A helper can live in a value and be called from anywhere that can see it:
+
+```html
+<body :suffix=${'!'} :fmt=${(n) => n + suffix} :count=${1}>
+  <p>${fmt(count)}</p>
+</body>
+```
+
+`${fmt(count)}` depends on `fmt` and `count`. It cannot depend on `suffix` —
+it never mentions it — so what makes the text update when `suffix` changes is
+that **`fmt` itself depends on `suffix`** and is rebuilt, and the rebuilt
+function is a different one. That difference is what reaches the caller.
+
+So the references inside a function you store in a value *are* dependencies
+of that value, even though its body doesn't run until called. The rule is
+about what can observe the result: anything can call `fmt`, so anything can
+observe `suffix` through it.
+
+Callbacks are the exception, and for the same reason read backwards. Nothing
+can call `:on-click`, `:did-init`, `:will-dispose` or `:handle-x` from an
+expression — the DOM and the runtime invoke them — so no caller can go stale,
+and their bodies are deliberately not tracked. That is why a handler observes
+only the value it names.
+
 ## When an expression fails
 
 An expression that throws — `${user.name}` before `user` has loaded, say — does

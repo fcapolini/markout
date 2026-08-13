@@ -82,11 +82,21 @@ export class CoreValue<T = any> {
   }
 
   get(): T | undefined {
-    if (this.exp && this.cycle !== this.scope.ctx.cycle) {
-      if (!this.cycle || this.src.size) {
+    const ctx = this.scope.ctx;
+    if (this.exp && this.cycle !== ctx.cycle) {
+      const first = !this.cycle;
+      // marked BEFORE evaluating, not after. update() can propagate straight
+      // into a value whose own expression reads this one back -- `:fmt=${(n)
+      // => n + suffix}` with `${fmt(count)}` is the everyday shape of it --
+      // and arriving here with a stale cycle would evaluate this value a
+      // second time, mid-flight. For an ordinary value that lands on the
+      // same result and stops; for one that builds something new every time,
+      // a function or an object literal, every pass differs from the last,
+      // so each propagates again and the recursion only ends at the stack
+      this.cycle = ctx.cycle;
+      if (first || this.src.size) {
         this.update();
       }
-      this.cycle = this.scope.ctx.cycle;
     }
     return this.value;
   }
