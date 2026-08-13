@@ -110,6 +110,16 @@ describe("Browser execution (happy-dom)", () => {
       </html>`
     );
 
+    fs.writeFileSync(
+      path.join(tempDir, "nullish.html"),
+      `<html :note=\${null}>
+        <body>
+          <p id="note">\${note}</p>
+          <button :on-click=\${() => note = 'now set'}>set</button>
+        </body>
+      </html>`
+    );
+
     server = new Server({ docroot: tempDir });
     await server.start();
   });
@@ -316,6 +326,36 @@ describe("Browser execution (happy-dom)", () => {
       expect(read('name')).toEqual(['peas', 'tomatoes', 'mushrooms', 'asparagus']);
       expect(read('kind')).toEqual(['spring', 'summer', 'autumn', 'spring']);
       expect(errors).toEqual([]);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it('should keep a binding that server-rendered to nothing alive after hydration', async () => {
+    // a nullish binding renders as nothing, so its text node serializes away
+    // entirely and the markers arrive adjacent -- the same shape the stencil
+    // has. This is the whole reason a nullish value used to be written as a
+    // zero-width space; init() materializing the node is what replaces it
+    const served = await (
+      await fetch(`http://127.0.0.1:${server.port}/nullish.html`)
+    ).text();
+    expect(served).toContain('<!---t0--><!---/-->');
+
+    const browser = new Browser({ settings: { enableJavaScriptEvaluation: true } });
+    try {
+      const page = browser.newPage();
+      await page.goto(`http://127.0.0.1:${server.port}/nullish.html`);
+      await page.waitUntilComplete();
+
+      const doc = page.mainFrame.document;
+      const note = doc.querySelector('#note')!;
+      // no placeholder character left on the page for `.trim()` to keep
+      expect(note.textContent).toBe('');
+
+      doc.querySelector('button')!.dispatchEvent(
+        new page.mainFrame.window.MouseEvent('click')
+      );
+      expect(note.textContent).toBe('now set');
     } finally {
       await browser.close();
     }

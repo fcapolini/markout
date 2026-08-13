@@ -271,10 +271,14 @@ export class WebScope extends CoreScope {
       //finer-grained.
       ret.setCB((_, val) => {
         if (!t) return this.unbound(ret, 'no text node carrying that marker id');
-        // a real zero-width space, not the `&#8203;` reference: text content
-        // is escaped on serialization, so an entity written here would reach
-        // the page as the literal characters `&#8203;`
-        t.textContent = val == null ? "​" : String(val);
+        // nothing, not a zero-width space: a ZWSP used to be what kept the
+        // text node alive through serialization, but init() now materializes
+        // a missing one at hydration, so the placeholder has no job left --
+        // and it was never free. U+200B isn't whitespace, so it survives
+        // `.trim()`, and component slot-detection (Shoelace's, among others)
+        // decides a slot has content with exactly that test: an "empty"
+        // binding could silently switch on a card's header or footer
+        t.textContent = val == null ? '' : String(val);
       });
       return ret;
     }

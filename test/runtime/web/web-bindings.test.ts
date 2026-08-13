@@ -284,13 +284,18 @@ describe('text$', () => {
     assert.include(markup(), '<!---t0-->now here<!---/-->');
   });
 
-  it('renders a nullish value as a zero-width space', () => {
+  it('renders a nullish value as nothing at all, leaving no placeholder behind', () => {
+    // a zero-width space used to stand in here, so the text node would
+    // survive serialization. init() now materializes a missing one instead,
+    // and the placeholder is worth being rid of: U+200B isn't whitespace, so
+    // `.trim()` keeps it and any component deciding whether a slot has
+    // content by that test reads an empty binding as real content
     const { context, markup } = setup(MARKED, {
       id: '0',
       values: { text$0: { val: 'a' } },
     });
     context.root.proxy.text$0 = null;
-    assert.include(markup(), '<!---t0-->​<!---/-->');
+    assert.include(markup(), '<!---t0--><!---/-->');
   });
 
   it('does nothing (rather than throwing) for an unrecognised key format', () => {
