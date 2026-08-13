@@ -51,7 +51,7 @@ NOTE: "on its own" is literal — whitespace is text like any other, so
 | `:prop-name=${expr}` | Assigns the element's JS property `name`, for what an attribute can't carry. Browser-only: skipped when server rendering. |
 | `:class-name` | Toggles the `name` CSS class. |
 | `:style-name` | Writes the `name` CSS property. |
-| `:on-click=${() => ...}` | Binds an event handler. |
+| `:on-click=${() => ...}` | Binds an event handler. The name is the event type verbatim, so `.` and `:` are allowed for the sake of `shown.bs.modal`, `click.mine` and the like. |
 | `:did-init=${() => ...}` | Runs a lifecycle callback when the scope reaches a phase. |
 | `:will-dispose=${() => ...}` | Runs a lifecycle callback before teardown. |
 
@@ -74,8 +74,11 @@ Note what the first line *isn't*: `:if` is not a conditional. There is no
 expressed today).
 
 The names in the dash-case families are element-facing — CSS properties,
-attribute names, event names — so they keep their dashes and this rule
-doesn't apply to them.
+attribute names, event types — so they keep their dashes and this rule
+doesn't apply to them. Each takes what its own world uses: dash-case for
+class, style, attribute and property names, and for `:on-` also `.` and `:`,
+since an event type is passed to `addEventListener` exactly as written. `$`
+stays out everywhere, being the runtime's own prefix.
 
 The three callback families take a **literal arrow function**, written at
 that spot. A classic `function` is refused because it would rebind `this`,

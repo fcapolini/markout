@@ -332,6 +332,32 @@ describe('stage1-loader', () => {
       expect(page.errors.map(e => e.msg)).toStrictEqual(['Invalid name: "my-thing"']);
     });
 
+    it('should accept the punctuation real event names use', () => {
+      // an event type reaches addEventListener verbatim, so the charset is
+      // the DOM's, not ours: Bootstrap fires `shown.bs.modal`, and
+      // `click.mine` namespacing is a long-standing convention. The old rule
+      // allowed only dash-case and refused both for nothing
+      const page = runLoaderFromMarkup(
+        '<html :on-shown.bs.modal=${() => {}} :on-click.mine=${() => {}}' +
+          ' :on-my:event=${() => {}} :on-sl-change=${() => {}}></html>'
+      );
+      expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+      const scope = getLoadedScope(page as any);
+      expect(scope.values.has('on$shown.bs.modal')).toBe(true);
+      expect(scope.values.has('on$click.mine')).toBe(true);
+      expect(scope.values.has('on$my:event')).toBe(true);
+    });
+
+    it('should keep that punctuation out of the other families', () => {
+      // a dot is fine in an event type and meaningless in a CSS property or
+      // a class name, so the looser charset stays where it belongs
+      const page = runLoaderFromMarkup('<html :class-a.b=${true} :style-c.d=${1}></html>');
+      expect(page.errors.map(e => e.msg)).toStrictEqual([
+        'Invalid name: "a.b"',
+        'Invalid name: "c.d"',
+      ]);
+    });
+
     it('should reject a dollar sign even inside a dash-allowed class-/style-/on- suffix', () => {
       const page = runLoaderFromMarkup('<html :class-a$b=${true}></html>');
       expect(page.errors.map(e => e.msg)).toStrictEqual(['Invalid name: "a$b"']);
