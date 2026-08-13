@@ -769,8 +769,7 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     } else if (name.startsWith(PRESENCE_VALUE_ATTR_PREFIX)) {
       prefix = PRESENCE_VALUE_ATTR_PREFIX;
       compiledPrefix = PRESENCE_VALUE_PREFIX;
-      // attribute names are conventionally dash-case (`aria-hidden`)
-      extra = NAME_CHARS.dashed;
+      extra = NAME_CHARS.dom;
     } else if (name.startsWith(CLASS_VALUE_ATTR_PREFIX)) {
       prefix = CLASS_VALUE_ATTR_PREFIX;
       compiledPrefix = CLASS_VALUE_PREFIX;
@@ -782,7 +781,7 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     } else if (name.startsWith(EVENT_VALUE_ATTR_PREFIX)) {
       prefix = EVENT_VALUE_ATTR_PREFIX;
       compiledPrefix = EVENT_VALUE_PREFIX;
-      extra = NAME_CHARS.event;
+      extra = NAME_CHARS.dom;
     } else if (name.startsWith(DID_VALUE_ATTR_PREFIX)) {
       prefix = DID_VALUE_ATTR_PREFIX;
       compiledPrefix = DID_VALUE_PREFIX;
@@ -840,14 +839,16 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
  */
 const NAME_CHARS = {
   plain: '',
-  /** CSS properties, class names, attributes, JS properties */
+  /** CSS class and property names, JS property names */
   dashed: '-',
   /**
-   * an event type reaches addEventListener verbatim and may be anything at
-   * all: Bootstrap fires `shown.bs.modal`, and namespaced `click.mine` is a
-   * long-standing convention. Refusing those bought nothing
+   * attribute names and event types, which reach setAttribute and
+   * addEventListener exactly as written -- so the charset is the DOM's, and
+   * it is wider than dash-case. `data-x.y` and `xlink:href` are legal
+   * attributes; Bootstrap fires `shown.bs.modal`, and namespaced
+   * `click.mine` is a long-standing convention
    */
-  event: '.:-',
+  dom: '.:-',
 };
 
 function isReferenceable(name: string): boolean {
