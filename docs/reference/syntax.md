@@ -71,6 +71,41 @@ function:
 The ban on classic functions is wider than these three: one may not appear
 anywhere inside any `${...}`, for the same reason.
 
+## Comments inside a tag
+
+Between the attributes of an opening tag, `//` comments to end of line and
+`/* … */` block comments are both allowed. They are stripped at parse time
+and never reach the served markup.
+
+That matters more than it sounds, because attributes may also span lines. A
+tag declaring a handful of values stops being a long line to scan and
+becomes something closer to a declaration, with its parts grouped and
+labelled:
+
+```html
+<div class="my-component"
+
+     // parameters
+     :width=${100}
+
+     // private
+     :_w="${width}px"
+
+>${_w}</div>
+```
+
+Commenting out a single attribute works the way it does in code — the
+comment simply hides it from the parser. One left unterminated runs to the
+end of the file, which shows up as the enclosing tag never being closed
+(`Unterminated tag DIV`) rather than as anything about comments.
+
+These belong to a tag. In text content they are ordinary text; use
+`<!-- … -->` there.
+
+> The leading underscore is a convention meaning "private" — a value the
+> component uses but no caller should set. Nothing in the language treats
+> `_` specially; it reads as private to a person, not to the compiler.
+
 ## Replication
 
 | Syntax | Meaning |

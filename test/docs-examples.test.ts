@@ -172,6 +172,53 @@ describe('docs/reference/syntax.md', () => {
     expect(select.dom.options).toStrictEqual(['a', 'b']);
     expect(select.dom.label).toBe('one of 2');
   });
+
+  it('renders the commented, multi-line opening tag', () => {
+    // written exactly as the section shows it, newlines and all: what makes
+    // the shape usable is that attributes may span lines AND be annotated,
+    // so the test would be worthless collapsed onto one
+    const result = render(
+      '<html><body>\n' +
+        '<div class="my-component"\n' +
+        '\n' +
+        '     // parameters\n' +
+        '     :width=${100}\n' +
+        '\n' +
+        '     // private\n' +
+        '     :_w="${width}px"\n' +
+        '\n' +
+        '>${_w}</div>\n' +
+        '</body></html>'
+    );
+
+    expectClean(result);
+    expect(result.body).toContain('100px');
+    // stripped at parse time: neither comment reaches the served markup
+    expect(result.body).not.toContain('//');
+    expect(result.body).not.toContain('parameters');
+  });
+
+  it('hides a single attribute behind a comment, as code does', () => {
+    const result = render(
+      '<html><body><div class="x"\n' +
+        '  // :width=${100}\n' +
+        '  :height=${20}\n' +
+        '>${height}</div></body></html>'
+    );
+
+    expectClean(result);
+    expect(result.body).toContain('20');
+  });
+
+  it('runs an unterminated comment to EOF, surfacing as an unclosed tag', () => {
+    // the diagnostic names the tag, not the comment -- worth stating in the
+    // docs, because the message points somewhere other than the mistake
+    const source = parse(
+      '<html><body><div\n  /* never closed\n  :x=${1}\n></div></body></html>',
+      'docs.html'
+    );
+    expect(source.errors.map(e => e.msg)).toStrictEqual(['Unterminated tag DIV']);
+  });
 });
 
 describe('docs/concepts/scopes.md', () => {
