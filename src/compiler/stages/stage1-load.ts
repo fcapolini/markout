@@ -1,3 +1,4 @@
+import * as acorn from 'acorn';
 import {
   ServerElement,
   ServerAttribute,
@@ -739,7 +740,7 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
         addError(page, `Cannot redefine scope name: "${scope.name}"`, attr.loc);
         continue;
       }
-      scope.name = validateName(page, attr.value, attr.valueLoc);
+      scope.name = validateName(page, attr.value, attr.valueLoc, false, true);
       continue;
     }
     if (name === FOR_EACH_ATTR) {
@@ -796,7 +797,7 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
         column: attr.loc.start.column + prefix.length,
       },
     };
-    const suffix = validateName(page, name.slice(prefix.length), loc, allowDash);
+    const suffix = validateName(page, name.slice(prefix.length), loc, allowDash, prefix === '');
     name = compiledPrefix + suffix;
     scope.values.set(name, new Value(name, attr, scope, page.createValueId()));
   }
@@ -820,14 +821,52 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
 // a plain (non-prefixed) value or scope name must be a clean JS identifier:
 // no dash (reserved for our own class-/style-/on- families, for
 // expressiveness there), no dollar sign (reserved for system values)
+/**
+ * Whether `name` can be written as a bare reference in an expression.
+ *
+ * Asked of the expression parser rather than answered from a keyword list:
+ * these names are read back as `${name}`, so the only authority on what
+ * works is the thing that parses that -- and it keeps agreeing with the
+ * language as the language moves. `${if}` doesn't parse, `${9lives}` doesn't
+ * parse, `${true}` parses as a literal and never reaches the name.
+ */
+function isReferenceable(name: string): boolean {
+  try {
+    const exp = acorn.parseExpressionAt(name, 0, {
+      ecmaVersion: 'latest',
+      // the same mode expressions are parsed in, so a name is judged by
+      // exactly the rules that will apply where it's used
+      sourceType: 'script',
+    });
+    return exp.type === 'Identifier' && exp.end === name.length;
+  } catch (ignored) {
+    return false;
+  }
+}
+
 function validateName(
   page: Page,
   name: any,
   loc?: SourceLocation,
-  allowDash = false
+  allowDash = false,
+  referenced = false
 ): string {
   name = name ? `${name}` : '';
   const invalid = allowDash ? /[^a-zA-Z0-9_-]/ : /[^a-zA-Z0-9_]/;
+  if (name && !invalid.test(name) && referenced && !isReferenceable(name)) {
+    // the character check passes for plenty of things JS won't take as a
+    // reference: every reserved word, and anything starting with a digit.
+    // They used to declare a value in good order that no expression could
+    // ever name -- `:if=${...}` above all, which is what someone arriving
+    // from another framework writes first and gets no word about
+    addError(
+      page,
+      `Invalid name: "${name}" is a reserved word or not a JS identifier, ` +
+        `so no expression could reference it`,
+      loc
+    );
+    return name;
+  }
   if (!name || invalid.test(name)) {
     // recorded, not thrown: an exception escapes the compiler entirely, so
     // the server answers a bad name with a 500 and a stack trace instead of
