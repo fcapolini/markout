@@ -193,7 +193,10 @@ export class CoreScope {
   callSiteScope(): CoreScope | undefined {
     if (!this.props.slotted) return this.parent;
     const instance = this.enclosingInstance();
-    return instance ? instance.callSiteScope() : this.parent;
+    // usageSiteScope, not callSiteScope: markup slotted into a REPLICATED
+    // tag was written beside that `:for-each`, so it sees the name it
+    // declares. Identical to callSiteScope for every other instance
+    return instance ? instance.usageSiteScope() : this.parent;
   }
 
   /**
@@ -537,6 +540,12 @@ export class CoreScope {
     const clone = this.ctx.newScope({
       id: cloneId(this.props.id, index),
       // name: this.props.name,
+      // carried so a replica of a usage still reads as an INSTANCE: markup
+      // slotted into it looks for the enclosing instance to resolve against,
+      // and must find THIS replica rather than walk past it to the host and
+      // read the host's unset item. init() checks `cloned` first, so the DOM
+      // still comes from the stencil rather than from here
+      template: this.props.template,
       children: this.props.children,
       values: this.props.values,
       cloned: true,
@@ -556,31 +565,41 @@ export class CoreScope {
  * call site. Only the alias crosses over -- see usageSiteScope().
  */
 class LoopSiteScope extends CoreScope {
-  private owner: CoreScope;
+  private owner?: CoreScope;
 
   constructor(owner: CoreScope) {
     // no parent: linking would put it in someone's children and give it a
     // life cycle it has no use for
     super({ id: `${owner.props.id}$site`, values: {} }, owner.ctx);
     this.owner = owner;
+    // this shim is not a scope a page can see: $id and $parent must go on
+    // meaning the call site's, so they fall through rather than answering
+    // for a thing with no element and no place in the tree. $value stays
+    // ours -- the compiler emits every dependency as `this.$value(name)`,
+    // and those have to start resolving HERE to reach the alias
+    delete this.values[RT_ID_VALUE_KEY];
+    delete this.values[RT_PARENT_VALUE_KEY];
   }
 
-  override lookup(prop: string | symbol): CoreValue<any> | undefined {
+  /**
+   * Resolution continues at the scope the tag was written in.
+   *
+   * lexicalParent rather than a lookup() override, because that is what
+   * CoreScope.lookup() walks: it reads `values` and `lexicalParent()` off
+   * each scope in turn and never calls the next one's lookup(). Slotted
+   * markup resolves THROUGH this scope, so an override would be skipped.
+   */
+  override lexicalParent(): CoreScope | undefined {
     const owner = this.owner;
-    // the compiler emits every dependency as `this.$value(name)`, so this has
-    // to be OUR $value: delegated away, deps would resolve against the call
-    // site and the alias would come back unresolved. $id and $parent still
-    // mean what they mean out there
-    if (prop === RT_VALUE_FN_KEY) return this.values[RT_VALUE_FN_KEY];
-    // read per lookup rather than cached: a replica's alias holds whatever
-    // the current pass just set, and `:for-as` is itself a value
-    if (prop === owner.aliasName()) return owner.aliasValue();
+    // super() resolves `$parent` before this subclass's fields are assigned
+    // (the ordering WebScope handles with `declare`), so this runs once with
+    // no owner yet -- and the value it would compute is deleted above anyway
+    if (!owner) return undefined;
     // a replica's structural parent is the HOST instance, not a call site.
     // Resolving from there would continue through the host's own
     // lexicalParent -- the page root, for an instance -- losing everything
     // declared in between, `<body>` included. The tag was written where the
     // host was
-    const site = owner.cloned ? owner.parent?.callSiteScope() : owner.callSiteScope();
-    return (site ?? owner).lookup(prop);
+    return owner.cloned ? owner.parent?.callSiteScope() : owner.callSiteScope();
   }
 }

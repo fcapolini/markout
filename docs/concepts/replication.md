@@ -82,21 +82,19 @@ value, and it declares it where the instance scope is defined: at the usage
 site. `:title=${data.name}` is written in that same place, so it reads that
 name like any other call-site expression.
 
+Markup **slotted into** the tag is written at the usage site too, so it
+reads that name as well:
+
+```html
+<my-card :for-each=${rows} :for-key=${data.id} :title=${data.name}>
+  <button :on-click=${() => remove(data.id)}>Drop</button>
+</my-card>
+```
+
 Only that one name crosses over. The definition still resolves where it was
 defined, so a component whose body says `${data}` reads its own scope's
 value rather than the caller's item — and `:title=${title}` at the usage
 site still means the *caller's* `title`, never the definition's or itself.
-
-One gap for now: markup **slotted into** a replicated tag can't see that
-name yet, only the tag's own attributes can. Referring to it there is a
-compile error. Until that is finished, put `:for-each` on an element around
-the tag when the slotted content needs the item:
-
-```html
-<li :for-each=${rows} :for-key=${data.id}>
-  <my-card :title=${data.name}>${data.note}</my-card>
-</li>
-```
 
 ## Optional rendering
 

@@ -103,17 +103,40 @@ describe('custom tags inside replicated markup', () => {
     expect(live).not.toContain('definition');
   });
 
-  it('does not yet let slotted content see that name', () => {
-    // markup slotted INTO a replicated tag is written at the usage site too,
-    // so by the same rule it should see the alias. It does not yet: the alias
-    // reaches the tag's own attributes only. Pinned so that finishing the job
-    // has to come here and say so
-    const { errors } = render(
+  it('lets markup slotted into a replicated tag see that name too', () => {
+    // slotted content is written at the usage site like the attributes
+    // beside it, so the same rule reaches it. Both forms: an attribute used
+    // to be a compile error, and text used to compile and then render empty
+    const { errors, runtimeErrors, body } = render(
       '<html><head><:define tag="my-card:div" class="card"><:slot /></:define></head>' +
-        '<body><my-card :for-each=${["a", "b"]}><i data-v=${data}>x</i></my-card></body></html>'
+        '<body><my-card :for-each=${["a", "b"]}><i data-v=${data}>${data}</i></my-card>' +
+        '</body></html>'
     );
 
-    expect(errors.map((e: any) => e.msg)).toStrictEqual(['Unknown reference: "data"']);
+    expect(errors).toStrictEqual([]);
+    expect(runtimeErrors).toStrictEqual([]);
+    const live = body
+      .slice(body.indexOf('</template>'))
+      .replace(/<!--.*?-->/g, '')
+      .replace(/ data-markout="[^"]*"/g, '');
+    expect(live).toContain('<i data-v="a">a</i>');
+    expect(live).toContain('<i data-v="b">b</i>');
+  });
+
+  it('keeps slotted content resolving at the call site for everything else', () => {
+    // the alias is an addition, not a replacement: a name the page declares
+    // still resolves to the page's, and the definition's stays invisible
+    const { errors, runtimeErrors, body } = render(
+      '<html :tone=${"page"}><head>' +
+        '<:define tag="my-card:div" class="card" :tone=${"definition"}><:slot /></:define>' +
+        '</head><body><my-card :for-each=${[1]}>${tone}</my-card></body></html>'
+    );
+
+    expect(errors).toStrictEqual([]);
+    expect(runtimeErrors).toStrictEqual([]);
+    const live = body.slice(body.indexOf('</template>'));
+    expect(live).toContain('page');
+    expect(live).not.toContain('definition');
   });
 
   it('still expands a custom tag that merely sits inside a stencil', () => {
@@ -204,6 +227,24 @@ describe('slots', () => {
     expect(body).toContain('nothing here');
     // the directive tag itself never reaches the page
     expect(body).not.toContain(':slot');
+  });
+
+  it('resolves slotted text at the call site even when the usage has attributes', () => {
+    // any `:` attribute gives the usage a scope of its own, and expansion
+    // used to hand the instance a fresh call-site-values set at that point,
+    // dropping the marking slotting had just put on the slotted TEXT. The
+    // symptom was silent and backwards: `${tone}` written in the page read
+    // the component's own `tone`, and only when the tag had an attribute
+    const { errors, runtimeErrors, body } = render(
+      '<html :tone=${"page"}><head>' +
+        '<:define tag="my-card:div" class="card" :tone=${"definition"}><:slot /></:define>' +
+        '</head><body><my-card :x=${1}>${tone}</my-card></body></html>'
+    );
+
+    expect(errors).toStrictEqual([]);
+    expect(runtimeErrors).toStrictEqual([]);
+    expect(body).toContain('page');
+    expect(body).not.toContain('definition');
   });
 
   it('resolves slotted markup against the call site, not the definition', () => {

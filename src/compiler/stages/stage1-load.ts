@@ -321,7 +321,13 @@ function expandCustomTagUsages(page: Page): void {
     }
     if (loadedUsageScope) {
       scope.name = loadedUsageScope.name;
-      scope.callSiteValues = new Set();
+      // kept, not replaced: slotUsage() has already marked the instance's
+      // slotted TEXT as call-site-resolved, and assigning a fresh set here
+      // dropped that -- so a component with any `:` attribute on its usage
+      // (the only thing that gives the usage a scope, and so brings us here)
+      // silently resolved slotted text against its own values instead of the
+      // call site's, which is the one thing slotting must never do
+      scope.callSiteValues ??= new Set();
       for (const [name, value] of loadedUsageScope.values) {
         // deliberately NOT reassigned to `scope`: `value.scope` is what both
         // stage3/stage4 and the runtime resolve an expression against, and
@@ -457,7 +463,13 @@ function slotUsage(
     const index = slotted.parent!.children.indexOf(slotted);
     index >= 0 && slotted.parent!.children.splice(index, 1);
     slotted.parent = scope;
-    slotted.lexicalParent = scope.parent;
+    // markup slotted into a REPLICATED usage resolves against the usage
+    // scope, which is where that `:for-each` declared its per-item name --
+    // slotted content is written at the usage site just like the attributes
+    // beside it. Anything else resolves where the usage sits, as before
+    slotted.lexicalParent = loadedUsageScope?.values.has(FOR_EACH_VALUE)
+      ? loadedUsageScope
+      : scope.parent;
     slotted.slotted = true;
     scope.children.push(slotted);
   }
