@@ -51,6 +51,12 @@ export class WebScope extends CoreScope {
   // node clone() already resolved for it; not itself touched during any
   // super() call, so it needs no such declare treatment
   private pendingCloneDom?: Element;
+  // an SSR-hydrating page has real elements pre-rendered for however many
+  // replicas it rendered; a client-only mount never does. Since SSR always
+  // renders a contiguous prefix, the first replica acquireCloneDom() can't
+  // find already means every later one in this host's lifetime won't either
+  // -- see acquireCloneDom for why that matters
+  private noMoreHydratedClones = false;
 
   constructor(props: CoreScopeProps, context: WebContext, parent?: CoreScope) {
     super(props, context, parent);
@@ -406,11 +412,19 @@ export class WebScope extends CoreScope {
     const container = anchor?.parentElement;
     if (!anchor || !container) return undefined;
 
-    const siblings = [...container.childNodes];
-    const existing = siblings.find(
-      n => n.nodeType === NodeType.ELEMENT && (n as Element).getAttribute(DOM_ID_ATTR) === id
-    ) as Element | undefined;
-    if (existing) return existing;
+    // re-snapshotting and scanning all of container's children here, once
+    // per NEW clone, made mounting n replicas O(n^2) (each scan costs O(n)
+    // of its own, since the container keeps growing). Skipping the scan
+    // once it has ever missed removes it from the hot path entirely for a
+    // pure client-side mount, leaving only the (small, fixed) hydration
+    // prefix actually scanned
+    if (!this.noMoreHydratedClones) {
+      const existing = [...container.childNodes].find(
+        n => n.nodeType === NodeType.ELEMENT && (n as Element).getAttribute(DOM_ID_ATTR) === id
+      ) as Element | undefined;
+      if (existing) return existing;
+      this.noMoreHydratedClones = true;
+    }
 
     const stencil = [...(anchor as unknown as TemplateElement).content.childNodes].find(
       n => n.nodeType === NodeType.ELEMENT
@@ -419,11 +433,11 @@ export class WebScope extends CoreScope {
 
     const node = stencil.cloneNode(true) as unknown as Element;
     node.setAttribute(DOM_ID_ATTR, id);
+    // the previous clone's own element is the insertion point directly --
+    // no need to find its index in a snapshot of the container's children
     const prevClone = this.clones?.at(-1) as WebScope | undefined;
     const ref = prevClone?.dom ?? anchor;
-    const refIndex = siblings.indexOf(ref);
-    const insertBeforeNode = refIndex >= 0 ? siblings[refIndex + 1] ?? null : null;
-    container.insertBefore(node, insertBeforeNode);
+    container.insertBefore(node, ref.nextSibling);
     return node;
   }
 }
