@@ -35,7 +35,12 @@ calls that out explicitly.
 
 ## Mental model
 
-Markout stays intentionally small:
+Markout is the presentation layer: the DOM is the view, the application's
+data is the model, and markout is the logic between — the presenter, written
+declaratively. [State](concepts/state.md) says which of the three each piece
+of a page belongs to.
+
+It stays intentionally small:
 
 - HTML is the base syntax.
 - `${...}` is the only interpolation syntax, and anything holding one is

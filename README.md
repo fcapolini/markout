@@ -18,6 +18,14 @@ equivalent of a natively modular and reactive HTML. It is isomorphic: the same
 scope/value model runs on the server and in the browser, so SSR comes for
 free.
 
+Markout is the presentation layer, and only that. The DOM is the view, your
+application's data is the model, and markout is the logic between them:
+deriving what is shown from what is true, and folding what a user does back
+into data. In the vocabulary of model-view-presenter it is the presenter —
+written declaratively rather than as imperative view-pushing. Today the model
+is whatever values a page declares; [datasources](docs/concepts/state.md) are
+designed to be its home and are not built yet.
+
 ## Design philosophy
 
 The objective is to remove as much needless complexity as possible from
