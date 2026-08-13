@@ -307,5 +307,6 @@ one inferring which you meant from the shape of the value.
 > what the pair are for once the runtime side exists. `:on-` handlers are
 > the working way to run code today.
 >
-> Note it fails differently from `:for-data` above, which is refused
-> outright. These are accepted and silent.
+> Note it fails differently from
+> [`:for-data`](#optional-rendering--designed-not-yet-implemented) above,
+> which is refused outright. These are accepted and silent.
