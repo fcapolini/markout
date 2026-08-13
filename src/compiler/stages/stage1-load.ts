@@ -394,22 +394,47 @@ function slotUsage(
   scope: Scope,
   loadedUsageScope: Scope | undefined
 ): string {
-  const children = [...usageEl.childNodes].filter(
-    n => n.nodeType !== NodeType.TEXT || `${(n as ServerText).textContent}`.trim()
-  );
-  if (!children.length) return defScope.id;
+  const slotOf = (n: ServerNode): string =>
+    n.nodeType === NodeType.ELEMENT
+      ? page.slotTargets.get(n as ServerElement) ?? DEFAULT_SLOT_NAME
+      : DEFAULT_SLOT_NAME;
+
+  // Each child paired with the slot it fills, blank text included where it
+  // is doing work.
+  //
+  // Blank text used to be filtered out wholesale, which is right for the
+  // indentation around a usage site and wrong for the space BETWEEN two
+  // pieces that end up side by side in the same slot: that one is rendered,
+  // and dropping it ran `<span>a</span> <span>b</span>` together. So a blank
+  // node travels only when the nearest non-blank nodes on either side of it
+  // address the same slot. Leading and trailing blanks stay behind (a
+  // container doesn't render those), and a blank between differently-
+  // addressed pieces separates two nodes that are about to be pulled apart
+  // anyway.
+  const addressed: [ServerNode, string][] = [];
+  let pending: ServerNode[] = [];
+  let prev: string | undefined;
+  for (const child of [...usageEl.childNodes] as ServerNode[]) {
+    if (isBlankText(child)) {
+      prev !== undefined && pending.push(child);
+      continue;
+    }
+    const name = slotOf(child);
+    prev === name && addressed.push(...pending.map(n => [n, name] as [ServerNode, string]));
+    pending = [];
+    prev = name;
+    addressed.push([child, name]);
+  }
+  if (!addressed.length) return defScope.id;
+  const children = addressed.map(([child]) => child);
 
   const defEl = defScope.e!;
   const defSlots = findSlots(defEl);
   // grouped by the slot each child addresses; anything unaddressed fills the
   // default one, which is also where every text node goes
   const groups = new Map<string, ServerNode[]>();
-  for (const child of children) {
-    const name =
-      child.nodeType === NodeType.ELEMENT
-        ? page.slotTargets.get(child as ServerElement) ?? DEFAULT_SLOT_NAME
-        : DEFAULT_SLOT_NAME;
-    groups.set(name, [...(groups.get(name) ?? []), child as ServerNode]);
+  for (const [child, name] of addressed) {
+    groups.set(name, [...(groups.get(name) ?? []), child]);
   }
 
   let unusable = false;
@@ -505,6 +530,18 @@ function slotUsage(
     children as ServerNode[]
   );
   return stencilId;
+}
+
+/**
+ * Text that is nothing but the whitespace HTML uses for formatting.
+ *
+ * The ASCII whitespace set rather than `.trim()`, which also strips U+00A0:
+ * an author's deliberate `&nbsp;` is content, and reading it as blank threw
+ * it away along with the indentation.
+ */
+function isBlankText(n: ServerNode): boolean {
+  if (n.nodeType !== NodeType.TEXT) return false;
+  return !/[^ \t\n\r\f]/.test(`${(n as ServerText).textContent}`);
 }
 
 /**
