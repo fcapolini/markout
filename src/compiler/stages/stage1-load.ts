@@ -740,7 +740,7 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
         addError(page, `Cannot redefine scope name: "${scope.name}"`, attr.loc);
         continue;
       }
-      scope.name = validateName(page, attr.value, attr.valueLoc, false, true);
+      scope.name = validateName(page, attr.value, attr.valueLoc, NAME_CHARS.plain, true);
       continue;
     }
     if (name === FOR_EACH_ATTR) {
@@ -757,32 +757,32 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     }
     let prefix = '';
     let compiledPrefix = '';
-    // class-/style-/on- suffixes may be multi-word (CSS properties, class
-    // names, custom event names are conventionally dash-case) -- allowed
-    // here "for expressiveness" and kept dash-case verbatim in the
-    // compiled name (stage7-generate quotes value keys, so a dash is fine)
-    let allowDash = false;
+    // what a family's suffix may hold beyond letters, digits and `_`.
+    // These name things OUTSIDE markout -- CSS properties, class names,
+    // attributes, event types -- so the charset is theirs, not ours, and is
+    // kept verbatim in the compiled name (stage7-generate quotes value keys)
+    let extra = NAME_CHARS.plain;
     if (name.startsWith(PROP_VALUE_ATTR_PREFIX)) {
       prefix = PROP_VALUE_ATTR_PREFIX;
       compiledPrefix = PROP_VALUE_PREFIX;
-      allowDash = true;
+      extra = NAME_CHARS.dashed;
     } else if (name.startsWith(PRESENCE_VALUE_ATTR_PREFIX)) {
       prefix = PRESENCE_VALUE_ATTR_PREFIX;
       compiledPrefix = PRESENCE_VALUE_PREFIX;
       // attribute names are conventionally dash-case (`aria-hidden`)
-      allowDash = true;
+      extra = NAME_CHARS.dashed;
     } else if (name.startsWith(CLASS_VALUE_ATTR_PREFIX)) {
       prefix = CLASS_VALUE_ATTR_PREFIX;
       compiledPrefix = CLASS_VALUE_PREFIX;
-      allowDash = true;
+      extra = NAME_CHARS.dashed;
     } else if (name.startsWith(STYLE_VALUE_ATTR_PREFIX)) {
       prefix = STYLE_VALUE_ATTR_PREFIX;
       compiledPrefix = STYLE_VALUE_PREFIX;
-      allowDash = true;
+      extra = NAME_CHARS.dashed;
     } else if (name.startsWith(EVENT_VALUE_ATTR_PREFIX)) {
       prefix = EVENT_VALUE_ATTR_PREFIX;
       compiledPrefix = EVENT_VALUE_PREFIX;
-      allowDash = true;
+      extra = NAME_CHARS.event;
     } else if (name.startsWith(DID_VALUE_ATTR_PREFIX)) {
       prefix = DID_VALUE_ATTR_PREFIX;
       compiledPrefix = DID_VALUE_PREFIX;
@@ -797,7 +797,7 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
         column: attr.loc.start.column + prefix.length,
       },
     };
-    const suffix = validateName(page, name.slice(prefix.length), loc, allowDash, prefix === '');
+    const suffix = validateName(page, name.slice(prefix.length), loc, extra, prefix === '');
     name = compiledPrefix + suffix;
     scope.values.set(name, new Value(name, attr, scope, page.createValueId()));
   }
@@ -830,6 +830,26 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
  * language as the language moves. `${if}` doesn't parse, `${9lives}` doesn't
  * parse, `${true}` parses as a literal and never reaches the name.
  */
+/**
+ * What each family's suffix may contain beyond letters, digits and `_`.
+ *
+ * `plain` is the strict one, because those names are read back as
+ * `${name}`. The rest name things markout doesn't own, so the rule is only
+ * that the name survives being a compiled value key -- and that `$` stays
+ * out, since that prefix is the runtime's.
+ */
+const NAME_CHARS = {
+  plain: '',
+  /** CSS properties, class names, attributes, JS properties */
+  dashed: '-',
+  /**
+   * an event type reaches addEventListener verbatim and may be anything at
+   * all: Bootstrap fires `shown.bs.modal`, and namespaced `click.mine` is a
+   * long-standing convention. Refusing those bought nothing
+   */
+  event: '.:-',
+};
+
 function isReferenceable(name: string): boolean {
   try {
     const exp = acorn.parseExpressionAt(name, 0, {
@@ -848,11 +868,13 @@ function validateName(
   page: Page,
   name: any,
   loc?: SourceLocation,
-  allowDash = false,
+  extra = NAME_CHARS.plain,
   referenced = false
 ): string {
   name = name ? `${name}` : '';
-  const invalid = allowDash ? /[^a-zA-Z0-9_-]/ : /[^a-zA-Z0-9_]/;
+  // `extra` is one of NAME_CHARS, written so `-` lands last and stays a
+  // literal rather than starting a range
+  const invalid = new RegExp(`[^a-zA-Z0-9_${extra}]`);
   if (name && !invalid.test(name) && referenced && !isReferenceable(name)) {
     // the character check passes for plenty of things JS won't take as a
     // reference: every reserved word, and anything starting with a digit.
