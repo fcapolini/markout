@@ -437,7 +437,16 @@ function slotUsage(
   }
   if (unusable) return defScope.id;
 
-  const doc = usageEl.ownerDocument;
+  // the PAGE's document, not `usageEl.ownerDocument`. A usage site written
+  // inside an imported file still belongs to that file's document, whose
+  // root is its `<lib>` and which has no <head> at all -- so the append
+  // below dropped the stencil into a document nobody serves, and the
+  // instance came up with no DOM: "unbound binding: no element to set ... on"
+  // at runtime, with the element simply missing from the page. Everything
+  // else here inserts relative to a node already spliced into the page
+  // (expandDefine's insertBefore, the markers), which is why this is the one
+  // place the owning document could differ and matter
+  const doc = page.source.doc;
   const stencil = defEl.clone(doc, null) as ServerElement;
   // `${scope.id}t` rather than a scope id: this is a stencil, not a scope,
   // and it only has to be unique among data-markout values so
