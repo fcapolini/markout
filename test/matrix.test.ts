@@ -163,6 +163,38 @@ const CONTAINERS = [
     count: 2,
   },
   {
+    // the usage carries an attribute, which is the only thing that gives it a
+    // scope of its own -- and a scope of its own is what sends expansion down
+    // a different path for everything ELSE the usage brought with it. Slotted
+    // content resolving at the call site had to be re-proved on that path:
+    // every other slotted cell here uses an attribute-less usage
+    name: 'in slotted content, usage carrying an attribute',
+    wrap: (m: string) => ({
+      head: `<:define tag="my-box:div" :v="SHADOW" :n=${'${0}'}><:slot /></:define>`,
+      body: `<my-box :n=${'${1}'}>${m}</my-box>`,
+    }),
+    count: 1,
+  },
+  {
+    // `:for-each` on the usage itself: the instance IS the replica, and the
+    // name the loop declares has to reach the slotted markup without the
+    // definition's own values reaching it too
+    name: 'in slotted content of a replicated component',
+    wrap: (m: string) => ({
+      head: '<:define tag="my-box:div" :v="SHADOW"><:slot /></:define>',
+      body: `<my-box :for-each=${'${[1, 2]}'}>${m}</my-box>`,
+    }),
+    count: 2,
+  },
+  {
+    name: 'via a parameter of a replicated component',
+    wrap: (m: string) => ({
+      head: `<:define tag="my-p:div" :v="SHADOW">${m}</:define>`,
+      body: `<my-p :for-each=${'${[v, v]}'} :v=${'${data}'} />`,
+    }),
+    count: 2,
+  },
+  {
     name: 'in a named slot',
     wrap: (m: string) => ({
       head:
