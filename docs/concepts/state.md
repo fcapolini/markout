@@ -7,6 +7,10 @@ So the question when writing a page isn't *where do I keep this* — values are
 the only place — but **how long does it need to last**. Three answers, and
 they want different treatment.
 
+The three map onto model-view-presenter, which is the shape markout is: the
+model's, the presenter's, and the view's own. That the two framings agree is
+the reason to trust either.
+
 ## Durable app state
 
 What the page is *about*: the setlist's tracks and their cue notes, a
