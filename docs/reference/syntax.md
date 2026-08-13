@@ -55,6 +55,28 @@ NOTE: "on its own" is literal — whitespace is text like any other, so
 | `:did-init=${() => ...}` | Runs a lifecycle callback when the scope reaches a phase. |
 | `:will-dispose=${() => ...}` | Runs a lifecycle callback before teardown. |
 
+### Naming a value
+
+`:name` and `:aka` are read back as `${name}`, so the name has to be
+something an expression can say: a JS identifier, no dash (reserved for the
+dash-case families above) and no `$` (reserved for the runtime's own). A
+reserved word or a leading digit is refused for the same reason — `${if}`
+and `${9lives}` don't parse, so the value could be declared but never read:
+
+```html
+<div :if=${ready}>          <!-- error: "if" is a reserved word -->
+<div :ready=${ready}>       <!-- fine -->
+```
+
+Note what the first line *isn't*: `:if` is not a conditional. There is no
+`:if` directive — a bare `:name` always declares a value (see
+[replication](../concepts/replication.md) for how conditional rendering is
+expressed today).
+
+The names in the dash-case families are element-facing — CSS properties,
+attribute names, event names — so they keep their dashes and this rule
+doesn't apply to them.
+
 The three callback families take a **literal arrow function**, written at
 that spot. A classic `function` is refused because it would rebind `this`,
 which is how the surrounding scope is reached; and for now a reference to

@@ -342,6 +342,52 @@ describe('stage1-loader', () => {
       expect(page.errors.map(e => e.msg)).toStrictEqual(['Invalid name: "my-name"']);
     });
 
+    it('should reject a value name no expression could reference', () => {
+      // the character check passes for every reserved word, so these used to
+      // declare a value in good order that nothing could ever name. `:if` is
+      // the one that matters: it is what someone arriving from another
+      // framework writes first, and it silently rendered the element
+      for (const name of ['if', 'class', 'for', 'return', 'true']) {
+        const page = runLoaderFromMarkup(`<html :${name}=\${1}></html>`);
+        expect(page.errors.map(e => e.msg)).toStrictEqual([
+          `Invalid name: "${name}" is a reserved word or not a JS identifier, ` +
+            'so no expression could reference it',
+        ]);
+      }
+    });
+
+    it('should reject a value name starting with a digit', () => {
+      const page = runLoaderFromMarkup('<html :9lives=${1}></html>');
+      expect(page.errors.length).toBe(1);
+      expect(page.errors[0].msg).toContain('"9lives"');
+    });
+
+    it('should reject a reserved word as an :aka scope name too', () => {
+      // a scope name is read back the same way a value is
+      const page = runLoaderFromMarkup('<html><body><div :aka="class"></div></body></html>');
+      expect(page.errors.length).toBe(1);
+      expect(page.errors[0].msg).toContain('"class"');
+    });
+
+    it('should keep accepting names that merely look reserved', () => {
+      // `let` and `undefined` ARE referenceable in the mode expressions are
+      // parsed in, so the rule follows the parser rather than a word list
+      const page = runLoaderFromMarkup(
+        '<html :data=${1} :_w=${2} :item2=${3} :undefined=${4} :let=${5}></html>'
+      );
+      expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+    });
+
+    it('should leave the dash-case families alone', () => {
+      // these name CSS properties, attributes and events -- never anything an
+      // expression references, so the identifier rule must not reach them
+      const page = runLoaderFromMarkup(
+        '<html :class-my-thing=${1} :style-font-size=${2} :on-item-selected=${() => {}}' +
+          ' :attr-aria-hidden=${true} :prop-someProp=${3}></html>'
+      );
+      expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+    });
+
     it('should report every bad name, not just the first', () => {
       const page = runLoaderFromMarkup('<html :a-b="1"><body :c-d="2"></body></html>');
       expect(page.errors.map(e => e.msg)).toStrictEqual([
