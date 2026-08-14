@@ -1,0 +1,633 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1">
+  <title>Markout — Reactive HTML for Bootstrap</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+</head>
+
+<body>
+
+  <!-- Navigation -->
+
+  <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom">
+    <div class="container">
+      <a class="navbar-brand fw-semibold"
+         href="#">Markout</a>
+
+      <button class="navbar-toggler"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#navbarMain"
+              aria-controls="navbarMain"
+              aria-expanded="false"
+              aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse"
+           id="navbarMain">
+        <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link"
+               href="#bootstrap">Bootstrap Kit</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link"
+               href="#how-it-works">How it works</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link"
+               href="#isomorphic">Isomorphic</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link"
+               href="#github">GitHub</a>
+          </li>
+        </ul>
+
+        <a href="#"
+           class="btn btn-primary ms-lg-3">
+          Get Started
+        </a>
+      </div>
+    </div>
+
+  </nav>
+
+  <!-- Hero -->
+
+  <header class="py-5">
+    <div class="container py-lg-5">
+      <div class="row align-items-center g-5">
+
+        <div class="col-lg-7">
+          <span class="badge text-bg-primary mb-3">
+            Bootstrap + Markout
+          </span>
+
+          <h1 class="display-4 fw-bold lh-1 mb-4">
+            What if you could add application logic directly to your Bootstrap page?
+          </h1>
+
+          <p class="lead text-body-secondary mb-4">
+            Build interactive Bootstrap applications without bringing in a
+            frontend framework.
+          </p>
+
+          <p class="fs-5 mb-4">
+            Markout makes HTML modular, reactive, and isomorphic — so you can
+            start with ordinary Bootstrap markup and add application logic
+            directly where it belongs: in the page.
+          </p>
+
+          <div class="d-flex flex-wrap gap-2">
+            <a href="#"
+               class="btn btn-primary btn-lg">
+              Get Started
+            </a>
+
+            <a href="#bootstrap"
+               class="btn btn-outline-secondary btn-lg">
+              See the Bootstrap Kit
+            </a>
+          </div>
+        </div>
+
+        <div class="col-lg-5">
+          <div class="card shadow-sm">
+            <div class="card-header">
+              <span class="font-monospace small">index.htm</span>
+            </div>
+
+            <div class="card-body bg-dark text-light rounded-bottom">
+              <pre class="mb-0 small"><code>&lt;button
+
+class="btn btn-primary"
+@click="count++"
+>
+Clicked {count} times
+</button></code></pre>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </header>
+
+  <!-- Bootstrap, but reactive -->
+
+  <section id="bootstrap"
+           class="py-5 bg-body-tertiary">
+    <div class="container py-lg-4">
+
+      <div class="row justify-content-center">
+        <div class="col-lg-8 text-center">
+
+          <h2 class="display-6 fw-bold mb-3">
+            Bootstrap, but reactive
+          </h2>
+
+          <p class="lead text-body-secondary">
+            You already know Bootstrap. You already know HTML.
+          </p>
+
+          <p class="fs-5">
+            Why introduce React, Vue, or another frontend framework just
+            because your page needs a little application logic?
+          </p>
+
+          <div class="alert alert-primary text-start mt-4">
+            <strong>With Markout, your Bootstrap markup becomes the application.</strong>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="row justify-content-center mt-4">
+        <div class="col-lg-9">
+
+          <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span class="fw-semibold">Example</span>
+              <span class="badge text-bg-secondary">HTML</span>
+            </div>
+
+            <div class="card-body bg-dark text-light">
+              <pre class="mb-0"><code>&lt;main class="container"&gt;
+
+<h1>{title}</h1>
+
+<button class="btn btn-primary" @click="count++">
+Clicked {count} times
+</button>
+
+<p class="mt-3">
+You have clicked the button {count} times.
+</p>
+</main></code></pre>
+            </div>
+
+            <div class="card-footer text-body-secondary">
+              It's still HTML. The difference is that the markup can now
+              express behavior and react to changing data.
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- Bootstrap components -->
+
+  <section class="py-5">
+    <div class="container py-lg-4">
+
+      <div class="row align-items-center g-5">
+
+        <div class="col-lg-6">
+          <span class="badge text-bg-primary mb-3">
+            Bootstrap Kit
+          </span>
+
+          <h2 class="display-6 fw-bold mb-3">
+            Use the Bootstrap components you already know
+          </h2>
+
+          <p class="lead text-body-secondary">
+            Markout's Bootstrap Kit provides reusable Bootstrap components
+            as ordinary Markout fragments.
+          </p>
+
+          <p>
+            Buttons, modals, dropdowns, tabs, accordions, cards, forms,
+            alerts — use them as building blocks for your application.
+          </p>
+
+          <p>
+            And because they're Markout fragments, you can
+            <strong>open them, understand them, customize them,
+              and extend them.</strong>
+          </p>
+
+          <div class="alert alert-success mt-4">
+            <strong>They're yours.</strong>
+            No black boxes. No component registration ceremony.
+            No special extension API.
+          </div>
+
+          <a href="#"
+             class="btn btn-primary">
+            Explore the Bootstrap Kit
+          </a>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="row row-cols-2 g-3">
+
+            <div class="col">
+              <div class="card h-100">
+                <div class="card-body">
+                  <h3 class="h5">Buttons</h3>
+                  <p class="text-body-secondary mb-0">
+                    Reusable, reactive controls.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="col">
+              <div class="card h-100">
+                <div class="card-body">
+                  <h3 class="h5">Modals</h3>
+                  <p class="text-body-secondary mb-0">
+                    Compose dialogs directly in markup.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="col">
+              <div class="card h-100">
+                <div class="card-body">
+                  <h3 class="h5">Forms</h3>
+                  <p class="text-body-secondary mb-0">
+                    Add application logic where it's needed.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="col">
+              <div class="card h-100">
+                <div class="card-body">
+                  <h3 class="h5">Components</h3>
+                  <p class="text-body-secondary mb-0">
+                    Inspect, modify, and extend everything.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- No framework -->
+
+  <section id="how-it-works"
+           class="py-5 bg-body-tertiary">
+    <div class="container py-lg-4">
+
+      <div class="row justify-content-center">
+        <div class="col-lg-8 text-center">
+
+          <h2 class="display-6 fw-bold mb-3">
+            No framework required
+          </h2>
+
+          <p class="lead text-body-secondary">
+            Markout doesn't try to replace HTML with a component framework.
+          </p>
+
+          <p class="fs-5">
+            It asks a different question:
+          </p>
+
+          <blockquote class="blockquote my-4">
+            <p class="mb-0">
+              What would web development look like if HTML itself
+              was modular and reactive?
+            </p>
+          </blockquote>
+
+          <p>
+            The answer is a small reactive runtime sitting underneath
+            your markup — not an application framework sitting above it.
+          </p>
+
+        </div>
+      </div>
+
+      <div class="row g-4 mt-4">
+
+        <div class="col-md-4">
+          <div class="card h-100 border-0">
+            <div class="card-body text-center p-4">
+              <div class="display-6 mb-3">01</div>
+              <h3 class="h4">Write markup</h3>
+              <p class="text-body-secondary mb-0">
+                Compose your UI using familiar HTML and Bootstrap.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="card h-100 border-0">
+            <div class="card-body text-center p-4">
+              <div class="display-6 mb-3">02</div>
+              <h3 class="h4">Add logic</h3>
+              <p class="text-body-secondary mb-0">
+                Add reactive expressions and behavior directly to your markup.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="card h-100 border-0">
+            <div class="card-body text-center p-4">
+              <div class="display-6 mb-3">03</div>
+              <h3 class="h4">Build applications</h3>
+              <p class="text-body-secondary mb-0">
+                Use the same model for everything from simple pages
+                to interactive applications.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- Isomorphic -->
+
+  <section id="isomorphic"
+           class="py-5">
+    <div class="container py-lg-4">
+
+      <div class="row align-items-center g-5">
+
+        <div class="col-lg-6">
+          <span class="badge text-bg-success mb-3">
+            Isomorphic by design
+          </span>
+
+          <h2 class="display-6 fw-bold mb-3">
+            The same application on the server and in the browser
+          </h2>
+
+          <p class="lead text-body-secondary">
+            Markout is isomorphic by design.
+          </p>
+
+          <p>
+            The same Markout application can run on the server to produce
+            HTML and in the browser to make that HTML reactive.
+          </p>
+
+          <p>
+            No separate server template. No separate client application.
+            No framework-specific hydration model to understand.
+          </p>
+
+          <div class="alert alert-success mt-4">
+            <strong>It's the same application.</strong>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+
+          <div class="card shadow-sm">
+            <div class="card-body p-4">
+
+              <div class="row text-center align-items-center">
+
+                <div class="col-12">
+                  <div class="border rounded p-3 fw-semibold">
+                    Your Markout page
+                  </div>
+                </div>
+
+                <div class="col-6 mt-4">
+                  <div class="border rounded p-3">
+                    <div class="fw-semibold">Server</div>
+                    <div class="text-body-secondary small mt-1">
+                      HTML
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-6 mt-4">
+                  <div class="border rounded p-3">
+                    <div class="fw-semibold">Browser</div>
+                    <div class="text-body-secondary small mt-1">
+                      Reactive DOM
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- Start with Bootstrap -->
+
+  <section class="py-5 bg-body-tertiary">
+    <div class="container py-lg-4">
+
+      <div class="row justify-content-center">
+        <div class="col-lg-9 text-center">
+
+          <h2 class="display-6 fw-bold mb-3">
+            Start with Bootstrap. Go as far as you need.
+          </h2>
+
+          <p class="lead text-body-secondary">
+            A simple Bootstrap page can remain a simple Bootstrap page.
+            Add reactive behavior when you need it.
+          </p>
+
+          <p class="fs-5">
+            Build a complete application when you need more.
+            Markout doesn't require you to cross a framework boundary
+            just because your page becomes interactive.
+          </p>
+
+          <div class="alert alert-primary mt-4">
+            <strong>Start with HTML. Stay with HTML.</strong>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- Small runtime -->
+
+  <section class="py-5">
+    <div class="container py-lg-4">
+
+      <div class="row justify-content-center">
+        <div class="col-lg-8 text-center">
+
+          <span class="badge text-bg-secondary mb-3">
+            Small by design
+          </span>
+
+          <h2 class="display-6 fw-bold mb-3">
+            A tiny runtime for a much more expressive HTML
+          </h2>
+
+          <p class="lead text-body-secondary">
+            Markout's reactive runtime is small by design.
+          </p>
+
+          <p>
+            The goal isn't to build the biggest framework.
+            It's to put the smallest possible amount of machinery
+            underneath a much more expressive form of HTML.
+          </p>
+
+          <div class="row g-3 mt-4">
+
+            <div class="col-md-4">
+              <div class="card h-100">
+                <div class="card-body">
+                  <h3 class="h5">Modular</h3>
+                  <p class="text-body-secondary mb-0">
+                    Compose reusable HTML fragments.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <div class="card h-100">
+                <div class="card-body">
+                  <h3 class="h5">Reactive</h3>
+                  <p class="text-body-secondary mb-0">
+                    Let your markup respond to changing data.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <div class="card h-100">
+                <div class="card-body">
+                  <h3 class="h5">Isomorphic</h3>
+                  <p class="text-body-secondary mb-0">
+                    Run the same application on server and browser.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- CTA -->
+
+  <section id="github"
+           class="py-5 bg-dark text-white">
+    <div class="container py-lg-5">
+
+      <div class="row justify-content-center text-center">
+        <div class="col-lg-8">
+
+          <h2 class="display-6 fw-bold mb-3">
+            See how it works
+          </h2>
+
+          <p class="lead text-white-50 mb-4">
+            Start with the Bootstrap Kit. Look inside.
+            Change a component. Extend it. Build your own.
+          </p>
+
+          <p class="fs-5 mb-4">
+            Then ask the bigger question:
+          </p>
+
+          <blockquote class="blockquote mb-5">
+            <p>
+              What would your Bootstrap applications look like
+              if HTML itself was modular and reactive?
+            </p>
+          </blockquote>
+
+          <div class="d-flex justify-content-center flex-wrap gap-2">
+            <a href="#"
+               class="btn btn-primary btn-lg">
+              Get Started with Markout
+            </a>
+
+            <a href="#"
+               class="btn btn-outline-light btn-lg">
+              View Source on GitHub
+            </a>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- Footer -->
+
+  <footer class="py-4 border-top">
+    <div class="container">
+
+      <div class="row align-items-center">
+
+        <div class="col-md-6">
+          <span class="fw-semibold">Markout</span>
+          <span class="text-body-secondary ms-2">
+            Mark out your UI. Add application logic directly to your HTML.
+          </span>
+        </div>
+
+        <div class="col-md-6 text-md-end mt-3 mt-md-0">
+          <span class="text-body-secondary small">
+            Modular HTML · Reactive HTML · Isomorphic HTML
+          </span>
+        </div>
+
+      </div>
+
+    </div>
+
+  </footer>
+
+</body>
+
+</html>
