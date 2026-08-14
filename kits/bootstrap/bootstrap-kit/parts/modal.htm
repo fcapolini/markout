@@ -1,0 +1,84 @@
+<lib>
+  <:import src="base.htm" />
+  <:import src="button.htm" />
+
+  <!--
+    A modal. Opened the Bootstrap way, by a trigger naming it:
+
+      <bs-button :toggle="modal" :target="#signup">Sign up</bs-button>
+      <bs-modal :name="signup" :title="Sign up">…</bs-modal>
+
+    The footer is a named slot with a working default, so a modal that only
+    needs a Close button doesn't have to say so. That is also why it isn't an
+    optional region: a `<:slot>` can't live inside a `:for-each`, and a
+    fallback is the better answer here anyway.
+
+    `:open` is the other way in — a value the page owns, which lets the modal
+    be driven by state rather than by a click. `:handle-open` is the door to
+    the imperative half of the DOM: `show()` and `hide()` are verbs, so no
+    amount of markup expresses them, and a handler is what runs them.
+  -->
+  <:define tag="bs-modal:div"
+           class="modal fade ${extra ?? ''}"
+           tabindex="-1"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :name=${null}
+           :title=${''}
+           :size=${null}          // 'sm' | 'lg' | 'xl'
+           :centered=${false}
+           :scrollable=${false}
+           :fullscreen=${null}    // true | 'sm-down' | 'md-down' | ...
+           :staticBackdrop=${false}
+           :open=${false}
+
+           // private
+           :_labelId=${`bs-modal-title-${$id}`}
+           :_dialogClass=${[
+             'modal-dialog',
+             size ? `modal-${size}` : '',
+             centered ? 'modal-dialog-centered' : '',
+             scrollable ? 'modal-dialog-scrollable' : '',
+             fullscreen === true ? 'modal-fullscreen' : '',
+             typeof fullscreen === 'string' ? `modal-fullscreen-${fullscreen}` : '',
+           ].filter(s => s).join(' ')}
+
+           id=${name}
+           aria-labelledby=${_labelId}
+           aria-hidden="true"
+           data-bs-backdrop=${staticBackdrop ? 'static' : null}
+           data-bs-keyboard=${staticBackdrop ? 'false' : null}
+
+           // `globalThis` rather than a bare `bootstrap`: the standard
+           // library is on the scope chain, a page's own libraries are not,
+           // and going through `globalThis` is what keeps "this line needs a
+           // browser" visible in the line
+           :handle-open=${(v) => {
+             const modal = globalThis.bootstrap.Modal.getOrCreateInstance($dom);
+             v ? modal.show() : modal.hide();
+           }}
+           :on-hidden.bs.modal=${() => open = false}
+           :on-shown.bs.modal=${() => open = true}
+  >
+    <div class=${_dialogClass}>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id=${_labelId}>${title}</h1>
+          <bs-close :dismiss="modal" />
+        </div>
+
+        <div class="modal-body">
+          <:slot />
+        </div>
+
+        <div class="modal-footer">
+          <:slot name="footer">
+            <bs-button :variant="secondary" :dismiss="modal">Close</bs-button>
+          </:slot>
+        </div>
+      </div>
+    </div>
+  </:define>
+
+</lib>

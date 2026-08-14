@@ -1,0 +1,58 @@
+<lib>
+  <:import src="base.htm" />
+  <:import src="badge.htm" />
+
+  <!--
+    A list group, from `{ name, link, active, disabled, variant, badge, text }`
+    entries.
+
+    Every entry is an `<a>`. Bootstrap only wants `.list-group-item-action`
+    (the hover and focus treatment) on the ones that actually go somewhere, so
+    that class follows `link` rather than being always on — and an anchor with
+    no `href` is inert, which is exactly what a non-link entry should be.
+  -->
+  <:define tag="bs-list-group:div"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :items=${[
+             { name: 'An item', active: true },
+             { name: 'A second item' },
+             { name: 'A disabled item', disabled: true },
+           ]}
+           :flush=${false}
+           :horizontal=${false}
+
+           // private
+           :_class=${[
+             'list-group',
+             flush ? 'list-group-flush' : '',
+             horizontal ? 'list-group-horizontal' : '',
+             extra,
+           ].filter(s => s).join(' ')}
+
+           class=${_class}
+  >
+    <a :for-each=${items}
+       :for-as="item"
+       class="list-group-item d-flex justify-content-between align-items-center"
+       :class-list-group-item-action=${!!item.link}
+       :class-active=${item.active}
+       :class-disabled=${item.disabled}
+       href=${item.link ?? null}
+       aria-current=${item.active ? 'true' : null}
+       aria-disabled=${item.disabled ? 'true' : null}>
+
+      <span>
+        <span :class-fw-bold=${!!item.text}>${item.name}</span>
+        <span class="d-block small opacity-75"
+              :for-each=${item.text ? [1] : []}>${item.text}</span>
+      </span>
+
+      <bs-badge :variant=${item.badge?.variant ?? 'secondary'}
+                :pill
+                :for-each=${item.badge ? [1] : []}>${item.badge?.name ?? item.badge}</bs-badge>
+    </a>
+  </:define>
+
+</lib>

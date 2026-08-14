@@ -1,0 +1,43 @@
+<lib>
+  <:import src="base.htm" />
+
+  <!--
+    A popover: a tooltip with a heading and a body, and click to open rather
+    than hover. Constructed the same way, and for the same reason — see
+    `tooltip.htm`.
+
+    The handler names `:content` rather than `:title` because the body is the
+    part that usually changes; both are read when it runs.
+  -->
+  <:define tag="bs-popover:span"
+           class="d-inline-block ${extra ?? ''}"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :title=${''}
+           :content=${''}
+           :placement=${'right'}
+           :trigger=${'click'}
+           :html=${false}
+
+           :handle-content=${(v) => {
+             // a `:for-each` host is compiled into an inert `<template>`
+             // stencil whose scopes still evaluate, so this can run for an
+             // element that is not in the page — and with the loop's per-item
+             // name still unbound. `isConnected` is the precise question:
+             // build a plugin only for an element the user can actually reach
+             if (!$dom.isConnected) { return; }
+             globalThis.bootstrap.Popover.getInstance($dom)?.dispose();
+             new globalThis.bootstrap.Popover($dom, {
+               title: title,
+               content: v,
+               placement: placement,
+               trigger: trigger,
+               html: html,
+             });
+           }}
+  >
+    <:slot />
+  </:define>
+
+</lib>

@@ -1,0 +1,34 @@
+<lib>
+  <:import src="base.htm" />
+
+  <!--
+    A loading placeholder. Bootstrap's animation classes are descendant
+    selectors (`.placeholder-glow .placeholder`), so the component wraps its
+    own bar and is self-contained — no animation wrapper to remember.
+  -->
+  <:define tag="bs-placeholder:span"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :cols=${6}
+           :size=${null}         // 'xs' | 'sm' | 'lg'
+           :variant=${null}
+           :animation=${'glow'}  // 'glow' | 'wave' | null
+
+           // private
+           :_class=${[animation ? `placeholder-${animation}` : '', extra]
+                     .filter(s => s).join(' ') || null}
+           :_barClass=${[
+             'placeholder',
+             `col-${cols}`,
+             size ? `placeholder-${size}` : '',
+             variant ? `bg-${variant}` : '',
+           ].filter(s => s).join(' ')}
+
+           class=${_class}
+           aria-hidden="true"
+  >
+    <span class=${_barClass}></span>
+  </:define>
+
+</lib>

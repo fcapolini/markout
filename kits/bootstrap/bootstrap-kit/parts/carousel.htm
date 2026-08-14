@@ -1,0 +1,85 @@
+<lib>
+  <:import src="base.htm" />
+
+  <!--
+    A carousel from an array of slides. A slide is
+    `{ image, alt, title, text }`.
+
+    Controls and indicators both have to point at the carousel's id, which is
+    derived from `$id` — three places that have to agree, and the reason this
+    is worth a component at all.
+  -->
+  <:define tag="bs-carousel:div"
+           class="carousel slide ${extra ?? ''}"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :slides=${[]}
+           :controls=${true}
+           :indicators=${true}
+           :captions=${true}
+           :fade=${false}
+           :ride=${true}
+           :interval=${5000}
+           :dark=${false}
+
+           // private
+           :_id=${`bs-carousel-${$id}`}
+           :_selector=${`#bs-carousel-${$id}`}
+           // the position is needed three times per slide and `:for-each`
+           // binds the item, not its index, so it is carried on the item
+           :_slides=${slides.map((slide, i) => ({ ...slide, index: i }))}
+
+           id=${_id}
+           :class-carousel-fade=${fade}
+           data-bs-ride=${ride ? 'carousel' : null}
+           data-bs-interval=${interval}
+           data-bs-theme=${dark ? 'dark' : null}
+  >
+    <div class="carousel-indicators" :for-each=${indicators ? [1] : []}>
+      <button type="button"
+              :for-each=${_slides}
+              :for-as="slide"
+              data-bs-target=${_selector}
+              data-bs-slide-to=${slide.index}
+              :class-active=${slide.index === 0}
+              aria-current=${slide.index === 0 ? 'true' : null}
+              aria-label="Slide ${slide.index + 1}"></button>
+    </div>
+
+    <div class="carousel-inner">
+      <div class="carousel-item"
+           :for-each=${_slides}
+           :for-as="slide"
+           :class-active=${slide.index === 0}>
+        <img class="d-block w-100"
+             src=${slide.image}
+             alt=${slide.alt ?? ''}>
+        <div class="carousel-caption d-none d-md-block"
+             :for-each=${captions && (slide.title || slide.text) ? [1] : []}>
+          <h5 :for-each=${slide.title ? [1] : []}>${slide.title}</h5>
+          <p :for-each=${slide.text ? [1] : []}>${slide.text}</p>
+        </div>
+      </div>
+    </div>
+
+    <button class="carousel-control-prev"
+            type="button"
+            :for-each=${controls ? [1] : []}
+            data-bs-target=${_selector}
+            data-bs-slide="prev">
+      <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+      <span class="visually-hidden">Previous</span>
+    </button>
+
+    <button class="carousel-control-next"
+            type="button"
+            :for-each=${controls ? [1] : []}
+            data-bs-target=${_selector}
+            data-bs-slide="next">
+      <span class="carousel-control-next-icon" aria-hidden="true"></span>
+      <span class="visually-hidden">Next</span>
+    </button>
+  </:define>
+
+</lib>

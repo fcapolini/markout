@@ -1,0 +1,83 @@
+<lib>
+  <:import src="base.htm" />
+  <:import src="button.htm" />
+
+  <!--
+    A toast, shown by setting a value rather than by calling anything:
+
+      <bs-toast :aka="saved" :title="Saved">Your changes are safe.</bs-toast>
+      <bs-button :on-click=${() => saved.open = true}>Save</bs-button>
+
+    `:handle-open` turns that value into the `show()` / `hide()` the plugin
+    wants, and Bootstrap's own `hidden.bs.toast` puts the value back when the
+    toast times out — so the value stays true to what is on screen however it
+    got closed.
+  -->
+  <:define tag="bs-toast:div"
+           class="toast"
+           role="alert"
+           aria-live="assertive"
+           aria-atomic="true"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :title=${''}
+           :time=${null}
+           :variant=${null}
+           :open=${false}
+           :autohide=${true}
+           :delay=${5000}
+
+           // private
+           :_class=${['toast', variant ? `text-bg-${variant} border-0` : '', extra]
+                     .filter(s => s).join(' ')}
+
+           class=${_class}
+           data-bs-autohide=${autohide ? null : 'false'}
+           data-bs-delay=${delay}
+
+           :handle-open=${(v) => {
+             const toast = globalThis.bootstrap.Toast.getOrCreateInstance($dom);
+             v ? toast.show() : toast.hide();
+           }}
+           :on-hidden.bs.toast=${() => open = false}
+  >
+    <div class="toast-header" :for-each=${title ? [1] : []}>
+      <strong class="me-auto">${title}</strong>
+      <small class="text-body-secondary"
+             :for-each=${time ? [1] : []}>${time}</small>
+      <bs-close :dismiss="toast" />
+    </div>
+
+    <div class="toast-body">
+      <:slot />
+    </div>
+  </:define>
+
+  <!--
+    Where toasts stack. Bootstrap positions the container, not the toasts, so
+    this is the piece that decides the corner they appear in.
+  -->
+  <:define tag="bs-toast-container:div"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :placement=${'bottom-end'}   // 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end' | 'top-center'
+
+           // private
+           :_class=${[
+             'toast-container position-fixed p-3',
+             placement.startsWith('top') ? 'top-0' : 'bottom-0',
+             placement.endsWith('start') ? 'start-0' : '',
+             placement.endsWith('end') ? 'end-0' : '',
+             placement.endsWith('center') ? 'start-50 translate-middle-x' : '',
+             extra,
+           ].filter(s => s).join(' ')}
+
+           class=${_class}
+           style="z-index: 1090"
+  >
+    <:slot />
+  </:define>
+
+</lib>

@@ -1,0 +1,33 @@
+<lib>
+  <:import src="base.htm" />
+
+  <!--
+    `text-bg-*` rather than `bg-*`: it sets the foreground colour along with
+    the background, which is the pairing that stays readable in both colour
+    modes.
+  -->
+  <:define tag="bs-badge:span"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :variant=${'primary'}
+           :pill=${false}
+           :position=${null}    // 'top-end' | 'bottom-end' — for a badge on a button
+
+           // private
+           :_class=${[
+             'badge',
+             `text-bg-${variant}`,
+             pill ? 'rounded-pill' : '',
+             position ? 'position-absolute translate-middle' : '',
+             position === 'top-end' ? 'top-0 start-100' : '',
+             position === 'bottom-end' ? 'top-100 start-100' : '',
+             extra,
+           ].filter(s => s).join(' ')}
+
+           class=${_class}
+  >
+    <:slot />
+  </:define>
+
+</lib>

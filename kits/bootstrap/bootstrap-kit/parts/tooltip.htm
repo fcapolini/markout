@@ -1,0 +1,50 @@
+<lib>
+  <:import src="base.htm" />
+
+  <!--
+    Tooltips and popovers are the two components Bootstrap does not start on
+    its own: every other one wakes up from a `data-bs-*` attribute, these two
+    have to be constructed. The usual answer is a page-level loop over
+    `[data-bs-toggle="tooltip"]`, which then misses anything added later.
+
+    `:handle-title` is the per-instance answer instead. It runs once when the
+    scope comes up and again whenever the title changes, so a tooltip whose
+    text is an expression keeps up with it — and one inside a `:for-each`
+    gets built with its replica rather than being left behind.
+
+    The old instance is disposed before the new one is made, because
+    Bootstrap's options are read at construction and never re-read.
+
+    This wraps its content in a `<span>`, since the tooltip needs an element
+    of its own to hang off; wrap the trigger, not the page around it.
+  -->
+  <:define tag="bs-tooltip:span"
+           class="d-inline-block ${extra ?? ''}"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :title=${''}
+           :placement=${'top'}
+           :html=${false}
+           :trigger=${'hover focus'}
+
+           :handle-title=${(v) => {
+             // a `:for-each` host is compiled into an inert `<template>`
+             // stencil whose scopes still evaluate, so this can run for an
+             // element that is not in the page — and with the loop's per-item
+             // name still unbound. `isConnected` is the precise question:
+             // build a plugin only for an element the user can actually reach
+             if (!$dom.isConnected) { return; }
+             globalThis.bootstrap.Tooltip.getInstance($dom)?.dispose();
+             new globalThis.bootstrap.Tooltip($dom, {
+               title: v,
+               placement: placement,
+               html: html,
+               trigger: trigger,
+             });
+           }}
+  >
+    <:slot />
+  </:define>
+
+</lib>

@@ -1,0 +1,57 @@
+<lib>
+  <:import src="base.htm" />
+  <:import src="button.htm" />
+
+  <!--
+    An offcanvas panel: the same shape as `bs-modal`, opened by a trigger
+    naming it or by the `:open` value.
+
+      <bs-button :toggle="offcanvas" :target="#menu">Menu</bs-button>
+      <bs-offcanvas :name="menu" :title="Menu">…</bs-offcanvas>
+  -->
+  <:define tag="bs-offcanvas:div"
+           class="offcanvas"
+           tabindex="-1"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :name=${null}
+           :title=${''}
+           :placement=${'start'}   // 'start' | 'end' | 'top' | 'bottom'
+           :backdrop=${true}
+           :scroll=${false}
+           :responsive=${null}     // 'lg' — an offcanvas below this breakpoint only
+           :open=${false}
+
+           // private
+           :_labelId=${`bs-offcanvas-title-${$id}`}
+           :_class=${[
+             responsive ? `offcanvas-${responsive}` : 'offcanvas',
+             `offcanvas-${placement}`,
+             extra,
+           ].join(' ')}
+
+           class=${_class}
+           id=${name}
+           aria-labelledby=${_labelId}
+           data-bs-backdrop=${backdrop ? null : 'false'}
+           data-bs-scroll=${scroll ? 'true' : null}
+
+           :handle-open=${(v) => {
+             const panel = globalThis.bootstrap.Offcanvas.getOrCreateInstance($dom);
+             v ? panel.show() : panel.hide();
+           }}
+           :on-hidden.bs.offcanvas=${() => open = false}
+           :on-shown.bs.offcanvas=${() => open = true}
+  >
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id=${_labelId}>${title}</h5>
+      <bs-close :dismiss="offcanvas" />
+    </div>
+
+    <div class="offcanvas-body">
+      <:slot />
+    </div>
+  </:define>
+
+</lib>

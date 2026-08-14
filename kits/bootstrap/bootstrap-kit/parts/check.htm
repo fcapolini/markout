@@ -1,0 +1,149 @@
+<lib>
+  <:import src="base.htm" />
+
+  <!--
+    Checkbox, radio and switch are one component: in Bootstrap a switch IS a
+    checkbox with `.form-switch` on the wrapper, and a radio differs only by
+    `type`. `:type` picks between them.
+
+    A group of radios shares one `:name`, as it does in plain HTML — that is
+    what makes them exclusive, and the kit doesn't hide it.
+  -->
+  <:define tag="bs-check:div"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :label=${''}
+           :type=${'checkbox'}   // 'checkbox' | 'radio' | 'switch'
+           :name=${null}
+           :value=${null}
+           :checked=${false}
+           :inline=${false}
+           :reverse=${false}
+           :disabled=${false}
+           :help=${null}
+
+           // private
+           :_id=${`bs-check-${$id}`}
+           :_helpId=${`bs-check-help-${$id}`}
+           :_type=${type === 'switch' ? 'checkbox' : type}
+
+           class="form-check ${extra ?? ''}"
+           :class-form-switch=${type === 'switch'}
+           :class-form-check-inline=${inline}
+           :class-form-check-reverse=${reverse}
+  >
+    <input class="form-check-input"
+           id=${_id}
+           type=${_type}
+           name=${name}
+           value=${value}
+           role=${type === 'switch' ? 'switch' : null}
+           aria-describedby=${help ? _helpId : null}
+           :attr-checked=${checked}
+           :attr-disabled=${disabled}
+           :on-change=${ev => checked = ev.target.checked}>
+
+    <label class="form-check-label"
+           for=${_id}>${label}</label>
+
+    <div class="form-text"
+         id=${_helpId}
+         :for-each=${help ? [1] : []}>${help}</div>
+  </:define>
+
+  <!--
+    A whole group of radios or checkboxes from one array, sharing a name and
+    reporting the selection back through `:value`. Entries are strings or
+    `{ name, value, disabled }`, as in `bs-select`.
+  -->
+  <:define tag="bs-check-group:div"
+           class="mb-3 ${extra ?? ''}"
+           role="group"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :legend=${''}
+           :type=${'radio'}
+           :options=${[]}
+           :value=${null}
+           :inline=${false}
+           :disabled=${false}
+
+           // private
+           :_name=${`bs-check-group-${$id}`}
+           :_legendId=${`bs-check-group-legend-${$id}`}
+
+           aria-labelledby=${legend ? _legendId : null}
+           :_options=${options.map(o =>
+             typeof o === 'object' && o !== null
+               ? { name: o.name, value: o.value ?? o.name, disabled: !!o.disabled }
+               : { name: o, value: o, disabled: false })}
+  >
+    <!--
+      A `<div>` rather than `<fieldset>`/`<legend>`: Bootstrap floats a
+      legend, and a floated check input beside it wraps up onto the same
+      line. `role="group"` plus `aria-labelledby` says the same thing to a
+      screen reader without the float.
+    -->
+    <div class="form-label fs-6"
+         id=${_legendId}
+         :for-each=${legend ? [1] : []}>${legend}</div>
+
+    <div class="form-check"
+         :for-each=${_options}
+         :for-as="option"
+         :class-form-switch=${type === 'switch'}
+         :class-form-check-inline=${inline}>
+      <input class="form-check-input"
+             id="${_name}-${option.value}"
+             type=${type === 'switch' ? 'checkbox' : type}
+             name=${_name}
+             value=${option.value}
+             :attr-checked=${option.value === value}
+             :attr-disabled=${disabled || option.disabled}
+             :on-change=${ev => value = ev.target.value}>
+      <label class="form-check-label"
+             for="${_name}-${option.value}">${option.name}</label>
+    </div>
+  </:define>
+
+  <!-- A range slider, with its label and its current value. -->
+  <:define tag="bs-range:div"
+           class="mb-3 ${extra ?? ''}"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :label=${''}
+           :name=${null}
+           :min=${0}
+           :max=${100}
+           :step=${1}
+           :value=${50}
+           :disabled=${false}
+           :showValue=${false}
+
+           // private
+           :_id=${`bs-range-${$id}`}
+  >
+    <label class="form-label d-flex justify-content-between"
+           for=${_id}
+           :for-each=${label ? [1] : []}>
+      <span>${label}</span>
+      <span class="text-body-secondary"
+            :for-each=${showValue ? [1] : []}>${value}</span>
+    </label>
+
+    <input class="form-range"
+           id=${_id}
+           type="range"
+           name=${name}
+           min=${min}
+           max=${max}
+           step=${step}
+           value=${value}
+           :attr-disabled=${disabled}
+           :on-input=${ev => value = Number(ev.target.value)}>
+  </:define>
+
+</lib>

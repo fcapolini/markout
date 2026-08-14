@@ -1,0 +1,42 @@
+<lib>
+  <:import src="base.htm" />
+
+  <!--
+    The first of the kit's list-driven components. Where a component repeats
+    one shape over a list, its API is an array rather than a slot: the caller
+    describes the entries, the component owns the markup.
+
+    An entry is `{ name, link }`. The one without a `link` is the current
+    page, and gets `active` plus `aria-current` — the `<a>` stays in place
+    either way, since an anchor without an `href` renders as plain text.
+  -->
+  <:define tag="bs-breadcrumb:nav"
+           aria-label="breadcrumb"
+           class=${extra}
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :items=${[
+             { name: 'Home', link: '#' },
+             { name: 'Library', link: '#' },
+             { name: 'Data' },
+           ]}
+           :divider=${null}
+
+           // Bootstrap reads the separator from a CSS custom property, and
+           // `:style-` writes ordinary CSS properties — so this one goes
+           // through the plain `style` attribute.
+           style=${divider ? `--bs-breadcrumb-divider: '${divider}'` : null}
+  >
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"
+          :for-each=${items}
+          :for-as="item"
+          :class-active=${!item.link}
+          aria-current=${item.link ? null : 'page'}>
+        <a href=${item.link ?? null}>${item.name}</a>
+      </li>
+    </ol>
+  </:define>
+
+</lib>

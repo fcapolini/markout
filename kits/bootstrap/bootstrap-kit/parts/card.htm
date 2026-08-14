@@ -1,0 +1,90 @@
+<lib>
+  <:import src="base.htm" />
+
+  <!--
+    A card: parameters for the chrome, the slot for the content. Every region
+    other than the body is optional and only appears when its parameter is
+    given, which is the kit's general shape — a caller writes what the card
+    HAS, not the markup that produces it.
+
+      <bs-card :title="Card title" :footer="2 days ago">
+        <p class="card-text">Some quick example text.</p>
+      </bs-card>
+  -->
+  <:define tag="bs-card:div"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :title=${null}
+           :subtitle=${null}
+           :header=${null}
+           :footer=${null}
+           :image=${null}
+           :imageAlt=${''}
+           :imageBottom=${false}
+           :variant=${null}       // colours the whole card, e.g. 'primary'
+           :border=${null}        // colours only the border
+           :align=${null}         // 'center' | 'end'
+
+           // private
+           :_class=${[
+             'card',
+             variant ? `text-bg-${variant}` : '',
+             border ? `border-${border}` : '',
+             align ? `text-${align}` : '',
+             extra,
+           ].filter(s => s).join(' ')}
+
+           class=${_class}
+  >
+    <img class="card-img-top"
+         :for-each=${image && !imageBottom ? [1] : []}
+         src=${image}
+         alt=${imageAlt}>
+
+    <div class="card-header"
+         :for-each=${header ? [1] : []}>${header}</div>
+
+    <div class="card-body">
+      <h5 class="card-title"
+          :for-each=${title ? [1] : []}>${title}</h5>
+
+      <h6 class="card-subtitle mb-2 text-body-secondary"
+          :for-each=${subtitle ? [1] : []}>${subtitle}</h6>
+
+      <:slot />
+    </div>
+
+    <div class="card-footer text-body-secondary"
+         :for-each=${footer ? [1] : []}>${footer}</div>
+
+    <img class="card-img-bottom"
+         :for-each=${image && imageBottom ? [1] : []}
+         src=${image}
+         alt=${imageAlt}>
+  </:define>
+
+  <!--
+    Equal-height, equal-width cards in a grid. Bootstrap wants the row
+    classes on a wrapper; this is that wrapper, named.
+  -->
+  <:define tag="bs-card-group:div"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :cols=${3}
+           :gap=${4}
+           :attached=${false}     // a seamless strip instead of separate cards
+
+           // private
+           :_class=${attached
+             ? 'card-group'
+             : `row row-cols-1 row-cols-md-${cols} g-${gap}`}
+           :_groupClass=${extra ? `${_class} ${extra}` : _class}
+
+           class=${_groupClass}
+  >
+    <:slot />
+  </:define>
+
+</lib>

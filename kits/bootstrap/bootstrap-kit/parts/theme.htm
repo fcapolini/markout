@@ -1,0 +1,67 @@
+<lib>
+  <:import src="base.htm" />
+
+  <!--
+    Bootstrap 5.3's colour modes, as a value.
+
+    The inline script runs before first paint, which is the whole point of
+    putting it here rather than in a handler: the mode has to be on `<html>`
+    before the first frame or the page flashes the wrong one. It is the one
+    piece of this kit that cannot be reactive, because it has to happen
+    before Markout exists.
+
+    From there `_theme` is an ordinary value and `:handle-_theme` keeps the
+    document in step with it. Two things about that handler:
+
+    - it goes through `globalThis`, because `document` and `localStorage` are
+      browser globals rather than standard library, and this kit would rather
+      say so at the point of use than pretend a server has them.
+    - the first run ADOPTS what the pre-paint script chose instead of
+      overwriting it, since the value starts at a server-rendered default
+      that knows nothing about this visitor.
+  -->
+  <script>
+    (() => {
+      const stored = localStorage.getItem('bs-theme');
+      const theme = stored
+        || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-bs-theme', theme);
+    })();
+  </script>
+
+  <:define tag="bs-theme-toggle:button"
+           type="button"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :variant=${'secondary'}
+           :outline=${true}
+           :size=${null}
+
+           // private
+           :_theme=${'light'}
+           :_adopted=${false}
+           :_class=${[
+             'btn',
+             `btn-${outline ? 'outline-' : ''}${variant}`,
+             size ? `btn-${size}` : '',
+             extra,
+           ].filter(s => s).join(' ')}
+
+           class=${_class}
+           aria-label="Toggle colour mode"
+
+           :handle-_theme=${(v) => {
+             const root = globalThis.document.documentElement;
+             if (!_adopted) {
+               _adopted = true;
+               _theme = root.getAttribute('data-bs-theme') || v;
+               return;
+             }
+             root.setAttribute('data-bs-theme', v);
+             globalThis.localStorage.setItem('bs-theme', v);
+           }}
+           :on-click=${() => _theme = _theme === 'dark' ? 'light' : 'dark'}
+  >${_theme === 'dark' ? '☀' : '☾'}</:define>
+
+</lib>
