@@ -13,6 +13,7 @@
     "build:runtime": "node scripts/build-runtime.mjs",
     "clean": "rm -rf dist",
     "dev": "tsx src/index.ts -d ./demo",
+    "dev:bench": "tsx src/index.ts -d ./bench",
     "test": "vitest run",
     "test:watch": "vitest",
     "test-coverage": "vitest run --coverage",
