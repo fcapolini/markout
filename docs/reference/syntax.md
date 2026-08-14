@@ -205,6 +205,49 @@ Available on every scope; not declared, and reserved from user code.
 | `$value("key")` | Looks a value up by key. |
 | `$dom` | This scope's own element, or nothing if it has none. Browser-only. |
 
+## Globals
+
+A name an expression uses is looked up on the scope chain, and the JS
+standard library is its last link. So an expression is plain JavaScript in
+the way it looks:
+
+```html
+<p :n=${Math.max(1, 2)}>${JSON.stringify({ n })}</p>
+```
+
+Available: `Array`, `BigInt`, `Boolean`, `Date`, `Error`, `Infinity`, `Intl`,
+`JSON`, `Map`, `Math`, `NaN`, `Number`, `Object`, `Promise`, `RegExp`, `Set`,
+`String`, `Symbol`, `WeakMap`, `WeakSet`, `console`, `decodeURI`,
+`decodeURIComponent`, `encodeURI`, `encodeURIComponent`, `globalThis`,
+`isFinite`, `isNaN`, `parseFloat`, `parseInt`, `structuredClone`,
+`undefined`.
+
+Because it is the last link, a declared value of the same name shadows it —
+`:Math=${...}` means yours from there down.
+
+A global is not a dependency: it can't change, so nothing re-evaluates
+because of one.
+
+### What is deliberately not on the list
+
+`document`, `localStorage`, `fetch`, `setTimeout`, and whatever libraries the
+page loads exist in the browser and not on the server. Naming one directly
+would give a page an expression that works in one half of an isomorphic
+render and throws in the other, with nothing in the source to say which.
+
+They are reached through `globalThis`, which is on the list, so that the
+environment a line depends on is visible in the line itself:
+
+```html
+<div :open=${false}
+     :handle-open=${(v) => globalThis.bootstrap.Modal
+       .getOrCreateInstance($dom)[v ? 'show' : 'hide']()}>
+```
+
+The same rule as `$dom`, which is browser-only for the same reason: anything
+that has to show up in the served markup belongs in a value, and anything
+that needs a browser belongs in a handler.
+
 ## Notes
 
 - `${...}` is the only expression syntax, and anything containing one is

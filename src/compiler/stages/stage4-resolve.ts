@@ -17,6 +17,19 @@ const RT_DOM_VALUE_KEY = '$dom';
 // value itself
 const CALLBACK_VALUE_PREFIXES = [EVENT_VALUE_PREFIX, DID_VALUE_PREFIX, WILL_VALUE_PREFIX];
 
+// The JS standard library, which the runtime's global scope supplies to every
+// expression. Duplicated from runtime/core/core-global.ts rather than
+// imported -- as with the RT_ keys above, the compiler doesn't depend on
+// runtime code -- and a test asserts the two lists stay identical.
+export const GLOBAL_NAMES = new Set([
+  'Array', 'BigInt', 'Boolean', 'Date', 'Error', 'Infinity', 'Intl', 'JSON',
+  'Map', 'Math', 'NaN', 'Number', 'Object', 'Promise', 'RegExp', 'Set',
+  'String', 'Symbol', 'WeakMap', 'WeakSet', 'console', 'decodeURI',
+  'decodeURIComponent', 'encodeURI', 'encodeURIComponent', 'globalThis',
+  'isFinite', 'isNaN', 'parseFloat', 'parseInt', 'structuredClone',
+  'undefined',
+]);
+
 /**
  * Stage 4: Resolve value references at compile time.
  *
@@ -243,6 +256,13 @@ function validated(
     key !== RT_DOM_VALUE_KEY
   ) {
     if (!resolvesToKnownValue(target, key)) {
+      // a JS global, resolved at runtime from the global scope -- the last
+      // link of the chain, which is why it is only consulted once nothing
+      // declared has claimed the name. It never changes, so it is not a
+      // dependency either: returning no ref keeps it out of `deps`
+      if (!via.length && GLOBAL_NAMES.has(key)) {
+        return undefined;
+      }
       addError(page, `Unknown reference: "${[...via, key].join('.')}"`, value.node.loc);
       return undefined;
     }

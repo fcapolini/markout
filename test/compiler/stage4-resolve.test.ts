@@ -3,7 +3,8 @@ import * as acorn from 'acorn';
 import { stage1load } from '../../src/compiler/stages/stage1-load';
 import { stage2validate } from '../../src/compiler/stages/stage2-validate';
 import { stage3qualify } from '../../src/compiler/stages/stage3-qualify';
-import { stage4resolve } from '../../src/compiler/stages/stage4-resolve';
+import { GLOBAL_NAMES, stage4resolve } from '../../src/compiler/stages/stage4-resolve';
+import { GLOBAL_NAMES as GLOBAL_NAMES_RT } from '../../src/runtime/core/core-global';
 import { Page } from '../../src/compiler/ir/Page';
 import { Scope } from '../../src/compiler/ir/Scope';
 import { Value } from '../../src/compiler/ir/Value';
@@ -402,5 +403,72 @@ describe('stage4-resolve: chained scope navigation', () => {
       expect.arrayContaining([{ key: 'items' }, { key: 'i' }])
     );
     expect(textDeps(p)).toHaveLength(2);
+  });
+});
+
+// `${...}` is meant to be plain JavaScript, and plain JavaScript says
+// `Math.max(a, b)`. Since stage3 qualifies every free name to `this.<name>`,
+// that only works if the standard library is reachable as the last link of
+// the scope chain -- see runtime/core/core-global.ts for what is on the list
+// and why the browser-only names are not.
+describe('stage4-resolve: JS globals', () => {
+  function compile(html: string) {
+    const p = new Page(parse(html, 'test.html'));
+    stage1load(p);
+    stage2validate(p);
+    stage3qualify(p);
+    stage4resolve(p);
+    return p;
+  }
+
+  function textDeps(p: Page) {
+    for (const [, v] of p.values) {
+      if (v.name.startsWith('t$') && v.deps.length) return v.deps;
+    }
+    return [];
+  }
+
+  it('resolves a standard-library reference without declaring it', () => {
+    const p = compile('<html><body><p>${Math.max(1, 2)}</p></body></html>');
+    expect(p.errors).toStrictEqual([]);
+  });
+
+  it('does not make a global a dependency', () => {
+    // a global never changes, so a value that reads one must not be woken by
+    // it -- and the runtime would have to hand back a CoreValue for a dep
+    // that can never fire
+    const p = compile('<html :n=${1}><body><p>${Math.max(n, 2)}</p></body></html>');
+    expect(p.errors).toStrictEqual([]);
+    expect(textDeps(p)).toStrictEqual([{ key: 'n' }]);
+  });
+
+  it('lets a declared value shadow a global', () => {
+    // resolution reaches the global scope only after walking the chain, so
+    // the page's own name wins and is a real dependency
+    const p = compile('<html :Math=${"mine"}><body><p>${Math}</p></body></html>');
+    expect(p.errors).toStrictEqual([]);
+    expect(textDeps(p)).toStrictEqual([{ key: 'Math' }]);
+  });
+
+  it('still reports a name that is neither declared nor a global', () => {
+    const p = compile('<html><body><p>${Mathe.max(1, 2)}</p></body></html>');
+    expect(p.errors.map(e => e.msg)).toStrictEqual(['Unknown reference: "Mathe"']);
+  });
+
+  it('does not treat a global name reached through a scope as global', () => {
+    // `outer.Math` names a value on another scope; that it happens to spell a
+    // global is irrelevant, and letting it through would hide a typo
+    const p = compile(
+      '<html><body><div :aka="outer"></div><p>${outer.Math}</p></body></html>'
+    );
+    expect(p.errors.map(e => e.msg)).toStrictEqual(['Unknown reference: "outer.Math"']);
+  });
+
+  it('keeps the compiler list and the runtime list identical', () => {
+    // the two are deliberately duplicated (the compiler doesn't depend on
+    // runtime code); this is what stops them drifting apart. A name in one
+    // list only is the worst case of both: the compiler accepting a
+    // reference the runtime cannot resolve, or refusing one it could
+    expect([...GLOBAL_NAMES].sort()).toStrictEqual([...GLOBAL_NAMES_RT].sort());
   });
 });
