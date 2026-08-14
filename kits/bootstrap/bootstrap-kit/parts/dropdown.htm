@@ -1,0 +1,86 @@
+<lib>
+  <:import src="base.htm" />
+
+  <!--
+    A dropdown. Entries are `{ name, link, active, disabled, header, divider,
+    select }`; the three shapes Bootstrap draws differently — a divider, a
+    header, an item — are three optional regions over the same list.
+
+    The menu is tied to its toggle by `aria-labelledby`, and the id for that
+    comes from `$id`, which is unique per instance. That is the general
+    answer in this kit to "this widget needs an id": derive it, never ask the
+    caller for one, unless another component has to name it (see
+    `bs-accordion`).
+  -->
+  <:define tag="bs-dropdown:div"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :label=${'Dropdown'}
+           :items=${[
+             { name: 'Action', link: '#' },
+             { name: 'Another action', link: '#' },
+             { divider: true },
+             { name: 'Something else here', link: '#' },
+           ]}
+           :variant=${'primary'}
+           :outline=${false}
+           :size=${null}
+           :split=${false}
+           :direction=${'down'}   // 'down' | 'up' | 'start' | 'end'
+           :align=${'start'}      // 'start' | 'end'
+           :dark=${false}
+
+           // private
+           :_id=${`bs-dropdown-${$id}`}
+           :_class=${[direction === 'down' ? 'dropdown' : `drop${direction}`, extra]
+                     .filter(s => s).join(' ')}
+           :_btnClass=${[
+             'btn',
+             `btn-${outline ? 'outline-' : ''}${variant}`,
+             size ? `btn-${size}` : '',
+           ].filter(s => s).join(' ')}
+
+           class=${_class}
+           :class-btn-group=${split}
+  >
+    <!-- a split button keeps the label clickable on its own -->
+    <button type="button"
+            class=${_btnClass}
+            :for-each=${split ? [1] : []}>${label}</button>
+
+    <button type="button"
+            id=${_id}
+            class=${_btnClass}
+            :class-dropdown-toggle
+            :class-dropdown-toggle-split=${split}
+            data-bs-toggle="dropdown"
+            aria-expanded="false">
+      <span :for-each=${split ? [] : [1]}>${label}</span>
+      <span class="visually-hidden"
+            :for-each=${split ? [1] : []}>Toggle dropdown</span>
+    </button>
+
+    <ul class="dropdown-menu"
+        :class-dropdown-menu-end=${align === 'end'}
+        data-bs-theme=${dark ? 'dark' : null}
+        aria-labelledby=${_id}>
+      <li :for-each=${items} :for-as="item">
+        <hr class="dropdown-divider"
+            :for-each=${item.divider ? [1] : []}>
+
+        <h6 class="dropdown-header"
+            :for-each=${item.header ? [1] : []}>${item.header}</h6>
+
+        <a class="dropdown-item"
+           :for-each=${item.divider || item.header ? [] : [1]}
+           :class-active=${item.active}
+           :class-disabled=${item.disabled}
+           href=${item.link ?? null}
+           aria-current=${item.active ? 'true' : null}
+           :on-click=${() => item.select?.(item)}>${item.name}</a>
+      </li>
+    </ul>
+  </:define>
+
+</lib>

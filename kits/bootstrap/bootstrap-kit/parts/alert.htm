@@ -1,0 +1,43 @@
+<lib>
+  <:import src="base.htm" />
+  <:import src="button.htm" />
+
+  <!--
+    An alert, with the two parts that are easy to get wrong done for you:
+    `role="alert"` so it is announced, and the `fade show` + close button
+    combination that a dismissible one needs to animate out.
+
+    `:heading` and the dismiss button are optional REGIONS. Markout has no
+    `:if` yet, so an optional region is a `:for-each` over a one-or-zero
+    element list — the documented way to say "render this only when". It
+    works everywhere except around a `<:slot>`, which is why the alert's body
+    is the slot and its heading is a parameter.
+  -->
+  <:define tag="bs-alert:div"
+           role="alert"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :variant=${'primary'}
+           :heading=${null}
+           :dismissible=${false}
+
+           // private
+           :_class=${['alert', `alert-${variant}`, extra].filter(s => s).join(' ')}
+
+           class=${_class}
+           :class-alert-dismissible=${dismissible}
+           :class-fade=${dismissible}
+           :class-show=${dismissible}
+  >
+    <h4 class="alert-heading"
+        :for-each=${heading ? [1] : []}>${heading}</h4>
+
+    <:slot />
+
+    <bs-close :dismiss="alert"
+              :label="Close alert"
+              :for-each=${dismissible ? [1] : []} />
+  </:define>
+
+</lib>

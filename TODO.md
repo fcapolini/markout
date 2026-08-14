@@ -9,7 +9,7 @@
 
 - [ ] check rehydration w/ claude: given the same `props`, client side we come up w/ the same values, what will change will be data sources and interaction, correct?
 
-- [ ] bootstrap wrapper library for adoptability and as a demonstration of components, reuse, and simplicity in authoring libraries
+- [ ] bootstrap wrapper library for adoptability and as a demonstration of components, reuse, and simplicity in authoring libraries, see [kitchen sink](https://getbootstrap.com/docs/5.3/examples/cheatsheet/)
 
 - [ ] component kits from npm packages, using e.g. `<:import npm="@markout/bootstrap-kit" />` (preprocessor already supports additional root folders I think)
 

@@ -1,0 +1,33 @@
+<lib>
+  <:import src="base.htm" />
+
+  <!--
+    Scrollspy is behaviour rather than appearance: it marks the entry in a
+    nav that matches what is currently on screen. `:target` is the selector
+    of that nav, and the element this sits on is the thing being scrolled.
+
+      <bs-nav :vertical id="toc" :items=${sections} />
+      <bs-scrollspy :target="#toc" :height="300">…</bs-scrollspy>
+  -->
+  <:define tag="bs-scrollspy:div"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :target=${null}
+           :offset=${0}
+           :smooth=${false}
+           :height=${null}
+
+           class=${extra}
+           data-bs-spy="scroll"
+           data-bs-target=${target}
+           data-bs-root-margin="${offset}px 0px -40%"
+           data-bs-smooth-scroll=${smooth ? 'true' : null}
+           tabindex="0"
+           :style-height=${height ? `${height}px` : null}
+           :style-overflow-y=${height ? 'auto' : null}
+  >
+    <:slot />
+  </:define>
+
+</lib>

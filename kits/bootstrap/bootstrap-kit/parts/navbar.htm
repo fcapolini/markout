@@ -1,0 +1,82 @@
+<lib>
+  <:import src="base.htm" />
+
+  <!--
+    Bootstrap's navbar, driven by an array of entries rather than by writing
+    `<li><a class="nav-link">` per link. `:items` is this component's API, not
+    something from the Bootstrap docs — see the default below for its shape;
+    `button: true` turns an entry into a call to action.
+
+    The collapse target needs an id that no other navbar on the page shares,
+    and `$id` is exactly that: unique per instance, so two navbars can't
+    collide and the caller never has to invent a name.
+
+    Two named slots: the unnamed one is the brand, `end` is whatever should
+    sit past the links — a search box, a theme toggle, an avatar.
+  -->
+  <:define tag="bs-navbar:nav"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :items=${[
+             { name: 'Home', link: '#', active: true },
+             { name: 'Features', link: '#' },
+             { name: 'Pricing', link: '#' },
+           ]}
+           :brand=${'#'}
+           :expand=${'lg'}
+           :container=${'container'}   // 'container' | 'container-fluid' | ...
+           :sticky=${false}
+           :fixed=${false}
+           :theme=${null}              // 'light' | 'dark' — independent of the page
+           :bg=${'body-tertiary'}
+
+           // private
+           :_id=${`bs-navbar-${$id}`}
+           :_class=${[
+             'navbar',
+             expand ? `navbar-expand-${expand}` : '',
+             bg ? `bg-${bg}` : '',
+             extra,
+           ].filter(s => s).join(' ')}
+
+           class=${_class}
+           :class-sticky-top=${sticky}
+           :class-fixed-top=${fixed}
+           data-bs-theme=${theme}
+  >
+    <div class=${container}>
+      <a class="navbar-brand" href=${brand}><:slot /></a>
+
+      <button class="navbar-toggler"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#${_id}"
+              aria-controls=${_id}
+              aria-expanded="false"
+              aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id=${_id}>
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item" :for-each=${items} :for-as="item">
+            <a class="nav-link"
+               :class-active=${item.active}
+               :class-disabled=${item.disabled}
+               :class-btn=${item.button}
+               :class-btn-primary=${item.button}
+               href=${item.link ?? null}
+               aria-current=${item.active ? 'page' : null}
+               aria-disabled=${item.disabled ? 'true' : null}>${item.name}</a>
+          </li>
+        </ul>
+
+        <div class="d-flex gap-2 align-items-center">
+          <:slot name="end" />
+        </div>
+      </div>
+    </div>
+  </:define>
+
+</lib>

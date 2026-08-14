@@ -1,0 +1,54 @@
+<lib>
+  <:import src="base.htm" />
+
+  <!--
+    Bootstrap 5.3 moved the ARIA onto the outer `.progress` and left
+    `.progress-bar` as the visual fill, so a progress bar is two elements
+    whose values have to agree. Here they are derived from one `:value`.
+
+    `:label` is the text drawn inside the bar; leave it off for a bare bar.
+  -->
+  <:define tag="bs-progress:div"
+           class="progress ${extra ?? ''}"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :value=${0}
+           :min=${0}
+           :max=${100}
+           :label=${null}
+           :variant=${null}
+           :striped=${false}
+           :animated=${false}
+           :height=${null}
+           :name=${'Progress'}
+
+           // private
+           :_percent=${Math.max(0, Math.min(100, ((value - min) / (max - min || 1)) * 100))}
+           :_class=${[
+             'progress-bar',
+             variant ? `text-bg-${variant}` : '',
+             striped || animated ? 'progress-bar-striped' : '',
+             animated ? 'progress-bar-animated' : '',
+           ].filter(s => s).join(' ')}
+
+           role="progressbar"
+           aria-label=${name}
+           aria-valuenow=${value}
+           aria-valuemin=${min}
+           aria-valuemax=${max}
+           :style-height=${height}
+  >
+    <div class=${_class}
+         :style-width="${_percent}%">${label}</div>
+  </:define>
+
+  <!--
+    Several bars sharing one track. Each child is a `bs-progress` whose
+    percentages add up to 100.
+  -->
+  <:define tag="bs-progress-stacked:div" class="progress-stacked">
+    <:slot />
+  </:define>
+
+</lib>

@@ -1,0 +1,73 @@
+<lib>
+  <:import src="base.htm" />
+
+  <!--
+    An accordion, in two tags, because its panels hold arbitrary markup and
+    markup belongs in a slot rather than in an array.
+
+    The only thing an item needs from its accordion is the id Bootstrap
+    closes the others by, and slotted content resolves at the CALL site, so
+    it can't read the parent instance's internals. Hence `:name` on the
+    accordion and `:parent` on the item — the same id wiring plain Bootstrap
+    asks for, and no more:
+
+      <bs-accordion :name="faq">
+        <bs-accordion-item :parent="faq" :title="First" :open>…</bs-accordion-item>
+        <bs-accordion-item :parent="faq" :title="Second">…</bs-accordion-item>
+      </bs-accordion>
+
+    Leave `:parent` off and the items open and close independently, which is
+    Bootstrap's "always open" accordion.
+
+    Each item's own collapse id is derived from `$id` rather than asked for,
+    since nothing outside the item ever names it.
+  -->
+  <:define tag="bs-accordion:div"
+           class="accordion ${extra ?? ''}"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :name=${null}
+           :flush=${false}
+
+           id=${name}
+           :class-accordion-flush=${flush}
+  >
+    <:slot />
+  </:define>
+
+  <:define tag="bs-accordion-item:div"
+           class="accordion-item ${extra ?? ''}"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :title=${''}
+           :parent=${null}
+           :open=${false}
+
+           // private
+           :_id=${`bs-accordion-item-${$id}`}
+           :_headingId=${`bs-accordion-heading-${$id}`}
+  >
+    <h2 class="accordion-header" id=${_headingId}>
+      <button class="accordion-button"
+              type="button"
+              :class-collapsed=${!open}
+              data-bs-toggle="collapse"
+              data-bs-target="#${_id}"
+              aria-expanded=${open ? 'true' : 'false'}
+              aria-controls=${_id}>${title}</button>
+    </h2>
+
+    <div class="accordion-collapse collapse"
+         id=${_id}
+         :class-show=${open}
+         aria-labelledby=${_headingId}
+         data-bs-parent=${parent ? `#${parent}` : null}>
+      <div class="accordion-body">
+        <:slot />
+      </div>
+    </div>
+  </:define>
+
+</lib>

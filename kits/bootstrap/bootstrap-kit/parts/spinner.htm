@@ -1,0 +1,32 @@
+<lib>
+  <:import src="base.htm" />
+
+  <!--
+    A spinner is a loading state, so it needs to say so to a screen reader as
+    well as to the eye: `role="status"` plus visually hidden text. That text
+    is the reason this is a component rather than a class.
+  -->
+  <:define tag="bs-spinner:div"
+           role="status"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :variant=${null}
+           :type=${'border'}    // 'border' | 'grow'
+           :small=${false}
+           :label=${'Loading…'}
+
+           // private
+           :_class=${[
+             `spinner-${type}`,
+             small ? `spinner-${type}-sm` : '',
+             variant ? `text-${variant}` : '',
+             extra,
+           ].filter(s => s).join(' ')}
+
+           class=${_class}
+  >
+    <span class="visually-hidden">${label}</span>
+  </:define>
+
+</lib>

@@ -1,0 +1,70 @@
+<lib>
+  <:import src="base.htm" />
+
+  <!--
+    A table from `:columns` and `:rows`.
+
+    A column is `{ key, name, class }`; a row is any object the columns can
+    be read out of. That is the one place in this kit where markup is
+    generated from data twice over — once per column, once per row — and it
+    is the case where writing it by hand hurts most.
+
+    `:responsive` is a class on the same element rather than an extra
+    wrapper: `.table-responsive` only sets `overflow-x`, so it costs nothing
+    when off.
+  -->
+  <:define tag="bs-table:div"
+
+           // parameters
+           :extra=${null}      // extra classes for this instance
+           :columns=${[]}
+           :rows=${[]}
+           :caption=${null}
+           :striped=${false}
+           :hover=${false}
+           :bordered=${false}
+           :borderless=${false}
+           :small=${false}
+           :variant=${null}
+           :headVariant=${null}
+           :align=${null}          // 'middle' | 'bottom'
+           :responsive=${false}
+
+           // private
+           :_class=${[
+             'table',
+             striped ? 'table-striped' : '',
+             hover ? 'table-hover' : '',
+             bordered ? 'table-bordered' : '',
+             borderless ? 'table-borderless' : '',
+             small ? 'table-sm' : '',
+             variant ? `table-${variant}` : '',
+             align ? `align-${align}` : '',
+           ].filter(s => s).join(' ')}
+
+           class=${extra}
+           :class-table-responsive=${responsive}
+  >
+    <table class=${_class}>
+      <caption :for-each=${caption ? [1] : []}>${caption}</caption>
+
+      <thead class=${headVariant ? `table-${headVariant}` : null}>
+        <tr>
+          <th scope="col"
+              :for-each=${columns}
+              :for-as="column"
+              class=${column.class ?? null}>${column.name ?? column.key}</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr :for-each=${rows} :for-as="row" class=${row.class ?? null}>
+          <td :for-each=${columns}
+              :for-as="column"
+              class=${column.class ?? null}>${row[column.key]}</td>
+        </tr>
+      </tbody>
+    </table>
+  </:define>
+
+</lib>
