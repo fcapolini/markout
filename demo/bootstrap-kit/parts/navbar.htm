@@ -3,11 +3,17 @@
 
   <style>
     .navbar-toggler {
-      border-radius: ${bsBtnRadius};
+      border-radius: ${k_bsBtnRadius};
     }
   </style>
 
-  <:define tag="bs-nav:nav"
+  <!--
+    Bootstrap's own navbar, driven by an array of link descriptors rather than
+    by writing `<li><a class="nav-link">` per entry. `:options` is this
+    component's API, not something from the Bootstrap docs — see the default
+    below for its shape.
+  -->
+  <:define tag="bs-navbar:nav"
            class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top"
            
            :options=${[

@@ -1,0 +1,39 @@
+<lib>
+  <:import src="base.htm" />
+
+  <!--
+    A Bootstrap form control — label, input, feedback — with the validation
+    state wired up rather than left to the caller.
+
+    The policy, since it is this component's own and not Bootstrap's: an input
+    is invalid once it is non-empty and fails `check`. Empty is neutral, so a
+    form doesn't open covered in errors.
+  -->
+  <:define tag="bs-input:div"
+           class="mb-3"
+
+           // parameters
+           :label=${''}
+           :type=${'text'}
+           :placeholder=${''}
+           :check=${() => true}
+           :message=${'Please check this value.'}
+
+           // private: each instance keeps its own value, so validity is
+           // derived rather than toggled by hand
+           :_value=${''}
+           :_invalid=${_value !== '' && !check(_value)}
+
+  >
+    <label class="form-label">${label}</label>
+
+    <input class="form-control"
+           type=${type}
+           placeholder=${placeholder}
+           :class-is-invalid=${_invalid}
+           :on-input=${ev => _value = ev.target.value}>
+
+    <div class="invalid-feedback">${message}</div>
+  </:define>
+
+</lib>

@@ -183,14 +183,14 @@ attributes). With a kit of Markout fragments, the same thing is:
 </head>
 
 <body>
-  <bs-nav :options=${[
+  <bs-navbar :options=${[
     { name: 'Services', link: '#services' },
     { name: 'Our work', link: '#work' },
     { name: 'Insights', link: '#insights' },
     { name: 'Start a project', link: '#contact', button: true, primary: true},
   ]}>
     Northstar Studio
-  </bs-nav>
+  </bs-navbar>
 ```
 
 The markup that was only ever mechanical becomes data. The pinned Bootstrap
@@ -200,17 +200,17 @@ accessibility attributes are written once in
 page.
 
 NOTE: the kit itself is plain HTML too — see
-[`parts/nav.htm`](demo/bootstrap-kit/parts/nav.htm), where the `<li>` is
+[`parts/navbar.htm`](demo/bootstrap-kit/parts/navbar.htm), where the `<li>` is
 the original Bootstrap one with `:for-each=${options}` and a few
 `:class-x=${...}` attributes added; there's no component API to learn
 beyond the rules above
 
-NOTE: the toggler/collapse wiring is built from `$id`, so each `<bs-nav>`
+NOTE: the toggler/collapse wiring is built from `$id`, so each `<bs-navbar>`
 gets ids of its own — the reason a component carrying internal `id`/`aria-*`
 references can be used more than once on a page at all
 
 NOTE: fragments compose — `all.htm` imports `parts/base.htm` and
-`parts/nav.htm`, so a page can pull in the whole kit or just the parts it
+`parts/navbar.htm`, so a page can pull in the whole kit or just the parts it
 needs
 
 NOTE: since a custom tag is just a tag, the rest of the page stays plain

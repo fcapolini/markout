@@ -11,6 +11,26 @@
 
 - [ ] bootstrap wrapper library for adoptability and as a demonstration of components, reuse, and simplicity in authoring libraries
 
+- [ ] component kits from npm packages, using e.g. `<:import npm="@markout/bootstrap-kit" />` (preprocessor already supports additional root folders I think)
+
+- [ ] perhaps: component extension — `<:define tag="bs-fancy-input:bs-input">`, i.e. basing a definition on another component instead of a plain HTML tag. Motivation: a kit could offer a plain component and an enriched one without the two drifting, since the enriched one would be built from the plain one rather than copying its markup.
+  - Currently accepted with no error and then broken. `expandDefine` builds the body as a literal `<bs-input>` element inside the definition's `<template>`; `expandCustomTagUsages` later walks into template content and expands it, consuming the extension's own `<:slot />` as content bound for the base's slot. With caller content you get `<x> was given content but its <:define> has no <:slot> to put it in` even when it has one; without caller content it renders NOTHING, silently. Worth at least rejecting a custom tag as a base until this is designed.
+  - Two questions to settle first. (1) Slot ownership: when B extends A and both have a `<:slot />`, which receives the caller's children? Needs either a rule or a second spelling. (2) Parameter merge: is `:label` on `<:define tag="b:a" :label=${''}>` declaring b's parameter or passing one to a? "Both — b's scope is a's scope with additions" is the answer that falls out of existing lexical scoping, but it needs stating.
+  - Note extension alone would not have solved the motivating case: to add validation an extension must reach the `<input>` *inside* the base's body, and no extension mechanism gives that. The base has to expose the hooks (take `:invalid`, apply the class itself), at which point the extension only supplies policy — and that composition works today without any compiler change.
+
+- [ ] comptime constants — values whose name marks them compile-time (`:k_accent=${'#6f42c1'}`), evaluated by stage5-comptime and substituted into every expression that reads them, so a constant never reaches the runtime as a reactive cell. `stage5-comptime.ts` is currently a 15-line placeholder whose docstring already reserves the stage for exactly this.
+  - Motivation is theming: today every design token is a full reactive value (scope entry + dependency closure + a cell that will never fire). Measured on a page with 12 constants used in CSS, against the same page with the values written literally: props **4033 → 308 chars**, served page **4617 → 882 bytes**. ~13x on the payload, for tokens that by definition never change.
+  - Solvability rule that keeps verification tractable: **a `k_` value may reference only literals and other `k_` values.** That's a closure check rather than general partial evaluation, and it's one sentence to document. Anything reaching `$id`, the DOM, a handler, a datasource, or an ordinary reactive value is rejected.
+  - Unsolvable must be a **compile error, never a silent fall back to reactive** — otherwise you get exactly the cost you marked the value to avoid, with no signal. Same rule as the parenthesized-interpolation fix below: never treat "didn't match what I expected" as a no-op.
+  - Spelling settled: `:k_name`, not `:const-name`. The language's `:family-name` rule would suggest the latter, but a family prefix marks only the *declaration* — a `:const-color` would still be read as `${color}`, indistinguishable from a reactive value at every point where it actually matters. `:k_color` is read as `${k_color}`, so the cost model is visible wherever the value is used. Same reasoning as the existing `_private` convention, which marks on the name for the same reason.
+  - Open sub-question: whether `_` and `k_` ever need to compose (`:_k_foo` / `:k__foo`, both ugly). Note it may not arise. `_` marks a value as internal rather than a parameter, but a `k_` value is substituted away entirely, so there is no runtime value left to keep private. What could still want the combination is "constant AND not overridable at the import site" — a compile-time-only concern, and a rare one.
+  - Document the limit loudly: a `k_` value cannot participate in runtime theming. The README's light/dark example toggles CSS reactively and those values must stay reactive. `k_` is for tokens fixed at build time; otherwise people will mark theme constants `k_` and wonder why the dark-mode switch stopped working.
+  - Overrides should still work, and settle well before comptime would run: a fragment's root attributes are copied onto the `<:import>` container by the preprocessor (`applyIncludedAttributes`, preprocessor.ts) unless already declared there, i.e. before stage1 even sees the tree. So `base.htm` declaring `:k_btnRadius="0.5rem"` and a page replacing it at the import site are both settled by the time stage5 runs. Worth a test either way, as it's the main theming path.
+
+- [ ] a page with NO expressions at all still ships `<script src="/.markout.js">`. Comptime constants and `<:define>` treeshaking both reduce the payload but neither reaches zero JS on their own; the runtime should be elided when nothing reactive survives compilation. This is what would make "zero-cost design system" literal rather than rhetorical.
+
+- [ ] treeshake should remove unused `<:defines>`
+
 - [ ] The CLI joins the docroot onto cwd, so absolute paths don't work
 
 - [ ] Remove classic functions limitation: let's use a `$this` argument of execution function and qualify value references with that instead of `this`
@@ -66,3 +86,4 @@
 
 - [ ] found authoring `bench/medium` (2026-08-13): no path from `${...}` to any JS global (`Math`, `JSON`, `Number`, ...) -- every bare identifier is qualified to `this.X` by stage3-qualify, so `Math.floor(x)` is a compile-time "Unknown reference: Math". Consistent with the "no undeclared globals" design, but the ergonomics cost is real (had to write `(n / d) | 0` and chained ternaries instead of `Math.floor`/`Math.min`/`Math.max`). Consider a small allowlist of read-only global references (`Math`, `JSON`, `Number`, `String`, `Date`) that bypass qualification instead of erroring.
 
+- [ ] online service for "booking" a kit name prefix, so authors can prevent collisions
