@@ -28,6 +28,9 @@ export class CoreValue<T = any> {
   cycle: number;
   exp?: ValueExp<T>;
   value: T | undefined;
+  /** longest path from a value with no sources; see depthNow() */
+  depth = 0;
+  private depthCycle = -1;
 
   constructor(
     props: CoreValueProps<T>,
@@ -132,6 +135,55 @@ export class CoreValue<T = any> {
     }
   }
 
+  /**
+   * How far this value is from the nearest value that depends on nothing.
+   *
+   * It is what orders a propagation. A value's sources are all strictly
+   * shallower than it is -- reading something is what makes it a source --
+   * so working outwards from the shallowest pending value means every input
+   * a value has has already settled by the time it is evaluated.
+   *
+   * Memoized per cycle rather than per graph edit: the graph doesn't change
+   * within a push, and a cycle costs one walk of the sources either way.
+   */
+  depthNow(): number {
+    const ctx = this.scope.ctx;
+    if (this.depthCycle === ctx.cycle) {
+      return this.depth;
+    }
+    // marked before recursing: the compiler rejects a value that reads
+    // itself, but the runtime must not hang if one ever reaches it, and a
+    // back edge counting as zero keeps the rest of the ordering sane
+    this.depthCycle = ctx.cycle;
+    this.depth = 0;
+    let depth = 0;
+    this.src.forEach(o => {
+      const d = o.depthNow();
+      d >= depth && (depth = d + 1);
+    });
+    return (this.depth = depth);
+  }
+
+  /**
+   * Hands this value's dependents to the context's queue, and drains it if
+   * this is the outermost push.
+   *
+   * It used to call `get()` on each dependent directly, which is depth-first
+   * and evaluates a value the moment one of its sources changes -- before
+   * its other sources have caught up. A diamond is where that shows:
+   *
+   *   pageNo -> page -> shown        rows -> shown
+   *
+   * a change to `rows` reaches `shown` down the short arm while `page` is
+   * still mid-evaluation on the long one, and `shown` then marks itself
+   * current for the cycle, so the settled `page` never revisits it. The page
+   * showed the previous page's rows under the new page's number, with
+   * nothing reported anywhere: the value was not stale, it was WRONG, and
+   * only for the one cycle in which it changed.
+   *
+   * Draining by depth removes the shape of the problem rather than that
+   * instance of it.
+   */
   protected propagate() {
     const ctx = this.scope.ctx;
     if (ctx.pushLevel < 1) {
@@ -139,7 +191,10 @@ export class CoreValue<T = any> {
     }
     ctx.pushLevel++;
     try {
-      this.dst.forEach(v => v.get());
+      this.dst.forEach(v => ctx.enqueue(v));
+      // a nested propagation adds to the same queue and lets this one keep
+      // draining it, so the whole cascade is ordered together
+      ctx.pushLevel === 1 && ctx.drain();
     } catch (err) {
       // get() already handles a failing expression, so this is a backstop for
       // internal breakage rather than user code -- report it rather than

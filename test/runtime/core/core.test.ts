@@ -381,3 +381,73 @@ it(`leaves a constructor's own statics reachable`, () => {
   );
   assert.equal(context.root.proxy.Math, Math);
 });
+
+it(`settles both arms of a diamond before evaluating what reads them`, () => {
+  // the shape a paged table has: `page` is derived from the page number and
+  // from how many pages there are, and `shown` reads both `page` and the
+  // rows it slices. A change to the page number reaches `shown` down the
+  // short arm -- through `rows` re-evaluating to a fresh array -- while
+  // `page` is still mid-evaluation on the long one, and `shown` used to
+  // settle for the cycle against the page number it was about to stop having
+  const dep = (name: string) =>
+    function (this: any) {
+      return this.$value(name);
+    };
+  const context = new CoreContext({
+    root: {
+      id: '0',
+      values: {
+        n: { val: 1 },
+        items: { val: [1, 2, 3, 4, 5, 6] },
+        // a fresh array every evaluation, so it always counts as changed --
+        // which is what pushes the short arm ahead of the long one
+        rows: { exp: function (this: any) { return [...this.items]; }, deps: [dep('items')] },
+        pages: { exp: function (this: any) { return this.rows.length / 2; }, deps: [dep('rows')] },
+        page: {
+          exp: function (this: any) { return Math.min(this.n, this.pages); },
+          deps: [dep('n'), dep('pages')],
+        },
+        shown: {
+          exp: function (this: any) { return this.rows.slice((this.page - 1) * 2, this.page * 2); },
+          deps: [dep('rows'), dep('page')],
+        },
+      },
+    },
+  }).refresh();
+
+  assert.deepEqual(context.root.proxy.shown, [1, 2]);
+
+  context.root.proxy.n = 2;
+  assert.equal(context.root.proxy.page, 2);
+  assert.deepEqual(context.root.proxy.shown, [3, 4]);
+
+  context.root.proxy.n = 3;
+  assert.equal(context.root.proxy.page, 3);
+  assert.deepEqual(context.root.proxy.shown, [5, 6]);
+
+  // and the clamp still holds, which is the other half of `page`
+  context.root.proxy.n = 9;
+  assert.equal(context.root.proxy.page, 3);
+  assert.deepEqual(context.root.proxy.shown, [5, 6]);
+});
+
+it(`orders a propagation by how far a value is from what it depends on`, () => {
+  const dep = (name: string) =>
+    function (this: any) {
+      return this.$value(name);
+    };
+  const context = new CoreContext({
+    root: {
+      id: '0',
+      values: {
+        a: { val: 1 },
+        b: { exp: function (this: any) { return this.a + 1; }, deps: [dep('a')] },
+        c: { exp: function (this: any) { return this.b + 1; }, deps: [dep('b')] },
+      },
+    },
+  }).refresh();
+  const value = (k: string) => (context.root as any).values[k];
+  assert.equal(value('a').depthNow(), 0);
+  assert.equal(value('b').depthNow(), 1);
+  assert.equal(value('c').depthNow(), 2);
+});
