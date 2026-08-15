@@ -117,6 +117,26 @@ describe('$host', () => {
     expect(markup()).toContain('data-parent="page"');
   });
 
+  it('is the container, for a replicated component as much as a written one', () => {
+    // a replica's scope hangs off its own stencil, which carries `template`
+    // because a replica of a usage has to read as an instance itself -- so
+    // the walk outwards used to stop on the replica's own kind and report
+    // `my-item` as `my-item`'s host. Every component that coordinates with
+    // its container (an accordion item finding its accordion, a pane
+    // finding its tabs) quietly went back to standing alone the moment it
+    // was written as a `:for-each` rather than one tag per row
+    const { errors, runtime, markup } = run(
+      `<html><head>${GROUP}${ITEM}</head>` +
+        '<body :rows=${[1, 2]}><my-group :label="outer">' +
+        '<my-item :for-each=${rows} :for-as="row" />' +
+        '</my-group></body></html>'
+    );
+    expect(errors).toStrictEqual([]);
+    expect(runtime).toStrictEqual([]);
+    // one per row, and both of them found the group
+    expect(markup().match(/data-seen="outer"/g)).toHaveLength(2);
+  });
+
   it('composes, like $parent does', () => {
     const { errors, runtime, markup } = run(
       '<html><head>' +
