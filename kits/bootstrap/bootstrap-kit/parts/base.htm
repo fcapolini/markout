@@ -10,9 +10,11 @@
       <:import src="/bootstrap-kit/all.htm" />
     </head>
 
-  Where Bootstrap itself comes from is a token too, so a page that can't use
-  a CDN — a strict CSP, an offline build, a pinned vendored copy — sets the
-  two URLs and drops the hashes rather than forking this file:
+  Where Bootstrap itself comes from is a token too. A page under a content
+  security policy that allows no third party, an offline build, or a vendored
+  copy pinned on purpose sets the two URLs and drops the hashes rather than
+  forking this file — and so does a page serving its own Sass build, which is
+  how a design system gets past what the tokens below can reach:
 
     <head :k_bsCssUrl="/vendor/bootstrap.min.css"
           :k_bsJsUrl="/vendor/bootstrap.bundle.min.js"

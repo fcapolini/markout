@@ -18,9 +18,11 @@ import { renderPage } from '../../src/server/render';
  * evaluating its subtree, a name declared in slotted markup, an
  * interpolation inside a `<textarea>` -- was found exactly this way.
  *
- * Nothing here reaches the network. The kit's Bootstrap URLs are tokens, so
- * the tests point them at files that don't need fetching; what is being
- * tested is the markup markout produces, not what a CDN serves.
+ * Nothing here reaches the network. The kit's Bootstrap URLs are tokens --
+ * there so a page under a content security policy, an offline build or a
+ * custom Sass build can point the kit at its own copy -- and the tests are
+ * simply another caller doing that. What is under test is the markup markout
+ * produces, not what a CDN serves.
  */
 
 const KIT_ROOT = path.resolve(__dirname, '../../kits/bootstrap');
