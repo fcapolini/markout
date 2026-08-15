@@ -130,6 +130,14 @@ export class CoreContext {
   // changes batching
   // ===========================================================================
   pending = new Set<CoreValue>();
+  /**
+   * Scopes built since the last settled refresh, waiting to be told so.
+   *
+   * Drained after `pending`, so `:did-init` runs against a scope whose
+   * values are evaluated and whose bindings have reached the DOM -- the
+   * first moment at which "this scope exists" is actually true.
+   */
+  arrived = new Set<CoreScope>();
 
   applyPending() {
     try {
@@ -146,5 +154,11 @@ export class CoreContext {
     } finally {
       this.pending.clear();
     }
+    // after the bindings, and snapshotted: a `:did-init` may build more
+    // scopes, and those belong to the next drain rather than to this one's
+    // iteration
+    const arrived = [...this.arrived];
+    this.arrived.clear();
+    arrived.forEach(s => s.settle());
   }
 }

@@ -84,6 +84,14 @@ see it.
 functions the component calls. `:on-click` and friends stay what they are in
 the language: DOM events.
 
+**A plugin is built on attach and released on detach.** The five components
+that hand their element to Bootstrap's JS — `bs-modal`, `bs-offcanvas`,
+`bs-toast`, `bs-tooltip`, `bs-popover` — do it from `:did-attach` and undo it
+from `:will-detach`, not from `:did-init`/`:will-dispose`. A `:for-data`
+region takes its markup out of the page without its scope going anywhere,
+and a plugin left holding a removed element leaves its backdrop, its popper
+and the page's scroll lock behind.
+
 **Values are read and written.** `bs-input`, `bs-select`, `bs-check`,
 `bs-range`, `bs-modal`, `bs-offcanvas` and `bs-toast` keep `:value` or
 `:open` in step with what is on screen. Name the instance and read it from

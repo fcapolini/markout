@@ -53,8 +53,10 @@ NOTE: "on its own" is literal — whitespace is text like any other, so
 | `:style-name` | Writes the `name` CSS property. |
 | `:on-click=${() => ...}` | Binds an event handler. The name is the event type verbatim, so `.` and `:` are allowed for the sake of `shown.bs.modal`, `click.mine` and the like. |
 | `:handle-name=${(v) => ...}` | Runs when value `name` changes, and once at start, with its value. For driving the view imperatively; browser-only. |
-| `:did-init=${() => ...}` | Lifecycle callback for when a scope reaches a phase. Designed, **not implemented** — see below. |
-| `:will-dispose=${() => ...}` | Lifecycle callback for before teardown. Designed, **not implemented** — see below. |
+| `:did-init=${() => ...}` | Runs once, when this scope has come up. Browser-only. |
+| `:did-attach=${() => ...}` | Runs when this scope's markup enters the page, and again each time it comes back. Browser-only. |
+| `:will-detach=${() => ...}` | Runs before that markup leaves. Browser-only. |
+| `:will-dispose=${() => ...}` | Runs once, before this scope stops existing. Browser-only. |
 
 ### Naming a value
 
@@ -82,12 +84,40 @@ for `:attr-` and `:on-`, whose names reach `setAttribute` and
 `addEventListener` exactly as written. `$` stays out everywhere, being the
 runtime's own prefix.
 
-### Lifecycle, and how it is unfinished
+### Lifecycle
 
-`:did-init` and `:will-dispose` are designed but not implemented, and they
-fail quietly: they are parsed, validated as callbacks, and compiled into the
-page — and then nothing ever calls them. A page using one gets no error and
-no effect.
+Two pairs, answering two different questions.
+
+`:did-init` and `:will-dispose` bracket the **scope**: what it set up when it
+came into being, and has to let go of when it stops existing. A timer, a
+subscription, anything whose lifetime is the component's.
+
+`:did-attach` and `:will-detach` bracket its **markup**: what has to exist
+while the element is in the page, and be taken apart when it leaves. A
+third-party plugin holding your element, an observer, a measurement.
+
+They are not the same thing, which is why there are four rather than two. A
+`:for-data` region's markup leaves the page and comes back without its scope
+ever going away, so it detaches and attaches repeatedly and never disposes.
+A `:for-each` replica that is dropped does both, in that order — its markup
+goes, then it does.
+
+```html
+<span :did-attach=${() => globalThis.bootstrap.Tooltip.getOrCreateInstance($dom)}
+      :will-detach=${() => globalThis.bootstrap.Tooltip.getInstance($dom)?.dispose()}>
+```
+
+Order within a pass: parents before children on the way in, children before
+parents on the way out — things are taken apart in the order they were built,
+reversed.
+
+All four are browser-only, like `:handle-`, and all four take a literal arrow
+like every other callback family. The suffixes are a closed set: `:did-mount`
+is a compile error rather than a callback that never runs.
+
+A stencil announces nothing. A `:for-each` host and a `:for-data` region with
+nothing to show evaluate none of their values, and for the same reason they
+report none of these — what a stencil is, is a prototype.
 
 Until the runtime half exists, treat them as reserved. `:on-` handlers are
 the working way to run code.

@@ -3,10 +3,10 @@
 
   <!---
     A popover: a tooltip with a heading and a body, and click to open rather
-    than hover. Constructed the same way, and for the same reason — see
-    `tooltip.htm`.
+    than hover. Built, rebuilt and disposed on the same three moments, and
+    for the same reasons — see `tooltip.htm`.
 
-    The handler names `:content` rather than `:title` because the body is the
+    `:handle-content` rather than `:handle-title` because the body is the
     part that usually changes; both are read when it runs.
   -->
   <:define tag="bs-popover:span"
@@ -20,16 +20,22 @@
            :trigger=${'click'}
            :html=${false}
 
-           :handle-content=${(v) => {
-             globalThis.bootstrap.Popover.getInstance($dom)?.dispose();
-             new globalThis.bootstrap.Popover($dom, {
+           // private
+           :_build=${() => {
+             const bs = globalThis.bootstrap;
+             bs.Popover.getInstance($dom)?.dispose();
+             new bs.Popover($dom, {
                title: title,
-               content: v,
+               content: content,
                placement: placement,
                trigger: trigger,
                html: html,
              });
            }}
+
+           :did-attach=${() => _build()}
+           :handle-content=${() => _build()}
+           :will-detach=${() => globalThis.bootstrap.Popover.getInstance($dom)?.dispose()}
   >
     <:slot />
   </:define>
