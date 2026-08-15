@@ -31,6 +31,12 @@ export class Scope {
    * single value, applied to a whole subtree.
    */
   slotted?: boolean;
+  /**
+   * Took over text written at a usage site without being slotted markup
+   * itself -- see rehomeNestedScopes, and CoreScopeProps.slottedText for
+   * what the runtime does with it.
+   */
+  slottedText?: boolean;
   /** where name resolution continues; the structural parent unless slotted */
   lexicalParent?: Scope;
   /**
