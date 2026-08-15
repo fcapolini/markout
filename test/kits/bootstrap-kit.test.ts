@@ -167,6 +167,103 @@ describe('the showcase', () => {
   });
 });
 
+/**
+ * The demo application, which tests what the showcase can't.
+ *
+ * The showcase is a catalogue: each component on its own, next to the last.
+ * `demo.html` is one page built OUT of them, and every bug it turned up
+ * while it was being written lived where two features meet rather than in
+ * either one -- a slot filled with a `:for-each`, a slot fallback holding a
+ * component, a derived value reading another derived value, a replica
+ * looking for its host. None of those shapes occur in the showcase.
+ *
+ * So this block is not a second copy of the one above. It pins the page's
+ * own invariants, and the live half below drives the interactions that are
+ * pure markout -- filtering, sorting, paging -- which need no Bootstrap at
+ * all and are exactly where a propagation bug shows up as stale content and
+ * nothing else.
+ */
+describe('the demo application', () => {
+  let result: Awaited<ReturnType<typeof compile>>;
+
+  beforeAll(async () => {
+    result = await compile(KIT_ROOT, '/demo.html');
+  });
+
+  it('compiles and renders with nothing reported', () => {
+    expect(result.errors).toStrictEqual([]);
+    // a page-level `<:define>` whose slot sits under a scope used to leave
+    // every replica in the markup filling it unbound, and each one was
+    // reported here rather than thrown
+    expect(result.runtime).toStrictEqual([]);
+  });
+
+  it('instantiates the kit\'s tags and its own', () => {
+    // `dash-` are the four this page defines on top of the kit; either
+    // prefix surviving is a usage the compiler didn't match to a definition
+    const leftovers = [...live(result.markup).matchAll(/<((?:bs|dash)-[a-z-]+)/g)].map(m => m[1]);
+    expect([...new Set(leftovers)]).toStrictEqual([]);
+  });
+
+  it('gives every element a unique id', () => {
+    const ids = attrValues(live(result.markup), 'id');
+    expect(ids.length).toBeGreaterThan(10);
+    expect([...new Set(ids)]).toHaveLength(ids.length);
+  });
+
+  it.each([
+    ['aria-controls', (v: string) => v],
+    ['aria-labelledby', (v: string) => v],
+    ['aria-describedby', (v: string) => v],
+    ['for', (v: string) => v],
+    ['data-bs-target', (v: string) => (v.startsWith('#') ? v.slice(1) : '')],
+  ])('resolves every %s to an element that exists', (attr, toId) => {
+    const markup = live(result.markup);
+    const ids = new Set(attrValues(markup, 'id'));
+    const refs = attrValues(markup, attr).map(toId).filter(id => id);
+    expect(refs.length).toBeGreaterThan(0);
+    expect(refs.filter(id => !ids.has(id))).toStrictEqual([]);
+  });
+
+  it('serves one page of rows, not the whole array', () => {
+    // the row list is an expression over a search box, two selects, a sort
+    // order and a page number. That it comes out sliced in the SERVED
+    // markup is the whole isomorphic claim: the same expressions ran on the
+    // server that will run in the browser
+    const body = live(result.markup);
+    const rows = [...body.matchAll(/<tr [^>]*data-markout="[^"]*-\d+"/g)];
+    expect(rows.length).toBeGreaterThan(0);
+    expect(body).toContain('Showing');
+    // six deployments per page, six services, five endpoints, three regions
+    expect(body).toContain('of 18');
+  });
+
+  it('keeps its prose out of the served page', () => {
+    // this page carries more explanation than markup, and a comment written
+    // `<!--` is markup: it would all be shipped. `<!---` is removed by the
+    // preprocessor, and the runtime's own markers are the only comments
+    // that should survive
+    expect(result.markup).not.toMatch(/<!--(?!-)/);
+  });
+
+  it('writes an attribute name the way the page spelled it', () => {
+    // the charts derive their `viewBox` from whether the chart is tall, and
+    // an attribute set from an expression used to be dash-cased on its way
+    // to the DOM -- `view-box`, which an SVG ignores, so every chart drew at
+    // one pixel per unit in a corner and nothing said why
+    expect(result.markup).toContain('viewBox=');
+    expect(result.markup).not.toContain('view-box');
+  });
+
+  it('leaves the stencils unbound', () => {
+    const stencils = [...result.markup.matchAll(/<template>([\s\S]*?)<\/template>/g)]
+      .map(m => m[1])
+      .join('\n');
+    expect(stencils).not.toContain('edge-router');
+    expect(stencils).not.toContain('eu-west');
+  });
+});
+
 describe('a page that self-hosts Bootstrap', () => {
   // the URLs are tokens, so a page under a strict CSP can point them at its
   // own files and drop the hashes. Worth pinning: it is the one part of
@@ -298,6 +395,23 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     fs.writeFileSync(path.join(docroot, 'vendor/bootstrap.css'), '');
     fs.writeFileSync(path.join(docroot, 'index.html'), PAGE);
 
+    // the real demo, pointed at the stub. The URL tokens are what makes
+    // that possible without forking the page: it imports the kit exactly as
+    // it does when served, and only where Bootstrap comes from changes
+    const demo = fs.readFileSync(path.join(KIT_ROOT, 'demo.html'), 'utf8');
+    const offline = demo.replace(
+      '<head>',
+      '<head :k_bsCssUrl="/vendor/bootstrap.css"\n' +
+        '      :k_bsJsUrl="/vendor/bootstrap.js"\n' +
+        '      :k_bsCssIntegrity=${null}\n' +
+        '      :k_bsJsIntegrity=${null}>'
+    );
+    if (offline === demo) {
+      // a silent no-op here would put the CDN back in the test run
+      throw new Error('demo.html: no bare <head> to point at the stub');
+    }
+    fs.writeFileSync(path.join(docroot, 'demo.html'), offline);
+
     server = await new Server({ docroot, port: 0, logger: () => {} }).start();
     browser = await chromium.launch();
   }, 60000);
@@ -309,12 +423,12 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
   });
 
   /** a freshly hydrated page, plus everything the assertions need from it */
-  async function open() {
+  async function open(pathname = '/index.html') {
     const page = await browser.newPage();
     const failures: string[] = [];
     page.on('pageerror', e => failures.push(`pageerror: ${e.message}`));
     page.on('console', m => m.type() === 'error' && failures.push(m.text()));
-    await page.goto(`http://127.0.0.1:${server.port}/index.html`);
+    await page.goto(`http://127.0.0.1:${server.port}${pathname}`);
     await page.waitForFunction('window.__MARKOUT_PROPS !== undefined');
     return {
       page,
@@ -399,5 +513,122 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     } finally {
       await page.close();
     }
+  });
+
+  /**
+   * The demo application, driven.
+   *
+   * Everything below is pure markout -- a filter, a sort, a page number, a
+   * checkbox, a colour -- so none of it needs Bootstrap's JS, and none of it
+   * reports anything when it goes wrong. A propagation bug here shows up as
+   * content that is one step behind and nothing else, which is why these
+   * assertions compare what is on screen rather than counting calls.
+   */
+  describe('the demo application', () => {
+    const rows = '#deployments tbody tr';
+    const services = '#deployments tbody td.fw-semibold';
+    const commits = '#deployments td.dash-mono';
+
+    it('hydrates without reporting anything', async () => {
+      const { page, failures } = await open('/demo.html');
+      try {
+        expect(await page.locator('#markout-errors').count()).toBe(0);
+        expect(failures).toStrictEqual([]);
+        // the page's own tags as well as the kit's
+        expect(await page.locator('dash-panel, dash-chart, bs-card').count()).toBe(0);
+        expect(await page.locator(rows).count()).toBe(6);
+      } finally {
+        await page.close();
+      }
+    });
+
+    it('filters a table nothing is listening to', async () => {
+      const { page, failures } = await open('/demo.html');
+      try {
+        await page.locator('#deployments input[type="text"]').fill('auth');
+
+        expect(await page.locator(services).allInnerTexts())
+          .toStrictEqual(Array(3).fill('auth-service'));
+        // the count under the table reads the same expression the rows do
+        expect(await page.locator('#deployments').innerText()).toContain('Showing 3 of 3');
+        expect(failures).toStrictEqual([]);
+      } finally {
+        await page.close();
+      }
+    });
+
+    it('sorts by whichever column was asked for', async () => {
+      const { page } = await open('/demo.html');
+      try {
+        // the headers are buttons calling one function that flips two
+        // values; the row order is an expression over them
+        await page.locator('#deployments thead button').first().click();
+        const asc = await page.locator(services).allInnerTexts();
+        expect(asc).toStrictEqual([...asc].sort());
+
+        await page.locator('#deployments thead button').first().click();
+        const desc = await page.locator(services).allInnerTexts();
+        expect(desc).toStrictEqual([...desc].sort().reverse());
+      } finally {
+        await page.close();
+      }
+    });
+
+    it('shows the page it says it is showing', async () => {
+      const { page } = await open('/demo.html');
+      try {
+        const first = await page.locator(commits).allInnerTexts();
+        expect(first).toHaveLength(6);
+
+        await page.locator('#deployments .page-link').nth(2).click();
+
+        // the regression this pins: the slice used to be a step behind the
+        // page number, so the pagination said 2 while the table still held
+        // page 1 -- no error anywhere, just the wrong rows
+        expect((await page.locator('#deployments .page-item.active').innerText()).trim())
+          .toBe('2');
+        const second = await page.locator(commits).allInnerTexts();
+        expect(second).toHaveLength(6);
+        expect(second.filter(c => first.includes(c))).toStrictEqual([]);
+      } finally {
+        await page.close();
+      }
+    });
+
+    it('writes back into the array a checkbox came from', async () => {
+      const { page } = await open('/demo.html');
+      try {
+        expect(await page.locator('#activity').innerText()).toContain('2/5 done');
+
+        await page.locator('#activity .form-check-input').first().check();
+
+        // the counter, the bar and the strikethrough all read `todos`
+        expect(await page.locator('#activity').innerText()).toContain('3/5 done');
+        expect(await page.locator('#activity .progress-bar').getAttribute('style'))
+          .toContain('60%');
+      } finally {
+        await page.close();
+      }
+    });
+
+    it('restyles the page from one value', async () => {
+      const { page } = await open('/demo.html');
+      try {
+        // the stylesheet interpolates `accent`; nothing toggles a class
+        const swatch = page.locator('#settings .dash-swatch').nth(2);
+        await swatch.click();
+
+        // as a string, like the plugin-call assertions above: this file is
+        // typechecked without the DOM lib, since it is mostly compiler work
+        expect(
+          await page.evaluate(
+            "getComputedStyle(document.documentElement)" +
+              ".getPropertyValue('--dash-accent').trim()"
+          )
+        ).toBe('#20c997');
+      } finally {
+        await page.close();
+      }
+    });
   });
 });
