@@ -45,6 +45,13 @@ export class CoreContext {
   cycle = 0;
   refreshLevel = 0;
   pushLevel = 0;
+  /**
+   * Bumped whenever the dependency graph's shape changes, which is what
+   * CoreValue.depthNow() memoizes against. Linking and unlinking are the
+   * only things that move it, and both happen inside a refresh -- plus
+   * `set()` discarding an expression, which drops that value's own edges.
+   */
+  graphVersion = 0;
 
   constructor(props: CoreContextProps) {
     this.props = props;
@@ -58,6 +65,7 @@ export class CoreContext {
     this.refreshLevel++;
     try {
       nextCycle && this.cycle++;
+      this.graphVersion++;
       scope.unlinkValues();
       scope.linkValues();
       scope.updateValues();
@@ -138,35 +146,55 @@ export class CoreContext {
    * source left in here, since a source is always strictly shallower. That
    * is what keeps a value from being evaluated against inputs that are
    * half-way through the same change.
+   *
+   * An array indexed by depth, holding arrays. Depths are small integers, so
+   * indexing beats hashing, and the buckets are kept between pushes rather
+   * than reallocated. Duplicates are left in rather than deduplicated: a
+   * value evaluates at most once per cycle whatever arrives here (get()
+   * checks), so a Set would only be buying uniqueness the cycle already
+   * guarantees -- and at a cost paid on every edge. The benchmark's twenty
+   * cart clicks push 800k values through this on a 10k-row page.
    */
-  private queue = new Map<number, Set<CoreValue>>();
+  private queue: CoreValue[][] = [];
+  private minDepth = Infinity;
+  private maxDepth = -1;
 
   enqueue(value: CoreValue): void {
     const depth = value.depthNow();
-    let bucket = this.queue.get(depth);
-    bucket || this.queue.set(depth, (bucket = new Set()));
-    bucket.add(value);
+    (this.queue[depth] ??= []).push(value);
+    depth < this.minDepth && (this.minDepth = depth);
+    depth > this.maxDepth && (this.maxDepth = depth);
   }
 
   drain(): void {
-    while (this.queue.size) {
-      // re-read the minimum each time: evaluating one value can enqueue
-      // others, and a shallower arrival has to be taken before this one's
-      // own dependents
-      const depth = Math.min(...this.queue.keys());
-      const bucket = this.queue.get(depth)!;
-      const value: CoreValue = bucket.values().next().value!;
-      bucket.delete(value);
-      bucket.size || this.queue.delete(depth);
-      try {
-        value.get();
-      } catch (err) {
-        // one value's internal breakage must not strand the rest of the
-        // queue: those are unrelated bindings that happened to change in
-        // the same push
-        this.onError('propagate', err, value);
+    while (this.minDepth <= this.maxDepth) {
+      const bucket = this.queue[this.minDepth];
+      if (!bucket || !bucket.length) {
+        // nothing left this shallow: evaluating what was here can only have
+        // enqueued deeper, so the front never moves backwards
+        this.minDepth++;
+        continue;
       }
+      // the whole level in one pass. Evaluating a value at this depth can
+      // only enqueue deeper -- its dependents read it, so they are strictly
+      // below -- which is what makes it safe to walk the bucket by index
+      // and empty it at the end rather than re-checking the front each time
+      for (let i = 0; i < bucket.length; i++) {
+        const value = bucket[i];
+        try {
+          value.get();
+        } catch (err) {
+          // one value's internal breakage must not strand the rest of the
+          // queue: those are unrelated bindings that happened to change in
+          // the same push
+          this.onError('propagate', err, value);
+        }
+      }
+      bucket.length = 0;
+      this.minDepth++;
     }
+    this.minDepth = Infinity;
+    this.maxDepth = -1;
   }
 
   // ===========================================================================
