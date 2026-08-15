@@ -24,6 +24,22 @@ Run the showcase — every component below, live — with:
 npm run dev:bootstrap-kit
 ```
 
+## Tests
+
+`test/kits/bootstrap-kit.test.ts`, in two tiers:
+
+- **compiled**, which is most of it: every part compiles on its own, the
+  showcase compiles and server-renders with nothing reported, and the id
+  wiring is checked mechanically — every `aria-controls`, `aria-labelledby`,
+  `for`, `data-bs-target` and `data-bs-parent` has to name an element that
+  exists. That last one is the kit's whole reason for existing, so it is
+  worth a test that can't be argued with.
+- **live**, in Playwright: the value-driven components actually driven, and
+  a stubbed Bootstrap asserting the plugin calls. Skipped when no browser is
+  installed (`npx playwright install chromium`).
+
+Nothing reaches the network: the tests set the URL tokens to local files.
+
 ## What is and isn't a component
 
 A component earns its place by removing something a person would otherwise
