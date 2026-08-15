@@ -261,6 +261,18 @@ describe('the demo application', () => {
     expect(markup).toMatch(/<div[^>]*data-bs-spy="scroll"[^>]*data-bs-target="#dash-runbook-nav"/);
   });
 
+  it('draws the chart marker as stroke rather than as a shape', () => {
+    // the plot box is stretched to fill its element, and x and y stretch by
+    // different amounts -- so a <circle> renders as an ellipse, wider the
+    // wider the chart. `vector-effect="non-scaling-stroke"` rescues a line's
+    // width but not a shape's geometry. A zero-length path with a round cap
+    // is a dot sized by stroke-width, which that same effect then keeps in
+    // device pixels, so it stays round at any aspect ratio
+    const markup = live(result.markup);
+    expect(markup).toContain('stroke-linecap="round"');
+    expect(markup).not.toContain('<circle');
+  });
+
   it('keeps its prose out of the served page', () => {
     // this page carries more explanation than markup, and a comment written
     // `<!--` is markup: it would all be shipped. `<!---` is removed by the
