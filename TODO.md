@@ -9,7 +9,9 @@
 
 - [ ] check rehydration w/ claude: given the same `props`, client side we come up w/ the same values, what will change will be data sources and interaction, correct?
 
-- [ ] bootstrap wrapper library for adoptability and as a demonstration of components, reuse, and simplicity in authoring libraries, see [kitchen sink](https://getbootstrap.com/docs/5.3/examples/cheatsheet/)
+- [x] bootstrap wrapper library for adoptability and as a demonstration of components, reuse, and simplicity in authoring libraries, see [kitchen sink](https://getbootstrap.com/docs/5.3/examples/cheatsheet/)
+
+- [ ] an "additional classes" attribute for cumulative CSS classes in components: we decided not to include that behavior in `class` attribute as Vue does for our "no-magic" policy, but an explicit construct for achieving the same result is needed
 
 - [ ] component kits from npm packages, using e.g. `<:import npm="@markout/bootstrap-kit" />` (preprocessor already supports additional root folders I think)
 
