@@ -1,7 +1,7 @@
 <lib>
   <:import src="base.htm" />
 
-  <!--
+  <!---
     A form control with its label, help text and validation state wired up
     rather than left to the caller.
 
@@ -50,7 +50,7 @@
            :_class=${['form-control', size ? `form-control-${size}` : '']
                      .filter(s => s).join(' ')}
   >
-    <!-- plain layout: label, control, feedback -->
+    <!--- plain layout: label, control, feedback -->
     <div :for-each=${floating ? [] : [1]}>
       <label class="form-label"
              for=${_id}
@@ -76,7 +76,7 @@
       <div class="invalid-feedback">${message}</div>
     </div>
 
-    <!-- floating layout: control, then label -->
+    <!--- floating layout: control, then label -->
     <div class="form-floating" :for-each=${floating ? [1] : []}>
       <input class=${_class}
              id=${_id}
@@ -96,7 +96,7 @@
     </div>
   </:define>
 
-  <!--
+  <!---
     The same shape for multi-line text. Kept separate rather than folded into
     `bs-input` as `type="textarea"`: it is a different element with its own
     `rows`, and a type that isn't one of HTML's would be a small lie.
@@ -147,7 +147,7 @@
     <div class="invalid-feedback">${message}</div>
   </:define>
 
-  <!--
+  <!---
     An input group: text or markup either side of a control. `:prefix` and
     `:suffix` cover the common case; anything richer goes in the slot as
     ordinary `.input-group-text` markup.

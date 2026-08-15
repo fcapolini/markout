@@ -1,4 +1,4 @@
-<!--
+<!---
   The one part every other part imports. It brings in Bootstrap itself and
   declares the kit's design tokens.
 
@@ -38,14 +38,14 @@
   <meta name="viewport"
         content="width=device-width, initial-scale=1">
 
-  <!-- `crossorigin` follows the hash: it is what makes one checkable, and
+  <!--- `crossorigin` follows the hash: it is what makes one checkable, and
        means nothing on a same-origin file -->
   <link href=${k_bsCssUrl}
         rel="stylesheet"
         integrity=${k_bsCssIntegrity}
         crossorigin=${k_bsCssIntegrity ? 'anonymous' : null}>
 
-  <!--
+  <!---
     Deliberately not `async`. The components that need Bootstrap's JS
     (tooltips, popovers, toasts) create their plugin instance from a
     `:handle-`, which runs the moment Markout hydrates; loading the bundle

@@ -1,7 +1,7 @@
 <lib>
   <:import src="base.htm" />
 
-  <!--
+  <!---
     Checkbox, radio and switch are one component: in Bootstrap a switch IS a
     checkbox with `.form-switch` on the wrapper, and a radio differs only by
     `type`. `:type` picks between them.
@@ -52,7 +52,7 @@
          :for-each=${help ? [1] : []}>${help}</div>
   </:define>
 
-  <!--
+  <!---
     A whole group of radios or checkboxes from one array, sharing a name and
     reporting the selection back through `:value`. Entries are strings or
     `{ name, value, disabled }`, as in `bs-select`.
@@ -80,7 +80,7 @@
                ? { name: o.name, value: o.value ?? o.name, disabled: !!o.disabled }
                : { name: o, value: o, disabled: false })}
   >
-    <!--
+    <!---
       A `<div>` rather than `<fieldset>`/`<legend>`: Bootstrap floats a
       legend, and a floated check input beside it wraps up onto the same
       line. `role="group"` plus `aria-labelledby` says the same thing to a
@@ -108,7 +108,7 @@
     </div>
   </:define>
 
-  <!-- A range slider, with its label and its current value. -->
+  <!--- A range slider, with its label and its current value. -->
   <:define tag="bs-range:div"
            class="mb-3 ${extra ?? ''}"
 
