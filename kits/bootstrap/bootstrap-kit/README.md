@@ -113,6 +113,42 @@ belongs — `bs-card`'s header is both: `:header` sets the text, and a
 `:slot="header"` replaces it with markup. A `<:slot>` may sit inside a
 `:for-data` but not inside a `:for-each`, which is what makes that possible.
 
+## Where Bootstrap comes from
+
+The CDN URLs and their hashes are tokens like any other, so a page points the
+kit at its own copy without forking `base.htm`:
+
+```html
+<head :k_bsCssUrl="/vendor/bootstrap.min.css"
+      :k_bsJsUrl="/vendor/bootstrap.bundle.min.js"
+      :k_bsCssIntegrity=${null}
+      :k_bsJsIntegrity=${null}>
+  <:import src="/bootstrap-kit/all.htm" />
+</head>
+```
+
+| Token | Default |
+| --- | --- |
+| `k_bsCssUrl` | jsDelivr, Bootstrap 5.3.8 |
+| `k_bsJsUrl` | jsDelivr, Bootstrap 5.3.8 |
+| `k_bsCssIntegrity` | the matching SRI hash |
+| `k_bsJsIntegrity` | the matching SRI hash |
+
+Drop the hashes when self-hosting: `crossorigin` follows the hash, and
+neither means anything on a same-origin file.
+
+Four reasons this is worth having rather than a convenience:
+
+- **A content security policy** that allows no third-party origin, which is
+  most of them once an app is behind a login.
+- **An offline or air-gapped build**, where a CDN isn't reachable at all.
+- **A vendored, pinned copy**, so the page doesn't depend on a third party
+  staying up or staying honest.
+- **Your own Bootstrap build.** The tokens below only reach what Bootstrap
+  exposes as CSS variables; a design system usually compiles Bootstrap from
+  Sass with its own variables. Pointing `k_bsCssUrl` at that build is how
+  the kit gets out of the way of it.
+
 ## Theming
 
 `base.htm` declares the kit's tokens and writes them into Bootstrap's own CSS
