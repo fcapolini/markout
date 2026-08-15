@@ -24,6 +24,10 @@ Run the showcase — every component below, live — with:
 npm run dev:bootstrap-kit
 ```
 
+That serves two pages: `/index.html`, the showcase, which is every component
+one after another; and `/demo.html`, an operations dashboard built out of
+them, which is what they look like wired to one page's data.
+
 ## Tests
 
 `test/kits/bootstrap-kit.test.ts`, in two tiers:
