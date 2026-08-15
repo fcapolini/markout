@@ -593,19 +593,7 @@ function rehomeSlottedText(
   callScope: Scope,
   stencil: ServerElement,
   moved: ServerNode[],
-  /**
-   * Whether this scope may take over text written at the usage site.
-   *
-   * True for an instance, whose territory is where that text lands. False
-   * for a nested definition scope: the text is still the call site's, and a
-   * scope inside the definition resolves against the definition, so taking
-   * it over would evaluate it in the wrong place -- loudly, since the names
-   * it uses are not there. It stays where it was, which leaves it bound to
-   * nothing exactly as it was before any of this ran. See the note in
-   * rehomeNestedScopes.
-   */
-  claimCallSite = true
-): void {
+): boolean {
   const within = descendantsOf(moved);
   const movedText = new Map<ServerText, string>();
   for (const [name, value] of callScope.textValues) {
@@ -622,6 +610,8 @@ function rehomeSlottedText(
   const textValues = new Map<string, Value>();
   scope.callSiteValues ??= new Set();
   let index = 0;
+  // whether any of what this scope took over was written at the usage site
+  let claimed = false;
   for (const { marker, text } of orderedTexts(stencil)) {
     // the definition's ids and the call site's are allocated from separate
     // counters and would collide here, so the instance gets its own run of
@@ -629,7 +619,7 @@ function rehomeSlottedText(
     // the runtime binds by (see WebScope.init())
     const id = index++;
     const key = `${TEXT_VALUE_PREFIX}${id}`;
-    const fromCallSite = claimCallSite ? movedText.get(text) : undefined;
+    const fromCallSite = movedText.get(text);
     const value =
       fromCallSite !== undefined
         ? callScope.textValues.get(fromCallSite)
@@ -645,6 +635,7 @@ function rehomeSlottedText(
       continue;
     }
     marker.textContent = `${DOM_TEXT_MARKER1}${id}`;
+    claimed ||= fromCallSite !== undefined;
     textValues.set(key, value);
     if (fromCallSite !== undefined) {
       scope.callSiteValues.add(key);
@@ -652,6 +643,7 @@ function rehomeSlottedText(
     }
   }
   scope.textValues = textValues;
+  return claimed;
 }
 
 /**
@@ -715,7 +707,10 @@ function rehomeNestedScopes(
       callScope,
       moved
     );
-    rehomeSlottedText(child, copy, callScope, el, moved, false);
+    // text written between the tag's tags can land in here, and a binding
+    // belongs to the scope whose territory holds its node. It still
+    // resolves out at the call site, which is what the flag says
+    copy.slottedText = rehomeSlottedText(child, copy, callScope, el, moved);
     return copy;
   });
 }

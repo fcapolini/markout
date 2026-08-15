@@ -50,6 +50,21 @@ export interface CoreScopeProps {
   /** markup written at a usage site and slotted into the instance: it lives
    * here but resolves names from outside (see lexicalParent()) */
   slotted?: boolean;
+  /**
+   * This scope took over TEXT written at a usage site, without being slotted
+   * markup itself.
+   *
+   * Text between a custom tag's tags lands wherever the definition's slot
+   * put it, which can be inside one of the definition's own scopes -- and a
+   * binding belongs to the scope whose territory holds its node, so that
+   * scope has to take the value. It resolves where it was WRITTEN all the
+   * same, which is out at the instance's call site rather than here.
+   *
+   * Only `callSite` values are affected; everything this scope declares for
+   * itself goes on resolving against the definition, which is why this
+   * cannot just be `slotted`.
+   */
+  slottedText?: boolean;
 }
 
 export class CoreScope {
@@ -415,7 +430,7 @@ export class CoreScope {
     if (key === RT_FOR_KEY_VALUE) {
       return new CoreValue({}, this, key);
     }
-    const ret = new CoreValue(props, props.callSite ? this.usageSiteScope() : this, key);
+    const ret = new CoreValue(props, this.hostFor(props), key);
     if (key === RT_FOR_EACH_VALUE) {
       // `this`, not the callback's own scope argument: those differ for a
       // usage-site value, whose CoreValue resolves against the call site
@@ -433,6 +448,22 @@ export class CoreScope {
       return ret;
     }
     return ret;
+  }
+
+  /**
+   * The scope a value evaluates against.
+   *
+   * Its own, unless it was written at a usage site. `usageSiteScope()` is
+   * the right answer for an instance, which sits at that site -- and the
+   * wrong one for a definition scope that merely took the text over, whose
+   * parent is the instance rather than the caller. That one goes out
+   * through the instance, the same path slotted markup takes, and for the
+   * same reason.
+   */
+  private hostFor(props: CoreValueProps<any>): CoreScope {
+    if (!props.callSite) return this;
+    if (!this.props.slottedText) return this.usageSiteScope();
+    return this.enclosingInstance()?.usageSiteScope() ?? this.usageSiteScope();
   }
 
   /**

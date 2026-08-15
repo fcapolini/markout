@@ -110,6 +110,12 @@ function generateScope(scope: Scope): ObjectExpression {
     // resolves its names from outside rather than from the definition
     props.push(property('slotted', literal(true)));
   }
+  if (scope.slottedText) {
+    // holds text written at a usage site: that text resolves out at the
+    // instance's call site, while everything else here resolves against the
+    // definition (see CoreScope.hostFor)
+    props.push(property('slottedText', literal(true)));
+  }
   if (scope.usesTemplate) {
     // a custom-tag usage instance: WebScope instantiates its DOM from the
     // named <:define> stencil if no already-rendered element is found

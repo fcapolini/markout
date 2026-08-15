@@ -258,6 +258,29 @@ describe('values declared inside slotted content', () => {
     assert.include(body, 'fallback');
   });
 
+  it('binds text slotted into one of the definition\'s own scopes', () => {
+    // where the node lands and where the expression resolves pull apart: a
+    // binding belongs to the scope whose territory holds its node, which
+    // here is the definition's inner <i>, while `${x}` was written outside
+    // and has to go on meaning the caller's. It used to be claimed by
+    // neither and render blank -- silently, which is how it survived
+    const { page: p, ctx, errors } = run(
+      '<html><body>' +
+        '<:define tag="mk-panel:div" :pad=${1}>' +
+        '<i :aka="inner" :class-p=${pad}><:slot /></i>' +
+        '</:define>' +
+        '<main :aka="app" :x=${3}><mk-panel>[${x}]</mk-panel></main>' +
+        '</body></html>'
+    );
+    assert.deepEqual(errors, []);
+    const inner = findInBody(p.source.doc, 'I');
+    assert.equal(textOf(inner), '[3]');
+
+    // and it is the CALLER's value, so it keeps up with it
+    findScope(ctx.root, 'app').proxy.x = 9;
+    assert.equal(textOf(inner), '[9]');
+  });
+
   it('keeps the enclosing definition invisible to markup slotted into it', () => {
     // the isolation half of the same rule: resolution now continues through
     // the slotted <div>, and must go on skipping the instance it sits in
