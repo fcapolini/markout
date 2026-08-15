@@ -514,10 +514,28 @@ function slotUsage(
     name => defSlots.get(name)!.el as unknown as ServerNode
   );
   const filled = descendantsOf(slotEls);
-  scope.children = scope.children.filter(child => !child.e || !filled.has(child.e));
+  // A usage written in a slot's FALLBACK was expanded before this ran, so
+  // what stands in the markup is its `-u<id>` marker rather than its tag,
+  // and the scope it left behind is matched by that marker or not at all.
+  // Missed, it stayed on an instance whose fallback had just been replaced:
+  // a component with nothing to render, reporting every one of its bindings
+  // unbound -- while the same component in the next instance, which took the
+  // fallback, worked.
+  const usages = new Set<string>();
+  filled.forEach(n => {
+    const node = n as ServerComment;
+    if (node.nodeType !== NodeType.COMMENT) return;
+    const text = `${node.textContent}`;
+    text.startsWith(DOM_USE_MARKER) && usages.add(text.slice(DOM_USE_MARKER.length));
+  });
+  const dropped = (s: Scope): boolean =>
+    (!!s.e && filled.has(s.e)) || usages.has(s.id);
+  scope.children = scope.children.filter(child => !dropped(child));
+  const slotHosts = new Map<string, ServerElement>();
   for (const [name, nodes] of groups) {
     const target = slots.get(name)!.el;
     const host = target.parentElement!;
+    slotHosts.set(name, host);
     for (const child of nodes) {
       usageEl.removeChild(child);
       host.insertBefore(child, target);
@@ -559,13 +577,74 @@ function slotUsage(
     page,
     scope.children,
     slotEls,
-    filled,
+    dropped,
     scope,
     stencil,
     callScope,
     children as ServerNode[]
   );
+  // last, because it is the copies above that slotted markup lands inside
+  adoptSlottedScopes(page, scope, stencilId, groups, slotHosts);
   return stencilId;
+}
+
+/**
+ * Re-parents each slotted scope to the scope whose ELEMENT now contains it.
+ *
+ * The scope tree is what the runtime searches to find a scope's element: it
+ * looks within its parent's element and stops at any nested scope's, so a
+ * scope has to sit under whichever one owns the markup around it. Slotted
+ * content went under the instance regardless, which is right only while the
+ * `<:slot>` sits in the definition's outermost element.
+ *
+ * Put anything between them -- and one `:class-` is enough to make an
+ * element a scope -- and the search reached that element, declined to
+ * descend into another scope's territory, and came back with nothing. Every
+ * binding in the slotted markup then reported itself unbound, which is loud,
+ * and a `:for-each` in there rendered no replicas at all, which is not: the
+ * region simply came out empty.
+ *
+ * Resolution is untouched. `lexicalParent` still points at the call site, so
+ * what moves is only where the markup is looked for, never what its names
+ * mean.
+ */
+function adoptSlottedScopes(
+  page: Page,
+  scope: Scope,
+  stencilId: string,
+  groups: Map<string, ServerNode[]>,
+  slotHosts: Map<string, ServerElement>
+): void {
+  const byId = (from: Scope, id: string): Scope | undefined => {
+    for (const child of from.children) {
+      if (child.id === id) return child;
+      const found = byId(child, id);
+      if (found) return found;
+    }
+    return undefined;
+  };
+  for (const [name, nodes] of groups) {
+    // the element the slot's content was inserted into, which is where the
+    // markup now lives -- not the slotted node's own parent, which for a
+    // replicated one is a <template>'s content and no element at all
+    let owner = slotHosts.get(name) as ServerElement | null | undefined;
+    while (owner && owner.getAttribute(DOM_ID_ATTR) === null) {
+      owner = owner.parentElement as ServerElement | null;
+    }
+    const id = owner?.getAttribute(DOM_ID_ATTR);
+    // the stencil's own root carries the instance's stencil id, which means
+    // the markup landed directly in the instance -- where it already is
+    if (id == null || `${id}` === stencilId) continue;
+    const target = byId(scope, `${id}`);
+    if (!target) continue;
+    for (const child of outermostScopesIn(page, nodes)) {
+      if (child.parent === target) continue;
+      const index = child.parent!.children.indexOf(child);
+      index >= 0 && child.parent!.children.splice(index, 1);
+      child.parent = target;
+      target.children.push(child);
+    }
+  }
 }
 
 /**
@@ -679,7 +758,7 @@ function rehomeNestedScopes(
   page: Page,
   children: Scope[],
   slotEls: ServerNode[],
-  filled: Set<object>,
+  dropped: (s: Scope) => boolean,
   parent: Scope,
   stencil: ServerElement,
   callScope: Scope,
@@ -707,9 +786,9 @@ function rehomeNestedScopes(
     copy.textCount = child.textCount;
     copy.children = rehomeNestedScopes(
       page,
-      child.children.filter(c => !c.e || !filled.has(c.e)),
+      child.children.filter(c => !dropped(c)),
       slotEls,
-      filled,
+      dropped,
       copy,
       stencil,
       callScope,

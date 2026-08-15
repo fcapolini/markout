@@ -345,6 +345,37 @@ describe('named slots', () => {
     expect(clean).toContain('<footer><p>bye</p></footer>');
   });
 
+  it('drops a component in the fallback of a slot that was filled', () => {
+    // the fallback is expanded before the slot is filled, so what stands in
+    // the markup by then is the usage's `-u<id>` marker rather than its tag
+    // -- and a filter looking for the ELEMENT inside the replaced region
+    // missed it. The scope stayed on an instance whose fallback was gone: a
+    // component with no markup at all, reporting each of its bindings
+    // unbound, in exactly the instances that supplied their own footer
+    const DIALOG =
+      '<:define tag="my-btn:button" class="btn" :kind="x" data-kind=${kind}><:slot /></:define>' +
+      '<:define tag="my-dialog:div" class="dlg">' +
+      '<div class="body"><:slot /></div>' +
+      '<div class="foot"><:slot name="foot">' +
+      '<my-btn :kind="close">Close</my-btn></:slot></div>' +
+      '</:define>';
+    const { errors, runtimeErrors, body } = render(
+      `<html><head>${DIALOG}</head><body>` +
+        '<my-dialog><p>one</p><span :slot="foot"><my-btn :kind="go">Go</my-btn></span></my-dialog>' +
+        '<my-dialog><p>two</p></my-dialog>' +
+        '</body></html>'
+    );
+
+    expect(errors).toStrictEqual([]);
+    expect(runtimeErrors).toStrictEqual([]);
+    const clean = body.replace(/<!--.*?-->/g, '');
+    // the filled one took the supplied button, and only that one
+    expect(clean).toContain('data-kind="go"');
+    // the untouched one still gets its fallback
+    expect(clean).toContain('data-kind="close"');
+    expect(clean.match(/data-kind="close"/g)).toHaveLength(1);
+  });
+
   it('reports content addressed to a slot the definition has not got', () => {
     const { errors } = render(
       `<html><head>${PANEL}</head><body>` +
