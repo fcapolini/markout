@@ -281,6 +281,36 @@ describe('values declared inside slotted content', () => {
     assert.equal(textOf(inner), '[9]');
   });
 
+  it('finds its markup when the slot sits under a scope of its own', () => {
+    // the runtime looks for a scope's element inside its PARENT's element,
+    // and stops at any nested scope's rather than descending into it. So a
+    // slotted scope has to sit under whichever scope owns the markup around
+    // it -- and it went under the instance regardless, which is only the
+    // same thing while the `<:slot>` is in the definition's own outermost
+    // element. One `:class-` on the element between them was enough:
+    // everything slotted in reported itself unbound, and a `:for-each` in
+    // there rendered nothing at all, which reports nothing at all
+    const { ctx, errors } = run(
+      '<html><body :rows=${["a", "b"]}>' +
+        '<:define tag="mk-panel:div" class="panel" :flush=${false}>' +
+        '<div class="body" :class-p-0=${flush}><:slot /></div>' +
+        '</:define>' +
+        '<mk-panel><i :for-each=${rows} :for-as="row">[${row}]</i></mk-panel>' +
+        '</body></html>'
+    );
+    assert.deepEqual(errors, []);
+    const body = findByTag((ctx.props as any).doc, 'BODY');
+    const rendered: string[] = [];
+    const walk = (n: any) => {
+      n.tagName === 'I' && rendered.push(textOf(n));
+      (n.childNodes ?? []).forEach(walk);
+    };
+    walk(body);
+    // the stencil inside the <template> is not part of the document a
+    // browser renders, so only the two replicas count
+    assert.deepEqual(rendered, ['[a]', '[b]']);
+  });
+
   it('keeps the enclosing definition invisible to markup slotted into it', () => {
     // the isolation half of the same rule: resolution now continues through
     // the slotted <div>, and must go on skipping the instance it sits in
