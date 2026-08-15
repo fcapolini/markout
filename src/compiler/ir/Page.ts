@@ -40,12 +40,15 @@ export const EVENT_VALUE_PREFIX = 'on$';
 export const DID_VALUE_PREFIX = 'did$';
 export const WILL_VALUE_PREFIX = 'will$';
 export const HANDLE_VALUE_PREFIX = 'handle$';
-// `:for-each`/`:for-as`/`:for-key` are fixed (non-prefixed) attribute names,
-// not open-ended `prefix-name` families like class-/style-/on-/did-/will-
+// `:for-each`/`:for-data`/`:for-as`/`:for-key` are fixed (non-prefixed)
+// attribute names, not open-ended `prefix-name` families like
+// class-/style-/on-/did-/will-
 export const FOR_EACH_ATTR = 'for-each';
+export const FOR_DATA_ATTR = 'for-data';
 export const FOR_AS_ATTR = 'for-as';
 export const FOR_KEY_ATTR = 'for-key';
 export const FOR_EACH_VALUE = 'for$each';
+export const FOR_DATA_VALUE = 'for$data';
 export const FOR_AS_VALUE = 'for$as';
 export const FOR_KEY_VALUE = 'for$key';
 // the per-item value's runtime key defaults to this (`:for-as` overrides it);
@@ -86,6 +89,15 @@ export class Page {
   values: Map<string, Value>;
   /** `:slot` targets, kept aside by stage1 before it strips `:` attributes */
   slotTargets: Map<ServerElement, string>;
+  /**
+   * The `<template>`s wrapping a `:for-data` rather than a `:for-each`.
+   *
+   * Both arities are compiled into a stencil, but only one of them is
+   * stamped out repeatedly -- and that is what decides whether a `<:slot>`
+   * inside can be filled. By the time slots are matched the `:` attributes
+   * are long stripped, so the distinction is recorded here as it is made.
+   */
+  optionalStencils: Set<ServerElement>;
   /** nodes moved into a custom-tag instance's slot -> that instance. A
    * stencil clone isn't in the scope tree, so this is the only way a usage
    * site nested in slotted content can find what it now sits inside */
@@ -107,6 +119,7 @@ export class Page {
     }
     this.customTags = new Map();
     this.slotTargets = new Map();
+    this.optionalStencils = new Set();
     this.slottedInto = new Map();
     this.definitionScopes = new Set();
     this.values = new Map();

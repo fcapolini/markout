@@ -126,4 +126,7 @@ export interface Document extends Node {
 
 export interface DocumentFragment extends Node {
   childNodes: NodeList;
+  appendChild(n: Node): Node;
+  insertBefore(n: Node, ref: Node | null): Node;
+  removeChild(n: Node): Node;
 }

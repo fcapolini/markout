@@ -21,7 +21,7 @@
 
            // parameters
            :extra=${null}      // extra classes for this instance
-           :title=${''}
+           :title=${null}
            :time=${null}
            :variant=${null}
            :open=${false}
@@ -42,10 +42,10 @@
            }}
            :on-hidden.bs.toast=${() => open = false}
   >
-    <div class="toast-header" :for-each=${title ? [1] : []}>
+    <div class="toast-header" :for-data=${title}>
       <strong class="me-auto">${title}</strong>
       <small class="text-body-secondary"
-             :for-each=${time ? [1] : []}>${time}</small>
+             :for-data=${time}>${time}</small>
       <bs-close :dismiss="toast" />
     </div>
 

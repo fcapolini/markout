@@ -3,7 +3,7 @@ import * as estraverse from 'estraverse';
 import type { Identifier, Node, Pattern } from 'estree';
 import { NodeType } from '../../html/dom';
 import { ServerAttribute, ServerText } from '../../html/server-dom';
-import { FOR_AS_VALUE, FOR_DATA_DEFAULT_NAME, FOR_EACH_VALUE } from '../ir/Page';
+import { FOR_AS_VALUE, FOR_DATA_DEFAULT_NAME, FOR_DATA_VALUE, FOR_EACH_VALUE } from '../ir/Page';
 import type { Page } from '../ir/Page';
 import type { Scope } from '../ir/Scope';
 import type { Value } from '../ir/Value';
@@ -41,7 +41,8 @@ function qualifyScope(scope: Scope) {
   }
 }
 
-// :for-each's own array expression logically runs in the OUTER scope --
+// :for-each's own array expression (and :for-data's value) logically runs
+// in the OUTER scope --
 // the per-item alias (e.g. `data`) it's about to bind doesn't exist yet, so
 // a bare reference to that same name inside it must shadow-skip to
 // whatever the parent already has, exactly like a value referencing its
@@ -49,7 +50,7 @@ function qualifyScope(scope: Scope) {
 // wouldn't trigger this (it never collides with a user-chosen alias), so
 // the alias itself has to be used as the qualification key instead.
 function shadowKeyFor(scope: Scope, name: string): string {
-  if (name === FOR_EACH_VALUE) {
+  if (name === FOR_EACH_VALUE || name === FOR_DATA_VALUE) {
     return (scope.values.get(FOR_AS_VALUE)?.value as string) || FOR_DATA_DEFAULT_NAME;
   }
   return name;

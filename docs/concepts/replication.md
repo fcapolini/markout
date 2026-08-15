@@ -98,9 +98,32 @@ site still means the *caller's* `title`, never the definition's or itself.
 
 ## Optional rendering
 
-`:for-data` is the planned single-item counterpart to `:for-each`. It is not
-yet a live compiler/runtime feature — it is documented as part of the language
-design rather than as current syntax.
+`:for-data` is the single-item counterpart to `:for-each`: zero or one where
+that one is zero or many.
+
+```html
+<p :for-data=${user}>Welcome, ${data.name}</p>
+```
+
+The test is `!= null`, the same rule `:for-each` states for an empty list —
+`0` and `''` are data and render. A page that means "if this is true" rather
+than "if this is here" wants a directive that says so; there isn't one yet.
+
+Three things follow from it being one rather than many:
+
+- **The body doesn't evaluate while there is nothing to show.** That is the
+  point of the directive rather than an optimisation: `${data.name}` above
+  has to be safe to write, and it wouldn't be if the expression ran with no
+  `data`.
+- **Nothing is cloned.** The scope owns one element for its whole life, and
+  that element is moved between the document and the stencil it arrived in.
+  Focus, a scroll offset, a playing video, an `<iframe>`'s document — all of
+  it survives a round trip, without needing a key to say so.
+- **`:for-key` is refused.** A key tells replicas apart, and there are none.
+
+`:for-as` works as it does on `:for-each`, and the two may not appear on the
+same element: they are one question — how many times does this render — and
+an element answers it once.
 
 ## Nested replication
 

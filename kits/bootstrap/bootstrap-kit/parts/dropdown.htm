@@ -70,7 +70,7 @@
             :for-each=${item.divider ? [1] : []}>
 
         <h6 class="dropdown-header"
-            :for-each=${item.header ? [1] : []}>${item.header}</h6>
+            :for-data=${item.header}>${item.header}</h6>
 
         <a class="dropdown-item"
            :for-each=${item.divider || item.header ? [] : [1]}

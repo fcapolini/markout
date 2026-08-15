@@ -14,8 +14,13 @@ import {
   DID_VALUE_PREFIX,
   EVENT_VALUE_ATTR_PREFIX,
   EVENT_VALUE_PREFIX,
+  SPECIAL_ATTR_PREFIX,
   FOR_AS_VALUE,
   FOR_EACH_VALUE,
+  FOR_DATA_VALUE,
+  FOR_EACH_ATTR,
+  FOR_DATA_ATTR,
+  FOR_KEY_ATTR,
   FOR_KEY_VALUE,
   STYLE_VALUE_ATTR_PREFIX,
   STYLE_VALUE_PREFIX,
@@ -46,6 +51,7 @@ const KNOWN_VALUE_PREFIXES = [
   WILL_VALUE_PREFIX,
   HANDLE_VALUE_PREFIX,
   FOR_EACH_VALUE,
+  FOR_DATA_VALUE,
   FOR_AS_VALUE,
   FOR_KEY_VALUE,
   CLASS_VALUE_ATTR_PREFIX,
@@ -99,6 +105,26 @@ export function stage2validate(page: Page) {
 }
 
 function validateScope(page: Page, scope: Scope) {
+  // the two replication arities are the same question -- how many times does
+  // this render -- so an element may only answer it once. And a key is what
+  // tells replicas apart, which is nothing to ask of a thing that is either
+  // there or not
+  if (scope.values.has(FOR_EACH_VALUE) && scope.values.has(FOR_DATA_VALUE)) {
+    addError(
+      page,
+      `Cannot use "${SPECIAL_ATTR_PREFIX}${FOR_EACH_ATTR}" and ` +
+        `"${SPECIAL_ATTR_PREFIX}${FOR_DATA_ATTR}" on the same element`,
+      scope.values.get(FOR_DATA_VALUE)!.node.loc
+    );
+  } else if (scope.values.has(FOR_DATA_VALUE) && scope.values.has(FOR_KEY_VALUE)) {
+    addError(
+      page,
+      `"${SPECIAL_ATTR_PREFIX}${FOR_KEY_ATTR}" means nothing on ` +
+        `"${SPECIAL_ATTR_PREFIX}${FOR_DATA_ATTR}": there is only ever one`,
+      scope.values.get(FOR_KEY_VALUE)!.node.loc
+    );
+  }
+
   // Validate all user-defined values in this scope
   for (const [name, value] of scope.values) {
     validateValue(page, name, value);

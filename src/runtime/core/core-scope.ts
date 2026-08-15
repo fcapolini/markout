@@ -22,6 +22,7 @@ export function cloneId(baseId: string, index: number): string {
   return `${baseId}-${index}`;
 }
 export const RT_FOR_EACH_VALUE = 'for$each';
+export const RT_FOR_DATA_VALUE = 'for$data';
 export const RT_FOR_OFFSET_VALUE = 'for$offset';
 export const RT_FOR_LENGTH_VALUE = 'for$length';
 export const RT_FOR_AS_VALUE = 'for$as';
@@ -251,8 +252,15 @@ export class CoreScope {
    * definition's own names stay invisible from the call site as always.
    */
   usageSiteScope(): CoreScope {
-    if (!this.props.values?.[RT_FOR_EACH_VALUE]) return this.callSiteScope() ?? this;
+    if (!this.replicates()) return this.callSiteScope() ?? this;
     return (this.loopSite ??= new LoopSiteScope(this));
+  }
+
+  /** whether this scope binds a per-item name of its own, at either arity */
+  private replicates(): boolean {
+    return !!(
+      this.props.values?.[RT_FOR_EACH_VALUE] || this.props.values?.[RT_FOR_DATA_VALUE]
+    );
   }
   private loopSite?: CoreScope;
 
@@ -279,9 +287,9 @@ export class CoreScope {
    * value, and the scope's own namespace is exactly where it belongs.
    */
   private relocateLoopAlias(): void {
-    if (!this.props.values?.[RT_FOR_EACH_VALUE]) return;
+    if (!this.replicates()) return;
     const alias = this.aliasName();
-    if (!this.props.values[alias]?.callSite) return;
+    if (!this.props.values?.[alias]?.callSite) return;
     const value = this.values[alias];
     if (!value) return;
     this.usageSiteScope().values[alias] = value;
@@ -330,16 +338,39 @@ export class CoreScope {
   }
 
   /**
-   * Whether this scope is a `:for-each` host rather than something rendered.
+   * Unlinks what this scope has just stopped evaluating, and only that.
    *
-   * The host's element is an inert <template> stencil; what a reader sees is
-   * always a clone, built from the host's own props. So the host has exactly
+   * A `:for-data` going away keeps the one value that decides whether it
+   * comes back; everything else, here and below, is dropped.
+   */
+  private unlinkInert() {
+    const live = new Set(this.liveKeys());
+    this.cache.clear();
+    Object.keys(this.values).forEach((key) => live.has(key) || this.values[key].unlink());
+    this.children.forEach((scope) => scope.unlinkValues());
+  }
+
+  /**
+   * Whether this scope's markup is a stencil at the moment rather than a
+   * rendering. Two ways to be one, and the same consequence either way.
+   *
+   * A `:for-each` host: its element is only ever cloned, so it has exactly
    * one job -- say what the items are -- and its remaining values are
    * prototypes for the clones rather than bindings of its own.
+   *
+   * A `:for-data` with nothing to show: this is the whole point of the
+   * directive rather than an optimisation. `:for-data=${user}` exists so the
+   * body can say `data.name`; if the body evaluated while there is no user,
+   * the guard would have done nothing at all.
    */
   isStencil(): boolean {
-    return !this.cloned && !!this.props.values?.[RT_FOR_EACH_VALUE];
+    if (this.cloned) return false;
+    if (this.props.values?.[RT_FOR_EACH_VALUE]) return true;
+    return !!this.props.values?.[RT_FOR_DATA_VALUE] && !this.showing;
   }
+
+  /** whether a `:for-data` scope currently has something to show */
+  showing = false;
 
   /**
    * The values worth evaluating on this scope.
@@ -395,8 +426,55 @@ export class CoreScope {
       ret.setCB((_, vv) => CoreScope.foreachCB(this, vv));
       return ret;
     }
+    if (key === RT_FOR_DATA_VALUE) {
+      // `this` for the same reason as above: a usage-site value resolves at
+      // the call site while what it acts on is still this scope
+      ret.setCB((_, v) => CoreScope.fordataCB(this, v));
+      return ret;
+    }
     return ret;
   }
+
+  /**
+   * Zero or one, which is `:for-each`'s arity minus the copies.
+   *
+   * Nothing is cloned: the scope owns one element for its whole life and
+   * that element is moved between the document and the stencil it came in.
+   * So showing and hiding preserve whatever the DOM was holding -- focus, a
+   * scroll offset, a playing video -- which a rebuild would throw away.
+   *
+   * `!= null` rather than truthiness, deliberately: `:for-each` already says
+   * null and undefined mean nothing renders, and this is the same rule at
+   * arity one. `0` and `''` are data, and a page that means "if" wants a
+   * directive that says so.
+   */
+  static fordataCB(that: CoreScope, v: any) {
+    const alias = that.aliasValue();
+    if (v != null) {
+      alias?.set(v);
+      if (that.showing) return;
+      // set before refreshing: liveKeys() answers with everything only once
+      // this scope counts as rendering
+      that.showing = true;
+      that.showView();
+      that.ctx.refresh(that);
+      return;
+    }
+    if (!that.showing) return;
+    that.showing = false;
+    // NOT unlinkValues(): `for$data` has to stay linked to whatever it reads,
+    // or nothing will ever notice the value coming back and the region is
+    // hidden for good. Everything liveKeys() no longer covers goes, which is
+    // exactly the body
+    that.unlinkInert();
+    alias?.set(undefined);
+    that.hideView();
+  }
+
+  /** puts this scope's element back in the document; DOM-side, so a no-op here */
+  showView() {}
+  /** parks it back in the stencil it came in; likewise */
+  hideView() {}
 
   // ===========================================================================
   // replication
