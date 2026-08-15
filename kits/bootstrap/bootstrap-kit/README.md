@@ -98,11 +98,20 @@ That holds however deeply the component sits: a `bs-toast :aka="saved"`
 written inside a `bs-toast-container` is still named where you wrote it, so
 `saved.open = true` reaches it from anywhere on the page.
 
-**Optional regions are `:for-each` over one item or none.** Markout has no
-`:if` yet, so a region that should sometimes not exist is written
-`:for-each=${title ? [1] : []}`. This is why optional parts of a component
-are parameters rather than named slots: a `<:slot>` may not sit inside a
-`:for-each`.
+**Optional regions are `:for-data`.** A region that exists only when a value
+does is written `:for-data=${header}`, and its body may read that value as
+`data`. Nothing in there evaluates while the value is absent, which is what
+makes `${data.name}` safe to write.
+
+Boolean flags still can't use it — `:for-data` shows for anything that isn't
+`null`, so `false` would render — so a dozen regions in the kit are still
+written `:for-each=${dismissible ? [1] : []}`. Those are waiting on an `:if`
+rather than working around `:for-data`.
+
+Optional parts of a component are parameters rather than named slots. A
+`<:slot>` may now sit inside a `:for-data`, but not inside a `:for-each`, and
+one that also wants an interpolated fallback hits a separate limitation of
+slots inside nested scopes.
 
 ## Theming
 

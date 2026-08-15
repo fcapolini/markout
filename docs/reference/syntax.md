@@ -85,9 +85,9 @@ runtime's own prefix.
 ### Lifecycle, and how it is unfinished
 
 `:did-init` and `:will-dispose` are designed but not implemented, and they
-fail more quietly than `:for-data` does. That one is refused outright. These
-two are parsed, validated as callbacks, and compiled into the page — and
-then nothing ever calls them. A page using one gets no error and no effect.
+fail quietly: they are parsed, validated as callbacks, and compiled into the
+page — and then nothing ever calls them. A page using one gets no error and
+no effect.
 
 Until the runtime half exists, treat them as reserved. `:on-` handlers are
 the working way to run code.
@@ -187,8 +187,8 @@ it differs:
 | --- | --- |
 | `:for-each=${expr}` | Repeat once per item in an iterable. `null`/`undefined` means zero items. |
 | `:for-as="name"` | Rename the per-item binding from the default `data`. |
-| `:for-key=${expr}` | Give each item an identity, so reordering moves replicas instead of rewriting them. Evaluated per item, and may read the per-item binding. |
-| `:for-data=${expr}` | Optional single-item rendering. Designed, **not implemented** — a compile error today. |
+| `:for-key=${expr}` | Give each item an identity, so reordering moves replicas instead of rewriting them. Evaluated per item, and may read the per-item binding. Refused on `:for-data`, which has only ever one. |
+| `:for-data=${expr}` | Render once if `expr` is neither `null` nor `undefined`, not at all otherwise. Binds the item like `:for-each`. |
 
 ## Modules and components
 

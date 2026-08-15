@@ -265,7 +265,7 @@ rendered) and otherwise expects an iterable; it never guesses at a scalar
 meaning "one", since that would make its meaning depend on the incidental
 shape of the value rather than being one fixed rule
 
-## Optional rendering — designed, not yet implemented
+## Optional rendering
 
 ```html
 <html :user=${undefined}>
@@ -275,15 +275,18 @@ shape of the value rather than being one fixed rule
 </html>
 ```
 
-`:for-data=${expr}` is intended to render its tag once if `expr` is neither
-`null` nor `undefined`, and not at all otherwise — the same `data`/`:for-as`
-binding as `:for-each`, but for an optional single item rather than a list,
-e.g. `:for-data=${isLoggedIn ? user : undefined}`.
+`:for-data=${expr}` renders its tag once if `expr` is neither `null` nor
+`undefined`, and not at all otherwise — the same `data`/`:for-as` binding as
+`:for-each`, but for an optional single item rather than a list.
 
-It is designed but **not implemented**: writing it today is a compile error.
-It appears here because it explains why `:for-each` doesn't quietly accept a
-non-iterable and render it once — two intents, two attributes, rather than
-one inferring which you meant from the shape of the value.
+That is also why `:for-each` doesn't quietly accept a non-iterable and render
+it once: two intents, two attributes, rather than one inferring which you
+meant from the shape of the value.
+
+The body doesn't evaluate while there is nothing to show, which is the point
+rather than an optimisation — `${data.name}` above has to be safe to write.
+And the element itself is moved rather than rebuilt, so whatever the DOM was
+holding survives a round trip.
 
 ## Data-binding
 
@@ -315,8 +318,6 @@ one inferring which you meant from the shape of the value.
 > calls them. It is here for the shape — a value's whole life expressed on
 > the element that owns it, with `:_timer` private to that scope — which is
 > what the pair are for once the runtime side exists. `:on-` handlers are
-> the working way to run code today.
->
-> Note it fails differently from
-> [`:for-data`](#optional-rendering--designed-not-yet-implemented) above,
-> which is refused outright. These are accepted and silent.
+> the working way to run code today. They are the last unimplemented pair in
+> the reference, and they fail the quiet way: accepted, compiled, and never
+> called.

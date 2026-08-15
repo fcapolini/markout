@@ -321,9 +321,17 @@ const CASES: Record<string, Case> = {
     },
   },
   ':for-data=${expr}': {
-    unimplemented: async () => {
-      const compiled = await build('<html><body><i :for-data=${1}>x</i></body></html>');
-      expect(compiled.errors.length).toBeGreaterThan(0);
+    works: async () => {
+      const p = await run(
+        '<html :user=${{ name: "Ada" }} :none=${null}><body>' +
+          '<i :for-data=${user}>${data.name}</i>' +
+          '<b :for-data=${none}>${data.boom.deep}</b></body></html>'
+      );
+      // present renders, absent doesn't -- and the absent one's body never
+      // evaluates, which is what makes `${data.boom.deep}` safe to write
+      expect(p.body()).toContain('<i>Ada</i>');
+      // parked in its stencil rather than deleted, so it can come back
+      expect(p.body()).toContain('<template><b></b></template>');
     },
   },
 

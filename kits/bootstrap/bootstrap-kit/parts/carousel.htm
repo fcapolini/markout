@@ -57,8 +57,8 @@
              alt=${slide.alt ?? ''}>
         <div class="carousel-caption d-none d-md-block"
              :for-each=${captions && (slide.title || slide.text) ? [1] : []}>
-          <h5 :for-each=${slide.title ? [1] : []}>${slide.title}</h5>
-          <p :for-each=${slide.text ? [1] : []}>${slide.text}</p>
+          <h5 :for-data=${slide.title}>${slide.title}</h5>
+          <p :for-data=${slide.text}>${slide.text}</p>
         </div>
       </div>
     </div>

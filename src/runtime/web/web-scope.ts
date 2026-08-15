@@ -8,7 +8,7 @@ import {
   TemplateElement,
   Text,
 } from '../../html/dom';
-import { CoreScope, CoreScopeProps, cloneId } from '../core/core-scope';
+import { CoreScope, CoreScopeProps, RT_FOR_DATA_VALUE, cloneId } from '../core/core-scope';
 import { CoreValue, CoreValueProps } from '../core/core-value';
 import {
   DOM_ATOMIC_TEXT_TAGS,
@@ -137,6 +137,20 @@ export class WebScope extends CoreScope {
         );
       });
     };
+    // A `:for-data` scope is moved between the document and the stencil it
+    // came in, so it needs to know where that stencil is for its whole life.
+    // lookupView() sets templateEl only when the element was found INSIDE
+    // one, which is the hidden case; when the server rendered it visible the
+    // element sits immediately after the template instead, because that is
+    // where showView() puts it
+    if (this.props.values?.[RT_FOR_DATA_VALUE] && !this.cloned && !this.templateEl) {
+      const previous = view.previousSibling;
+      if (previous?.nodeType === NodeType.ELEMENT && (previous as Element).tagName === 'TEMPLATE') {
+        this.templateEl = previous as Element;
+        this.showing = true;
+      }
+    }
+
     // An atomic-text element with a scope of ITS OWN (`<textarea :on-input=...>`)
     // is the one case the walk below cannot reach: its content marker sits
     // outside the element, among its parent's children, because a comment
@@ -387,6 +401,34 @@ export class WebScope extends CoreScope {
 
   camelToDash(s: string): string {
     return s.replace(/([a-z][A-Z])/g, (g) => g[0] + "-" + g[1].toLowerCase());
+  }
+
+  /**
+   * Puts this scope's element back where the stencil sits.
+   *
+   * Immediately after the template, which is exactly where the compiler had
+   * the element before wrapInTemplate() moved it in -- so the rendered
+   * position is the written position, and init() can find its way back to
+   * the template by looking one node to the left.
+   */
+  override showView(): void {
+    const template = this.templateEl;
+    if (!this.dom || !template) return;
+    const container = (template as unknown as { parentNode: Element }).parentNode;
+    container?.insertBefore(this.dom, template.nextSibling);
+  }
+
+  /**
+   * Parks it back inside the stencil.
+   *
+   * Not `remove()`: the element goes where a page that never showed it would
+   * have carried it, so the served markup is the same either way and the
+   * node stays reachable for the next time the value comes back.
+   */
+  override hideView(): void {
+    const template = this.templateEl;
+    if (!this.dom || !template) return;
+    (template as unknown as TemplateElement).content.appendChild(this.dom);
   }
 
   override clone(index: number): WebScope {

@@ -30,9 +30,11 @@ import {
   WILL_VALUE_PREFIX,
   HANDLE_VALUE_PREFIX,
   FOR_EACH_ATTR,
+  FOR_DATA_ATTR,
   FOR_AS_ATTR,
   FOR_KEY_ATTR,
   FOR_EACH_VALUE,
+  FOR_DATA_VALUE,
   FOR_AS_VALUE,
   FOR_KEY_VALUE,
   FOR_DATA_DEFAULT_NAME,
@@ -134,9 +136,13 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
         if (inner) load(page, scope, inner);
         continue;
       }
-      // the stencil for each instance WebScope.clone() creates/reuses at
-      // runtime; :for-each's element itself is never a live instance
-      if (hasForEachAttr(childEl)) wrapInTemplate(childEl);
+      // the stencil the runtime renders from: `:for-each` clones it once
+      // per item, `:for-data` shows the one it already has. Neither
+      // element is itself a live rendering
+      if (needsStencil(childEl)) {
+        const stencil = wrapInTemplate(childEl);
+        hasAttr(childEl, FOR_DATA_ATTR) && page.optionalStencils.add(stencil);
+      }
       load(page, scope, childEl);
       continue;
     }
@@ -203,17 +209,30 @@ function isDynamic(attr: ServerAttribute): boolean {
   return attr.value != null && typeof attr.value !== 'string';
 }
 
-function hasForEachAttr(e: ServerElement): boolean {
-  const name = `${SPECIAL_ATTR_PREFIX}${FOR_EACH_ATTR}`;
-  return (e.attributes as ServerAttribute[]).some(attr => attr.name === name);
+/**
+ * Whether this element's own markup has to be kept out of the live tree.
+ *
+ * True of both replication families, for the same reason and with different
+ * arities: `:for-each` renders zero or more copies of it, `:for-data` zero
+ * or one. Either way what the compiler emits is a stencil rather than a
+ * rendering, and the runtime decides how many times it appears.
+ */
+function needsStencil(e: ServerElement): boolean {
+  return hasAttr(e, FOR_EACH_ATTR) || hasAttr(e, FOR_DATA_ATTR);
 }
 
-function wrapInTemplate(e: ServerElement): void {
+function hasAttr(e: ServerElement, name: string): boolean {
+  const full = `${SPECIAL_ATTR_PREFIX}${name}`;
+  return (e.attributes as ServerAttribute[]).some(attr => attr.name === full);
+}
+
+function wrapInTemplate(e: ServerElement): ServerElement {
   const parent = e.parentElement!;
   const template = new ServerTemplateElement(e.ownerDocument, e.loc);
   parent.insertBefore(template, e);
   parent.removeChild(e);
   template.appendChild(e);
+  return template;
 }
 
 // <:define tag="custom-name:base-tag" ...special-attrs...>children</:define>
@@ -429,7 +448,7 @@ function slotUsage(
   const children = addressed.map(([child]) => child);
 
   const defEl = defScope.e!;
-  const defSlots = findSlots(defEl);
+  const defSlots = findSlots(page, defEl);
   // grouped by the slot each child addresses; anything unaddressed fills the
   // default one, which is also where every text node goes
   const groups = new Map<string, ServerNode[]>();
@@ -479,7 +498,7 @@ function slotUsage(
   const stencilId = `${scope.id}t`;
   stencil.setAttribute(DOM_ID_ATTR, stencilId);
 
-  const slots = findSlots(stencil);
+  const slots = findSlots(page, stencil);
   // the definition's own scopes inside a slot that got filled: their markup
   // was just replaced, so the instance must not carry values still pointing
   // at it (see rehomeSlottedText for the text half of the same problem)
@@ -657,18 +676,24 @@ interface SlotSite {
  * Every `<:slot>` in a definition body, by name (the default one is `''`).
  *
  * Descends into `<template>` content, which is where load() has already moved
- * any `:for-each` element -- a slot in there is reported rather than missed,
- * so a usage trying to fill it gets told what's actually wrong.
+ * both replication families -- a slot in there is reported rather than
+ * missed, so a usage trying to fill it gets told what's actually wrong.
+ *
+ * Only a `:for-each` stencil counts as replicated. A `:for-data` one holds
+ * the single copy it will ever have and never clones it, so the scopes
+ * behind a slot inside it have nobody to fight with.
  */
 function findSlots(
+  page: Page,
   e: ServerElement,
   into = new Map<string, SlotSite>(),
   inLoop = false
 ): Map<string, SlotSite> {
-  const isStencil = e.tagName === 'TEMPLATE';
-  const children = isStencil
-    ? [...(e as ServerTemplateElement).content.childNodes]
-    : [...e.childNodes];
+  const isStencil = e.tagName === 'TEMPLATE' && !page.optionalStencils.has(e);
+  const children =
+    e.tagName === 'TEMPLATE'
+      ? [...(e as ServerTemplateElement).content.childNodes]
+      : [...e.childNodes];
   for (const child of children) {
     if (child.nodeType !== NodeType.ELEMENT) continue;
     const el = child as ServerElement;
@@ -678,7 +703,7 @@ function findSlots(
       into.has(name) || into.set(name, { el, replicated: inLoop || isStencil });
       continue;
     }
-    findSlots(el, into, inLoop || isStencil);
+    findSlots(page, el, into, inLoop || isStencil);
   }
   return into;
 }
@@ -808,6 +833,10 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
       scope.values.set(FOR_EACH_VALUE, new Value(FOR_EACH_VALUE, attr, scope, page.createValueId()));
       continue;
     }
+    if (name === FOR_DATA_ATTR) {
+      scope.values.set(FOR_DATA_VALUE, new Value(FOR_DATA_VALUE, attr, scope, page.createValueId()));
+      continue;
+    }
     if (name === FOR_AS_ATTR) {
       scope.values.set(FOR_AS_VALUE, new Value(FOR_AS_VALUE, attr, scope, page.createValueId()));
       continue;
@@ -874,7 +903,7 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
   e.attributes = e.attributes.filter(
     attr => !attr.name.startsWith(SPECIAL_ATTR_PREFIX) && !isDynamic(attr as ServerAttribute)
   );
-  if (scope.values.has(FOR_EACH_VALUE)) {
+  if (scope.values.has(FOR_EACH_VALUE) || scope.values.has(FOR_DATA_VALUE)) {
     // ordinary value, not a for$-prefixed one: stage3-qualify already turns
     // any bare identifier into `this.<name>` with no scope-aware special
     // casing, so the per-item binding only resolves correctly if it's keyed

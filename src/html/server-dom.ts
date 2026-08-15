@@ -276,11 +276,19 @@ export abstract class ServerContainerNode extends ServerNode {
 
   insertBefore(n: Node, ref: Node | null): Node {
     if (n.nodeType === NodeType.DOCUMENT_FRAGMENT) {
-      (n as ServerContainerNode).childNodes.forEach(n =>
+      // snapshot: inserting a fragment moves its children out of it, as in
+      // the browser, so iterating the live array would skip every other one
+      [...(n as ServerContainerNode).childNodes].forEach(n =>
         this.insertBefore(n, ref)
       );
       return n;
     }
+    // a move, as in the browser: a node has one parent, so putting it here
+    // takes it out of wherever it was. Without this, relocating a node
+    // between containers left it in both -- the same element, with the same
+    // id, in two places at once
+    const previous = (n as ServerNode).parentNode as ServerContainerNode | null;
+    previous && previous !== (this as unknown as ServerContainerNode) && previous.removeChild(n);
     this.removeChild(n);
     let i = ref ? this.childNodes.indexOf(ref) : -1;
     i = i < 0 ? this.childNodes.length : i;

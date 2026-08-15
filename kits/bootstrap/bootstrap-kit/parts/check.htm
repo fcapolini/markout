@@ -13,7 +13,7 @@
 
            // parameters
            :extra=${null}      // extra classes for this instance
-           :label=${''}
+           :label=${null}
            :type=${'checkbox'}   // 'checkbox' | 'radio' | 'switch'
            :name=${null}
            :value=${null}
@@ -49,7 +49,7 @@
 
     <div class="form-text"
          id=${_helpId}
-         :for-each=${help ? [1] : []}>${help}</div>
+         :for-data=${help}>${help}</div>
   </:define>
 
   <!---
@@ -63,7 +63,7 @@
 
            // parameters
            :extra=${null}      // extra classes for this instance
-           :legend=${''}
+           :legend=${null}
            :type=${'radio'}
            :options=${[]}
            :value=${null}
@@ -88,7 +88,7 @@
     -->
     <div class="form-label fs-6"
          id=${_legendId}
-         :for-each=${legend ? [1] : []}>${legend}</div>
+         :for-data=${legend}>${legend}</div>
 
     <div class="form-check"
          :for-each=${_options}
@@ -114,7 +114,7 @@
 
            // parameters
            :extra=${null}      // extra classes for this instance
-           :label=${''}
+           :label=${null}
            :name=${null}
            :min=${0}
            :max=${100}
@@ -128,7 +128,7 @@
   >
     <label class="form-label d-flex justify-content-between"
            for=${_id}
-           :for-each=${label ? [1] : []}>
+           :for-data=${label}>
       <span>${label}</span>
       <span class="text-body-secondary"
             :for-each=${showValue ? [1] : []}>${value}</span>
