@@ -30,7 +30,7 @@ export class CoreValue<T = any> {
   value: T | undefined;
   /** longest path from a value with no sources; see depthNow() */
   depth = 0;
-  private depthCycle = -1;
+  private depthVersion = -1;
 
   constructor(
     props: CoreValueProps<T>,
@@ -107,6 +107,12 @@ export class CoreValue<T = any> {
   set(value: T) {
     const old = this.value;
     delete this.exp;
+    // an expression value becoming static drops every edge into it, which
+    // moves this value's depth and its dependents'. Rare, and the only way
+    // the graph changes outside a refresh -- an ordinary `set()` on a value
+    // that never had sources leaves the shape alone and must not invalidate
+    // what the whole page's depths are memoized against
+    this.src.size && this.scope.ctx.graphVersion++;
     this.src.forEach(o => o.dst.delete(this));
     this.src.clear();
     this.value = value;
@@ -143,18 +149,22 @@ export class CoreValue<T = any> {
    * so working outwards from the shallowest pending value means every input
    * a value has has already settled by the time it is evaluated.
    *
-   * Memoized per cycle rather than per graph edit: the graph doesn't change
-   * within a push, and a cycle costs one walk of the sources either way.
+   * Memoized against the graph rather than the cycle. Keying it per cycle
+   * looked harmless and cost 3x on the benchmark's twenty rapid mutations:
+   * every push opens a new cycle, so each one re-walked the sources of
+   * everything it touched -- O(edges) per click, on a graph whose edges grow
+   * with the rows on screen. The graph only moves when values are linked or
+   * unlinked, which is what `graphVersion` counts.
    */
   depthNow(): number {
     const ctx = this.scope.ctx;
-    if (this.depthCycle === ctx.cycle) {
+    if (this.depthVersion === ctx.graphVersion) {
       return this.depth;
     }
     // marked before recursing: the compiler rejects a value that reads
     // itself, but the runtime must not hang if one ever reaches it, and a
     // back edge counting as zero keeps the rest of the ordering sane
-    this.depthCycle = ctx.cycle;
+    this.depthVersion = ctx.graphVersion;
     this.depth = 0;
     let depth = 0;
     this.src.forEach(o => {
