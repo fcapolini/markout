@@ -225,6 +225,16 @@
            :_line=${_xy.map(p => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join(' ')}
            :_area=${`0,${_h} ${_line} 100,${_h}`}
            :_last=${_xy.length ? _xy[_xy.length - 1] : [0, 0]}
+
+           // The marker is drawn as STROKE rather than as a shape. The box
+           // is stretched to fill its element (`preserveAspectRatio="none"`)
+           // and x and y are stretched by different amounts, so a <circle>
+           // comes out as an ellipse — wider the wider the chart. A
+           // zero-length path with a round cap is a dot whose size comes
+           // from `stroke-width`, and `vector-effect="non-scaling-stroke"`
+           // keeps that in device pixels, so it stays round at any size.
+           :_dot=${`M ${_last[0].toFixed(2)} ${_last[1].toFixed(2)}` +
+                   ` L ${_last[0].toFixed(2)} ${_last[1].toFixed(2)}`}
   >
     <svg viewBox="0 0 100 ${_h}"
          preserveAspectRatio="none"
@@ -244,11 +254,12 @@
                 stroke-linecap="round"
                 vector-effect="non-scaling-stroke" />
 
-      <circle cx=${_last[0].toFixed(2)}
-              cy=${_last[1].toFixed(2)}
-              r="2.5"
-              fill=${stroke}
-              vector-effect="non-scaling-stroke" />
+      <path d=${_dot}
+            fill="none"
+            stroke=${stroke}
+            stroke-width="5"
+            stroke-linecap="round"
+            vector-effect="non-scaling-stroke" />
     </svg>
   </:define>
 
