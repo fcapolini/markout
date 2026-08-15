@@ -1,4 +1,4 @@
-import { assert, it } from 'vitest';
+import { assert, it, vi } from 'vitest';
 import { CoreContext } from '../../../src/runtime/core/core-context';
 import { RT_FOR_EACH_VALUE, RT_FOR_AS_VALUE } from '../../../src/runtime/core/core-scope';
 
@@ -349,4 +349,35 @@ it(`clones ignore their own for$each -- only the host reconciles`, () => {
   const clone = context.root.clones![0];
   assert.equal(clone.cloned, true);
   assert.isUndefined(clone.clones);
+});
+
+it(`binds a global that insists on the global object as its receiver`, () => {
+  // what a browser does: the timers are methods of the global object and
+  // throw "Illegal invocation" for any other `this` -- and an expression
+  // reaches one as `this.setTimeout(...)`, where `this` is the scope proxy
+  const native = function (this: unknown) {
+    if (this !== globalThis) {
+      throw new TypeError('Illegal invocation');
+    }
+    return 42;
+  };
+  vi.stubGlobal('setTimeout', native);
+  try {
+    const context = new CoreContext({ root: { id: '0' } }).refresh();
+    assert.equal(context.root.proxy.setTimeout(), 42);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+it(`leaves a constructor's own statics reachable`, () => {
+  // the other half of the same decision: binding these would drop `.from`,
+  // and `Array.from({ length: n }, ...)` is how a page builds a range
+  const context = new CoreContext({ root: { id: '0' } }).refresh();
+  assert.equal(context.root.proxy.Array, Array);
+  assert.deepEqual(
+    context.root.proxy.Array.from({ length: 3 }, (_: unknown, i: number) => i + 1),
+    [1, 2, 3]
+  );
+  assert.equal(context.root.proxy.Math, Math);
 });

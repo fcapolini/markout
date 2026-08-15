@@ -70,6 +70,40 @@ export const GLOBAL_NAMES = [
   'undefined',
 ];
 
+/**
+ * The globals that are METHODS of the global object rather than
+ * constructors or namespaces.
+ *
+ * An expression reaches one as `this.setTimeout(...)`, where `this` is the
+ * scope's proxy -- and a browser's timers insist on the global object as
+ * their receiver, so an unbound one throws "Illegal invocation" the first
+ * time a `:did-init` calls it. They are bound here rather than left to the
+ * caller: reaching for `globalThis.setTimeout` to work around it would say
+ * "this line needs a browser" about a name that is on the list precisely
+ * because it doesn't.
+ *
+ * Only these. Binding a constructor (`Array`, `Promise`) would drop the
+ * statics hanging off it, so `Array.from(...)` -- which the kit's own
+ * pagination uses -- would stop resolving. `new` on a bound function still
+ * works, but `.from` on one does not.
+ */
+const BOUND_GLOBAL_NAMES = new Set([
+  'clearInterval',
+  'clearTimeout',
+  'decodeURI',
+  'decodeURIComponent',
+  'encodeURI',
+  'encodeURIComponent',
+  'isFinite',
+  'isNaN',
+  'parseFloat',
+  'parseInt',
+  'queueMicrotask',
+  'setInterval',
+  'setTimeout',
+  'structuredClone',
+]);
+
 //FIXME: server-side timer stuff should be no-ops
 export class CoreGlobal extends CoreScope {
   constructor(
@@ -78,9 +112,15 @@ export class CoreGlobal extends CoreScope {
   ) {
     const values: { [key: string | symbol]: CoreValueProps<any> } = {};
     for (const name of GLOBAL_NAMES) {
+      const val = (globalThis as Record<string, unknown>)[name];
       // `val`, not `exp`: these never change, so they link as an inert source
       // and cost one lookup rather than a re-evaluation per cycle
-      values[name] = { val: (globalThis as Record<string, unknown>)[name] };
+      values[name] = {
+        val:
+          BOUND_GLOBAL_NAMES.has(name) && typeof val === 'function'
+            ? (val as (...args: unknown[]) => unknown).bind(globalThis)
+            : val,
+      };
     }
     super(
       {
