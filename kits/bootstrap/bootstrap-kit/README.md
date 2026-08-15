@@ -165,8 +165,8 @@ commented.
 
 | Tag | Parameters |
 | --- | --- |
-| `bs-accordion` | `name` `flush` |
-| `bs-accordion-item` | `title` `parent` `open` |
+| `bs-accordion` | `exclusive` `flush` |
+| `bs-accordion-item` | `title` `open` |
 | `bs-alert` | `variant` `heading` `dismissible` |
 | `bs-badge` | `variant` `pill` `position` |
 | `bs-breadcrumb` | `items` `divider` |
@@ -203,10 +203,11 @@ commented.
 A few components are shaped by something in the language rather than by
 Bootstrap, and each says so in its own file:
 
-- **`bs-accordion-item` takes `:parent`.** Slotted markup resolves at the
-  call site, so an item cannot read the id of the accordion it sits in. The
-  accordion takes a `:name` and items point at it — the same wiring plain
-  Bootstrap asks for.
+- **`bs-accordion-item` reads `$host`.** An item needs the id of the
+  accordion it sits in, and slotted markup resolves at the call site, so it
+  cannot reach it by name. `$host` is the instance it was slotted *into* —
+  the one place the kit needs the structural relationship rather than the
+  lexical one. No id is written by anyone.
 - **`bs-pagination` says `:current`, not `:page`.** `page` is already the
   name of `<html>`'s own scope, so a parameter of that name would resolve to
   the scope rather than to the number.

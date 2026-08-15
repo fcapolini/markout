@@ -423,6 +423,19 @@ const CASES: Record<string, Case> = {
       expect(p.body()).toContain('outer');
     },
   },
+  $host: {
+    works: async () => {
+      // the instance the markup ended up INSIDE, as opposed to $parent's
+      // "where it was written" -- and nothing at all outside one
+      const p = await run(
+        '<html><head><:define tag="d-box:div" :who="box"><:slot /></:define>' +
+          '<:define tag="d-probe:i">${$host ? $host.who : "none"}</:define></head>' +
+          '<body><d-box><d-probe /></d-box><d-probe /></body></html>'
+      );
+      expect(p.body()).toContain('box');
+      expect(p.body()).toContain('none');
+    },
+  },
   '$value("key")': {
     works: async () => {
       const p = await run('<html :v=${"A"}><body><i>${$value("v").get()}</i></body></html>');

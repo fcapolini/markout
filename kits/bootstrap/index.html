@@ -268,17 +268,18 @@
         <section class="kit-section mb-5" id="accordion">
           <h3 class="h5 mb-3">Accordion</h3>
           <div class="kit-example">
-            <bs-accordion :name="faq">
-              <bs-accordion-item :parent="faq" :title="What is in the kit?" :open>
+            <bs-accordion>
+              <bs-accordion-item :title="What is in the kit?" :open>
                 Every component on Bootstrap's own cheatsheet, as a tag.
               </bs-accordion-item>
-              <bs-accordion-item :parent="faq" :title="Why does the item need :parent?">
-                Because closing the others means naming them, and slotted
-                markup resolves at the call site — so the id is passed in
-                rather than reached for.
+              <bs-accordion-item :title="How does an item find its accordion?">
+                It asks for <code>$host</code> — the instance it was slotted
+                into, as opposed to <code>$parent</code>, which is the scope
+                it was written in. Nothing here carries an id.
               </bs-accordion-item>
-              <bs-accordion-item :parent="faq" :title="What if I leave it off?">
-                The items open and close independently.
+              <bs-accordion-item :title="And on its own?">
+                An item outside an accordion has no host, and opens and
+                closes independently.
               </bs-accordion-item>
             </bs-accordion>
           </div>

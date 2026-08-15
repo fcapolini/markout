@@ -215,9 +215,37 @@ Available on every scope; not declared, and reserved from user code.
 | Name | Meaning |
 | --- | --- |
 | `$id` | This scope's identifier, unique in the page. For building HTML ids. |
-| `$parent` | The enclosing scope. |
+| `$parent` | The enclosing scope — where this markup was WRITTEN. |
+| `$host` | The custom-tag instance this markup ended up INSIDE, or nothing outside any. |
 | `$value("key")` | Looks a value up by key. |
 | `$dom` | This scope's own element, or nothing if it has none. Browser-only. |
+
+### `$parent` and `$host`
+
+The same thing until slotting separates them, and then they answer the two
+questions markup slotted into a component actually has: what did I come
+from, and what am I part of.
+
+```html
+<:define tag="my-item:li"
+         // the list I was slotted into, whichever one that is
+         :_group=${$host ? $host.$id : null}>
+```
+
+`$parent` is lexical, so for slotted markup it is the call site — which is
+what keeps a definition from reading whatever its caller happened to
+declare. `$host` is structural: the nearest enclosing instance, whether or
+not the markup was written there. It is what a component reads to coordinate
+with the one containing it, and reading it takes writing it, so the
+isolation still holds by default.
+
+A component outside any instance has no `$host` at all, which is what lets
+it stand on its own rather than requiring a container.
+
+Which instance `$host` lands on is a property of each *usage*, so the
+compiler doesn't resolve through it: `$host.x` records that it read `x` —
+so a change still propagates — and doesn't check that `x` is there, in the
+same way `$dom.whatever` isn't checked.
 
 ## Globals
 

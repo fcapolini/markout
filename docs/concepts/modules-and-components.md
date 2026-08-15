@@ -163,6 +163,21 @@ once per page. `<:define>`, custom-tag instantiation, and slots are implemented
 and covered by tests. If you are looking for JavaScript-module-style behavior,
 Markout does not try to model that directly.
 
+A component slotted into another can reach the one containing it with
+`$host`, which is how a pair like a list and its rows coordinate without the
+caller wiring ids by hand:
+
+```html
+<:define tag="my-list:ul" :_id=${`list-${$id}`}><:slot /></:define>
+<:define tag="my-row:li" :_owner=${$host ? $host._id : null}>…</:define>
+
+<my-list><my-row /><my-row /></my-list>
+```
+
+`$host` is the instance the markup ended up inside; `$parent` is the scope it
+was written in. Only the first can answer "what am I part of", and it takes
+naming it, so a definition still can't read its call site by accident.
+
 A name that slotted markup declares belongs to the call site, since that is
 where the tag carrying it was written — so `:aka` reaches back out:
 

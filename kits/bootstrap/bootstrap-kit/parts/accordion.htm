@@ -5,32 +5,38 @@
     An accordion, in two tags, because its panels hold arbitrary markup and
     markup belongs in a slot rather than in an array.
 
-    The only thing an item needs from its accordion is the id Bootstrap
-    closes the others by, and slotted content resolves at the CALL site, so
-    it can't read the parent instance's internals. Hence `:name` on the
-    accordion and `:parent` on the item — the same id wiring plain Bootstrap
-    asks for, and no more:
-
-      <bs-accordion :name="faq">
-        <bs-accordion-item :parent="faq" :title="First" :open>…</bs-accordion-item>
-        <bs-accordion-item :parent="faq" :title="Second">…</bs-accordion-item>
+      <bs-accordion>
+        <bs-accordion-item :title="First" :open>…</bs-accordion-item>
+        <bs-accordion-item :title="Second">…</bs-accordion-item>
       </bs-accordion>
 
-    Leave `:parent` off and the items open and close independently, which is
-    Bootstrap's "always open" accordion.
+    The item needs one thing from the accordion — the id Bootstrap closes the
+    others by — and it asks for it with `$host`, which is the enclosing
+    instance rather than the scope the markup was written in. So neither tag
+    carries an id the caller had to invent, and the whole coupling is one
+    expression in the definition instead of a back-reference at every usage.
 
-    Each item's own collapse id is derived from `$id` rather than asked for,
-    since nothing outside the item ever names it.
+    An item written outside an accordion has no `$host` and simply opens and
+    closes on its own, which is Bootstrap's "always open" behaviour reached
+    by itself rather than by remembering to leave an attribute off. Setting
+    `:exclusive=${false}` on the accordion asks for the same thing.
+
+    Every id here is derived from `$id`, so two accordions on a page cannot
+    collide and nothing has to be named.
   -->
   <:define tag="bs-accordion:div"
            class="accordion ${extra ?? ''}"
 
            // parameters
            :extra=${null}      // extra classes for this instance
-           :name=${null}
+           :exclusive=${true}  // one open panel at a time
            :flush=${false}
 
-           id=${name}
+           // private: the id the items point at. Owned here rather than
+           // rebuilt there, so the two can't drift apart
+           :_id=${`bs-accordion-${$id}`}
+
+           id=${_id}
            :class-accordion-flush=${flush}
   >
     <:slot />
@@ -42,10 +48,10 @@
            // parameters
            :extra=${null}      // extra classes for this instance
            :title=${''}
-           :parent=${null}
            :open=${false}
 
-           // private
+           // private: the accordion this item was slotted into, if any
+           :_parent=${$host && $host.exclusive ? $host._id : null}
            :_id=${`bs-accordion-item-${$id}`}
            :_headingId=${`bs-accordion-heading-${$id}`}
   >
@@ -63,7 +69,7 @@
          id=${_id}
          :class-show=${open}
          aria-labelledby=${_headingId}
-         data-bs-parent=${parent ? `#${parent}` : null}>
+         data-bs-parent=${_parent ? `#${_parent}` : null}>
       <div class="accordion-body">
         <:slot />
       </div>

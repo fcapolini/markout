@@ -7,6 +7,7 @@ export const RT_VALUE_FN_KEY = '$value';
 export const RT_PARENT_VALUE_KEY = '$parent';
 /** this scope's own compiler-assigned id, e.g. `s4` (`s4-0` for a replica) */
 export const RT_ID_VALUE_KEY = '$id';
+export const RT_HOST_VALUE_KEY = '$host';
 
 /**
  * A replica's scope id, derived from the id of the scope it replicates.
@@ -147,6 +148,20 @@ export class CoreScope {
         val: this.lexicalParent()?.proxy,
       });
     }
+    // The custom-tag instance this scope ended up INSIDE, structurally --
+    // where `$parent` is where it was WRITTEN. The two are the same thing
+    // until slotting separates them, and then they answer the two different
+    // questions markup slotted into a component actually has: what did I
+    // come from, and what am I part of.
+    //
+    // Deliberately not reachable by a bare name: a definition sees its
+    // container only where it says so, which is what keeps `$host` from
+    // reopening the isolation lookup() maintains.
+    this.values[RT_HOST_VALUE_KEY] = this.newValue(RT_HOST_VALUE_KEY, {
+      // fixed once linked, like $parent; undefined outside any instance,
+      // which is what lets a component fall back to standing on its own
+      val: this.enclosingInstance()?.proxy,
+    });
     // unconditionally, unlike the two above: lookup() walks up the scope
     // chain, so a scope missing its own $id wouldn't fail -- it would
     // silently answer with an ancestor's, which is exactly the kind of

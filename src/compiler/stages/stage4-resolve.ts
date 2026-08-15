@@ -8,6 +8,8 @@ import type { Value, ValueDepRef } from '../ir/Value';
 const RT_PARENT_VALUE_KEY = '$parent';
 const RT_VALUE_FN_KEY = '$value';
 const RT_ID_VALUE_KEY = '$id';
+// the enclosing custom-tag instance, structurally -- see CoreScope's copy
+const RT_HOST_VALUE_KEY = '$host';
 // DOM-side, but the resolver only needs to know it is always there
 const RT_DOM_VALUE_KEY = '$dom';
 
@@ -281,8 +283,16 @@ function resolveChain(segments: string[], value: Value, page: Page): ValueDepRef
       return validated(via, segments[i], target, value, page);
     }
     if (!step.scope) {
-      addError(page, `Unknown reference: "${segments.join('.')}"`, value.node.loc);
-      return undefined;
+      if (!step.dynamic) {
+        addError(page, `Unknown reference: "${segments.join('.')}"`, value.node.loc);
+        return undefined;
+      }
+      // navigable, but to somewhere only the usage decides. The hop is
+      // recorded -- `this.$host.$value(key)` resolves fine at runtime, so
+      // what it reads still propagates -- and anything past it is plain
+      // property access on whatever turns up
+      via.push(segments[i]);
+      return { via, key: segments[i + 1] };
     }
     via.push(segments[i]);
     target = step.scope;
@@ -303,6 +313,7 @@ function validated(
     key !== RT_PARENT_VALUE_KEY &&
     key !== RT_VALUE_FN_KEY &&
     key !== RT_ID_VALUE_KEY &&
+    key !== RT_HOST_VALUE_KEY &&
     key !== RT_DOM_VALUE_KEY
   ) {
     if (!resolvesToKnownValue(target, key)) {
@@ -325,9 +336,21 @@ function validated(
  * says the name means "go to a scope" (so failing to find one is an error);
  * `scope` is where it lands.
  */
-function navigate(scope: Scope, name: string): { isNavigation: boolean; scope?: Scope } {
+function navigate(
+  scope: Scope,
+  name: string
+): { isNavigation: boolean; scope?: Scope; dynamic?: boolean } {
   if (name === RT_PARENT_VALUE_KEY) {
     return { isNavigation: true, scope: scope.lexical() };
+  }
+  if (name === RT_HOST_VALUE_KEY) {
+    // Structural rather than lexical, and that is what puts it out of this
+    // stage's reach: a definition's values are declared once and evaluated
+    // on every instance, so which instance encloses THEM is a property of
+    // each usage, not of the definition. The chain is recorded so what it
+    // reads still triggers an update; what is on the other end is checked by
+    // nobody, the same trade `$dom` makes
+    return { isNavigation: true, dynamic: true };
   }
   const target = findNavigableScope(scope, name);
   return { isNavigation: !!target, scope: target };
