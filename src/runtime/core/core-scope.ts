@@ -142,7 +142,15 @@ export class CoreScope {
       val: this.uid,
     });
     this.relocateLoopAlias();
-    props.children?.forEach((p) => context.newScope(p, context, this));
+    // A `:for-each` host is a stencil, not a rendering: its element is
+    // compiled into an inert <template> and every visible item is a clone
+    // built from these same props. Building its subtree anyway gave those
+    // scopes a life of their own -- evaluating against an item that is
+    // never set, writing into markup nobody sees, and (worst) running
+    // `:handle-` callbacks for an element that is not in the page
+    if (!this.isStencil()) {
+      props.children?.forEach((p) => context.newScope(p, context, this));
+    }
   }
 
   dispose() {
@@ -150,25 +158,45 @@ export class CoreScope {
     this.unlinkValues();
     const i = this.parent.children.indexOf(this);
     i >= 0 && this.parent.children.splice(i, 1);
-    if (!this.props.name) return;
-    const value = this.parent.values[this.props.name];
+    if (!this.props.name || !this.nameHost) return;
+    const value = this.nameHost.values[this.props.name];
     if (!value) return;
     value.unlink();
-    this.parent.cache.delete(this.props.name);
-    delete this.parent.values[this.props.name];
+    this.nameHost.cache.delete(this.props.name);
+    delete this.nameHost.values[this.props.name];
   }
 
   link(parent: CoreScope) {
     this.parent = parent;
     parent.children.push(this);
     if (this.props.name) {
-      parent.values[this.props.name] = new CoreValue(
+      const host = this.nameHost = this.nameSiteScope();
+      host.values[this.props.name] = new CoreValue(
         { val: this.proxy },
-        parent,
+        host,
         this.props.name,
       );
     }
   }
+
+  /**
+   * The scope an `:aka` name belongs to: the one its tag was WRITTEN in.
+   *
+   * Normally the structural parent. For markup slotted into a custom tag it
+   * is the call site, because that is where the tag carrying the name was
+   * written -- its DOM ends up inside the instance, but nothing about the
+   * name does. Registering it on the instance instead put it somewhere no
+   * lookup from the call site ever walks, so `<bs-toast :aka="saved">`
+   * inside a container was reachable from nowhere at all.
+   *
+   * Not lexicalParent(): for an instance that is the DEFINITION site, which
+   * is where the instance's own values resolve and not where its tag was.
+   */
+  private nameSiteScope(): CoreScope {
+    return (this.props.slotted ? this.callSiteScope() : this.parent) ?? this.parent!;
+  }
+  /** where link() registered this scope's name, so dispose() can remove it */
+  private nameHost?: CoreScope;
 
   /**
    * Where name resolution continues when this scope doesn't have the value.
@@ -286,19 +314,53 @@ export class CoreScope {
   }
 
   linkValues(recur = true) {
-    Object.keys(this.values).forEach((key) => this.values[key].link());
+    this.liveKeys().forEach((key) => this.values[key].link());
     recur && this.children.forEach((scope) => scope.linkValues());
   }
 
   unlinkValues(recur = true) {
     this.cache.clear();
-    Object.keys(this.values).forEach((key) => this.values[key].unlink());
+    this.liveKeys().forEach((key) => this.values[key].unlink());
     recur && this.children.forEach((scope) => scope.unlinkValues());
   }
 
   updateValues(recur = true) {
-    Object.keys(this.values).forEach((key) => this.values[key].get());
+    this.liveKeys().forEach((key) => this.values[key].get());
     recur && this.children.forEach((scope) => scope.updateValues());
+  }
+
+  /**
+   * Whether this scope is a `:for-each` host rather than something rendered.
+   *
+   * The host's element is an inert <template> stencil; what a reader sees is
+   * always a clone, built from the host's own props. So the host has exactly
+   * one job -- say what the items are -- and its remaining values are
+   * prototypes for the clones rather than bindings of its own.
+   */
+  isStencil(): boolean {
+    return !this.cloned && !!this.props.values?.[RT_FOR_EACH_VALUE];
+  }
+
+  /**
+   * The values worth evaluating on this scope.
+   *
+   * Everything, except on a stencil: there, only what drives replication and
+   * what the runtime supplies. Evaluating the rest used to fill markup
+   * nobody sees with values read against an item that is never set --
+   * harmless-looking until a component's `:handle-` ran for a `<template>`'s
+   * element, or an expression that is perfectly safe per item (`item.badge.name`)
+   * threw because there is no item here.
+   */
+  private liveKeys(): string[] {
+    const keys = Object.keys(this.values);
+    if (!this.isStencil()) return keys;
+    const alias = this.aliasName();
+    return keys.filter(
+      (key) =>
+        key.startsWith('$') ||
+        key.startsWith('for$') ||
+        key === alias
+    );
   }
 
   init() {}

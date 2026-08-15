@@ -11,9 +11,13 @@ import { CoreValueProps } from './core-value';
  * standard library has to be here for expressions to be plain JavaScript,
  * which is the whole premise of `${...}`.
  *
+ * The timers are here for the same reason, even though they do something
+ * rather than compute something: they exist in both environments, and the
+ * places that call them -- `:on-` and `:handle-` bodies -- only run in one.
+ *
  * What is NOT here is as deliberate: `document`, `localStorage`, `fetch`,
- * `setTimeout`, and whatever libraries a page loads all exist in the browser
- * and not on the server. Naming one directly would give a page an expression
+ * and whatever libraries a page loads all exist in the browser and not on
+ * the server. Naming one directly would give a page an expression
  * that works in one half of an isomorphic render and throws in the other,
  * with nothing in the source to say so. They are reached through
  * `globalThis` instead, which is on the list -- so the environment
@@ -47,6 +51,8 @@ export const GLOBAL_NAMES = [
   'Symbol',
   'WeakMap',
   'WeakSet',
+  'clearInterval',
+  'clearTimeout',
   'console',
   'decodeURI',
   'decodeURIComponent',
@@ -57,6 +63,9 @@ export const GLOBAL_NAMES = [
   'isNaN',
   'parseFloat',
   'parseInt',
+  'queueMicrotask',
+  'setInterval',
+  'setTimeout',
   'structuredClone',
   'undefined',
 ];

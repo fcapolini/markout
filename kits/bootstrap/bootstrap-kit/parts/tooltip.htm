@@ -29,12 +29,6 @@
            :trigger=${'hover focus'}
 
            :handle-title=${(v) => {
-             // a `:for-each` host is compiled into an inert `<template>`
-             // stencil whose scopes still evaluate, so this can run for an
-             // element that is not in the page — and with the loop's per-item
-             // name still unbound. `isConnected` is the precise question:
-             // build a plugin only for an element the user can actually reach
-             if (!$dom.isConnected) { return; }
              globalThis.bootstrap.Tooltip.getInstance($dom)?.dispose();
              new globalThis.bootstrap.Tooltip($dom, {
                title: v,

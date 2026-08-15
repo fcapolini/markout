@@ -100,13 +100,6 @@
     The same shape for multi-line text. Kept separate rather than folded into
     `bs-input` as `type="textarea"`: it is a different element with its own
     `rows`, and a type that isn't one of HTML's would be a small lie.
-
-    The starting text goes in through `:prop-value` rather than as the
-    element's content, because `<textarea>` is a raw-text element: a `${...}`
-    written between its tags is served with its binding markers intact and
-    the browser reads them as literal characters. The cost is that a value
-    set before render doesn't appear in the served markup, only after
-    hydration.
   -->
   <:define tag="bs-textarea:div"
            class="mb-3 ${extra ?? ''}"
@@ -145,8 +138,7 @@
               :attr-disabled=${disabled}
               :attr-readonly=${readonly}
               :attr-required=${required}
-              :prop-value=${value}
-              :on-input=${ev => value = ev.target.value}></textarea>
+              :on-input=${ev => value = ev.target.value}>${value}</textarea>
 
     <div class="form-text"
          id=${_helpId}

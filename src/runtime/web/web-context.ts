@@ -26,7 +26,7 @@ export const DOM_USE_MARKER = '-u';
 // core-scope.ts's FOR_DATA_DEFAULT_NAME); <style>/<title> hold their whole
 // interpolated content as one node, so comment markers can't (and don't
 // need to) surround it -- see stage1-load.ts's load() and WebScope.init()
-export const DOM_ATOMIC_TEXT_TAGS = new Set(['STYLE', 'TITLE']);
+export const DOM_ATOMIC_TEXT_TAGS = new Set(['STYLE', 'TITLE', 'TEXTAREA']);
 
 /** id of the dev-mode error panel the browser runtime paints into */
 export const DOM_ERRORS_ID = 'markout-errors';

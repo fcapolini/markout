@@ -464,11 +464,81 @@ describe('stage4-resolve: JS globals', () => {
     expect(p.errors.map(e => e.msg)).toStrictEqual(['Unknown reference: "outer.Math"']);
   });
 
+  it('resolves a global inside a handler body', () => {
+    const p = compile(
+      '<html><body><button :on-click=${() => console.log(Date.now())}></button></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+  });
+
   it('keeps the compiler list and the runtime list identical', () => {
     // the two are deliberately duplicated (the compiler doesn't depend on
     // runtime code); this is what stops them drifting apart. A name in one
     // list only is the worst case of both: the compiler accepting a
     // reference the runtime cannot resolve, or refusing one it could
     expect([...GLOBAL_NAMES].sort()).toStrictEqual([...GLOBAL_NAMES_RT].sort());
+  });
+});
+
+// A callback's body is not a dependency of the value holding it -- that is
+// deliberate, and stated where it is done. What it is NOT is a place where
+// anything goes: a name that resolves to nothing is a typo, and left
+// unchecked it compiles clean and then fails inside a handler nobody has run
+// yet, which is how a whole component shipped broken.
+describe('stage4-resolve: references inside callback bodies', () => {
+  function compile(html: string) {
+    const p = new Page(parse(html, 'test.html'));
+    stage1load(p);
+    stage2validate(p);
+    stage3qualify(p);
+    stage4resolve(p);
+    return p;
+  }
+
+  function valueNamed(p: Page, name: string) {
+    for (const [, v] of p.values) if (v.name === name) return v;
+    return undefined;
+  }
+
+  it('reports an unknown reference in an :on- body', () => {
+    const p = compile(
+      '<html><body><button :on-click=${() => nope.open = true}></button></body></html>'
+    );
+    expect(p.errors.map(e => e.msg)).toStrictEqual(['Unknown reference: "nope"']);
+  });
+
+  it('reports an unknown reference in a :handle- body', () => {
+    const p = compile(
+      '<html><body :n=${1}><div :handle-n=${(v) => nope(v)}></div></body></html>'
+    );
+    expect(p.errors.map(e => e.msg)).toStrictEqual(['Unknown reference: "nope"']);
+  });
+
+  it('accepts a body that resolves, and still records no dependency for it', () => {
+    // the point of the check is the error, not the dependency: a handler
+    // must not re-run because something its body happens to touch changed
+    const p = compile(
+      '<html><body :n=${1} :other=${2}><button :on-click=${() => n = other}></button></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+    expect(valueNamed(p, 'on$click')!.deps).toStrictEqual([]);
+  });
+
+  it('leaves a :handle- depending on what it names and nothing in its body', () => {
+    const p = compile(
+      '<html><body :n=${1} :other=${2}><div :handle-n=${(v) => other}></div></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+    expect(valueNamed(p, 'handle$n')!.deps).toStrictEqual([{ key: 'n' }]);
+  });
+
+  it('does not complain about a computed access inside a body', () => {
+    // that error is about a dependency this stage cannot follow, and a body
+    // has no dependencies to follow -- so it would be a false alarm here
+    const p = compile(
+      '<html :k="count"><body><div :aka="outer" :count=${1}></div>' +
+        '<button :on-click=${() => outer[k]}></button></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
   });
 });

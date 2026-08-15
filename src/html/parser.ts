@@ -5,7 +5,11 @@ import * as dom from './server-dom';
 //TODO: add support for single-word, unquoted attribute values for HTML compatibility
 
 export const SKIP_CONTENT_TAGS = new Set(['SCRIPT', 'CODE']);
-export const ATOMIC_TEXT_TAGS = new Set(['STYLE', 'TITLE']);
+// elements whose content is text rather than markup: an interpolation
+// inside one can't be wrapped in comment markers, because the browser reads
+// those back as literal characters rather than as comments. They hold their
+// whole content as one node instead, with the marker just outside the tag
+export const ATOMIC_TEXT_TAGS = new Set(['STYLE', 'TITLE', 'TEXTAREA']);
 // raw text elements: entities are neither decoded on parse nor emitted on
 // serialization, as browsers don't decode them either (HTML spec 13.2.5.1)
 export const RAW_TEXT_TAGS = new Set(['SCRIPT', 'STYLE']);

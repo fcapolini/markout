@@ -78,10 +78,9 @@ anywhere:
 <bs-button :disabled=${!email.value}>Send</bs-button>
 ```
 
-Reaching a name *inside* another component works the same way, one hop at a
-time — `toasts.saved.open = true` for a `bs-toast :aka="saved"` inside a
-`bs-toast-container :aka="toasts"`. A name only resolves upwards, so a
-component sitting inside another has to be reached through it.
+That holds however deeply the component sits: a `bs-toast :aka="saved"`
+written inside a `bs-toast-container` is still named where you wrote it, so
+`saved.open = true` reaches it from anywhere on the page.
 
 **Optional regions are `:for-each` over one item or none.** Markout has no
 `:if` yet, so a region that should sometimes not exist is written
@@ -186,12 +185,8 @@ Bootstrap, and each says so in its own file:
 - **`bs-pagination` says `:current`, not `:page`.** `page` is already the
   name of `<html>`'s own scope, so a parameter of that name would resolve to
   the scope rather than to the number.
-- **`bs-textarea` sets its starting text with `:prop-value`.**
-  `<textarea>` is a raw-text element, so a `${...}` between its tags reaches
-  the browser with its binding markers intact. The cost is that a preset
-  value doesn't appear in the served markup, only after hydration.
-- **`bs-tooltip` and `bs-popover` check `$dom.isConnected`.** They are the
-  only two components Bootstrap doesn't start by itself, so they construct
-  their plugin from a `:handle-`. A `:for-each` host is compiled into an
-  inert `<template>` whose scopes still evaluate, so without that check a
-  plugin gets built for an element that is not in the page.
+- **`bs-tooltip` and `bs-popover` construct their plugin from a
+  `:handle-`.** They are the only two components Bootstrap doesn't start by
+  itself, and the usual answer — a page-level loop over
+  `[data-bs-toggle="tooltip"]` — misses anything added later. A handler
+  builds one per instance instead, and rebuilds it when the text changes.

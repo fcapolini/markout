@@ -163,6 +163,14 @@ once per page. `<:define>`, custom-tag instantiation, and slots are implemented
 and covered by tests. If you are looking for JavaScript-module-style behavior,
 Markout does not try to model that directly.
 
+A name that slotted markup declares belongs to the call site, since that is
+where the tag carrying it was written — so `:aka` reaches back out:
+
+```html
+<my-panel><my-input :aka="email" /></my-panel>
+<button :disabled=${!email.value}>Send</button>
+```
+
 Two limits are worth knowing:
 
 - A `<:slot>` sitting inside the definition's *own* `:for-each` can't be filled

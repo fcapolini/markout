@@ -21,12 +21,6 @@
            :html=${false}
 
            :handle-content=${(v) => {
-             // a `:for-each` host is compiled into an inert `<template>`
-             // stencil whose scopes still evaluate, so this can run for an
-             // element that is not in the page — and with the loop's per-item
-             // name still unbound. `isConnected` is the precise question:
-             // build a plugin only for an element the user can actually reach
-             if (!$dom.isConnected) { return; }
              globalThis.bootstrap.Popover.getInstance($dom)?.dispose();
              new globalThis.bootstrap.Popover($dom, {
                title: title,

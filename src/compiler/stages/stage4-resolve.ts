@@ -24,10 +24,11 @@ const CALLBACK_VALUE_PREFIXES = [EVENT_VALUE_PREFIX, DID_VALUE_PREFIX, WILL_VALU
 export const GLOBAL_NAMES = new Set([
   'Array', 'BigInt', 'Boolean', 'Date', 'Error', 'Infinity', 'Intl', 'JSON',
   'Map', 'Math', 'NaN', 'Number', 'Object', 'Promise', 'RegExp', 'Set',
-  'String', 'Symbol', 'WeakMap', 'WeakSet', 'console', 'decodeURI',
-  'decodeURIComponent', 'encodeURI', 'encodeURIComponent', 'globalThis',
-  'isFinite', 'isNaN', 'parseFloat', 'parseInt', 'structuredClone',
-  'undefined',
+  'String', 'Symbol', 'WeakMap', 'WeakSet', 'clearInterval', 'clearTimeout',
+  'console', 'decodeURI', 'decodeURIComponent', 'encodeURI',
+  'encodeURIComponent', 'globalThis', 'isFinite', 'isNaN', 'parseFloat',
+  'parseInt', 'queueMicrotask', 'setInterval', 'setTimeout',
+  'structuredClone', 'undefined',
 ]);
 
 /**
@@ -56,6 +57,7 @@ export function stage4resolve(page: Page) {
   // it with global as its parent), so walking it separately would resolve the
   // whole tree a second time -- harmless for `deps`, which get reassigned, but
   // it reported every error twice
+  indexLexicalChildren(page.global);
   for (const child of page.global.children) {
     resolveScope(child, page);
   }
@@ -95,6 +97,13 @@ function resolveValue(name: string, value: Value, page: Page) {
     // from inside another value's expression. See below for why that
     // matters -- dropping the same references from an ordinary value would
     // leave whatever calls it reading stale data, in silence.
+    //
+    // The body still has to RESOLVE, though. Dropping it from `deps` says
+    // "this doesn't wake the value up", not "anything goes in here": a name
+    // that is nowhere is a typo, and left unchecked it compiles clean and
+    // then fails inside a handler nobody has run yet. Collected purely for
+    // the errors, which is why the result is discarded.
+    validate(ast, value, page);
     value.deps = [];
     return;
   }
@@ -110,6 +119,8 @@ function resolveValue(name: string, value: Value, page: Page) {
         deps.set([...(dep.via ?? []), dep.key].join('.'), dep);
       }
     }
+    // the arrow itself is the body case above: validated, never a dependency
+    ast.callee && validate(ast.callee as Node, value, page);
     value.deps = [...deps.values()];
     return;
   }
@@ -137,11 +148,34 @@ function resolveValue(name: string, value: Value, page: Page) {
   value.deps = collectDeps(ast, value, page);
 }
 
+/**
+ * Records, for every scope, which scopes named themselves in it.
+ *
+ * A scope's name belongs where its markup was WRITTEN, and stage1-load moves
+ * slotted markup under the instance it fills -- so `children` answers with
+ * the instance for something whose `:aka` was written at the call site. The
+ * runtime registers the name at the call site too (CoreScope.link), and
+ * resolution here has to agree with it or a page compiles clean and finds
+ * nothing at runtime.
+ */
+function indexLexicalChildren(scope: Scope): void {
+  for (const child of scope.children) {
+    const host = child.lexical();
+    if (host) (host.lexicalChildren ??= []).push(child);
+    indexLexicalChildren(child);
+  }
+}
+
+/** a scope that named itself in `scope`, whichever subtree it now sits in */
+function namedScopeIn(scope: Scope, name: string): Scope | undefined {
+  return scope.lexicalChildren?.find(c => c.name === name);
+}
+
 function resolvesToKnownValue(scope: Scope, key: string): boolean {
   let s: Scope | undefined = scope;
   while (s) {
     if (s.values.has(key)) return true;
-    if (s.children.some(c => c.name === key)) return true;
+    if (namedScopeIn(s, key)) return true;
     // lexical, not structural: slotted markup and custom-tag instances sit
     // where their DOM belongs but resolve where they were written
     s = s.lexical();
@@ -153,7 +187,23 @@ function addError(page: Page, msg: string, loc: Value['node']['loc']) {
   page.errors.push({ type: 'error', msg, loc });
 }
 
-function collectDeps(ast: Node, value: Value, page: Page): ValueDepRef[] {
+/**
+ * Resolve every reference in a callback body, for the errors alone.
+ *
+ * Same walk as collectDeps, minus the computed-access complaint: that one is
+ * about a dependency this stage cannot follow, and a body has no
+ * dependencies to follow in the first place.
+ */
+function validate(ast: Node, value: Value, page: Page): void {
+  collectDeps(ast, value, page, true);
+}
+
+function collectDeps(
+  ast: Node,
+  value: Value,
+  page: Page,
+  validateOnly = false
+): ValueDepRef[] {
   const deps = new Map<string, ValueDepRef>();
   estraverse.traverse(ast, {
     enter(node) {
@@ -162,7 +212,7 @@ function collectDeps(ast: Node, value: Value, page: Page): ValueDepRef[] {
       // silently recording a dependency on the scope itself, which would
       // never change and so would never trigger an update
       const dynamic = dynamicScopeAccess(node, value.scope);
-      if (dynamic) {
+      if (dynamic && !validateOnly) {
         addError(
           page,
           `Cannot track dependencies through a computed property access on scope "${dynamic}"`,
@@ -313,7 +363,7 @@ function dynamicScopeAccess(node: Node, scope: Scope): string | undefined {
 function findNavigableScope(scope: Scope, name: string): Scope | undefined {
   let s: Scope | undefined = scope;
   while (s) {
-    const child = s.children.find(c => c.name === name);
+    const child = namedScopeIn(s, name);
     if (child) return child;
     if (s.values.has(name)) return undefined;
     s = s.lexical();
