@@ -1,7 +1,7 @@
 <lib>
   <:import src="base.htm" />
 
-  <!--
+  <!---
     Bootstrap's button, as a real `<button>`.
 
     `:toggle`/`:target`/`:dismiss` write the `data-bs-*` triplet every
@@ -51,7 +51,7 @@
     <:slot />
   </:define>
 
-  <!--
+  <!---
     The same styling on an `<a>`, for a link that is meant to look like a
     button. Left as it is, it is an ordinary link; `:button` turns it into
     one, and `:variant` then means what it means on `bs-button`.
@@ -91,7 +91,7 @@
     <:slot />
   </:define>
 
-  <!--
+  <!---
     A button group. `:label` is Bootstrap's requirement, not this kit's: the
     group needs an accessible name of its own, since the buttons inside only
     name themselves.
@@ -118,7 +118,7 @@
     <:slot />
   </:define>
 
-  <!--
+  <!---
     A toolbar of groups: Bootstrap spaces groups apart differently to the
     buttons inside one, and this is the wrapper that says so.
   -->
@@ -139,7 +139,7 @@
     <:slot />
   </:define>
 
-  <!--
+  <!---
     The dismiss "×". Nothing but `class="btn-close"`, but it carries an
     accessible name and the dismissal target, both of which are easy to leave
     off when writing it by hand.

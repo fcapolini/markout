@@ -1,7 +1,7 @@
 <lib>
   <:import src="base.htm" />
 
-  <!--
+  <!---
     A dropdown. Entries are `{ name, link, active, disabled, header, divider,
     select }`; the three shapes Bootstrap draws differently — a divider, a
     header, an item — are three optional regions over the same list.
@@ -44,7 +44,7 @@
            class=${_class}
            :class-btn-group=${split}
   >
-    <!-- a split button keeps the label clickable on its own -->
+    <!--- a split button keeps the label clickable on its own -->
     <button type="button"
             class=${_btnClass}
             :for-each=${split ? [1] : []}>${label}</button>
