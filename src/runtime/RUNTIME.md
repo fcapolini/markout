@@ -103,11 +103,23 @@ The system alternates between two modes, tracked by `CoreContext`:
   refresh.
 - **Push mode**, everywhere else: calling `set()` on a value (or an
   expression re-evaluating to a new result because one of its dependencies
-  changed) immediately walks its `dst` set and re-evaluates every dependent
-  value (`propagate()`), advancing `ctx.cycle` so each value only recomputes
-  once per propagation. `pushLevel` tracks reentrancy so a chain of
-  cascading updates only bumps `cycle` once and flushes pending callbacks
-  once, at the outermost call.
+  changed) hands its `dst` set to the context's queue and, if this is the
+  outermost push, drains it (`propagate()`), advancing `ctx.cycle` so each
+  value only recomputes once per propagation. `pushLevel` tracks reentrancy
+  so a chain of cascading updates only bumps `cycle` once, drains once, and
+  flushes pending callbacks once, at the outermost call.
+
+  The queue is ordered by `CoreValue.depthNow()` — a value's distance from
+  the nearest value that depends on nothing — and always yields the
+  shallowest pending value. Since reading something is what makes it a
+  source, every source is strictly shallower than what reads it, so a value
+  is never evaluated while one of its inputs is still mid-change. Without
+  that ordering a diamond glitches: in `a → b → d` and `a → d`, `d` is
+  reached down the short arm while `b` is still being evaluated on the long
+  one, settles for the cycle against `b`'s previous value, and is then never
+  revisited when `b` lands. The result is not stale but *wrong*, and only for
+  the cycle in which it changed — no error, nothing to see in the graph
+  afterwards.
 
 A `CoreValue.get()` short-circuits: an expression value only re-evaluates if
 its `cycle` is behind the context's current `cycle`, and only if it's either

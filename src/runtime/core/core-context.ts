@@ -127,6 +127,49 @@ export class CoreContext {
   protected reported = new Set<string>();
 
   // ===========================================================================
+  // propagation order
+  // ===========================================================================
+
+  /**
+   * The values a push still has to re-evaluate, bucketed by their distance
+   * from the values they depend on (see CoreValue.depthNow()).
+   *
+   * Shallowest first, one at a time: whichever value comes out next has no
+   * source left in here, since a source is always strictly shallower. That
+   * is what keeps a value from being evaluated against inputs that are
+   * half-way through the same change.
+   */
+  private queue = new Map<number, Set<CoreValue>>();
+
+  enqueue(value: CoreValue): void {
+    const depth = value.depthNow();
+    let bucket = this.queue.get(depth);
+    bucket || this.queue.set(depth, (bucket = new Set()));
+    bucket.add(value);
+  }
+
+  drain(): void {
+    while (this.queue.size) {
+      // re-read the minimum each time: evaluating one value can enqueue
+      // others, and a shallower arrival has to be taken before this one's
+      // own dependents
+      const depth = Math.min(...this.queue.keys());
+      const bucket = this.queue.get(depth)!;
+      const value: CoreValue = bucket.values().next().value!;
+      bucket.delete(value);
+      bucket.size || this.queue.delete(depth);
+      try {
+        value.get();
+      } catch (err) {
+        // one value's internal breakage must not strand the rest of the
+        // queue: those are unrelated bindings that happened to change in
+        // the same push
+        this.onError('propagate', err, value);
+      }
+    }
+  }
+
+  // ===========================================================================
   // changes batching
   // ===========================================================================
   pending = new Set<CoreValue>();
