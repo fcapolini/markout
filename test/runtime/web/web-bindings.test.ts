@@ -47,12 +47,17 @@ describe('attr$', () => {
     assert.notInclude(markup(), 'lang');
   });
 
-  it('converts camelCase keys to dashed attribute names', () => {
+  it('writes the attribute name verbatim, dashes and camelCase alike', () => {
+    // the key already holds what the author wrote -- `data-foo-bar=${...}`
+    // compiles to `attr$data-foo-bar` -- so there is nothing to convert, and
+    // converting cost more than it saved: `viewBox` came out as `view-box`,
+    // which an SVG ignores, so the chart drew at 1px per unit in a corner
     const { markup } = setup(ROOT, {
       id: '0',
-      values: { attr$dataFooBar: { val: '1' } },
+      values: { 'attr$data-foo-bar': { val: '1' }, attr$viewBox: { val: '0 0 10 10' } },
     });
     assert.include(markup(), 'data-foo-bar="1"');
+    assert.include(markup(), 'viewBox="0 0 10 10"');
   });
 });
 

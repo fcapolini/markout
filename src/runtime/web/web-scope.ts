@@ -303,7 +303,13 @@ export class WebScope extends CoreScope {
     const ret = super.newValue(key, props, allValues);
     if (ret.cb) return ret;
     if (key.startsWith(RT_ATTR_VALUE_PREFIX)) {
-      const name = this.camelToDash(key.slice(RT_ATTR_VALUE_PREFIX.length));
+      // verbatim, like class$/style$/on$: the key already holds the name the
+      // author wrote, and an attribute name is element-facing rather than
+      // JS-facing. Dash-casing it turned `viewBox` into `view-box` -- and an
+      // SVG whose viewBox is spelled that way silently stops scaling, since
+      // the DOM only honours the exact name. Nothing in HTML needs the
+      // conversion: a dashed attribute is written dashed.
+      const name = key.slice(RT_ATTR_VALUE_PREFIX.length);
       ret.setCB((_, val) => {
         if (!this.dom) return this.unbound(ret, `no element to set "${name}" on`);
         if (val == null) {
@@ -408,10 +414,6 @@ export class WebScope extends CoreScope {
    */
   private unbound(value: CoreValue<any>, why: string): void {
     this.ctx.onError('callback', new Error(`unbound binding: ${why}`), value);
-  }
-
-  camelToDash(s: string): string {
-    return s.replace(/([a-z][A-Z])/g, (g) => g[0] + "-" + g[1].toLowerCase());
   }
 
   /**
