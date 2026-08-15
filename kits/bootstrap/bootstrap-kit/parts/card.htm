@@ -42,8 +42,15 @@
          src=${image}
          alt=${imageAlt}>
 
+    <!---
+      A named slot inside an optional region: the header appears only when
+      there is one, and a caller can put markup in it rather than a string.
+      Both halves had to be built for this: a `<:slot>` cannot sit inside a
+      `:for-each`, and filling one nested inside a component's own scope used
+      to leave the fallback's binding pointing at markup that was gone.
+    -->
     <div class="card-header"
-         :for-data=${header}>${header}</div>
+         :for-data=${header}><:slot name="header">${header}</:slot></div>
 
     <div class="card-body">
       <h5 class="card-title"

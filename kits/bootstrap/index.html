@@ -367,8 +367,10 @@
               <div class="col">
                 <bs-card :header="Featured" :title="Special title treatment"
                          :variant="primary">
+                  <span :slot="header">Featured <bs-badge :variant="light" :pill>new</bs-badge></span>
                   <p class="card-text mb-0">A card that colours itself, header
-                    and all, from one parameter.</p>
+                    and all, from one parameter — and the header is a slot, so
+                    it can hold markup rather than a string.</p>
                 </bs-card>
               </div>
             </bs-card-group>

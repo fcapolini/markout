@@ -502,9 +502,10 @@ function slotUsage(
   // the definition's own scopes inside a slot that got filled: their markup
   // was just replaced, so the instance must not carry values still pointing
   // at it (see rehomeSlottedText for the text half of the same problem)
-  const filled = descendantsOf(
-    [...groups.keys()].map(name => defSlots.get(name)!.el as unknown as ServerNode)
+  const slotEls = [...groups.keys()].map(
+    name => defSlots.get(name)!.el as unknown as ServerNode
   );
+  const filled = descendantsOf(slotEls);
   scope.children = scope.children.filter(child => !child.e || !filled.has(child.e));
   for (const [name, nodes] of groups) {
     const target = slots.get(name)!.el;
@@ -541,11 +542,19 @@ function slotUsage(
   }
   // whichever scope load() gave the usage element's own territory to: its
   // own, if the tag had attributes worth one, else the enclosing scope
-  rehomeSlottedText(
-    defScope,
+  const callScope = loadedUsageScope ?? scope.parent!;
+  rehomeSlottedText(defScope, scope, callScope, stencil, children as ServerNode[]);
+  // and the same for any definition scope BETWEEN the instance and a slot
+  // this usage filled: its territory changed too, and it is shared with
+  // every other usage until this gives this one a copy of its own
+  scope.children = rehomeNestedScopes(
+    page,
+    scope.children,
+    slotEls,
+    filled,
     scope,
-    loadedUsageScope ?? scope.parent!,
     stencil,
+    callScope,
     children as ServerNode[]
   );
   return stencilId;
@@ -579,11 +588,23 @@ function isBlankText(n: ServerNode): boolean {
  * were written, exactly like a usage-site attribute.
  */
 function rehomeSlottedText(
-  defScope: Scope,
+  fromScope: Scope,
   scope: Scope,
   callScope: Scope,
   stencil: ServerElement,
-  moved: ServerNode[]
+  moved: ServerNode[],
+  /**
+   * Whether this scope may take over text written at the usage site.
+   *
+   * True for an instance, whose territory is where that text lands. False
+   * for a nested definition scope: the text is still the call site's, and a
+   * scope inside the definition resolves against the definition, so taking
+   * it over would evaluate it in the wrong place -- loudly, since the names
+   * it uses are not there. It stays where it was, which leaves it bound to
+   * nothing exactly as it was before any of this ran. See the note in
+   * rehomeNestedScopes.
+   */
+  claimCallSite = true
 ): void {
   const within = descendantsOf(moved);
   const movedText = new Map<ServerText, string>();
@@ -608,16 +629,21 @@ function rehomeSlottedText(
     // the runtime binds by (see WebScope.init())
     const id = index++;
     const key = `${TEXT_VALUE_PREFIX}${id}`;
-    const fromCallSite = movedText.get(text);
+    const fromCallSite = claimCallSite ? movedText.get(text) : undefined;
     const value =
       fromCallSite !== undefined
         ? callScope.textValues.get(fromCallSite)
-        : defScope.textValues.get(
+        : fromScope.textValues.get(
             // a clone of one of the definition's own still carries the id it
-            // had there, which is the key it kept in defScope
+            // had there, which is the key it kept in the definition
             `${TEXT_VALUE_PREFIX}${marker.textContent.slice(DOM_TEXT_MARKER1.length)}`
           );
-    if (!value) continue;
+    if (!value) {
+      // renumbered even so: the ids this scope hands out have to stay unique
+      // within its own territory whether or not every marker gets a value
+      marker.textContent = `${DOM_TEXT_MARKER1}${id}`;
+      continue;
+    }
     marker.textContent = `${DOM_TEXT_MARKER1}${id}`;
     textValues.set(key, value);
     if (fromCallSite !== undefined) {
@@ -626,6 +652,87 @@ function rehomeSlottedText(
     }
   }
   scope.textValues = textValues;
+}
+
+/**
+ * Per-usage copies of the definition scopes whose markup this usage changed.
+ *
+ * An instance's children start out as the definition's own scope objects,
+ * shared with every other instance -- which is right exactly as long as the
+ * markup is shared too. Filling a slot ends that: the scope CONTAINING the
+ * slot keeps text values pointing at a fallback this stencil no longer has,
+ * and rebuilding them on the shared scope would rewrite it for every other
+ * usage as well. Left alone it is the quietest kind of failure -- the page
+ * compiles, and one binding reports "no text node carrying that marker id"
+ * at runtime while a sibling usage of the same component works fine.
+ *
+ * So each such scope is copied, and its text rehomed against this stencil,
+ * exactly as the instance's own is. The id is deliberately kept: the
+ * stencil's element still carries it, and the runtime finds a scope's
+ * element by searching its parent's subtree, so two instances holding the
+ * same id never collide.
+ *
+ * Only scopes around a filled slot are copied. Everything else goes on being
+ * shared, which is what keeps a component with many usages cheap.
+ */
+function rehomeNestedScopes(
+  page: Page,
+  children: Scope[],
+  slotEls: ServerNode[],
+  filled: Set<object>,
+  parent: Scope,
+  stencil: ServerElement,
+  callScope: Scope,
+  moved: ServerNode[]
+): Scope[] {
+  return children.map(child => {
+    if (!child.e) return child;
+    const within = descendantsOf([child.e as unknown as ServerNode]);
+    if (!slotEls.some(el => within.has(el))) return child;
+    const el = findByScopeId(stencil, child.id);
+    if (!el) return child;
+
+    const copy = new Scope(page, undefined, el, child.name);
+    copy.id = child.id;
+    copy.parent = parent;
+    copy.lexicalParent = child.lexicalParent;
+    copy.slotted = child.slotted;
+    copy.usesTemplate = child.usesTemplate;
+    copy.attributes = child.attributes;
+    copy.callSiteValues = child.callSiteValues && new Set(child.callSiteValues);
+    // shared: a Value resolves against the scope it was WRITTEN in, which is
+    // still the definition's. Only the text, which is bound by position in
+    // markup this usage has changed, has to be rebuilt
+    copy.values = child.values;
+    copy.textCount = child.textCount;
+    copy.children = rehomeNestedScopes(
+      page,
+      child.children.filter(c => !c.e || !filled.has(c.e)),
+      slotEls,
+      filled,
+      copy,
+      stencil,
+      callScope,
+      moved
+    );
+    rehomeSlottedText(child, copy, callScope, el, moved, false);
+    return copy;
+  });
+}
+
+/** an element in this stencil by the scope id it carries */
+function findByScopeId(root: ServerElement, id: string): ServerElement | undefined {
+  if (root.getAttribute(DOM_ID_ATTR) === id) return root;
+  const children =
+    root.tagName === 'TEMPLATE'
+      ? (root as ServerTemplateElement).content.childNodes
+      : root.childNodes;
+  for (const child of children) {
+    if (child.nodeType !== NodeType.ELEMENT) continue;
+    const found = findByScopeId(child as ServerElement, id);
+    if (found) return found;
+  }
+  return undefined;
 }
 
 /**
