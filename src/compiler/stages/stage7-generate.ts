@@ -164,17 +164,62 @@ function generateExpBody(value: Value): Expression {
   return expression as unknown as Expression;
 }
 
+const RT_HOST_KEY = '$host';
+
 function makeDep(dep: ValueDepRef): Expression {
   // `function () { return this.$value("key"); }` or, through one or more
   // scope navigations, `function () { return this.<via>...$value("key"); }`
-  // -- each `via` segment is a plain property (either $parent, or a named
-  // child scope's :aka name), unlike $value which is called with the key
+  // -- each `via` segment is a plain property (either $parent, $host, or a
+  // named child scope's :aka name), unlike $value which is called with the key
   let scope: Expression = { type: 'ThisExpression' } as unknown as Expression;
   for (const segment of dep.via ?? []) {
     scope = memberExpression(scope, identifier(segment));
   }
   const target = memberExpression(scope, identifier('$value'));
-  return functionExpression(callExpression(target, [literal(dep.key)]));
+  const call = callExpression(target, [literal(dep.key)]);
+  if (!dep.via?.includes(RT_HOST_KEY)) {
+    return functionExpression(call);
+  }
+  // `$host` is the one navigation that legitimately arrives nowhere: a
+  // component standing on its own has no enclosing instance. The runtime
+  // treats a dependency that resolves to nothing as a compiler bug, and it
+  // is right to -- so this one falls back to `$host` itself, which is on
+  // every scope and never changes. Inside a host it depends on what it
+  // reads; outside one it depends on a constant, which is what "there is
+  // nothing there to watch" should cost
+  return functionExpression(
+    logicalExpression(
+      '??',
+      optionalCall(scope, dep.key),
+      callExpression(
+        memberExpression({ type: 'ThisExpression' } as unknown as Expression, identifier('$value')),
+        [literal(RT_HOST_KEY)]
+      )
+    )
+  );
+}
+
+/** `<scope>?.$value("key")` */
+function optionalCall(scope: Expression, key: string): Expression {
+  return {
+    type: 'ChainExpression',
+    expression: {
+      type: 'CallExpression',
+      callee: {
+        type: 'MemberExpression',
+        object: scope,
+        property: identifier('$value'),
+        computed: false,
+        optional: true,
+      },
+      arguments: [literal(key)],
+      optional: false,
+    },
+  } as unknown as Expression;
+}
+
+function logicalExpression(operator: string, left: Expression, right: Expression): Expression {
+  return { type: 'LogicalExpression', operator, left, right } as unknown as Expression;
 }
 
 function toRuntimeKey(name: string): string {
