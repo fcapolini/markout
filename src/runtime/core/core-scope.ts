@@ -429,7 +429,14 @@ export class CoreScope {
   }
 
   private enclosingInstance(): CoreScope | undefined {
-    let scope: CoreScope | undefined = this.parent;
+    // A replica's parent is its own stencil host, which is the same ELEMENT
+    // rather than a containing one -- and it carries `template`, since a
+    // replica of a custom-tag usage has to read as an instance itself. So a
+    // walk starting there stops immediately and answers with the replica's
+    // own kind: `<my-item :for-each=${rows} />` inside `<my-list>` reported
+    // its host as another `my-item`, and every component that coordinates
+    // with its container went quietly back to standing alone.
+    let scope: CoreScope | undefined = this.cloned ? this.parent?.parent : this.parent;
     while (scope && !scope.props.template) scope = scope.parent;
     return scope;
   }
