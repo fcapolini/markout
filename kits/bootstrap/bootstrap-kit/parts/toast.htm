@@ -37,9 +37,20 @@
            data-bs-delay=${delay}
 
            :handle-open=${(v) => {
+             // only while this markup is in the page: a `:for-data` region
+             // can take it out with `open` still true, and Bootstrap asked
+             // to show a detached element walks into its own internals
+             if (!$dom.isConnected) return;
              const toast = globalThis.bootstrap.Toast.getOrCreateInstance($dom);
              v ? toast.show() : toast.hide();
            }}
+           // Bootstrap's plugins own DOM outside this element -- a backdrop,
+           // a popper, a body class -- so an element removed without a
+           // dispose() leaves it behind. `:will-detach` rather than
+           // `:will-dispose`: a `:for-data` region takes its markup out of
+           // the page without its scope going anywhere, and the leak is the
+           // same either way
+           :will-detach=${() => globalThis.bootstrap.Toast.getInstance($dom)?.dispose()}
            :on-hidden.bs.toast=${() => open = false}
   >
     <div class="toast-header" :for-data=${title}>

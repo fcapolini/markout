@@ -7,13 +7,20 @@
     have to be constructed. The usual answer is a page-level loop over
     `[data-bs-toggle="tooltip"]`, which then misses anything added later.
 
-    `:handle-title` is the per-instance answer instead. It runs once when the
-    scope comes up and again whenever the title changes, so a tooltip whose
-    text is an expression keeps up with it — and one inside a `:for-each`
-    gets built with its replica rather than being left behind.
+    Three moments instead, which between them cover everything a tooltip can
+    live through:
 
-    The old instance is disposed before the new one is made, because
-    Bootstrap's options are read at construction and never re-read.
+    - `:did-attach` builds it, every time the element enters the page — so
+      one inside a `:for-data` region that comes back has a working tooltip
+      rather than the memory of one.
+    - `:will-detach` disposes it before the element leaves. Bootstrap parks
+      the popper on `<body>`, so without this, hiding the region leaves a
+      tooltip floating over the page for good.
+    - `:handle-title` rebuilds it when the text changes, since Bootstrap
+      reads its options at construction and never again.
+
+    All three go through the same `_build`, which disposes first and is
+    therefore safe to call more than once.
 
     This wraps its content in a `<span>`, since the tooltip needs an element
     of its own to hang off; wrap the trigger, not the page around it.
@@ -28,15 +35,21 @@
            :html=${false}
            :trigger=${'hover focus'}
 
-           :handle-title=${(v) => {
-             globalThis.bootstrap.Tooltip.getInstance($dom)?.dispose();
-             new globalThis.bootstrap.Tooltip($dom, {
-               title: v,
+           // private
+           :_build=${() => {
+             const bs = globalThis.bootstrap;
+             bs.Tooltip.getInstance($dom)?.dispose();
+             new bs.Tooltip($dom, {
+               title: title,
                placement: placement,
                html: html,
                trigger: trigger,
              });
            }}
+
+           :did-attach=${() => _build()}
+           :handle-title=${() => _build()}
+           :will-detach=${() => globalThis.bootstrap.Tooltip.getInstance($dom)?.dispose()}
   >
     <:slot />
   </:define>

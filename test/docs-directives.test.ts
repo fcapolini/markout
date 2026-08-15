@@ -268,22 +268,57 @@ const CASES: Record<string, Case> = {
     },
   },
   ':did-init=${() => ...}': {
-    unimplemented: async () => {
+    works: async () => {
       const g = globalThis as any;
-      g.DOCS_DID = false;
-      await run('<html><body><i :did-init=${() => { globalThis.DOCS_DID = true; }}>x</i></body></html>');
-      expect(g.DOCS_DID).toBe(false);
+      g.DOCS_LOG = [];
+      await run(
+        '<html><body><i :did-init=${() => { globalThis.DOCS_LOG.push("init"); }}>x</i></body></html>'
+      );
+      expect(g.DOCS_LOG).toStrictEqual(['init']);
+    },
+  },
+  ':did-attach=${() => ...}': {
+    works: async () => {
+      const g = globalThis as any;
+      g.DOCS_LOG = [];
+      const p = await run(
+        '<html :on=${true}><body><div :for-data=${on}>' +
+          '<i :did-attach=${() => { globalThis.DOCS_LOG.push("attach"); }}>x</i>' +
+          '</div></body></html>'
+      );
+      expect(g.DOCS_LOG).toStrictEqual(['attach']);
+      // and again each time the markup comes back
+      p.ctx.root.proxy.on = null;
+      p.ctx.root.proxy.on = true;
+      expect(g.DOCS_LOG).toStrictEqual(['attach', 'attach']);
+    },
+  },
+  ':will-detach=${() => ...}': {
+    works: async () => {
+      const g = globalThis as any;
+      g.DOCS_LOG = [];
+      const p = await run(
+        '<html :on=${true}><body><div :for-data=${on}>' +
+          '<i :will-detach=${() => { globalThis.DOCS_LOG.push("detach"); }}>x</i>' +
+          '</div></body></html>'
+      );
+      expect(g.DOCS_LOG).toStrictEqual([]);
+      // the region's markup leaves; its scope does not
+      p.ctx.root.proxy.on = null;
+      expect(g.DOCS_LOG).toStrictEqual(['detach']);
     },
   },
   ':will-dispose=${() => ...}': {
-    unimplemented: async () => {
+    works: async () => {
       const g = globalThis as any;
-      g.DOCS_WILL = false;
+      g.DOCS_LOG = [];
       const p = await run(
-        '<html><body><i :will-dispose=${() => { globalThis.DOCS_WILL = true; }}>x</i></body></html>'
+        '<html><body><i :will-dispose=${() => { globalThis.DOCS_LOG.push("dispose"); }}>x</i></body></html>'
       );
+      expect(g.DOCS_LOG).toStrictEqual([]);
       (p.ctx.root.children[1] as any).children[0].dispose();
-      expect(g.DOCS_WILL).toBe(false);
+      // detach first: the markup goes before the scope does
+      expect(g.DOCS_LOG).toStrictEqual(['dispose']);
     },
   },
 

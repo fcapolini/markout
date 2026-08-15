@@ -46,6 +46,9 @@ export type NodeList = ArrayLike<Node> &
   };
 
 export interface Node {
+  /** whether this node is in the document; false server-side, where the
+   * lifecycle callbacks that ask do not run at all */
+  isConnected?: boolean;
   ownerDocument: Document | null;
   parentElement: Element | null;
   nodeType: unknown;

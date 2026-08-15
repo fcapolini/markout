@@ -90,6 +90,23 @@ export abstract class ServerNode implements Node {
     return i <= 0 ? null : siblings[i - 1];
   }
 
+  /**
+   * Whether this node is in the document, as the browser means it.
+   *
+   * The parent chain ends at the document for anything rendered, and at a
+   * `<template>`'s content fragment for anything held in a stencil -- which
+   * is not connected, exactly as it is not in a browser. The lifecycle
+   * callbacks that ask this are browser-only, but the runtime that drives
+   * them is the same code either way, so it has to be able to ask here too.
+   */
+  get isConnected(): boolean {
+    let n: ServerNode = this;
+    while (n.parentNode) {
+      n = n.parentNode as unknown as ServerNode;
+    }
+    return n.nodeType === NodeType.DOCUMENT;
+  }
+
   toString(): string {
     const sb = new Array<string>();
     this.toMarkup(sb);

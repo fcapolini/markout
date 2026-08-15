@@ -8,6 +8,17 @@ export const RT_PARENT_VALUE_KEY = '$parent';
 /** this scope's own compiler-assigned id, e.g. `s4` (`s4-0` for a replica) */
 export const RT_ID_VALUE_KEY = '$id';
 export const RT_HOST_VALUE_KEY = '$host';
+// The four lifecycle callbacks, in two pairs answering different questions.
+// `did$init`/`will$dispose` bracket the SCOPE: what it set up when it came
+// into being and has to let go of when it stops existing -- a timer, a
+// subscription. `did$attach`/`will$detach` bracket its MARKUP: what has to
+// exist while the element is in the page and be taken apart when it leaves,
+// which is not the same thing, since a `:for-data` region leaves and comes
+// back without its scope ever going away.
+export const RT_DID_INIT_VALUE = 'did$init';
+export const RT_DID_ATTACH_VALUE = 'did$attach';
+export const RT_WILL_DETACH_VALUE = 'will$detach';
+export const RT_WILL_DISPOSE_VALUE = 'will$dispose';
 
 /**
  * A replica's scope id, derived from the id of the scope it replicates.
@@ -173,6 +184,9 @@ export class CoreScope {
       val: this.uid,
     });
     this.relocateLoopAlias();
+    // told once the refresh it was built in has settled, so `:did-init` sees
+    // a scope whose values are evaluated and whose bindings have landed
+    this.ctx.arrived.add(this);
     // A `:for-each` host is a stencil, not a rendering: its element is
     // compiled into an inert <template> and every visible item is a clone
     // built from these same props. Building its subtree anyway gave those
@@ -186,6 +200,11 @@ export class CoreScope {
 
   dispose() {
     if (!this.parent) return;
+    // detaching before disposing, deepest first: a scope takes apart what it
+    // built for its element before it stops existing, which is the order it
+    // built them in, reversed
+    this.detachSubtree();
+    this.disposeSubtree();
     this.unlinkValues();
     const i = this.parent.children.indexOf(this);
     i >= 0 && this.parent.children.splice(i, 1);
@@ -195,6 +214,89 @@ export class CoreScope {
     value.unlink();
     this.nameHost.cache.delete(this.props.name);
     delete this.nameHost.values[this.props.name];
+  }
+
+  // ===========================================================================
+  // lifecycle
+  // ===========================================================================
+  /** whether this scope's markup is currently in the page */
+  attached = false;
+  private inited = false;
+
+  /**
+   * Runs a lifecycle callback, if this scope declares one.
+   *
+   * The value holds the arrow itself -- unlike `:handle-`, which stage1
+   * desugars into a call -- and it was compiled with `this` already bound
+   * here, so evaluating it hands back something callable that reads the
+   * right names. Server-side the value is inert and there is nothing to
+   * call, which is how these stay browser-only.
+   */
+  private fire(key: string): void {
+    const value = this.values[key];
+    if (!value) return;
+    try {
+      const fn = value.get();
+      typeof fn === 'function' && (fn as () => void)();
+    } catch (err) {
+      // one failing callback is a page bug, not a reason to abandon the
+      // rest of a teardown that still has DOM to release
+      this.ctx.onError('callback', err, value);
+    }
+  }
+
+  /**
+   * Announces this scope's arrival: once for the scope itself, then for its
+   * markup if that markup is actually in the page.
+   *
+   * Called per scope rather than by walking a subtree, because every scope
+   * queues itself as it is built -- so a ten-thousand-row list costs one
+   * check each rather than one walk each.
+   */
+  settle(): void {
+    // a stencil is a prototype rather than a rendering, so it announces
+    // nothing -- the same reason it evaluates nothing. A `:for-data` region
+    // stops being one when it shows, which is when its scopes come into
+    // being as far as anything watching is concerned
+    if (this.isStencil()) return;
+    if (!this.inited) {
+      this.inited = true;
+      this.fire(RT_DID_INIT_VALUE);
+    }
+    this.attachSelf();
+  }
+
+  /** whether this scope's element is in the document; browser-only */
+  protected domAttached(): boolean {
+    return false;
+  }
+
+  private attachSelf(): void {
+    if (this.attached || !this.domAttached()) return;
+    this.attached = true;
+    this.fire(RT_DID_ATTACH_VALUE);
+  }
+
+  /** parents first, in the order things came into being */
+  attachSubtree(): void {
+    this.settle();
+    this.children.forEach(c => c.attachSubtree());
+  }
+
+  /** children first, in the order things are taken apart */
+  detachSubtree(): void {
+    this.children.forEach(c => c.detachSubtree());
+    if (!this.attached) return;
+    this.attached = false;
+    this.fire(RT_WILL_DETACH_VALUE);
+  }
+
+  private disposeSubtree(): void {
+    this.children.forEach(c => c.disposeSubtree());
+    // paired with init: a scope that never announced it existed has nothing
+    // to announce about ceasing to
+    if (!this.inited) return;
+    this.fire(RT_WILL_DISPOSE_VALUE);
   }
 
   link(parent: CoreScope) {
@@ -504,9 +606,14 @@ export class CoreScope {
       that.showing = true;
       that.showView();
       that.ctx.refresh(that);
+      // the markup is back in the page without any scope having been built,
+      // so nothing queued itself; the region says so on their behalf
+      that.attachSubtree();
       return;
     }
     if (!that.showing) return;
+    // before the markup goes, so a callback still has an element in the page
+    that.detachSubtree();
     that.showing = false;
     // NOT unlinkValues(): `for$data` has to stay linked to whatever it reads,
     // or nothing will ever notice the value coming back and the region is

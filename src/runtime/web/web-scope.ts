@@ -28,6 +28,10 @@ export const RT_STYLE_VALUE_PREFIX = 'style$';
 export const RT_TEXT_VALUE_PREFIX = 'text$';
 export const RT_EVENT_VALUE_PREFIX = 'event$';
 export const RT_HANDLE_VALUE_PREFIX = 'handle$';
+// the lifecycle pairs, browser-only for the same reason a handler is: they
+// run for their effect on a view a served page does not have
+export const RT_DID_VALUE_PREFIX = 'did$';
+export const RT_WILL_VALUE_PREFIX = 'will$';
 /**
  * `$dom`: this scope's own element, for the imperative corner a projection
  * can't reach -- `focus()`, `showModal()`, `play()`. The only door from an
@@ -71,14 +75,19 @@ export class WebScope extends CoreScope {
       : templateId
         ? this.acquireUsageDom(templateId)
         : this.lookupView(this.parent instanceof WebScope ? this.parent.dom : undefined);
-    // set even when there is no element, and never inherited: answering with
-    // an ANCESTOR's element would be the plausible-but-wrong kind of failure
-    // that is hardest to notice (the same reason $id is unconditional).
-    // Browser-only, like `:prop-`: a served page has no element to drive,
-    // and a ServerElement would field method calls it does not have
-    if (!(this.ctx.props as WebContextProps).server) {
-      this.values[RT_DOM_VALUE_KEY] = new CoreValue({ val: view }, this, RT_DOM_VALUE_KEY);
-    }
+    // Declared even when there is no element, and never inherited: answering
+    // with an ANCESTOR's element would be the plausible-but-wrong kind of
+    // failure that is hardest to notice (the same reason $id is
+    // unconditional). Declared even when SERVING, too, holding nothing --
+    // browser-only is a property of the value, not of whether the name is
+    // there. A dependency on `$dom` is perfectly ordinary once anything
+    // reads it outside a callback, and the runtime treats one that resolves
+    // to nothing as a compiler bug, so the name has to exist either way
+    this.values[RT_DOM_VALUE_KEY] = new CoreValue(
+      { val: (this.ctx.props as WebContextProps).server ? undefined : view },
+      this,
+      RT_DOM_VALUE_KEY
+    );
     if (!view) {
       // Root scope or other scopes without corresponding DOM elements
       // should not try to perform DOM operations
@@ -284,7 +293,9 @@ export class WebScope extends CoreScope {
     // report, only nothing to do. Anything a handler would derive belongs in
     // a value instead, or server and browser render different markup
     if (
-      key.startsWith(RT_HANDLE_VALUE_PREFIX) &&
+      (key.startsWith(RT_HANDLE_VALUE_PREFIX) ||
+        key.startsWith(RT_DID_VALUE_PREFIX) ||
+        key.startsWith(RT_WILL_VALUE_PREFIX)) &&
       (this.ctx.props as WebContextProps).server
     ) {
       return new CoreValue({}, this, key);
@@ -429,6 +440,18 @@ export class WebScope extends CoreScope {
     const template = this.templateEl;
     if (!this.dom || !template) return;
     (template as unknown as TemplateElement).content.appendChild(this.dom);
+  }
+
+  /**
+   * Whether this scope's element is in the document.
+   *
+   * Asked of the DOM rather than tracked, because everything that can move
+   * an element -- a `:for-data` showing, a replica being stamped out, a
+   * usage materialising from its stencil -- already leaves the answer right
+   * there, and a bookkeeping copy could only ever disagree with it.
+   */
+  protected override domAttached(): boolean {
+    return !!this.dom?.isConnected;
   }
 
   override clone(index: number): WebScope {

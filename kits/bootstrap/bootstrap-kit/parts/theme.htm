@@ -10,15 +10,14 @@
     piece of this kit that cannot be reactive, because it has to happen
     before Markout exists.
 
-    From there `_theme` is an ordinary value and `:handle-_theme` keeps the
-    document in step with it. Two things about that handler:
+    From there `_theme` is an ordinary value: `:did-init` adopts whatever
+    that script decided, and `:handle-_theme` writes every later change back
+    out. Splitting the two is what keeps the handler honest — it used to
+    carry a flag so its first run could mean the opposite of every other one.
 
-    - it goes through `globalThis`, because `document` and `localStorage` are
-      browser globals rather than standard library, and this kit would rather
-      say so at the point of use than pretend a server has them.
-    - the first run ADOPTS what the pre-paint script chose instead of
-      overwriting it, since the value starts at a server-rendered default
-      that knows nothing about this visitor.
+    Both go through `globalThis`, because `document` and `localStorage` are
+    browser globals rather than standard library, and this kit would rather
+    say so at the point of use than pretend a server has them.
   -->
   <script>
     (() => {
@@ -40,7 +39,6 @@
 
            // private
            :_theme=${'light'}
-           :_adopted=${false}
            :_class=${[
              'btn',
              `btn-${outline ? 'outline-' : ''}${variant}`,
@@ -51,14 +49,15 @@
            class=${_class}
            aria-label="Toggle colour mode"
 
+           // the served page carried a default that knows nothing about this
+           // visitor; the pre-paint script already knows better
+           :did-init=${() => {
+             _theme = globalThis.document.documentElement
+               .getAttribute('data-bs-theme') || _theme;
+           }}
+
            :handle-_theme=${(v) => {
-             const root = globalThis.document.documentElement;
-             if (!_adopted) {
-               _adopted = true;
-               _theme = root.getAttribute('data-bs-theme') || v;
-               return;
-             }
-             root.setAttribute('data-bs-theme', v);
+             globalThis.document.documentElement.setAttribute('data-bs-theme', v);
              globalThis.localStorage.setItem('bs-theme', v);
            }}
            :on-click=${() => _theme = _theme === 'dark' ? 'light' : 'dark'}

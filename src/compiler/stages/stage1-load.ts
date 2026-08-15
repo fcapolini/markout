@@ -101,6 +101,14 @@ function unwrapSlots(e: ServerElement): void {
   }
 }
 
+// the moments the runtime knows how to announce -- see CoreScope's lifecycle
+const LIFECYCLE_SUFFIXES = new Set([
+  `${DID_VALUE_ATTR_PREFIX}init`,
+  `${DID_VALUE_ATTR_PREFIX}attach`,
+  `${WILL_VALUE_ATTR_PREFIX}detach`,
+  `${WILL_VALUE_ATTR_PREFIX}dispose`,
+]);
+
 function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope {
   const tagName = e.tagName.toUpperCase();
   if (tagName === 'HTML') name = 'page';
@@ -994,7 +1002,29 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     // a `:handle-x` suffix names the value being handled, so unlike the
     // element-facing families it has to be something an expression can say
     const referenced = prefix === '' || prefix === HANDLE_VALUE_ATTR_PREFIX;
+    const before = page.errors.length;
     const suffix = validateName(page, name.slice(prefix.length), loc, extra, referenced);
+    const named = page.errors.length === before;
+    // the lifecycle families are closed, unlike the element-facing ones:
+    // their suffixes name moments the runtime knows about rather than
+    // anything out in the DOM, so a misspelling has nothing to attach to.
+    // Left open it would compile and simply never run, which is the worst
+    // way for a callback to fail
+    if (
+      named &&
+      (prefix === DID_VALUE_ATTR_PREFIX || prefix === WILL_VALUE_ATTR_PREFIX) &&
+      !LIFECYCLE_SUFFIXES.has(`${prefix}${suffix}`)
+    ) {
+      addError(
+        page,
+        `Unknown lifecycle callback "${SPECIAL_ATTR_PREFIX}${prefix}${suffix}": ` +
+          `expected one of ${[...LIFECYCLE_SUFFIXES]
+            .map(n => `"${SPECIAL_ATTR_PREFIX}${n}"`)
+            .join(', ')}`,
+        loc
+      );
+      continue;
+    }
     name = compiledPrefix + suffix;
     prefix === HANDLE_VALUE_ATTR_PREFIX && desugarHandler(attr, suffix);
     scope.values.set(name, new Value(name, attr, scope, page.createValueId()));
