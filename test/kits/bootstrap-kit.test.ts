@@ -238,6 +238,29 @@ describe('the demo application', () => {
     expect(body).toContain('of 18');
   });
 
+  it('points every in-page link at something that exists', () => {
+    // the other half of the id wiring, and the half nothing checked: a nav
+    // resolves its own `data-bs-target`, and its LINKS are what scrollspy
+    // matches against the sections. The sidebar spent a while marking
+    // "Overview" active by hand with nothing spying at all, which looks
+    // exactly like a working nav until you scroll
+    const markup = live(result.markup);
+    const ids = new Set(attrValues(markup, 'id'));
+    const hrefs = [...markup.matchAll(/\shref="(#[^"]+)"/g)].map(m => m[1]);
+    expect(hrefs.length).toBeGreaterThan(10);
+    expect([...new Set(hrefs)].filter(h => !ids.has(h.slice(1)))).toStrictEqual([]);
+  });
+
+  it('spies the page from <body> and the runbook from its own region', () => {
+    const markup = live(result.markup);
+    // the page's own scrolling element is <body>, so that is where the
+    // attributes go; `bs-scrollspy` is for a region that scrolls inside it
+    expect(markup).toMatch(/<body[^>]*data-bs-spy="scroll"[^>]*>/);
+    expect(markup).toContain('data-bs-target="#dash-side-nav"');
+    // and the region one, which sets its own height and overflow
+    expect(markup).toMatch(/<div[^>]*data-bs-spy="scroll"[^>]*data-bs-target="#dash-runbook-nav"/);
+  });
+
   it('keeps its prose out of the served page', () => {
     // this page carries more explanation than markup, and a comment written
     // `<!--` is markup: it would all be shipped. `<!---` is removed by the

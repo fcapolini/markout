@@ -327,6 +327,16 @@
 -->
 <body class="bg-body-tertiary"
 
+      // Scrollspy marks the entry in a nav matching what is on screen. The
+      // page itself is the scrolling element here, so the attributes go on
+      // <body> as Bootstrap's own dashboard examples do -- `bs-scrollspy` is
+      // for a region that scrolls inside the page, like the Runbook panel.
+      data-bs-spy="scroll"
+      data-bs-target="#dash-side-nav"
+      data-bs-root-margin="0px 0px -60%"
+      data-bs-smooth-scroll="true"
+      tabindex="0"
+
       // ---------------------------------------------------------- data
       :services=${[
         { id: 'edge', name: 'edge-router', owner: 'Platform', state: 'ok',
@@ -542,7 +552,7 @@
              :extra="border-bottom"
              :container="container-fluid"
              :items=${[
-               { name: 'Overview', link: '#overview', active: true },
+               { name: 'Overview', link: '#overview' },
                { name: 'Services', link: '#services' },
                { name: 'Deployments', link: '#deployments' },
                { name: 'Settings', link: '#settings' },
@@ -583,8 +593,9 @@
           <bs-nav :vertical
                   :variant="pills"
                   :extra="mb-4"
+                  id="dash-side-nav"
                   :items=${[
-                    { name: 'Overview', link: '#overview', active: true },
+                    { name: 'Overview', link: '#overview' },
                     { name: 'Traffic', link: '#traffic' },
                     { name: 'Services', link: '#services' },
                     { name: 'Deployments', link: '#deployments' },
