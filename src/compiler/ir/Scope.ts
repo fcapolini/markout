@@ -33,6 +33,16 @@ export class Scope {
   slotted?: boolean;
   /** where name resolution continues; the structural parent unless slotted */
   lexicalParent?: Scope;
+  /**
+   * Scopes whose `lexical()` is this one -- i.e. whose `:aka` name was
+   * WRITTEN here, whatever subtree their DOM ended up in.
+   *
+   * The two differ only for slotted markup, which stage1-load moves under
+   * the instance it fills. Its name still belongs out here, so resolution
+   * has to be able to find it from out here; `children` alone can't say so.
+   * Built once, at the start of stage4.
+   */
+  lexicalChildren?: Scope[];
 
   /** the scope this one's expressions resolve against */
   lexical(): Scope | undefined {

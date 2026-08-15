@@ -212,6 +212,29 @@ describe('values declared inside slotted content', () => {
     assert.equal(textOf(probe), '9');
   });
 
+  it('makes an :aka on slotted markup readable from the call site', () => {
+    // the name is written where the tag is written, so it belongs out here
+    // however deeply the instance re-homes the markup's DOM. It used to be
+    // registered on the instance instead -- somewhere no lookup from the
+    // call site ever walks, leaving the name reachable from nowhere at all
+    const { page: p, ctx, errors } = run(
+      '<html><body>' +
+        '<:define tag="mk-box:div"><:slot /></:define>' +
+        '<:define tag="mk-probe:span" :count=${0}>${count}</:define>' +
+        '<main><mk-box><mk-probe :aka="inner" :count=${7} /></mk-box>' +
+        '<i>${inner.count}</i></main>' +
+        '</body></html>'
+    );
+    const echo = findInBody(p.source.doc, 'I');
+    assert.deepEqual(errors, []);
+    assert.equal(textOf(echo), '7');
+
+    // and writable: one value, wherever it is read from
+    findScope(ctx.root, 'inner').proxy.count = 9;
+    assert.equal(textOf(echo), '9');
+    assert.equal(textOf(findInBody(p.source.doc, 'SPAN')), '9');
+  });
+
   it('keeps the enclosing definition invisible to markup slotted into it', () => {
     // the isolation half of the same rule: resolution now continues through
     // the slotted <div>, and must go on skipping the instance it sits in

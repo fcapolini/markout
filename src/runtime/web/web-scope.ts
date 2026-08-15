@@ -137,6 +137,35 @@ export class WebScope extends CoreScope {
         );
       });
     };
+    // An atomic-text element with a scope of ITS OWN (`<textarea :on-input=...>`)
+    // is the one case the walk below cannot reach: its content marker sits
+    // outside the element, among its parent's children, because a comment
+    // written inside would be read back as literal text -- so the marker
+    // belongs to the parent's territory while the text value belongs to
+    // this scope. Bind it from the sibling side before walking.
+    if (DOM_ATOMIC_TEXT_TAGS.has(this.dom.tagName)) {
+      const marker = this.dom.previousSibling;
+      const target = this.dom.childNodes[0];
+      if (
+        marker?.nodeType === NodeType.COMMENT &&
+        `${(marker as Comment).textContent}`.startsWith(DOM_TEXT_MARKER1)
+      ) {
+        const id = Number.parseInt(
+          (marker as Comment).textContent.slice(DOM_TEXT_MARKER1.length)
+        );
+        // an interpolation that rendered empty serializes to nothing, so the
+        // element comes back with no text child at all -- materialize one,
+        // for the same reason the split-text case below does
+        this.texts.set(
+          id,
+          target?.nodeType === NodeType.TEXT
+            ? (target as Text)
+            : (this.dom.appendChild(
+                (this.ctx.props as WebContextProps).doc.createTextNode('')
+              ) as Text)
+        );
+      }
+    }
     f(this.dom);
   }
 

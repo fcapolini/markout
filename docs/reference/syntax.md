@@ -114,7 +114,9 @@ handler — a handler is for the part of the view that markup can't express.
 
 A handler depends on the value it names, and only that. References inside
 its body are not dependencies, so it does not re-run because something it
-happens to touch changed.
+happens to touch changed. They still have to *resolve*, though — a name that
+is nowhere is a compile error wherever it is written, handler bodies
+included, rather than a failure waiting for the first click.
 
 The four callback families take a **literal arrow function**, written at
 that spot. A classic `function` is refused because it would rebind `this`,
@@ -167,6 +169,18 @@ These belong to a tag. In text content they are ordinary text; use
 > component uses but no caller should set. Nothing in the language treats
 > `_` specially; it reads as private to a person, not to the compiler.
 
+## Text that isn't markup
+
+`<style>`, `<title>` and `<textarea>` hold text rather than markup: a browser
+reads what is between their tags as characters. So an interpolation there is
+the element's whole content as one value rather than one binding per
+`${...}`, and changing any part of it rewrites the lot. Nothing about writing
+it differs:
+
+```html
+<textarea :on-input=${(ev) => draft = ev.target.value}>${draft}</textarea>
+```
+
 ## Replication
 
 | Syntax | Meaning |
@@ -217,10 +231,15 @@ the way it looks:
 
 Available: `Array`, `BigInt`, `Boolean`, `Date`, `Error`, `Infinity`, `Intl`,
 `JSON`, `Map`, `Math`, `NaN`, `Number`, `Object`, `Promise`, `RegExp`, `Set`,
-`String`, `Symbol`, `WeakMap`, `WeakSet`, `console`, `decodeURI`,
-`decodeURIComponent`, `encodeURI`, `encodeURIComponent`, `globalThis`,
-`isFinite`, `isNaN`, `parseFloat`, `parseInt`, `structuredClone`,
-`undefined`.
+`String`, `Symbol`, `WeakMap`, `WeakSet`, `clearInterval`, `clearTimeout`,
+`console`, `decodeURI`, `decodeURIComponent`, `encodeURI`,
+`encodeURIComponent`, `globalThis`, `isFinite`, `isNaN`, `parseFloat`,
+`parseInt`, `queueMicrotask`, `setInterval`, `setTimeout`,
+`structuredClone`, `undefined`.
+
+The timers are on the list for the same reason as the rest: they exist in
+both environments, and the places that call them — `:on-` and `:handle-`
+bodies — only run in one.
 
 Because it is the last link, a declared value of the same name shadows it —
 `:Math=${...}` means yours from there down.

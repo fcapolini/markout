@@ -563,10 +563,10 @@
         <section class="kit-section mb-5" id="toasts">
           <h3 class="h5 mb-3">Toasts</h3>
           <div class="kit-example">
-            <bs-button :on-click=${() => toasts.saved.open = true}>Show a toast</bs-button>
+            <bs-button :on-click=${() => saved.open = true}>Show a toast</bs-button>
           </div>
 
-          <bs-toast-container :aka="toasts" :placement="bottom-end">
+          <bs-toast-container :placement="bottom-end">
             <bs-toast :aka="saved" :title="Saved" :time="just now">
               Your changes are safe.
             </bs-toast>
@@ -576,11 +576,11 @@
         <section class="kit-section mb-5" id="overlays">
           <h3 class="h5 mb-3">Tooltips &amp; popovers</h3>
           <div class="kit-example d-flex flex-wrap gap-2 align-items-center">
-            <span :for-each=${['top', 'right', 'bottom', 'left']}>
-              <bs-tooltip :placement=${data} :title="Tooltip on ${data}">
-                <bs-button :variant="secondary" :outline>${data}</bs-button>
-              </bs-tooltip>
-            </span>
+            <bs-tooltip :for-each=${['top', 'right', 'bottom', 'left']}
+                        :placement=${data}
+                        :title="Tooltip on ${data}">
+              <bs-button :variant="secondary" :outline>${data}</bs-button>
+            </bs-tooltip>
 
             <bs-popover :title="A popover"
                         :content="Constructed per instance, so it keeps up when its text changes.">
