@@ -235,6 +235,29 @@ describe('values declared inside slotted content', () => {
     assert.equal(textOf(findInBody(p.source.doc, 'SPAN')), '9');
   });
 
+  it('fills a slot nested inside another of the definition\'s scopes', () => {
+    // the scope CONTAINING the slot survives the fill -- the `<i>` is still
+    // there -- but its text values point at a fallback this usage no longer
+    // has. They used to be shared with every other usage of the definition,
+    // so one instance came up reporting "no text node carrying that marker
+    // id" while its sibling rendered fine
+    const { page: p, errors } = run(
+      '<html><body>' +
+        '<:define tag="mk-panel:div" :caption=${"fallback"}>' +
+        '<i :aka="head"><:slot name="cap">${caption}</:slot></i><:slot />' +
+        '</:define>' +
+        '<main><mk-panel><b :slot="cap">filled</b>one</mk-panel>' +
+        '<mk-panel>two</mk-panel></main>' +
+        '</body></html>'
+    );
+    assert.deepEqual(errors, []);
+    const markup = p.source.doc.toString();
+    const body = markup.slice(markup.indexOf('<body'), markup.indexOf('<script'));
+    // the filled one took the usage's markup; the other kept its fallback
+    assert.include(body, '<b>filled</b>');
+    assert.include(body, 'fallback');
+  });
+
   it('keeps the enclosing definition invisible to markup slotted into it', () => {
     // the isolation half of the same rule: resolution now continues through
     // the slotted <div>, and must go on skipping the instance it sits in

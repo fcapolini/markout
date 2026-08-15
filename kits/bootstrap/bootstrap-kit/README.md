@@ -108,10 +108,10 @@ Boolean flags still can't use it — `:for-data` shows for anything that isn't
 written `:for-each=${dismissible ? [1] : []}`. Those are waiting on an `:if`
 rather than working around `:for-data`.
 
-Optional parts of a component are parameters rather than named slots. A
-`<:slot>` may now sit inside a `:for-data`, but not inside a `:for-each`, and
-one that also wants an interpolated fallback hits a separate limitation of
-slots inside nested scopes.
+Optional parts of a component are parameters, and a named slot where markup
+belongs — `bs-card`'s header is both: `:header` sets the text, and a
+`:slot="header"` replaces it with markup. A `<:slot>` may sit inside a
+`:for-data` but not inside a `:for-each`, which is what makes that possible.
 
 ## Theming
 
