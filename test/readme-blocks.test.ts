@@ -108,10 +108,18 @@ describe('README code quoted from the demo', () => {
     // the whole call, not one attribute of it: pinning `:title="..."` meant
     // the check only ever noticed drift in that one spot, and went red
     // rather than informative when the demo dropped the attribute for a
-    // slot. Matched non-greedily to the first close, so it covers the
-    // self-closing form too
-    const quoted = /<bs-nav[\s\S]*?(?:\/>|<\/bs-nav>)/.exec(md);
+    // slot.
+    //
+    // The tag name is captured and its own closing tag required. Spelling
+    // that end literally is what broke this: `</bs-nav>` never matches
+    // `</bs-navbar>`, so the non-greedy scan ran past the whole section to
+    // the next `/>` anywhere in the file and compared four thousand
+    // characters of prose against the demo. A test that can only fail is
+    // worth no more than one that can only pass
+    const quoted = /<(bs-[\w-]+)[\s\S]*?(?:\/>|<\/\1>)/.exec(md);
     expect(quoted).not.toBeNull();
+    // the section quotes one tag; anything longer means the match ran on
+    expect(quoted![0].length).toBeLessThan(400);
     expect(demo).toContain(quoted![0]);
     expect(demo).toContain('<:import src="/bootstrap-kit/all.htm" />');
   });
