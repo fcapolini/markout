@@ -248,6 +248,34 @@ describe('the demo application: served from a database', () => {
     }
   });
 
+  it('takes its API base from the fragment, and lets a page move it', async () => {
+    // a fragment's root attributes land on whatever contains the include,
+    // unless that element already declares them -- so `:apiBase` in
+    // orbit/sources.htm is a default and the call site overrides it. The
+    // same mechanism as the kit's URL tokens; nothing about it is a library
+    // privilege, which is the point worth having a test for
+    const docroot = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-base-'));
+    fs.cpSync(path.join(KIT_ROOT, 'orbit'), path.join(docroot, 'orbit'), { recursive: true });
+    fs.cpSync(path.join(KIT_ROOT, 'std-kit'), path.join(docroot, 'std-kit'), {
+      recursive: true,
+      dereference: true,
+    });
+    fs.writeFileSync(
+      path.join(docroot, 'moved.html'),
+      '<html><head><:import src="/std-kit/all.htm" /></head>' +
+        '<body :apiBase="https://elsewhere.test/v2">' +
+        '<:include src="/orbit/sources.htm" />${servicesSrc.data}</body></html>'
+    );
+    const calls = (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock;
+    const before = calls.calls.length;
+    const { errors } = await compile(docroot, '/moved.html');
+    expect(errors).toStrictEqual([]);
+    const asked = calls.calls.slice(before).map(c => `${c[0]}`);
+    expect(asked).toContain('https://elsewhere.test/v2/services');
+    expect(asked.every(u => u.startsWith('https://elsewhere.test/v2/'))).toBe(true);
+    fs.rmSync(docroot, { recursive: true, force: true });
+  });
+
   it('asks its API for everything, and only while rendering', async () => {
     // one request per source and not one more -- in particular the browser
     // is left with nothing to fetch, which is the whole claim
@@ -673,6 +701,34 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     for (const trace of ['db.services', 'db.metrics', 'db.incidents', 'this.db', 'forServices']) {
       expect(markup).not.toContain(trace);
     }
+  });
+
+  it('takes its API base from the fragment, and lets a page move it', async () => {
+    // a fragment's root attributes land on whatever contains the include,
+    // unless that element already declares them -- so `:apiBase` in
+    // orbit/sources.htm is a default and the call site overrides it. The
+    // same mechanism as the kit's URL tokens; nothing about it is a library
+    // privilege, which is the point worth having a test for
+    const docroot = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-base-'));
+    fs.cpSync(path.join(KIT_ROOT, 'orbit'), path.join(docroot, 'orbit'), { recursive: true });
+    fs.cpSync(path.join(KIT_ROOT, 'std-kit'), path.join(docroot, 'std-kit'), {
+      recursive: true,
+      dereference: true,
+    });
+    fs.writeFileSync(
+      path.join(docroot, 'moved.html'),
+      '<html><head><:import src="/std-kit/all.htm" /></head>' +
+        '<body :apiBase="https://elsewhere.test/v2">' +
+        '<:include src="/orbit/sources.htm" />${servicesSrc.data}</body></html>'
+    );
+    const calls = (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock;
+    const before = calls.calls.length;
+    const { errors } = await compile(docroot, '/moved.html');
+    expect(errors).toStrictEqual([]);
+    const asked = calls.calls.slice(before).map(c => `${c[0]}`);
+    expect(asked).toContain('https://elsewhere.test/v2/services');
+    expect(asked.every(u => u.startsWith('https://elsewhere.test/v2/'))).toBe(true);
+    fs.rmSync(docroot, { recursive: true, force: true });
   });
 
   it('asks its API for everything, and only while rendering', async () => {

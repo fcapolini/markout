@@ -321,6 +321,51 @@ it differs:
 | `<:slot name="x" />` | A named slot. |
 | `:slot="x"` | On a usage site's child: which slot it fills. Unaddressed content fills the unnamed one. |
 
+### A fragment has one root
+
+An included or imported file is unwrapped: its root element disappears and
+its **children** are spliced in. So a fragment needs exactly one root element
+holding everything, conventionally `<lib>`:
+
+```html
+<lib>
+  <:define tag="app-panel:div">…</:define>
+  <:define tag="app-chart:div">…</:define>
+</lib>
+```
+
+Without it the parser supplies the missing structure the way it does for any
+loose markup — which means an implicit `<body>`, and splicing that into a
+page that already has one is an error rather than a merge.
+
+### Root attributes reach the call site
+
+The root element's own attributes are copied onto whatever contains the
+`<:import>` or `<:include>` — **unless that element already declares them.**
+So a fragment states its defaults on its root, and the page overrides them
+where it brings the fragment in:
+
+```html
+<!-- app/sources.htm -->
+<lib :apiBase="/api">
+  <app-data :aka="people" :url=${apiBase + '/people'} />
+</lib>
+```
+
+```html
+<body :apiBase="https://staging.example.test/api">
+  <:include src="/app/sources.htm" />
+```
+
+This is how the Bootstrap kit's URL and theme tokens work, and it is not
+something kits get and applications don't: it is the same mechanism wherever
+a fragment is brought in, and worth reaching for whenever a fragment has a
+setting its callers might want to move.
+
+Note which element receives them — the one the directive sits *in*. An
+`<:import>` is only allowed directly in `<head>`, so its root attributes land
+on `<head>`; an `<:include>` written in `<body>` puts them on `<body>`.
+
 ## Default scope names
 
 `<html>`, `<head>` and `<body>` always have scopes of their own, named
