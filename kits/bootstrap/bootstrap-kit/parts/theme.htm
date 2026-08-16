@@ -49,8 +49,10 @@
            class=${_class}
            aria-label="Toggle colour mode"
 
-           // the served page carried a default that knows nothing about this
-           // visitor; the pre-paint script already knows better
+           /*
+             the served page carried a default that knows nothing about this
+             visitor; the pre-paint script already knows better
+           */
            :did-init=${() => {
              _theme = globalThis.document.documentElement
                .getAttribute('data-bs-theme') || _theme;

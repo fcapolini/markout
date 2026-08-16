@@ -26,8 +26,10 @@
            // private
            :_id=${`bs-carousel-${$id}`}
            :_selector=${`#bs-carousel-${$id}`}
-           // the position is needed three times per slide and `:for-each`
-           // binds the item, not its index, so it is carried on the item
+           /*
+             the position is needed three times per slide and `:for-each`
+             binds the item, not its index, so it is carried on the item
+           */
            :_slides=${slides.map((slide, i) => ({ ...slide, index: i }))}
 
            id=${_id}

@@ -23,9 +23,11 @@
            ]}
            :divider=${null}
 
-           // Bootstrap reads the separator from a CSS custom property, and
-           // `:style-` writes ordinary CSS properties — so this one goes
-           // through the plain `style` attribute.
+           /*
+             Bootstrap reads the separator from a CSS custom property, and
+             `:style-` writes ordinary CSS properties — so this one goes
+             through the plain `style` attribute.
+           */
            style=${divider ? `--bs-breadcrumb-divider: '${divider}'` : null}
   >
     <ol class="breadcrumb mb-0">

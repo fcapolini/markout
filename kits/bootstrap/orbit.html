@@ -48,9 +48,11 @@
       :accent=${'#6f42c1'}
       :dense=${false}
 
-      // Which Bootstrap variant a status means, written once for the whole
-      // page: the components below read it, and so does every table cell,
-      // badge and bar in <body>.
+      /*
+        Which Bootstrap variant a status means, written once for the whole
+        page: the components below read it, and so does every table cell,
+        badge and bar in <body>.
+      */
       :toneOf=${(s) => ({
         ok: 'success', healthy: 'success', shipped: 'success',
         degraded: 'warning', queued: 'secondary', running: 'info',
@@ -76,6 +78,14 @@
       --dash-accent: ${accent};
       --dash-cell-y: ${dense ? '0.3rem' : '0.7rem'};
       --dash-gutter: ${dense ? '0.75rem' : '1.25rem'};
+
+      /*
+        Where the page begins under the sticky navbar: its height plus the
+        container's own top padding. One value, because the sidebar sticks
+        to it and every section scrolls to it, and the two drifting apart is
+        exactly what makes a sidebar jump on the first scroll.
+      */
+      --dash-top: 5.0625rem;
     }
 
     /*
@@ -89,14 +99,14 @@
     */
     .dash-side {
       position: sticky;
-      top: 4.5rem;
+      top: var(--dash-top);
       align-self: start;
       max-height: calc(100vh - 6rem);
       overflow-y: auto;
     }
 
     .dash-section {
-      scroll-margin-top: 4.5rem;
+      scroll-margin-top: var(--dash-top);
     }
 
     /*
@@ -220,29 +230,35 @@
 -->
 <body class="bg-body-tertiary"
 
-      // Scrollspy marks the entry in a nav matching what is on screen. The
-      // page itself is the scrolling element here, so the attributes go on
-      // <body> as Bootstrap's own dashboard examples do -- `bs-scrollspy` is
-      // for a region that scrolls inside the page, like the Runbook panel.
+      /*
+        Scrollspy marks the entry in a nav matching what is on screen. The
+        page itself is the scrolling element here, so the attributes go on
+        <body> as Bootstrap's own dashboard examples do -- `bs-scrollspy` is
+        for a region that scrolls inside the page, like the Runbook panel.
+      */
       data-bs-spy="scroll"
       data-bs-target="#dash-side-nav"
       data-bs-root-margin="0px 0px -60%"
       tabindex="0"
 
-      // ---------------------------------------------------------- data
-      //
-      // Every array below comes from Orbit's API (see server.ts), fetched by
-      // `std-data` WHILE THE PAGE RENDERS -- so the console arrives complete
-      // and the browser asks for nothing. The sources themselves are the
-      // elements at the top of the page; these are the names the rest of it
-      // reads, and nothing past this block knows where they came from.
+      /*
+        ---------------------------------------------------------- data
+
+        Every array below comes from Orbit's API (see server.ts), fetched by
+        `std-data` WHILE THE PAGE RENDERS -- so the console arrives complete
+        and the browser asks for nothing. The sources themselves are the
+        elements at the top of the page; these are the names the rest of it
+        reads, and nothing past this block knows where they came from.
+      */
       :services=${servicesSrc.data ?? []}
       :deploys=${deploysSrc.data ?? []}
       :feed=${activitySrc.data ?? []}
       :todos=${todosSrc.data ?? []}
 
-      // Forty-eight readings, oldest first — one per hour, so that the
-      // widest window still has a full window before it to be compared with
+      /*
+        Forty-eight readings, oldest first — one per hour, so that the
+        widest window still has a full window before it to be compared with
+      */
       :traffic=${trafficSrc.data ?? []}
       :faults=${faultsSrc.data ?? []}
       :latencies=${latenciesSrc.data ?? []}
@@ -262,10 +278,12 @@
       :chosen=${null}      // the deployment the detail panel is showing
       :forecast=${null}    // arrives a moment after load, see :did-init
 
-      // ------------------------------------------------------- derived
-      // A window over each series, and the window before it — which is all
-      // it takes to have a "vs. previous period" figure that is always
-      // right, because there is nowhere else for it to be written down.
+      /*
+        ------------------------------------------------------- derived
+        A window over each series, and the window before it — which is all
+        it takes to have a "vs. previous period" figure that is always
+        right, because there is nowhere else for it to be written down.
+      */
       :_now=${traffic.slice(-span)}
       :_before=${traffic.slice(-span * 2, -span)}
       :_faultsNow=${faults.slice(-span)}
@@ -287,9 +305,11 @@
       :_failedDeploys=${deploys.filter(d => d.state === 'failed').length}
       :_doneTodos=${todos.filter(t => t.done).length}
 
-      // ------------------------------------------------------ formatting
-      // Ordinary functions in ordinary values. `Intl` and `Math` are on the
-      // scope chain's last link, so an expression is plain JavaScript.
+      /*
+        ------------------------------------------------------ formatting
+        Ordinary functions in ordinary values. `Intl` and `Math` are on the
+        scope chain's last link, so an expression is plain JavaScript.
+      */
       :_num=${(n) => Intl.NumberFormat('en-US').format(Math.round(n))}
       :_compact=${(n) => Intl.NumberFormat('en-US', {
         notation: 'compact', maximumFractionDigits: 1 }).format(n)}
@@ -299,10 +319,12 @@
         : `${Math.round(m / 1440)}d ago`}
       :_secs=${(s) => s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`}
 
-      // --------------------------------------------------------- actions
-      // Sorting is two values and one function that flips them; the table
-      // header calls it and the row order follows. There is no second
-      // place where "the current order" is written down.
+      /*
+        --------------------------------------------------------- actions
+        Sorting is two values and one function that flips them; the table
+        header calls it and the row order follows. There is no second
+        place where "the current order" is written down.
+      */
       :_sortBy=${(key) => {
         if (sortKey === key) {
           sortDir = sortDir === 'asc' ? 'desc' : 'asc';
@@ -313,11 +335,13 @@
         pageNo = 1;
       }}
 
-      // ------------------------------------------------------- lifecycle
-      // `:did-init` and `:will-dispose` bracket the scope: what it set up
-      // when it came into being, and has to let go of when it stops
-      // existing. Both are browser-only, so the served page is the same
-      // whether or not the ticker ever runs.
+      /*
+        ------------------------------------------------------- lifecycle
+        `:did-init` and `:will-dispose` bracket the scope: what it set up
+        when it came into being, and has to let go of when it stops
+        existing. Both are browser-only, so the served page is the same
+        whether or not the ticker ever runs.
+      */
       :_timer=${null}
       :_load=${null}
       :did-init=${() => {
@@ -384,7 +408,7 @@
     </div>
   </bs-navbar>
 
-  <div class="container-fluid py-4">
+  <div class="container-fluid px-3 px-lg-4 py-4">
     <div class="row g-4">
 
       <!--- ============================================== sidebar (wide) -->
@@ -1383,7 +1407,7 @@
 
   <!--- ==================================================== the footer -->
   <footer class="border-top mt-4">
-    <div class="container-fluid py-4 small text-body-secondary d-flex flex-wrap justify-content-between gap-2">
+    <div class="container-fluid px-3 px-lg-4 py-4 small text-body-secondary d-flex flex-wrap justify-content-between gap-2">
       <span>
         Orbit — a demo application for the
         <a href="/index.html">Markout Bootstrap kit</a>.

@@ -33,6 +33,25 @@ This also means server rendering and browser hydration can share the same model:
 the server can emit real clones, and the browser can reuse them by id when they
 already exist.
 
+### The stencil is a real element, and CSS can see it
+
+The `<template>` stays in the DOM as the first child of whatever contained
+the host. It renders nothing — that is what `<template>` is for — but it is
+an element, so **`:first-child` does not match the first replica**:
+
+```css
+ul > li:first-child   /* never matches: the <template> is the first child */
+ul > li:first-of-type /* the first replica */
+```
+
+The same goes for `:nth-child`, `+` and `~` where the count starts at the
+top. Written against a replicated list, they are all off by the stencil.
+`:first-of-type`/`:nth-of-type` count only elements of that tag, so the
+stencil — being a `<template>` — is not among them.
+
+Worth knowing before it bites: the rule simply never matches, so nothing
+reports it and the style just doesn't appear.
+
 ## `:for-key`
 
 Without a key, a replica belongs to a *position*: replica 2 always shows item

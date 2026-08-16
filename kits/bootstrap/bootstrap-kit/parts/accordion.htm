@@ -32,8 +32,10 @@
            :exclusive=${true}  // one open panel at a time
            :flush=${false}
 
-           // private: the id the items point at. Owned here rather than
-           // rebuilt there, so the two can't drift apart
+           /*
+             private: the id the items point at. Owned here rather than
+             rebuilt there, so the two can't drift apart
+           */
            :_id=${`bs-accordion-${$id}`}
 
            id=${_id}
