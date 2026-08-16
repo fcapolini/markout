@@ -29,13 +29,13 @@
   Three files, which is the shape an application takes rather than a
   convenience:
 
-    demo.html            this page — its state, its layout, its logic
+    orbit.html            this page — its state, its layout, its logic
     orbit/components.htm the tags it defines on top of the kit's
     orbit/sources.htm    where its data comes from
     server.ts            its API, with markout as middleware
 
   Serve it with `npm run dev:bootstrap-kit`, then open
-  http://localhost:3000/demo.html
+  http://localhost:3000/orbit.html
 -->
 
 <!---
@@ -78,16 +78,46 @@
       --dash-gutter: ${dense ? '0.75rem' : '1.25rem'};
     }
 
-    /* the sidebar, pinned beside the content on wide screens */
+    /*
+      The sidebar, pinned beside the content on wide screens.
+
+      This is the column itself rather than a wrapper inside it, which is
+      what makes the scrolling panel the whole sidebar rather than its
+      contents. `align-self` is what the move costs: a grid column stretches
+      to the row's full height by default, and something already as tall as
+      its container has nowhere to stick.
+    */
     .dash-side {
       position: sticky;
       top: 4.5rem;
+      align-self: start;
       max-height: calc(100vh - 6rem);
       overflow-y: auto;
     }
 
     .dash-section {
       scroll-margin-top: 4.5rem;
+    }
+
+    /*
+      Scrollspy highlights whichever section is in the band it watches, and
+      at the very top of the page none is: the first section starts below
+      that band. So nothing is marked, and the sidebar reads as though we
+      were somewhere between entries.
+
+      Rather than widen the band -- which makes it overshoot by one entry
+      everywhere else -- say what should be lit when nothing is: the first
+      one. `:has()` asks the question directly, and it stays a fallback,
+      since the moment scrollspy marks anything this stops matching.
+
+      `:first-of-type`, not `:first-child`: a `:for-each` leaves its stencil
+      in the DOM as a template element, which is an element like any other
+      and therefore the first child. Anything written against a replicated
+      list has to count types rather than children.
+    */
+    #dash-side-nav:not(:has(.active)) > li:first-of-type > .nav-link {
+      color: var(--bs-nav-pills-link-active-color);
+      background-color: var(--bs-nav-pills-link-active-bg);
     }
 
     /* the accent, applied where Bootstrap's own variants don't reach */
@@ -293,7 +323,7 @@
       }}
 >
 
-<:include src="/orbit/sources.htm" />
+  <:include src="/orbit/sources.htm" />
 
 
   <!--- ================================================== navigation bar -->
@@ -338,46 +368,44 @@
     <div class="row g-4">
 
       <!--- ============================================== sidebar (wide) -->
-      <div class="col-lg-2 d-none d-lg-block">
-        <div class="dash-side">
-          <bs-nav :vertical
-                  :variant="pills"
-                  :extra="mb-4"
-                  id="dash-side-nav"
-                  :items=${[
-                    { name: 'Overview', link: '#overview' },
-                    { name: 'Traffic', link: '#traffic' },
-                    { name: 'Services', link: '#services' },
-                    { name: 'Deployments', link: '#deployments' },
-                    { name: 'Incidents', link: '#incidents' },
-                    { name: 'Activity', link: '#activity' },
-                    { name: 'Settings', link: '#settings' },
-                  ]} />
+      <div class="col-lg-2 d-none d-lg-block dash-side">
+        <bs-nav :vertical
+                :variant="pills"
+                :extra="mb-4"
+                id="dash-side-nav"
+                :items=${[
+                  { name: 'Overview', link: '#overview' },
+                  { name: 'Traffic', link: '#traffic' },
+                  { name: 'Services', link: '#services' },
+                  { name: 'Deployments', link: '#deployments' },
+                  { name: 'Incidents', link: '#incidents' },
+                  { name: 'Activity', link: '#activity' },
+                  { name: 'Settings', link: '#settings' },
+                ]} />
 
-          <dash-panel :heading="Plan usage">
-            <div class="small text-body-secondary d-flex justify-content-between">
-              <span>Requests</span>
-              <span>${_compact(_requests)} / 2M</span>
-            </div>
-            <bs-progress :value=${Math.min(100, (_requests / 2000000) * 100)}
-                         :height="0.5rem"
-                         :name="Request quota"
-                         :extra="mb-3" />
+        <dash-panel :heading="Plan usage">
+          <div class="small text-body-secondary d-flex justify-content-between">
+            <span>Requests</span>
+            <span>${_compact(_requests)} / 2M</span>
+          </div>
+          <bs-progress :value=${Math.min(100, (_requests / 2000000) * 100)}
+                       :height="0.5rem"
+                       :name="Request quota"
+                       :extra="mb-3" />
 
-            <div class="small text-body-secondary d-flex justify-content-between">
-              <span>Seats</span>
-              <span>18 / 25</span>
-            </div>
-            <bs-progress :value=${72}
-                         :variant="info"
-                         :height="0.5rem"
-                         :name="Seats used" />
+          <div class="small text-body-secondary d-flex justify-content-between">
+            <span>Seats</span>
+            <span>18 / 25</span>
+          </div>
+          <bs-progress :value=${72}
+                       :variant="info"
+                       :height="0.5rem"
+                       :name="Seats used" />
 
-            <bs-link :href="#settings"
-                     :variant="primary"
-                     :extra="small d-inline-block mt-3">Manage plan</bs-link>
-          </dash-panel>
-        </div>
+          <bs-link :href="#settings"
+                   :variant="primary"
+                   :extra="small d-inline-block mt-3">Manage plan</bs-link>
+        </dash-panel>
       </div>
 
       <!--- ================================================ main content -->

@@ -8,7 +8,7 @@
  *
  *     npm run dev:bootstrap-kit
  *
- * Serves `/index.html` (the component showcase) and `/demo.html` (Orbit).
+ * Serves `/index.html` (the component showcase) and `/orbit.html` (app demo).
  *
  * Exported as a factory as well as run directly, so the kit's tests drive
  * the same routes the browser gets rather than a second copy of them.
@@ -47,7 +47,7 @@ export function createOrbitApp(props: OrbitAppProps): Express {
 
   // The one endpoint whose answer depends on another's: which incidents
   // matter is decided by which services are unwell, so the page cannot ask
-  // for these until it has the first reply. In demo.html that is two
+  // for these until it has the first reply. In orbit.html that is two
   // `std-data` elements and one expression joining them.
   app.get('/api/incidents', async (req, res) => {
     const ids = `${req.query.services ?? ''}`.split(',').filter(s => s);
@@ -64,6 +64,6 @@ if (require.main === module) {
   const port = Number(process.env.PORT) || 3000;
   createOrbitApp({ docroot: __dirname, dev: true }).listen(port, () => {
     console.log(`bootstrap kit  http://127.0.0.1:${port}/index.html`);
-    console.log(`orbit          http://127.0.0.1:${port}/demo.html`);
+    console.log(`orbit          http://127.0.0.1:${port}/orbit.html`);
   });
 }
