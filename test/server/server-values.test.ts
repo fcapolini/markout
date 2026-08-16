@@ -40,10 +40,10 @@ function readState(page: Page): PageState | undefined {
   return window[STATE_GLOBAL] as PageState;
 }
 
-/** a client rehydrating the served page: same props, plus whatever state the
- *  server sent */
+/** a client rehydrating the served page: the props the BROWSER is given --
+ *  not the server's -- plus whatever state came with them */
 function rehydrate(page: Page, state?: PageState) {
-  const root = new Function(`return (${page.propsString});`)() as CoreScopeProps;
+  const root = new Function(`return (${page.clientPropsString});`)() as CoreScopeProps;
   return new CoreContext({ root, state }).refresh();
 }
 
@@ -81,13 +81,28 @@ describe(':server- end to end', () => {
     expect(rehydrate(page, state).root.proxy.r).toBe(0.25);
   });
 
-  it('re-derives when no state reaches it', async () => {
-    // the control for the test above: without the state the same props do
-    // re-run the expression, which is exactly the flip this feature prevents
+  it('is empty, not re-derived, when no state reaches it', async () => {
+    // the control for the test above. The browser is not given the
+    // expression at all, so a lost result is `undefined` -- never a second,
+    // DIFFERENT answer, which is the flip this whole feature exists to stop
     sequence(0.25, 0.75);
     const page = compile('<html :server-r=${Math.random()}><body>${r}</body></html>');
     await renderPage(page);
-    expect(rehydrate(page, undefined).root.proxy.r).toBe(0.75);
+    expect(rehydrate(page, undefined).root.proxy.r).toBeUndefined();
+  });
+
+  it('does not put the server expression in the page at all', async () => {
+    // the disclosure this closes: a server expression is written to run where
+    // the visitor cannot see, so its BODY -- a query, a table name, the shape
+    // of an internal API -- must not arrive in the source of the page
+    const page = compile(
+      '<html :server-r=${fetch("/internal/q?table=users").then(x => x)}>' +
+        '<body>${r}</body></html>'
+    );
+    await renderPage(page);
+    expect(page.propsString).toContain('/internal/q');
+    expect(page.clientPropsString).not.toContain('/internal/q');
+    expect(page.source.doc.toString()).not.toContain('/internal/q');
   });
 
   it('leaves an unmarked value re-derived', async () => {
@@ -95,6 +110,7 @@ describe(':server- end to end', () => {
     const page = compile('<html :r=${Math.random()}><body>${r}</body></html>');
     expect(await renderPage(page)).toStrictEqual([]);
     expect(page.stateScript).toBeUndefined();
+    // unmarked: its expression IS sent, so the browser derives its own
     expect(rehydrate(page, readState(page)).root.proxy.r).toBe(0.75);
   });
 
@@ -176,7 +192,7 @@ describe(':server- inside a :for-each', () => {
 });
 
 describe(':server- when a result cannot be sent', () => {
-  it('reports it, ships the rest, and lets that one re-derive', async () => {
+  it('reports it, ships the rest, and leaves that one undefined', async () => {
     // one unsendable value must not cost the page its other state, and must
     // not pass silently: a page that quietly sent less than it meant to
     // would show the failure as a binding that renders wrong, far from
@@ -193,7 +209,10 @@ describe(':server- when a result cannot be sent', () => {
 
     const values = Object.values(readState(page)!)[0];
     expect(values).toStrictEqual({ r: 0.25 });
-    expect(typeof rehydrate(page, readState(page)).root.proxy.f).toBe('function');
+    // and NOT re-derived in the browser. There is no expression there to
+    // re-derive from: a server expression reaches for what only the server
+    // has, so running it again is not a fallback, it is a different failure
+    expect(rehydrate(page, readState(page)).root.proxy.f).toBeUndefined();
   });
 });
 

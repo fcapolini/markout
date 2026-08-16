@@ -147,7 +147,7 @@ export class CoreContext {
    * A scope contributes under its `uid` (props.id plus replica path), which
    * is what makes a server-only value inside a `:for-each` land on the right
    * replica. A replica the client builds that the server never rendered
-   * simply finds no entry and falls back to its expression.
+   * simply finds no entry, and is `undefined` there.
    */
   collectState(): PageState {
     const state: PageState = {};
