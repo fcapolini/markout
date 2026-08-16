@@ -1,4 +1,5 @@
-import { DEV_GLOBAL, PROPS_GLOBAL } from '../core/core-context';
+import { DEV_GLOBAL, PROPS_GLOBAL, STATE_GLOBAL } from '../core/core-context';
+import type { PageState } from '../core/core-context';
 import type { CoreScopeProps } from '../core/core-scope';
 import type { Document as MarkoutDocument } from '../../html/dom';
 import { WebContext } from './web-context';
@@ -27,6 +28,11 @@ export function init(): WebContext | undefined {
     root,
     doc: document as unknown as MarkoutDocument,
     dev,
+    // results of the server's `:keep-` values, absent on a page that declared
+    // none. A value named here is built from its result instead of from its
+    // expression, which for a server-only expression is the only way it can
+    // exist in the browser at all
+    state: window[STATE_GLOBAL] as PageState | undefined,
   });
   context.refresh();
   return context;

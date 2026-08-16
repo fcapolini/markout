@@ -189,6 +189,16 @@ const CASES: Record<string, Case> = {
       expect(p.body()).toContain('<i>42</i>');
     },
   },
+  ':keep-name=${expr}': {
+    works: async () => {
+      // the mark doesn't change what the value IS -- it is read by name like
+      // any other, and renders the same. What it changes is that the browser
+      // is handed this result rather than running the expression again, which
+      // test/server/keep-values.test.ts is where that half is pinned down
+      const p = await run('<html :keep-n=${41 + 1}><body><i>${n}</i></body></html>');
+      expect(p.body()).toContain('<i>42</i>');
+    },
+  },
   ':aka="name"': {
     works: async () => {
       const p = await run(
