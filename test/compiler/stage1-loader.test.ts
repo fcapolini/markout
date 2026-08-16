@@ -872,6 +872,51 @@ describe('stage1-loader', () => {
       expect(outer.children.some(c => c.usesTemplate === inner.id)).toBe(true);
     });
 
+    it('refuses a definition based on another definition', () => {
+      // it reads like specialization and is not implemented. What made it
+      // worth an error of its own is what it did instead: the base tag is
+      // left as an element inside the new stencil, so it is an ordinary
+      // usage site, and expanding it replaced the element `my-card` had
+      // just been registered against. The page compiled clean, rendered
+      // clean, and showed nothing at all where the usages were
+      const page = runLoaderFromMarkup(
+        `<html><body>` +
+        `<:define tag="my-box:div" class="box"><:slot /></:define>` +
+        `<:define tag="my-card:my-box"><p>the body</p></:define>` +
+        `<my-card />` +
+        `</body></html>`
+      );
+      expect(page.errors).toHaveLength(1);
+      expect(page.errors[0].msg).toMatch(/based on <my-box>, which is itself a definition/);
+    });
+
+    it('refuses it wherever the base is written', () => {
+      // the check cannot live in expandDefine: that runs mid-load, when
+      // `customTags` holds only what has been seen so far, and a base may
+      // be written after the definition that names it -- or imported
+      const page = runLoaderFromMarkup(
+        `<html><body>` +
+        `<:define tag="my-card:my-box"><p>b</p></:define>` +
+        `<:define tag="my-box:div"><:slot /></:define>` +
+        `</body></html>`
+      );
+      expect(page.errors).toHaveLength(1);
+      expect(page.errors[0].msg).toMatch(/base tag has to be a real element/);
+    });
+
+    it('still allows a definition to USE another one', () => {
+      // the distinction the error has to keep: composing inside a body is
+      // the ordinary case and goes on working
+      const page = runLoaderFromMarkup(
+        `<html><body>` +
+        `<:define tag="my-box:div"><:slot /></:define>` +
+        `<:define tag="my-card:section"><my-box><p>b</p></my-box></:define>` +
+        `<my-card />` +
+        `</body></html>`
+      );
+      expect(page.errors).toStrictEqual([]);
+    });
+
     it('expands a usage that merely follows a <template> sibling', () => {
       const page = runLoaderFromMarkup(
         `<html><head><:define tag="theme-switcher:button">Switch</:define></head>` +

@@ -406,6 +406,34 @@ rather than `:first-child`, and `:nth-of-type` rather than `:nth-child`. See
 | `<:slot name="x" />` | A named slot. |
 | `:slot="x"` | On a usage site's child: which slot it fills. Unaddressed content fills the unnamed one. A literal, not an expression. |
 
+### A base tag is a real element
+
+The part after the colon in `tag="x-y:button"` is the element the
+definition becomes, and it has to be one HTML already has. A definition
+cannot be based on another definition:
+
+```html
+<:define tag="my-box:div" class="box"><:slot /></:define>
+
+<!-- compile error: <my-box> is itself a definition -->
+<:define tag="my-card:my-box">…</:define>
+```
+
+Composing is the ordinary case and is unaffected — a definition's body may
+use any other definition, including its own base-to-be:
+
+```html
+<:define tag="my-card:section">
+  <my-box><p>the body</p></my-box>
+</:define>
+```
+
+The difference is that the second one wraps rather than specializes, so
+`<my-card>` is a `<section>` containing a `<div class="box">` rather than
+a `<div class="box">` with different defaults. Where that extra element
+matters — a `position: sticky` child can only stick within its parent's
+box — the region has to stay where it is.
+
 ### `:aka` and `:slot` are literals
 
 Both name something while the page is being compiled — a scope's name is
