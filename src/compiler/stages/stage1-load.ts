@@ -43,6 +43,7 @@ import {
   FOR_DATA_DEFAULT_NAME,
   DEFINE_DIRECTIVE_TAG,
   LOGIC_DIRECTIVE_TAG,
+  LOGIC_BASE_TAG,
   DEFINE_TAG_ATTR,
   DEFINE_NAME_MARKER,
   SLOT_DIRECTIVE_TAG,
@@ -344,33 +345,7 @@ const LOGIC_FORBIDDEN_ATTRS: [string, string][] = [
  * to a value elsewhere has no reason to be referred to by anyone.
  */
 function loadLogic(page: Page, parent: Scope, e: ServerElement): void {
-  for (const [prefix, why] of LOGIC_FORBIDDEN_PREFIXES) {
-    const found = e.getAttributeNames().find(n => n.startsWith(`${SPECIAL_ATTR_PREFIX}${prefix}`));
-    found && addError(page, `<${LOGIC_DIRECTIVE_TAG.toLowerCase()}> has no element, so "${found}" has ${why}`, e.loc);
-  }
-  for (const [attr, why] of LOGIC_FORBIDDEN_ATTRS) {
-    hasAttr(e, attr) &&
-      addError(page, `<${LOGIC_DIRECTIVE_TAG.toLowerCase()}> has no element, so ":${attr}" has ${why}`, e.loc);
-  }
-  for (const name of e.getAttributeNames()) {
-    name.startsWith(SPECIAL_ATTR_PREFIX) ||
-      addError(
-        page,
-        `<${LOGIC_DIRECTIVE_TAG.toLowerCase()}> has no element, so the plain attribute ` +
-          `"${name}" has nowhere to go`,
-        e.loc
-      );
-  }
-  // Nothing inside it, for now. Markup would need an element to live in and
-  // there is none; a nested <:logic> would work and is deliberately left
-  // out, since a construct is easier to open up later than to close down
-  const child = e.childNodes.find(
-    n => n.nodeType === NodeType.ELEMENT || typeof (n as ServerText).textContent !== 'string' ||
-      `${(n as ServerText).textContent}`.trim() !== ''
-  );
-  child &&
-    addError(page, `<${LOGIC_DIRECTIVE_TAG.toLowerCase()}> holds values, not markup -- it cannot have content`, e.loc);
-
+  rejectElementish(page, e, `<${LOGIC_DIRECTIVE_TAG.toLowerCase()}>`);
   const scope = new Scope(page, parent, e);
   // taken down now, while the element is still in the tree: what it was
   // written inside is the one thing removing it destroys
@@ -381,6 +356,39 @@ function loadLogic(page: Page, parent: Scope, e: ServerElement): void {
   page.logicScopes.set(scope, ancestors);
   extractValues(page, scope, e);
   e.parentElement?.removeChild(e);
+}
+
+/**
+ * Refuses everything that needs an element to apply to, and any content.
+ *
+ * Shared by `<:logic>` and by a `tag="x:logic"` definition, which are the
+ * same construct at two scales -- one a scope with no element, the other a
+ * tag whose instances are. A rule that held for one and not the other would
+ * be a rule about spelling rather than about what these things are.
+ */
+function rejectElementish(page: Page, e: ServerElement, what: string): void {
+  for (const [prefix, why] of LOGIC_FORBIDDEN_PREFIXES) {
+    const found = e.getAttributeNames().find(n => n.startsWith(`${SPECIAL_ATTR_PREFIX}${prefix}`));
+    found && addError(page, `${what} has no element, so "${found}" has ${why}`, e.loc);
+  }
+  for (const [attr, why] of LOGIC_FORBIDDEN_ATTRS) {
+    hasAttr(e, attr) && addError(page, `${what} has no element, so ":${attr}" has ${why}`, e.loc);
+  }
+  for (const name of e.getAttributeNames()) {
+    name.startsWith(SPECIAL_ATTR_PREFIX) ||
+      name === DEFINE_TAG_ATTR ||
+      addError(page, `${what} has no element, so the plain attribute "${name}" has nowhere to go`, e.loc);
+  }
+  // Nothing inside it. Markup would need an element to live in and there is
+  // none; nesting would work and is deliberately left out, since a construct
+  // is easier to open up later than to close down
+  const child = e.childNodes.find(
+    n =>
+      n.nodeType === NodeType.ELEMENT ||
+      typeof (n as ServerText).textContent !== 'string' ||
+      `${(n as ServerText).textContent}`.trim() !== ''
+  );
+  child && addError(page, `${what} holds values, not markup -- it cannot have content`, e.loc);
 }
 
 /**
@@ -453,6 +461,23 @@ function expandDefine(page: Page, defineEl: ServerElement): ServerElement | unde
     return undefined;
   }
 
+  // `tag="x:logic"`: the instances have no element, so there is nothing to
+  // stamp them out of. The base element is still built -- it is what carries
+  // the declarations into extractValues -- but it is never put anywhere, so
+  // the runtime's stencil lookup finds nothing and WebScope.init takes the
+  // same no-DOM path a `<:logic>` scope takes (acquireUsageDom already
+  // answers `undefined`, which is why none of this needed runtime changes)
+  const elementless = baseTag.toLowerCase() === LOGIC_BASE_TAG;
+  // against the SOURCE element, before the base tag is built: that copy
+  // carries a class attribute and the name marker this stage adds itself,
+  // and refusing the compiler's own bookkeeping would be an odd way to
+  // greet someone who wrote nothing wrong
+  elementless &&
+    rejectElementish(
+      page,
+      defineEl,
+      `<${DEFINE_DIRECTIVE_TAG.toLowerCase()} ${DEFINE_TAG_ATTR}="${customName}:${LOGIC_BASE_TAG}">`
+    );
   const doc = defineEl.ownerDocument;
   const inner = new ServerElement(doc, baseTag, defineEl.loc);
   for (const attr of [...(defineEl.attributes as ServerAttribute[])]) {
@@ -465,6 +490,14 @@ function expandDefine(page: Page, defineEl: ServerElement): ServerElement | unde
   }
   // consumed by load() once it creates inner's own scope, then stripped
   inner.setAttribute(DEFINE_NAME_MARKER, customName);
+
+  if (elementless) {
+    page.elementlessTags.add(customName);
+    defineEl.parentElement?.removeChild(defineEl);
+    // no template, so nothing for stage6 to drop and nothing in the served
+    // page; `inner` stays detached, purely as the carrier of the values
+    return inner;
+  }
 
   const template = new ServerTemplateElement(doc, defineEl.loc);
   const parent = defineEl.parentElement!;
@@ -623,6 +656,13 @@ function expandCustomTagUsages(page: Page): void {
     // <template> by this point, and a fragment's children have no
     // parentElement -- which is where this used to throw
     const parent = usageEl.parentNode!;
+    if (page.elementlessTags.has(tagName)) {
+      // a marker is a place for an element to arrive; this instance has
+      // none, so leaving one would litter the page with comments nothing
+      // ever replaces
+      parent.removeChild(usageEl);
+      continue;
+    }
     const marker = new ServerComment(
       usageEl.ownerDocument,
       `${DOM_USE_MARKER}${scope.id}`,

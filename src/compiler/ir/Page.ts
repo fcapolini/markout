@@ -106,6 +106,15 @@ export const SLOT_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'SLOT';
  * such rule, in the one place the author had no reason to accept one.
  */
 export const LOGIC_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'LOGIC';
+/**
+ * The base tag that means "no element": `<:define tag="std-data:logic">`.
+ *
+ * The same word as `<:logic>` because it is the same thing -- that one is a
+ * scope with no element, this one is a tag whose instances are. Spelled out
+ * rather than left off, so `tag="my-panel"` goes on being the error it is
+ * today instead of quietly meaning something new.
+ */
+export const LOGIC_BASE_TAG = 'logic';
 // `<:slot name="header">`; a slot with no name is the default one, taking
 // everything a usage site doesn't address to another
 export const SLOT_NAME_ATTR = 'name';
@@ -160,6 +169,9 @@ export class Page {
    * until every `<:define>` on the page has been read.
    */
   logicScopes: Map<Scope, string[]>;
+  /** custom tags declared `tag="x:logic"`: their instances have no element,
+   *  so no stencil is emitted and no usage marker is left for one */
+  elementlessTags: Set<string>;
   values: Map<string, Value>;
   /** `:slot` targets, kept aside by stage1 before it strips `:` attributes */
   slotTargets: Map<ServerElement, string>;
@@ -225,6 +237,7 @@ export class Page {
     this.slottedInto = new Map();
     this.definitionScopes = new Set();
     this.logicScopes = new Map();
+    this.elementlessTags = new Set();
     this.usedTags = new Set();
     this.defineStencils = new Map();
     this.whenUsed = new Map();
