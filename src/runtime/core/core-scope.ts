@@ -348,21 +348,57 @@ export class CoreScope {
   }
 
   /**
-   * The scope an `:aka` name belongs to: the one its tag was WRITTEN in.
+   * The scope an `:aka` name belongs to: the nearest enclosing NAMED scope
+   * in the markup this tag was written in.
    *
-   * Normally the structural parent. For markup slotted into a custom tag it
-   * is the call site, because that is where the tag carrying the name was
-   * written -- its DOM ends up inside the instance, but nothing about the
-   * name does. Registering it on the instance instead put it somewhere no
-   * lookup from the call site ever walks, so `<bs-toast :aka="saved">`
-   * inside a container was reachable from nowhere at all.
+   * A name nests the way the markup nests, everywhere -- `<div
+   * :aka="ui"><span :aka="pane">` is `ui.pane`, and bare `pane` is not a
+   * name at all. This is that one rule. It used to be the immediate parent,
+   * which meant a name landed on whatever scope came next: an anonymous
+   * `<div :n=${1}>` in between made it reachable from nowhere, and for
+   * slotted markup the name skipped out to the call site, so `<my-box
+   * :aka="toasts"><span :aka="shipped">` gave `shipped` and refused
+   * `toasts.shipped` -- the nesting the author wrote.
    *
-   * Not lexicalParent(): for an instance that is the DEFINITION site, which
-   * is where the instance's own values resolve and not where its tag was.
+   * Two things stop the walk before it finds a name.
+   *
+   * An instance is a wall from the INSIDE: its definition's `:aka`s are how
+   * that markup refers to its own controls, and walking past would publish
+   * them to whatever page used the tag. Reached from outside -- from
+   * slotted markup, which the page wrote -- it is an ordinary enclosing
+   * scope: it takes the name if it has one of its own, and is transparent
+   * if it does not. That transparency is what keeps `<bs-toast
+   * :aka="saved">` inside an unnamed container reachable as `saved`.
+   *
+   * See lexicalParent(), which answers the other question -- where a lookup
+   * CONTINUES -- and gives a different chain for the same scope.
    */
   private nameSiteScope(): CoreScope {
-    return (this.props.slotted ? this.callSiteScope() : this.parent) ?? this.parent!;
+    // whether the walk is currently in markup the PAGE wrote, as opposed to
+    // a definition's own. It cannot be re-read at each level: only the
+    // outermost slotted scope carries the flag, and a component may slot
+    // content into a position inside its own markup, so the levels in
+    // between belong to the definition while the name does not
+    let outside = !!this.props.slotted;
+    let scope: CoreScope | undefined = this.parent;
+    // never past the page: `window` is a scope carrying a name like any
+    // other, and a walk that did not stop here put page names on it -- out
+    // of reach of the dispose that is supposed to take them away again
+    while (scope && scope !== this.ctx.global) {
+      const instance = !!scope.props.template;
+      // an instance reached from INSIDE is where a name stops, named or
+      // not: a definition's `:aka`s are how its markup refers to its own
+      // controls, and publishing them would make every one of them part of
+      // the interface
+      if (instance && !outside) return scope;
+      if (scope.props.name) return scope;
+      if (instance) outside = false;
+      else if (scope.props.slotted) outside = true;
+      scope = scope.parent;
+    }
+    return this.parent!;
   }
+
   /** where link() registered this scope's name, so dispose() can remove it */
   private nameHost?: CoreScope;
 

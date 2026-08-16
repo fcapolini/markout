@@ -182,7 +182,15 @@ function resolvesFrom(value: Value): Scope {
   if (scope.values.has(FOR_EACH_VALUE) || scope.values.has(FOR_DATA_VALUE)) {
     return scope;
   }
-  return scope.parent ?? scope;
+  // And a usage written in someone's slot has its call site further out than
+  // its structural parent, which is inside the instance it was slotted into.
+  // The runtime evaluates it at the call site either way (callSiteScope), and
+  // for as long as every `:aka` landed flat on <body> both walks reached the
+  // same names, so the difference never showed. It shows the moment a name
+  // belongs to the instance: `<bs-modal :aka="newDeploy">` holding
+  // `<bs-input :aka="ndCommit">` accepted a bare `ndCommit` here, by walking
+  // structurally back through the modal, and failed to link out there
+  return (scope.slotted ? scope.lexical() : scope.parent) ?? scope;
 }
 
 /**
@@ -197,7 +205,7 @@ function resolvesFrom(value: Value): Scope {
  */
 function indexLexicalChildren(scope: Scope): void {
   for (const child of scope.children) {
-    const host = child.lexical();
+    const host = child.nameSite();
     if (host) (host.lexicalChildren ??= []).push(child);
     indexLexicalChildren(child);
   }
@@ -224,23 +232,6 @@ function resolvesToKnownValue(scope: Scope, key: string, navigated = false): boo
     if (s.values.has(key)) return true;
     if (namedScopeIn(s, key)) return true;
     s = navigated ? s.resolvesVia() : s.lexical();
-  }
-  return false;
-}
-
-/**
- * Whether `key` sits anywhere up the STRUCTURAL chain from `scope`.
- *
- * Only ever asked once resolution has already failed, and only to tell two
- * failures apart. A name that is nowhere is a typo; a name that is right
- * there in the markup but on the other side of a custom tag is the trap
- * this stage exists to name, and the two deserve different sentences.
- */
-function reachableStructurally(scope: Scope, key: string): boolean {
-  let s: Scope | undefined = scope;
-  while (s) {
-    if (s.values.has(key) || namedScopeIn(s, key)) return true;
-    s = s.lexical();
   }
   return false;
 }
@@ -424,7 +415,7 @@ function validated(
       if (!via.length && GLOBAL_NAMES.has(key)) {
         return undefined;
       }
-      addError(page, unknownRef(via, key, target), value.node.loc);
+      addError(page, unknownRef(page, via, key, target), value.node.loc);
       return undefined;
     }
   }
@@ -434,22 +425,48 @@ function validated(
 /**
  * The message for a chain that did not resolve.
  *
- * Worth the extra question because of how this one is usually met: the name
- * IS in the markup, a line or two away, inside the tag being navigated into
- * -- so "unknown" reads as the compiler being wrong rather than as an
- * explanation. It is a scoping rule, and saying which one turns the error
- * into the documentation for it.
+ * Worth the extra search because of how this one is usually met: the name IS
+ * in the markup, a line or two away, and only the path to it is wrong -- so
+ * "unknown" reads as the compiler being mistaken rather than as an
+ * explanation. A name belongs to the nearest enclosing NAMED scope
+ * (Scope.nameSite), which is exactly the thing that is hard to see when the
+ * scope in question is a tag someone else wrote.
  */
-function unknownRef(via: string[], key: string, target: Scope): string {
+function unknownRef(page: Page, via: string[], key: string, from: Scope): string {
   const path = [...via, key].join('.');
-  if (!via.length || !reachableStructurally(target, key)) {
-    return `Unknown reference: "${path}"`;
+  const where = via.length ? undefined : pathTo(page, key, from);
+  return where
+    ? `Unknown reference: "${path}" -- it belongs to <${where.split('.')[0]}>; ` +
+      `read it as "${where}"`
+    : `Unknown reference: "${path}"`;
+}
+
+/**
+ * How `key` would have to be spelled to be reachable from `from`.
+ *
+ * Walks out from the scope that carries the name, collecting the names it
+ * is nested in, and stops as soon as the head of the path is something the
+ * reader can already see. Gives up rather than guess: an anonymous scope on
+ * the way out cannot be written down, and a definition's own names are
+ * behind one, which is what keeps this from suggesting a spelling that
+ * would breach a component.
+ */
+function pathTo(page: Page, key: string, from: Scope): string | undefined {
+  let found: Scope | undefined;
+  const walk = (s: Scope) => {
+    if (!found && s.name === key) found = s;
+    s.children.forEach(walk);
+  };
+  walk(page.global);
+  const parts: string[] = [];
+  let s: Scope | undefined = found;
+  for (let i = 0; s && i < 8; i++) {
+    if (!s.name) return undefined;
+    parts.unshift(s.name);
+    if (parts.length > 1 && resolvesToKnownValue(from, s.name)) return parts.join('.');
+    s = s.nameSite();
   }
-  return (
-    `Unknown reference: "${path}" -- "${key}" is inside <${via[via.length - 1]}>, ` +
-    `but its tag was written outside it, so the name belongs to where it was ` +
-    `written rather than to the instance. Read it as "${key}"`
-  );
+  return undefined;
 }
 
 /**

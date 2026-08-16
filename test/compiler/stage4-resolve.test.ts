@@ -332,32 +332,72 @@ describe('stage4-resolve: chained scope navigation', () => {
 
   const BOX = '<:define tag="my-box:div"><:slot /></:define>';
 
-  it('refuses a chain that steps back out of a custom-tag instance', () => {
-    // an `:aka` written in a slot belongs to the scope the TAG was written
-    // in, never to the instance its DOM lands inside -- CoreScope's
-    // nameSiteScope. The compiler used to walk out of the instance to find
-    // it anyway, so this compiled clean and then failed at link time with
-    // `Cannot read properties of undefined`, two scopes from anything
-    // naming either half of it
+  it('nests a slotted name under the tag it was written in', () => {
+    // an `:aka` belongs to the nearest enclosing NAMED scope in the markup
+    // its author wrote, and a named custom tag is one of those. The name
+    // used to jump out to the call site instead, so the markup said nested
+    // and the names were flat: `toasts.shipped` -- the spelling the author
+    // had just written -- was the one that did not work
     const p = compile(
       `<html><head>${BOX}</head><body>` +
         '<my-box :aka="toasts"><span :aka="shipped" :open=${true}></span></my-box>' +
         '<i>${toasts.shipped.open}</i></body></html>'
     );
-    expect(p.errors).toHaveLength(1);
-    expect(p.errors[0].msg).toMatch(/its tag was written outside it/);
-    // and it says what to write instead, since the name IS right there
-    expect(p.errors[0].msg).toMatch(/Read it as "shipped"/);
+    expect(p.errors).toStrictEqual([]);
+    expect(textDeps(p)).toStrictEqual([{ via: ['toasts', 'shipped'], key: 'open' }]);
   });
 
-  it('resolves that same name written as itself', () => {
+  it('moves the name, rather than adding a second way to reach it', () => {
+    // what the namespace is FOR: naming the container takes its contents out
+    // of whatever the page shares. The error says where the name went, since
+    // it is right there in the markup and only the path is wrong
     const p = compile(
       `<html><head>${BOX}</head><body>` +
         '<my-box :aka="toasts"><span :aka="shipped" :open=${true}></span></my-box>' +
         '<i>${shipped.open}</i></body></html>'
     );
+    expect(p.errors).toHaveLength(1);
+    expect(p.errors[0].msg).toBe(
+      'Unknown reference: "shipped" -- it belongs to <toasts>; read it as "toasts.shipped"'
+    );
+  });
+
+  it('leaves a name flat when the tag around it has none', () => {
+    // the case the rule must not disturb: an unnamed container is not a
+    // named scope, so it is transparent, and `<bs-toast :aka="saved">`
+    // inside one goes on being `saved`
+    const p = compile(
+      `<html><head>${BOX}</head><body>` +
+        '<my-box><span :aka="shipped" :open=${true}></span></my-box>' +
+        '<i>${shipped.open}</i></body></html>'
+    );
     expect(p.errors).toStrictEqual([]);
     expect(textDeps(p)).toStrictEqual([{ via: ['shipped'], key: 'open' }]);
+  });
+
+  it('reaches a name an anonymous scope used to swallow', () => {
+    // same rule, nothing to do with slots: the name landed on whatever scope
+    // came next, so a `<div :n=${1}>` in between left it addressable from
+    // nowhere at all
+    const p = compile(
+      '<html><body><div :n=${1}><span :aka="pane" :open=${true}></span></div>' +
+        '<i>${pane.open}</i></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+    expect(textDeps(p)).toStrictEqual([{ via: ['pane'], key: 'open' }]);
+  });
+
+  it("keeps a definition's own names out of its instances", () => {
+    // the wall the walk stops at: an `:aka` inside a <:define> is how that
+    // markup refers to its own controls, and walking past would make every
+    // one of them part of the interface. Not suggested by the error either
+    const p = compile(
+      '<html><head><:define tag="my-card:div" :n=${1}>' +
+        '<span :aka="inner" :k=${9}></span></:define></head>' +
+        '<body><my-card :aka="c" /><i>${c.inner.k}</i></body></html>'
+    );
+    expect(p.errors).toHaveLength(1);
+    expect(p.errors[0].msg).toBe('Unknown reference: "c.inner"');
   });
 
   it('still reads a value the instance itself declares', () => {

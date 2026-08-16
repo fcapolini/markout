@@ -469,50 +469,50 @@
             :name="dash-new-deploy"
             :title="New deployment"
             :centered>
-    <bs-select :aka="ndService"
+    <bs-select :aka="service"
                :label="Service"
                :placeholder="Choose a service…"
                :options=${app.services.map(s => s.name)} />
 
-    <bs-select :aka="ndEnv"
+    <bs-select :aka="env"
                :label="Environment"
                :value=${'staging'}
                :options=${['staging', 'production']} />
 
-    <bs-input :aka="ndCommit"
+    <bs-input :aka="commit"
               :label="Commit"
               :placeholder="9f3c1ab"
               :help="Seven hexadecimal characters."
               :check=${(v) => /^[0-9a-f]{7}$/.test(v)}
               :message="A commit is seven hexadecimal characters." />
 
-    <bs-textarea :aka="ndNotes"
+    <bs-textarea :aka="notes"
                  :label="Release notes"
                  :rows=${2}
                  :placeholder="What is going out?" />
 
-    <bs-check :aka="ndMigrate"
+    <bs-check :aka="migrate"
               :type="switch"
               :label="Run migrations first"
               :help="Migrations run before the first node is replaced." />
 
     <div :slot="footer" class="d-flex gap-2">
       <bs-button :variant="secondary" :dismiss="modal">Cancel</bs-button>
-      <bs-button :disabled=${!ndService.value || ndCommit._invalid || !ndCommit.value}
+      <bs-button :disabled=${!newDeploy.service.value || newDeploy.commit._invalid || !newDeploy.commit.value}
                  :on-click=${() => {
                    app.deploys = [{
                      id: `d-${2482 + app.deploys.length}`,
-                     service: ndService.value,
-                     env: ndEnv.value,
-                     commit: ndCommit.value,
+                     service: newDeploy.service.value,
+                     env: newDeploy.env.value,
+                     commit: newDeploy.commit.value,
                      author: 'you',
-                     state: ndMigrate.checked ? 'queued' : 'running',
+                     state: newDeploy.migrate.checked ? 'queued' : 'running',
                      secs: 0,
                      ago: 0,
                    }, ...app.deploys];
                    app.feed = [{
                      who: 'you',
-                     what: `started a deployment of ${ndService.value} to ${ndEnv.value}`,
+                     what: `started a deployment of ${newDeploy.service.value} to ${newDeploy.env.value}`,
                      ago: 0,
                      kind: 'info',
                    }, ...app.feed];
@@ -526,15 +526,13 @@
 
   <!--- ---------------------------------------------------- the toasts -->
   <!---
-    Five of one kind of thing, so they get a name of their own. The `:aka`
-    goes on a plain wrapper rather than on `bs-toast-container`: a name
-    written inside a component's slot belongs to the scope the TAG was
-    written in, so `<div :aka="toasts">` out here is what these register
-    against. Putting it on the container instead would read as though it
-    owned them, and `toasts.saved` would be a compile error saying so.
+    Five of one kind of thing, so they get a name of their own — and the
+    name goes where it reads as though it belongs, on the container. An
+    `:aka` is a namespace for the `:aka`s written inside it, so these are
+    `toasts.saved` and `toasts.shipped` rather than five more names on a
+    page that already has plenty.
   -->
-  <div :aka="toasts">
-  <bs-toast-container :placement="bottom-end">
+  <bs-toast-container :aka="toasts" :placement="bottom-end">
     <bs-toast :aka="shipped" :title="Deployment queued" :time="just now" :variant="success">
       It is at the top of the table, and in the activity feed.
     </bs-toast>
@@ -555,7 +553,6 @@
       The file will be mailed to ${prefs.address} when it is ready.
     </bs-toast>
   </bs-toast-container>
-  </div>
 
   <!--- ==================================================== the footer -->
   <orbit-footer :services=${app.services}
