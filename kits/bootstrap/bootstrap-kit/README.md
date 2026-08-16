@@ -28,6 +28,12 @@ That serves two pages: `/index.html`, the showcase, which is every component
 one after another; and `/demo.html`, an operations dashboard built out of
 them, which is what they look like wired to one page's data.
 
+The dev server is `kits/bootstrap/server.ts` rather than the CLI, because
+Orbit reads its data from a database (`kits/bootstrap/orbit-db.ts`, fake and
+in-memory) and there is nowhere on a command line to put one. It is handed to
+markout as a server global, which is what makes `:server-services=${db.services.all()}`
+legal on that page and a compile error anywhere the browser would go.
+
 ## Tests
 
 `test/kits/bootstrap-kit.test.ts`, in two tiers:

@@ -359,6 +359,16 @@ outcome beats a result reconstructed from whatever happened to finish.
   attribute now says what the doc says, which is that the expression runs on
   the server.
 
+## Where it ends up
+
+Orbit, the Bootstrap kit's demo application, now reads its data from a
+database instead of declaring it. The diff was ten `:server-` values and one
+new file; every filter, chart, table and detail panel is the same expression
+over the same array it always was. That is the whole argument in one page:
+the distance between "hardcoded data" and "a real service" is the line that
+fetches it, with no store, no loader, no effect and no request from the
+browser.
+
 ## What the kit found
 
 Writing the component turned up one gap that is about the language rather
