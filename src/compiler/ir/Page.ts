@@ -94,6 +94,18 @@ export const DEFINE_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'DEFINE';
 // marks where a <:define> body accepts the children written at a usage
 // site; its own content, if any, stands in when a usage supplies none
 export const SLOT_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'SLOT';
+/**
+ * `<:logic>`: a scope with no element of its own.
+ *
+ * Everything else that declares values is markup that happens to carry
+ * them, so state with no markup to belong to had to invent an element to
+ * live on -- and that element is then real: it is in the document, in the
+ * accessibility tree, and in the way of `:first-child` and `* + *`. This
+ * language already makes authors write `:first-of-type` because `:for-each`
+ * leaves a stencil behind; a `<span>` holding the model would be a second
+ * such rule, in the one place the author had no reason to accept one.
+ */
+export const LOGIC_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'LOGIC';
 // `<:slot name="header">`; a slot with no name is the default one, taking
 // everything a usage site doesn't address to another
 export const SLOT_NAME_ATTR = 'name';
@@ -138,6 +150,16 @@ export class Page {
    * compiled children by stage7-generate, since they're never live at
    * their own natural position, only instantiated per usage site */
   definitionScopes: Set<Scope>;
+  /**
+   * Every `<:logic>` scope, against the tag names it was written inside.
+   *
+   * Both halves are needed once the tree has settled (stage1's
+   * checkLogicPlacement) and neither can be recovered then: the element is
+   * gone by design, so its ancestry has to be taken down while it is still
+   * there, and whether one of those ancestors is a custom tag is not known
+   * until every `<:define>` on the page has been read.
+   */
+  logicScopes: Map<Scope, string[]>;
   values: Map<string, Value>;
   /** `:slot` targets, kept aside by stage1 before it strips `:` attributes */
   slotTargets: Map<ServerElement, string>;
@@ -202,6 +224,7 @@ export class Page {
     this.optionalStencils = new Set();
     this.slottedInto = new Map();
     this.definitionScopes = new Set();
+    this.logicScopes = new Map();
     this.usedTags = new Set();
     this.defineStencils = new Map();
     this.whenUsed = new Map();

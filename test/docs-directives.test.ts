@@ -441,6 +441,17 @@ const CASES: Record<string, Case> = {
       expect(p.body()).not.toContain('<my-b');
     },
   },
+  '<:logic :aka="x" :n=${1} />': {
+    works: async () => {
+      const p = await run(
+        '<html><body><:logic :aka="app" :n=${21} :double=${n * 2} />' +
+          '<i>${app.double}</i></body></html>'
+      );
+      expect(p.body()).toContain('42');
+      // the whole point: it declares a scope and leaves no element behind
+      expect(p.doc.toString()).not.toContain('logic');
+    },
+  },
   '<:slot />': {
     works: async () => {
       const p = await run(
