@@ -208,13 +208,38 @@ function namedScopeIn(scope: Scope, name: string): Scope | undefined {
   return scope.lexicalChildren?.find(c => c.name === name);
 }
 
-function resolvesToKnownValue(scope: Scope, key: string): boolean {
+/**
+ * Whether `key` resolves from `scope`.
+ *
+ * `navigated` says the chain has already stepped into this scope by name --
+ * `a.b` rather than a bare `b` -- and it changes which chain is walked. A
+ * bare name is looked up from where the expression sits, and slotted markup
+ * and usage sites make that a structural question (see resolvesFrom). A
+ * navigated one means "in there", and walking out of a custom-tag instance
+ * is a step the runtime has no edge for. See Scope.resolvesVia().
+ */
+function resolvesToKnownValue(scope: Scope, key: string, navigated = false): boolean {
   let s: Scope | undefined = scope;
   while (s) {
     if (s.values.has(key)) return true;
     if (namedScopeIn(s, key)) return true;
-    // lexical, not structural: slotted markup and custom-tag instances sit
-    // where their DOM belongs but resolve where they were written
+    s = navigated ? s.resolvesVia() : s.lexical();
+  }
+  return false;
+}
+
+/**
+ * Whether `key` sits anywhere up the STRUCTURAL chain from `scope`.
+ *
+ * Only ever asked once resolution has already failed, and only to tell two
+ * failures apart. A name that is nowhere is a typo; a name that is right
+ * there in the markup but on the other side of a custom tag is the trap
+ * this stage exists to name, and the two deserve different sentences.
+ */
+function reachableStructurally(scope: Scope, key: string): boolean {
+  let s: Scope | undefined = scope;
+  while (s) {
+    if (s.values.has(key) || namedScopeIn(s, key)) return true;
     s = s.lexical();
   }
   return false;
@@ -330,7 +355,9 @@ function resolveChain(segments: string[], value: Value, page: Page): ValueDepRef
   // a key, so that `this.foo` on a named scope depends on the scope-valued
   // entry itself rather than trying to navigate into it
   for (let i = 0; i < segments.length - 1; i++) {
-    const step = navigate(target, segments[i]);
+    // past the first segment the chain is already inside a named scope, so
+    // the lookup is "in there" rather than "from here"
+    const step = navigate(target, segments[i], i > 0);
     if (!step.isNavigation) {
       // an ordinary value: it's the dependency, and the remaining segments
       // are plain property access on whatever it holds at runtime
@@ -370,7 +397,7 @@ function validated(
     key !== RT_HOST_VALUE_KEY &&
     key !== RT_DOM_VALUE_KEY
   ) {
-    if (!resolvesToKnownValue(target, key)) {
+    if (!resolvesToKnownValue(target, key, via.length > 0)) {
       // Supplied by the host to the SERVER, so it exists in one half of the
       // render and not the other. Readable only from a `:server-` value,
       // whose expression never reaches the browser -- anywhere else it would
@@ -397,11 +424,32 @@ function validated(
       if (!via.length && GLOBAL_NAMES.has(key)) {
         return undefined;
       }
-      addError(page, `Unknown reference: "${[...via, key].join('.')}"`, value.node.loc);
+      addError(page, unknownRef(via, key, target), value.node.loc);
       return undefined;
     }
   }
   return via.length ? { via, key } : { key };
+}
+
+/**
+ * The message for a chain that did not resolve.
+ *
+ * Worth the extra question because of how this one is usually met: the name
+ * IS in the markup, a line or two away, inside the tag being navigated into
+ * -- so "unknown" reads as the compiler being wrong rather than as an
+ * explanation. It is a scoping rule, and saying which one turns the error
+ * into the documentation for it.
+ */
+function unknownRef(via: string[], key: string, target: Scope): string {
+  const path = [...via, key].join('.');
+  if (!via.length || !reachableStructurally(target, key)) {
+    return `Unknown reference: "${path}"`;
+  }
+  return (
+    `Unknown reference: "${path}" -- "${key}" is inside <${via[via.length - 1]}>, ` +
+    `but its tag was written outside it, so the name belongs to where it was ` +
+    `written rather than to the instance. Read it as "${key}"`
+  );
 }
 
 /**
@@ -411,7 +459,8 @@ function validated(
  */
 function navigate(
   scope: Scope,
-  name: string
+  name: string,
+  navigated = false
 ): { isNavigation: boolean; scope?: Scope; dynamic?: boolean } {
   if (name === RT_PARENT_VALUE_KEY) {
     return { isNavigation: true, scope: scope.lexical() };
@@ -425,7 +474,7 @@ function navigate(
     // nobody, the same trade `$dom` makes
     return { isNavigation: true, dynamic: true };
   }
-  const target = findNavigableScope(scope, name);
+  const target = findNavigableScope(scope, name, navigated);
   return { isNavigation: !!target, scope: target };
 }
 
@@ -456,13 +505,21 @@ function dynamicScopeAccess(node: Node, scope: Scope): string | undefined {
 // each level we check whether THAT level has such a child. An ordinary
 // value of the same name at a closer level shadows any named scope further
 // up (same precedence a real lookup() walk would give it).
-function findNavigableScope(scope: Scope, name: string): Scope | undefined {
+//
+// `navigated` picks the chain, for the reason resolvesToKnownValue gives:
+// once a chain is inside a named scope, stepping back OUT of a custom-tag
+// instance is a hop the runtime has no edge for.
+function findNavigableScope(
+  scope: Scope,
+  name: string,
+  navigated = false
+): Scope | undefined {
   let s: Scope | undefined = scope;
   while (s) {
     const child = namedScopeIn(s, name);
     if (child) return child;
     if (s.values.has(name)) return undefined;
-    s = s.lexical();
+    s = navigated ? s.resolvesVia() : s.lexical();
   }
   return undefined;
 }

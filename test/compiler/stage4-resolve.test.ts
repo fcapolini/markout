@@ -330,6 +330,66 @@ describe('stage4-resolve: chained scope navigation', () => {
     return [];
   }
 
+  const BOX = '<:define tag="my-box:div"><:slot /></:define>';
+
+  it('refuses a chain that steps back out of a custom-tag instance', () => {
+    // an `:aka` written in a slot belongs to the scope the TAG was written
+    // in, never to the instance its DOM lands inside -- CoreScope's
+    // nameSiteScope. The compiler used to walk out of the instance to find
+    // it anyway, so this compiled clean and then failed at link time with
+    // `Cannot read properties of undefined`, two scopes from anything
+    // naming either half of it
+    const p = compile(
+      `<html><head>${BOX}</head><body>` +
+        '<my-box :aka="toasts"><span :aka="shipped" :open=${true}></span></my-box>' +
+        '<i>${toasts.shipped.open}</i></body></html>'
+    );
+    expect(p.errors).toHaveLength(1);
+    expect(p.errors[0].msg).toMatch(/its tag was written outside it/);
+    // and it says what to write instead, since the name IS right there
+    expect(p.errors[0].msg).toMatch(/Read it as "shipped"/);
+  });
+
+  it('resolves that same name written as itself', () => {
+    const p = compile(
+      `<html><head>${BOX}</head><body>` +
+        '<my-box :aka="toasts"><span :aka="shipped" :open=${true}></span></my-box>' +
+        '<i>${shipped.open}</i></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+    expect(textDeps(p)).toStrictEqual([{ via: ['shipped'], key: 'open' }]);
+  });
+
+  it('still reads a value the instance itself declares', () => {
+    // the other half of the rule: `detail.open` on a component IS in there,
+    // and is how the kit's overlays are driven
+    const p = compile(
+      '<html><head><:define tag="my-box:div" :open=${false}><:slot /></:define></head>' +
+        '<body><my-box :aka="detail"></my-box><i>${detail.open}</i></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+  });
+
+  it('still walks out of a PLAIN named scope for an inherited value', () => {
+    // only an instance breaks the chain. A `<div :aka="pane">` is ordinary
+    // markup, and the runtime's lookup does walk out of it
+    const p = compile(
+      '<html><body :n=${7}><div :aka="pane" :z=${1}></div>' +
+        '<i>${pane.n}</i></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+  });
+
+  it('calls a name that is nowhere a plain unknown reference', () => {
+    // the hint is only earned when the name really is in the markup; a typo
+    // must not be told it is a scoping subtlety
+    const p = compile(
+      '<html><body><span :aka="app" :x=${1}></span><i>${app.y}</i></body></html>'
+    );
+    expect(p.errors).toHaveLength(1);
+    expect(p.errors[0].msg).toBe('Unknown reference: "app.y"');
+  });
+
   it('walks a chain through two named scopes down to the value', () => {
     const p = compile(
       '<html><body><div :aka="outer"><span :aka="inner" :count=${1}></span></div>' +
