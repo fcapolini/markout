@@ -16,6 +16,10 @@ let docroot: string;
 let seq = 0;
 
 const LIB = `<lib>
+  <style :when-used="x-used">.for-used { color: red }</style>
+  <style :when-used="x-unused">.for-unused { color: blue }</style>
+  <style :when-used="x-used x-unused">.for-either { color: teal }</style>
+  <style>.unconditional { color: green }</style>
   <:define tag="x-used:div" class="used-marker"><:slot /></:define>
   <:define tag="x-unused:div" class="unused-marker"><:slot /></:define>
   <:define tag="x-viaother:div" class="viaother-marker"><:slot /></:define>
@@ -28,20 +32,105 @@ beforeAll(() => {
 });
 afterAll(() => fs.rmSync(docroot, { recursive: true, force: true }));
 
-async function build(body: string) {
+interface Extra {
+  head?: string;
+  html?: string;
+  [file: string]: string | undefined;
+}
+
+async function build(body: string, extra: Extra = {}) {
   const name = `p${seq++}.html`;
+  for (const [file, content] of Object.entries(extra)) {
+    if (file === 'head' || file === 'html') continue;
+    fs.writeFileSync(path.join(docroot, file), content!);
+  }
   fs.writeFileSync(
     path.join(docroot, name),
-    `<html><head><:import src="/lib.htm" /></head><body>${body}</body></html>`
+    `<html${extra.html ?? ''}><head><:import src="/lib.htm" />${extra.head ?? ''}</head>` +
+      `<body>${body}</body></html>`
   );
   const page = await new Compiler({ docroot }).compile(`/${name}`);
-  expect(page.errors.map(e => e.msg)).toStrictEqual([]);
-  return { page, markup: page.source.doc.toString() };
+  const errors = page.errors.map(e => e.msg);
+  return { page, errors, markup: page.source.doc.toString() };
 }
+
+/** renders and reports, for the cases that must not leave a dangling binding */
+async function renderErrors(page: Awaited<ReturnType<typeof build>>['page']) {
+  const { renderPage } = await import('../../src/server/render');
+  return (await renderPage(page)).map(e => `${e.phase}: ${e.message}`);
+}
+
+describe(':when-used', () => {
+  it('keeps an asset while a tag it names survives', async () => {
+    const { markup } = await build('<x-used>hi</x-used>');
+    expect(markup).toContain('.for-used');
+  });
+
+  it('drops one whose tags all went', async () => {
+    const { markup } = await build('<x-used>hi</x-used>');
+    expect(markup).not.toContain('.for-unused');
+  });
+
+  it('needs only one of the tags it names', async () => {
+    const { markup } = await build('<x-used>hi</x-used>');
+    expect(markup).toContain('.for-either');
+  });
+
+  it('leaves an unmarked asset alone, whatever happens to the components', async () => {
+    // opting in is the whole point: a stylesheet sitting next to some
+    // definitions is not necessarily THEIR stylesheet
+    const { markup } = await build('<x-used>hi</x-used>');
+    expect(markup).toContain('.unconditional');
+  });
+
+  it('costs the element no scope, so it weighs nothing at runtime', async () => {
+    const { markup, page } = await build('<x-used>hi</x-used>');
+    expect(markup).not.toMatch(/<style data-markout/);
+    expect(page.propsString ?? '').not.toContain('when-used');
+    expect(markup).not.toContain('when-used');
+  });
+
+  it('takes the value and its binding with it when it goes', async () => {
+    // a dropped stylesheet holding an interpolation leaves a value whose
+    // node is gone; emitting it would bind to markup the page no longer has
+    const { page, markup, errors } = await build('<x-used>hi</x-used>', {
+      'lib2.htm':
+        '<lib><style :when-used="x-gone">.g { color: ${accent} }</style>' +
+        '<:define tag="x-gone:div">g</:define></lib>',
+      head: '<:import src="/lib2.htm" />',
+      html: ' :accent="red"',
+    });
+    expect(errors).toStrictEqual([]);
+    expect(markup).not.toContain('.g {');
+    expect(await renderErrors(page)).toStrictEqual([]);
+  });
+
+  it('refuses a tag no <:define> declares', async () => {
+    const { errors } = await build('<x-used>hi</x-used>', {
+      'lib3.htm': '<lib><style :when-used="x-typo">.t {}</style></lib>',
+      head: '<:import src="/lib3.htm" />',
+    });
+    expect(errors.join()).toMatch(/names "x-typo", which no <:DEFINE> declares/i);
+  });
+
+  it('refuses an expression, and an empty list', async () => {
+    const a = await build('<x-used>hi</x-used>', {
+      'lib4.htm': '<lib><style :when-used=${"x-used"}>.e {}</style></lib>',
+      head: '<:import src="/lib4.htm" />',
+    });
+    expect(a.errors.join()).toMatch(/takes a literal/);
+    const b = await build('<x-used>hi</x-used>', {
+      'lib5.htm': '<lib><style :when-used="">.e {}</style></lib>',
+      head: '<:import src="/lib5.htm" />',
+    });
+    expect(b.errors.join()).toMatch(/needs at least one tag name/);
+  });
+});
 
 describe('stage6-treeshake', () => {
   it('keeps a definition the page uses', async () => {
-    const { markup } = await build('<x-used>hi</x-used>');
+    const { markup, errors } = await build('<x-used>hi</x-used>');
+    expect(errors).toStrictEqual([]);
     expect(markup).toContain('used-marker');
   });
 

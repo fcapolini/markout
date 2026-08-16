@@ -64,6 +64,9 @@
   - Only markup: a definition's SCOPE was never in the props, since stage7 already filters definitions out of their parent's children. So the ceiling is what the unused components' markup weighs, which is why this is not a payload feature -- see the compact-codegen commit, which was 80%.
   - Deliberately conservative: a component reachable only through a definition that is itself unused survives. Removing it needs the usage graph rather than a flat set, and getting that wrong deletes markup a page needs.
   - Its real value is the item below: it is a prerequisite for eliding the runtime when nothing reactive survives.
+  - `:when-used="tag-a tag-b"` (2026-08-16) lets an asset go with the components it belongs to -- a `<style>`, a `<link>`, a `<script>`. Opt-in rather than inferred from the fragment, because a stylesheet next to some definitions is not necessarily THEIR stylesheet: Orbit's is the page's, so "these definitions died, so these styles are dead" would be wrong rather than merely surprising. A tag no `<:define>` declares is a compile error, so a rename cannot silently leave a stylesheet waiting on a name nothing uses.
+  - Nothing of it reaches the runtime, including the scope: an element is scope-worthy if it carries any `:` attribute, and a `<style :when-used=...>` given one took its own text with it -- the stylesheet rendered empty and its binding had nothing to write to. `:slot` was already excepted for the same reason.
+  - Speculative until a kit ships per-component styles. The change that would pay for it immediately is splitting the Bootstrap kit's `base.htm` stylesheet so each part carries its own component's rules -- then a page using three components stops shipping forty components' CSS.
 
 - [ ] The CLI joins the docroot onto cwd, so absolute paths don't work
 

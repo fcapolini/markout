@@ -1,3 +1,5 @@
+import { NodeType } from '../../html/dom';
+import type { ServerElement, ServerNode } from '../../html/server-dom';
 import type { Page } from '../ir/Page';
 import type { Scope } from '../ir/Scope';
 
@@ -33,7 +35,59 @@ export function stage6treeshake(page: Page) {
     page.definitionScopes.delete(scope);
     detach(scope);
   }
+  dropUnusedAssets(page);
   return page;
+}
+
+/**
+ * Drops what `:when-used` was waiting on, once nothing it named survives.
+ *
+ * The element goes and so does everything the compiler built from it. It
+ * runs after the definitions above so it sees the final answer, and it
+ * prunes rather than just unlinking: a `<style>` holding an interpolation
+ * has a value whose node is inside it, and leaving that behind would emit a
+ * binding reaching for markup the page no longer has.
+ */
+function dropUnusedAssets(page: Page) {
+  for (const [element, tags] of page.whenUsed) {
+    if (tags.some(tag => page.usedTags.has(tag))) continue;
+    prune(page, element);
+    element.parentElement?.removeChild(element);
+  }
+}
+
+/** forgets every value and scope the compiler built inside `root` */
+function prune(page: Page, root: ServerElement) {
+  const nodes = new Set<unknown>();
+  const walk = (n: ServerNode) => {
+    nodes.add(n);
+    if (n.nodeType !== NodeType.ELEMENT) return;
+    const e = n as ServerElement;
+    e.attributes.forEach(a => nodes.add(a));
+    e.childNodes.forEach(c => walk(c as ServerNode));
+  };
+  walk(root);
+
+  for (const [id, value] of [...page.values]) {
+    nodes.has(value.node) && page.values.delete(id);
+  }
+  const scopes = (scope: Scope) => {
+    for (const child of [...scope.children]) scopes(child);
+    if (scope.e && nodes.has(scope.e)) {
+      scope.values.clear();
+      scope.textValues.clear();
+      detach(scope);
+    }
+  };
+  scopes(page.global);
+  // a value on a surviving scope can still live on a node in here -- a
+  // stylesheet's text belongs to the scope that contains it
+  const strip = (scope: Scope) => {
+    for (const [name, value] of [...scope.values]) nodes.has(value.node) && scope.values.delete(name);
+    for (const [name, value] of [...scope.textValues]) nodes.has(value.node) && scope.textValues.delete(name);
+    scope.children.forEach(strip);
+  };
+  strip(page.global);
 }
 
 /** takes the scope out of the tree, so nothing downstream can walk into it */

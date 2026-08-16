@@ -24,6 +24,8 @@ import {
   FOR_KEY_VALUE,
   IF_ATTR,
   IF_VALUE,
+  WHEN_USED_ATTR,
+  DEFINE_DIRECTIVE_TAG,
   STYLE_VALUE_ATTR_PREFIX,
   STYLE_VALUE_PREFIX,
   TEXT_VALUE_PREFIX,
@@ -103,8 +105,31 @@ function stripKnownPrefix(name: string): string {
  */
 
 export function stage2validate(page: Page) {
+  validateWhenUsed(page);
   validateScope(page, page.global);
   return page;
+}
+
+/**
+ * Every tag a `:when-used` waits on has to be one some `<:define>` declares.
+ *
+ * Otherwise a renamed component leaves its stylesheet waiting on a name
+ * nothing will ever use, so the style is silently dropped from every page --
+ * the drift this directive exists to survive, arriving as missing styling
+ * with nothing to explain it.
+ */
+function validateWhenUsed(page: Page) {
+  for (const [element, tags] of page.whenUsed) {
+    for (const tag of tags) {
+      if (page.customTags.has(tag)) continue;
+      addError(
+        page,
+        `"${SPECIAL_ATTR_PREFIX}${WHEN_USED_ATTR}" names "${tag}", which no ` +
+          `<${DEFINE_DIRECTIVE_TAG}> declares`,
+        element.loc
+      );
+    }
+  }
 }
 
 function validateScope(page: Page, scope: Scope) {
