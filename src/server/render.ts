@@ -24,7 +24,12 @@ import { escapeScriptText, serialize, UnserializableError } from "./serialize";
  */
 export async function renderPage(
   page: Page,
-  props?: { origin?: string; settle?: { timeoutMs?: number; maxRounds?: number } }
+  props?: {
+    origin?: string;
+    /** what the host supplied, by name -- see Compiler's serverGlobals */
+    globals?: { [name: string]: unknown };
+    settle?: { timeoutMs?: number; maxRounds?: number };
+  }
 ): Promise<RuntimeError[]> {
   if (!page.propsString) {
     return [];
@@ -39,12 +44,32 @@ export async function renderPage(
     // WebContextProps.server); everything else renders as usual
     server: true,
     origin: props?.origin,
+    // `val`, not `exp`: a supplied object is fixed for the life of the
+    // render, so it links as an inert source the way the built-in globals do
+    addedGlobals: props?.globals
+      ? Object.fromEntries(Object.entries(props.globals).map(([k, v]) => [k, { val: v }]))
+      : undefined,
   });
   ctx.refresh();
   // async is what the server has that the browser doesn't: a `:server-` value
   // may produce a promise, and this is where the page waits for it. Nothing
   // is serialized until it has, or has given up
-  await ctx.settle(props?.settle);
+  if (await ctx.settle(props?.settle)) {
+    // Everything reading one of those values was evaluated once BEFORE it had
+    // a result -- against the promise itself. `${rows.length}` was undefined
+    // there and `${rows.filter(...)}` threw outright, and neither says
+    // anything about the page: they are a value asked too early. Reporting
+    // them buries the real ones, and in dev replaces the page with them.
+    //
+    // So the whole first reading is discarded and taken again now that the
+    // results are in. Only the `settle` failures survive the cut, being the
+    // one kind nothing later can turn into an answer.
+    const definite = errors.filter(e => e.phase === 'settle');
+    errors.length = 0;
+    errors.push(...definite);
+    ctx.resetReported();
+    ctx.refresh();
+  }
   emitState(page, ctx.collectState(), errors);
   return errors;
 }

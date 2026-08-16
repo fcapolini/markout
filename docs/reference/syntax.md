@@ -232,12 +232,11 @@ A value that rejects, times out, or is still waiting at the cap becomes
 follows. The page is still served: the rest of it is what the visitor came
 for.
 
-NOTE: a promise is truthy, so a guard like `${user ? … : null}` runs once
-against the *promise* before `user` has resolved. That first result is
-discarded — a value is never settled while its own source is still in flight
-— but any work it started, such as a request built from a not-yet-resolved
-URL, has already been sent. Guard on the shape you expect (`${user?.id ? …}`)
-where that matters.
+A promise never reaches the page. While one is in flight the value reads as
+`undefined` — the runtime holds the promise aside rather than letting it into
+the reactive system — so everything downstream is written against data and
+nothing else. That is what makes the guard above do what it looks like it
+does: `user` is not "a promise that is truthy", it is simply not there yet.
 
 Two things to know before using it:
 

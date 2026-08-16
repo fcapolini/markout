@@ -220,19 +220,46 @@ export class CoreContext {
    * `undefined` and is reported -- the same rule an expression that throws
    * already follows, and for the same reason: one fixed outcome beats a
    * result you have to reconstruct from what happened to finish.
+   *
+   * Answers whether anything was actually waited for, which tells the caller
+   * that everything reading one of these evaluated once too early and has to
+   * be judged again -- see renderPage.
    */
-  async settle(props?: { timeoutMs?: number; maxRounds?: number }): Promise<void> {
+  async settle(props?: { timeoutMs?: number; maxRounds?: number }): Promise<boolean> {
     const timeoutMs = props?.timeoutMs ?? DEFAULT_SETTLE_TIMEOUT_MS;
     const maxRounds = props?.maxRounds ?? DEFAULT_SETTLE_MAX_ROUNDS;
     const deadline = Date.now() + timeoutMs;
+    this.settledAny = false;
+    await this.settleRounds(deadline, timeoutMs, maxRounds);
+    return this.settledAny;
+  }
 
+  /** whether anything actually needed waiting for */
+  private settledAny = false;
+
+  /**
+   * Forgets which errors have already been reported.
+   *
+   * `onError` reports each distinct problem once, which is right for a page
+   * that keeps re-evaluating a broken expression -- and wrong for the one
+   * pass that has to be allowed to say the same thing again, after settling,
+   * having had its first attempt discarded.
+   */
+  resetReported() {
+    this.reported.clear();
+  }
+
+  private async settleRounds(
+    deadline: number,
+    timeoutMs: number,
+    maxRounds: number
+  ): Promise<void> {
     for (let round = 0; ; round++) {
       const pending: { value: CoreValue; promise: PromiseLike<unknown> }[] = [];
       this.eachServerValue((_scope, _key, value) => {
-        const held = value.value as PromiseLike<unknown> | undefined;
-        if (held && typeof (held as { then?: unknown }).then === 'function') {
-          pending.push({ value, promise: held });
-        }
+        // `pending`, not `value`: a promise is never the value. What a page
+        // reads while one is in flight is `undefined`
+        value.pending && pending.push({ value, promise: value.pending });
       });
       if (!pending.length) {
         return;
@@ -293,6 +320,7 @@ export class CoreContext {
         // the expression, which is right here -- the expression's job was to
         // start the work, and re-running it would start it again
         value.set(result.v);
+        this.settledAny = true;
       }
       // a settled value may have failed and become `undefined`, which can
       // itself change what depends on it; the next pass sees whatever that
@@ -303,6 +331,7 @@ export class CoreContext {
   /** a server value that will never arrive: `undefined`, and reported */
   private abandon(value: CoreValue, message: string) {
     value.set(undefined);
+    this.settledAny = true;
     this.onError('settle', new Error(message), value);
   }
 

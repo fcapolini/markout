@@ -46,6 +46,41 @@ function body(page: Page) {
     .replace(/<!--.*?-->/g, '');
 }
 
+describe('a promise never reaches the page', () => {
+  it('reads as undefined while it is in flight, not as a promise', async () => {
+    // the rule that makes everything downstream ordinary: a page is written
+    // against data, and a promise is the wrong shape for all of it -- truthy,
+    // no `.length`, and "[object Promise]" when rendered. Held aside instead,
+    // an unarrived value is `undefined`, which is what "not there" already
+    // means everywhere else here
+    const page = compile(
+      '<html :server-v=${Promise.resolve(1)}' +
+        ' :seen=${typeof v}' +
+        ' :guarded=${v ? "truthy" : "falsy"}>' +
+        '<body><i>${seen}</i><b>${guarded}</b></body></html>'
+    );
+    expect(await renderPage(page)).toStrictEqual([]);
+    // by the end it has landed, so both read the settled value
+    expect(body(page)).toContain('<i>number</i>');
+    expect(body(page)).toContain('<b>truthy</b>');
+    // and the page never carried the promise itself
+    expect(page.source.doc.toString()).not.toContain('[object Promise]');
+  });
+
+  it('does not let a guard build work from a value that has not arrived', async () => {
+    // `${a ? f(a) : null}` used to run against the promise, which is truthy:
+    // with a real fetch that sent a request to a URL built out of "[object
+    // Promise]". Now the guard sees undefined and declines, as written
+    const page = compile(
+      '<html :server-a=${Promise.resolve("x")}' +
+        ' :server-b=${a ? Promise.resolve("saw:" + a) : null}>' +
+        '<body><i>${b}</i></body></html>'
+    );
+    expect(await renderPage(page)).toStrictEqual([]);
+    expect(body(page)).toContain('<i>saw:x</i>');
+  });
+});
+
 describe('settling a :server- promise', () => {
   it('waits, and renders the result rather than the promise', async () => {
     const page = compile(
@@ -77,12 +112,11 @@ describe('settling a :server- promise', () => {
 
 describe('settling a waterfall', () => {
   it('follows a chain where one result feeds the next', async () => {
-    // One round per link. A promise is truthy, so `b` DOES run on the first
-    // pass, against the promise `a` is holding rather than against 2 -- and
-    // the result of that pass is thrown away, because a value whose source is
-    // still pending is not settled. Only after `a` lands does `b` re-evaluate
-    // against the real number. Awaiting once, or settling all three together,
-    // freezes `${b + 1}` where b is a promise: "[object Promise]1"
+    // One round per link. While `a` is in flight it reads as `undefined` --
+    // the promise is held off the reactive system entirely -- so the guard
+    // here does what it looks like it does and `b` stays null rather than
+    // building a request out of a promise. Only once `a` lands does `b`
+    // produce one of its own, and `c` after that.
     const page = compile(
       '<html :server-a=${Promise.resolve(2)}' +
         ' :server-b=${a ? Promise.resolve(a * 10) : null}' +
