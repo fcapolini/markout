@@ -13,6 +13,7 @@
  * Exported as a factory as well as run directly, so the kit's tests drive
  * the same routes the browser gets rather than a second copy of them.
  */
+import compression from "compression";
 import express, { type Express } from 'express';
 import { markout } from '../../src/server/middleware';
 import { openOperationsDb, type OperationsDb } from './orbit-db';
@@ -27,7 +28,8 @@ export interface OrbitAppProps {
 export function createOrbitApp(props: OrbitAppProps): Express {
   const db = props.db ?? openOperationsDb();
   const app = express();
-
+  app.use(compression());
+  
   // -------------------------------------------------------------- the API
   //
   // What any application has, and markout knows nothing about. Orbit's page
