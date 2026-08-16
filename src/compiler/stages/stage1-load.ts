@@ -324,6 +324,25 @@ function expandDefine(page: Page, defineEl: ServerElement): ServerElement | unde
     return undefined;
   }
 
+  // A definition is a kind of tag, not a thing on the page, so there is
+  // nothing here for a name to refer to. Left alone it was copied onto the
+  // base element and then dropped -- so `:aka` on a <:define> named nothing,
+  // every use of that name failed to resolve, and the attribute that caused
+  // it looked like the one thing that should have worked. Instances are
+  // named where they are USED, which is also the only place a name can mean
+  // one of them rather than all of them
+  if (defineEl.getAttribute(`${SPECIAL_ATTR_PREFIX}${SCOPE_NAME_ATTR}`) !== null) {
+    addError(
+      page,
+      `<${DEFINE_DIRECTIVE_TAG.toLowerCase()}> cannot carry ":${SCOPE_NAME_ATTR}": a ` +
+        `definition is a tag rather than an element on the page, and every ` +
+        `instance of it would answer to the one name. Put ":${SCOPE_NAME_ATTR}" on a ` +
+        `usage site instead`,
+      defineEl.loc
+    );
+    return undefined;
+  }
+
   const doc = defineEl.ownerDocument;
   const inner = new ServerElement(doc, baseTag, defineEl.loc);
   for (const attr of [...(defineEl.attributes as ServerAttribute[])]) {
