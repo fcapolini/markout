@@ -24,11 +24,9 @@
   - Not a redesign in either case, which is the point: the shape is compiled, so this is stage7 and the runtime's props contract agreeing on a cheaper encoding, with no page changing.
   - Related, and already done: `--prod` on the demo server (2026-08-17). Dev props are 5.4x compiled ones, so the page anyone reaches for to measure markout used to answer with 83KB gzipped instead of 49KB.
 
-- [ ] a usage site inside an `<:include>`d file is never expanded
-  - Found 2026-08-17 while migrating `std-data` to `tag="x:logic"`, and it is not caused by that: a plain `tag="x:span"` behaves identically. `<:include src="/sources.htm" />` splices a file holding `<my-src :aka="a" />`, and the tag is left in the page as an ordinary element with a scope of its own rather than expanded into an instance -- so the definition's values are never there and `${a.whatever}` resolves to nothing, with no error.
-  - Repro: a `<lib>`-wrapped file of usages, included into a page whose `<head>` imports the definition. The same usages written directly in the page expand correctly, which is the whole difference. `expandCustomTagUsages` collects the copies still parented to the included `<lib>` and removes THOSE, leaving the ones in the body untouched.
-  - Which is why Orbit's ten `<std-data>` elements survive in the served page and always have. The page still works -- the elements carry `:aka` and `:url`, so `load()` gives them scopes and their own attributes evaluate -- so nothing looks wrong until you ask why the DOM has them.
-  - Worth fixing before the `:logic` base tag pays for itself: a datasource that leaves no element is the point of that feature, and an included file is exactly where a page keeps its datasources.
+- [x] a usage site inside an `<:include>`d file is never expanded -- fixed 2026-08-17. The preprocessor spliced included nodes into the page by setting `parentElement` and pushing them onto the new parent's `childNodes` by hand, never touching `parentNode` -- which is the pointer `insertBefore`/`removeChild` actually read. So every included node was listed by the page while still claiming the fragment it came from as its parent, and anything that later tried to REPLACE one worked on a document nobody serves.
+  - Custom-tag usages were the visible casualty: stage1 removed the tag from the fragment and left the copy in the page, which rendered as an unknown element with a scope and no instance behind it. Orbit's ten `<std-data>` elements were exactly this, and had been since the sources moved into their own file.
+  - Reported nothing, at any stage, which is what made it worth chasing over a payload saving of 500 bytes: an include is a splice, and a splice that changes how the markup inside it compiles is the opposite of unobtrusive. `<:group>` flattening and literal includes had the same defect and were fixed with it.
 
 - [ ] import as
   - `<:import src="..." as="foo" />`
