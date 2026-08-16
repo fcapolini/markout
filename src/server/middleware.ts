@@ -33,13 +33,34 @@ export interface MarkoutProps {
    */
   dev?: boolean;
   logger?: MarkoutLogger;
+  /**
+   * Objects the pages may reach from a `:server-` value -- a database
+   * handle, a mailer, whatever this application has.
+   *
+   * They exist on the server and nowhere else, which is not a restriction
+   * this imposes but a fact about where they live: nothing could ship a
+   * database connection to a browser. The compiler is told their names and
+   * enforces it, so reading one outside a `:server-` value is a build error
+   * rather than a page that works in dev and is empty in production.
+   *
+   *   markout({ docroot, globals: { db: openDatabase() } })
+   *
+   * Their RESULTS still travel to the browser like any server value, so what
+   * a page reads out of one is as public as the page is.
+   */
+  globals?: { [name: string]: unknown };
 }
 
 export function markout(props: MarkoutProps) {
   const docroot = props.docroot || process.cwd();
   const dev = props.dev ?? false;
   const logger = props.logger ?? defaultLogger;
-  const compiler = new Compiler({ docroot, dev });
+  const globals = props.globals;
+  const compiler = new Compiler({
+    docroot,
+    dev,
+    serverGlobals: globals ? Object.keys(globals) : undefined,
+  });
   const clientCode = loadClientCode();
 
   return async function (req: Request, res: Response, next: NextFunction) {
@@ -73,7 +94,7 @@ export function markout(props: MarkoutProps) {
       return serveErrorPage(page.source.errors, res);
     }
 
-    const runtimeErrors = await renderPage(page, { origin: originOf(req) });
+    const runtimeErrors = await renderPage(page, { origin: originOf(req), globals });
     // always logged, whatever the mode
     runtimeErrors.forEach(e =>
       logger('error', `[markout] ${pathname} ${formatRuntimeError(e)}`)

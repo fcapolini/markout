@@ -318,6 +318,25 @@ function validated(
     key !== RT_DOM_VALUE_KEY
   ) {
     if (!resolvesToKnownValue(target, key)) {
+      // Supplied by the host to the SERVER, so it exists in one half of the
+      // render and not the other. Readable only from a `:server-` value,
+      // whose expression never reaches the browser -- anywhere else it would
+      // compile clean and then be `undefined` in a page nobody tested,
+      // which is the failure this language reports rather than produces.
+      //
+      // Checked here rather than left to the runtime: it costs a set lookup
+      // at build time and nothing at all afterwards.
+      if (!via.length && page.serverGlobals.has(key)) {
+        if (!value.serverOnly) {
+          addError(
+            page,
+            `"${key}" is supplied to the server, so it can only be read from ` +
+              `a ":server-" value`,
+            value.node.loc
+          );
+        }
+        return undefined;
+      }
       // a JS global, resolved at runtime from the global scope -- the last
       // link of the chain, which is why it is only consulted once nothing
       // declared has claimed the name. It never changes, so it is not a
