@@ -435,6 +435,41 @@ describe('stage1-loader', () => {
       }
     });
 
+    it('should reject an expression where a literal name belongs', () => {
+      // `:aka` and `:slot` are the two system attributes spelled as ordinary
+      // identifiers rather than reserved words -- a deliberate trade, since
+      // neither has a reserved word that reads as well. The price is that a
+      // page cannot declare values of those names, and that price is only
+      // worth paying if taking the name is loud.
+      //
+      // `:slot=${x}` was the silent one: the expression was stringified into
+      // a slot target, which addressed `[object Object]`, matched no slot,
+      // and dropped the content with nothing reported.
+      for (const markup of [
+        '<html><body><div :aka=${"box"}></div></body></html>',
+        '<html><body><div :aka="a${1}b"></div></body></html>',
+        '<html><body><my-t><p :slot=${"head"}>x</p></my-t></body></html>',
+        '<html><body><my-t><p :slot="a${1}">x</p></my-t></body></html>',
+      ]) {
+        const page = runLoaderFromMarkup(markup);
+        expect(page.errors.map(e => e.msg).join()).toMatch(
+          /takes a literal .*not an expression/
+        );
+      }
+    });
+
+    it('should still accept a literal name, and a bare :slot', () => {
+      // bare `:slot` names the unnamed slot, which is what omitting it does
+      // too -- redundant rather than wrong, so it stays legal
+      for (const markup of [
+        '<html><body><div :aka="box" :n=${1}>${box.n}</div></body></html>',
+        '<html><body><my-t><p :slot="head">x</p></my-t></body></html>',
+        '<html><body><my-t><p :slot>x</p></my-t></body></html>',
+      ]) {
+        expect(runLoaderFromMarkup(markup).errors.map(e => e.msg)).toStrictEqual([]);
+      }
+    });
+
     it('should reject a value name starting with a digit', () => {
       const page = runLoaderFromMarkup('<html :9lives=${1}></html>');
       expect(page.errors.length).toBe(1);

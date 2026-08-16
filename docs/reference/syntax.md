@@ -70,7 +70,7 @@ NOTE: "on its own" is literal — whitespace is text like any other, so
 | --- | --- |
 | `:name=${expr}` | Declares a reactive value on the current scope. |
 | `:server-name=${expr}` | Declares value `name`, but the expression runs on the **server only** — the client is handed its result. Server-only. |
-| `:aka="name"` | Names the current scope so descendants can reference it. |
+| `:aka="name"` | Names the current scope so descendants can reference it. A literal, not an expression. |
 | `:attr-name=${expr}` | Toggles whether attribute `name` is PRESENT, as boolean and custom-element attributes need. Bare `:attr-name` implies `true`. `.` and `:` are allowed, for `data-x.y` and `xlink:href`. |
 | `:prop-name=${expr}` | Assigns the element's JS property `name`, for what an attribute can't carry. Browser-only: skipped when server rendering. |
 | `:class-name` | Toggles the `name` CSS class. |
@@ -361,7 +361,20 @@ rather than `:first-child`, and `:nth-of-type` rather than `:nth-child`. See
 | `<:define tag="x-y:button">...</:define>` | Declares a reusable custom tag. |
 | `<:slot />` | In a definition: where a usage site's content goes. Its own content is the fallback. |
 | `<:slot name="x" />` | A named slot. |
-| `:slot="x"` | On a usage site's child: which slot it fills. Unaddressed content fills the unnamed one. |
+| `:slot="x"` | On a usage site's child: which slot it fills. Unaddressed content fills the unnamed one. A literal, not an expression. |
+
+### `:aka` and `:slot` are literals
+
+Both name something while the page is being compiled — a scope's name is
+resolved by the compiler, and which slot content fills is decided as the
+tree is assembled — so neither has anything to evaluate an expression
+against. `:aka=${x}` and `:slot=${x}` are compile errors.
+
+They are also the only two system attributes spelled as ordinary
+identifiers rather than [reserved words](#values), which is a deliberate
+trade: no reserved word reads as well as either. The price is that a page
+cannot declare values named `aka` or `slot`, and the error above is what
+keeps that price visible rather than silent.
 
 ### A fragment has one root
 
