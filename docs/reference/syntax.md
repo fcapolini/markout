@@ -8,8 +8,31 @@ the module and composition tags, and the names the runtime supplies.
 | Syntax | Meaning |
 | --- | --- |
 | `${expr}` in text | Reactive text content. |
-| `${expr}` in CSS | Reactive stylesheet content. |
+| `${expr}` in CSS | Reactive stylesheet content — the whole sheet is one binding, so see below. |
 | `attr=${expr}` | Reactive plain attribute; no `:` needed. `null`/`undefined` removes it. |
+
+### A stylesheet is one binding
+
+`<style>`, `<title>` and `<textarea>` hold text rather than markup, and an
+interpolation inside one cannot be wrapped in the comment markers that
+delimit dynamic text elsewhere — a browser would show them. So these hold
+their whole content as a single value.
+
+Which means **one `${...}` makes the entire sheet reactive**, and every
+change re-serializes all of it. Keep what changes in its own sheet:
+
+```html
+<style>
+  :root { --accent: ${accent}; }        <!-- reactive: a few tokens -->
+</style>
+<style>
+  .panel { border-color: var(--accent); }   <!-- static: never re-serialized -->
+</style>
+```
+
+Splitting a 4.6KB stylesheet this way in the Orbit demo left 0.8KB reactive
+and the rest inert. Nothing else in the language has this granularity: an
+ordinary attribute or text interpolation is its own binding.
 
 ### Attribute values and quoting
 
