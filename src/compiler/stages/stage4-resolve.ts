@@ -251,6 +251,25 @@ function depKey(dep: ValueDepRef): string {
  * descends and matches sub-expressions individually instead. That's what
  * keeps `this.items[this.i]` recording both `items` and `i`.
  */
+/**
+ * The dependency a `this`-rooted chain resolves to, or nothing if this node
+ * is not one.
+ *
+ * Exposed for stage5, which has to ask the same question this stage asks --
+ * "what does this chain read?" -- while walking an expression looking for
+ * comptime constants to substitute. Resolving it a second way there would
+ * be two answers to one question, and the one that mattered would be
+ * whichever ran last.
+ */
+export function chainDep(
+  node: Node,
+  value: Value,
+  page: Page
+): ValueDepRef | undefined {
+  const segments = chainSegments(node);
+  return segments ? resolveChain(segments, value, page) : undefined;
+}
+
 function chainSegments(node: Node): string[] | undefined {
   const segments: string[] = [];
   let n: Node = node;

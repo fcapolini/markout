@@ -189,6 +189,12 @@ const CASES: Record<string, Case> = {
       expect(p.body()).toContain('<i>42</i>');
     },
   },
+  ':k_name=${expr}': {
+    works: async () => {
+      const p = await run('<html :k_accent="#6f42c1"><body><i>${k_accent}</i></body></html>');
+      expect(p.body()).toContain('#6f42c1');
+    },
+  },
   ':server-name=${expr}': {
     works: async () => {
       // the mark doesn't change what the value IS -- it is read by name like
