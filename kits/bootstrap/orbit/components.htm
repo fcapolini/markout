@@ -15,6 +15,158 @@
   definition wants and an instance does not.
 -->
 <lib>
+  <:import src="/bootstrap-kit/all.htm" />
+
+  <style>
+    /*
+      A reactive stylesheet: `accent` and `dense` are ordinary values, so
+      picking a swatch in Settings restyles the page without a class being
+      toggled anywhere. A stylesheet holds text rather than markup, so its
+      whole content is one binding rather than one per interpolation.
+    */
+    :root {
+      --dash-accent: ${accent};
+      --dash-cell-y: ${dense ? '0.3rem' : '0.7rem'};
+      --dash-gutter: ${dense ? '0.75rem' : '1.25rem'};
+
+      /*
+        Where the page begins under the sticky navbar: its height plus the
+        container's own top padding. One value, because the sidebar sticks
+        to it and every section scrolls to it, and the two drifting apart is
+        exactly what makes a sidebar jump on the first scroll.
+      */
+      --dash-top: 5.0625rem;
+    }
+  </style>
+
+  <style>
+    /*
+      The sidebar, pinned beside the content on wide screens.
+
+      This is the column itself rather than a wrapper inside it, which is
+      what makes the scrolling panel the whole sidebar rather than its
+      contents. `align-self` is what the move costs: a grid column stretches
+      to the row's full height by default, and something already as tall as
+      its container has nowhere to stick.
+    */
+    .dash-side {
+      position: sticky;
+      top: var(--dash-top);
+      align-self: start;
+      max-height: calc(100vh - 6rem);
+      overflow-y: auto;
+    }
+
+    .dash-section {
+      scroll-margin-top: var(--dash-top);
+    }
+
+    /*
+      Smooth scrolling from the platform rather than from scrollspy's
+      `data-bs-smooth-scroll`, which does its own `scrollTo` off the
+      section's offsetTop and so ignores the scroll margins below. A plain
+      anchor jump honours them, and gets deep links for free.
+    */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /*
+      Overview is not really a section you scroll to, it is where the page
+      starts -- the title and the window controls above it belong to it as
+      much as the figures do. So its anchor lands at the top rather than
+      just below the header: a scroll margin taller than everything above it
+      clamps the jump to zero, whatever height that header happens to be.
+    */
+    #overview {
+      scroll-margin-top: 20rem;
+    }
+
+    /*
+      Scrollspy highlights whichever section is in the band it watches, and
+      at the very top of the page none is: the first section starts below
+      that band. So nothing is marked, and the sidebar reads as though we
+      were somewhere between entries.
+
+      Rather than widen the band -- which makes it overshoot by one entry
+      everywhere else -- say what should be lit when nothing is: the first
+      one. `:has()` asks the question directly, and it stays a fallback,
+      since the moment scrollspy marks anything this stops matching.
+
+      `:first-of-type`, not `:first-child`: a `:for-each` leaves its stencil
+      in the DOM as a <template>, which is an element like any other and
+      therefore the first child. Anything written against a replicated list
+      has to count types rather than children.
+    */
+    #dash-side-nav:not(:has(.active)) > li:first-of-type > .nav-link {
+      color: var(--bs-nav-pills-link-active-color);
+      background-color: var(--bs-nav-pills-link-active-bg);
+    }
+
+    /* the accent, applied where Bootstrap's own variants don't reach */
+    .dash-accent {
+      color: var(--dash-accent);
+    }
+
+    .dash-stat .card-body {
+      padding-bottom: 0.5rem;
+    }
+
+    .dash-figure {
+      font-size: 1.75rem;
+      font-weight: 600;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* the charts scale to their box; the stroke must not scale with it */
+    .dash-chart svg {
+      display: block;
+      width: 100%;
+      overflow: visible;
+    }
+
+    .dash-dot {
+      display: inline-block;
+      width: 0.55rem;
+      height: 0.55rem;
+      border-radius: 50%;
+      flex: none;
+    }
+
+    /* `dense` is one value, and this is the one place it lands */
+    .dash-table > tbody > tr > td,
+    .dash-table > thead > tr > th {
+      padding-top: var(--dash-cell-y);
+      padding-bottom: var(--dash-cell-y);
+      vertical-align: middle;
+    }
+
+    .dash-table tbody tr {
+      cursor: pointer;
+    }
+
+    .dash-mono {
+      font-family: var(--bs-font-monospace);
+      font-size: 0.85em;
+    }
+
+    .dash-swatch {
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      padding: 0;
+    }
+
+    .dash-swatch.dash-picked {
+      border-color: var(--bs-body-color);
+    }
+
+    .dash-rows > * + * {
+      margin-top: var(--dash-gutter);
+    }
+  </style>
 
 <!---
   A dashboard panel: a card with a heading, an optional tools area in the
