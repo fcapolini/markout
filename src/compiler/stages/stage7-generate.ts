@@ -43,7 +43,7 @@ export function stage7generate(
   const root = page.global.children[0];
   if (root) {
     page.propsAST = generateScope(root, false);
-    page.propsString = generate(page.propsAST);
+    page.propsString = generate(page.propsAST, codegenOptions(dev));
     // The browser gets a different copy, with every `:server-` expression
     // taken out of it. Two reasons, and the first is the serious one:
     //
@@ -62,11 +62,29 @@ export function stage7generate(
     // page with no server value pays nothing and produces what it always did.
     const hasServerValues = [...page.values.values()].some(v => v.serverOnly);
     page.clientPropsString = hasServerValues
-      ? generate(generateScope(root, true))
+      ? generate(generateScope(root, true), codegenOptions(dev))
       : page.propsString;
     injectBootstrapScripts(page, runtimeSrc, dev);
   }
   return page;
+}
+
+/**
+ * Readable props in dev, compact ones otherwise.
+ *
+ * escodegen indents and line-breaks by default, and the props are almost
+ * entirely small functions -- a dependency is
+ * `function () {\n    return this.$value('rows');\n}`, which is 145 bytes of
+ * which about 25 say anything. On Orbit's 305 scopes that is 1495KB
+ * pretty-printed against 300KB compact, 53KB against 24KB gzipped: four
+ * fifths of the page is indentation.
+ *
+ * Kept readable under `--dev` because that is where someone opens the props
+ * to see what the compiler made of their page, and a single line 300KB long
+ * is not that.
+ */
+function codegenOptions(dev: boolean) {
+  return dev ? undefined : { format: { compact: true } };
 }
 
 function injectBootstrapScripts(page: Page, runtimeSrc: string, dev: boolean) {
