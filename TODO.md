@@ -4,6 +4,9 @@
   - Still open, and the natural next step if a router ever wants one: `$url` or `$location` for the full current URL, so `pathname` and the query are reachable. `$origin` is a strict subset, so nothing is foreclosed. The question it raises that `$origin` doesn't: a URL changes under client-side navigation, so a static snapshot goes stale, and whether it should be reactive is a real decision rather than an implementation detail.
   - `URL` joined the globals list alongside it, on the same footing as `fetch`: it exists in both environments, and resolving a relative URL against a base is what the kit actually needed.
 
+- [ ] a usage-site value that reads a page value of the SAME NAME as the parameter it fills resolves to the parameter, not the page value -- `<x-tag :items=${items} />` where the definition declares `:items`. It self-references, so stage4 records a dependency on a value that cannot be built, and the runtime reports `link: unresolved dependency` -- a message its own comment reserves for "a markout bug, not a page bug" -- while the component renders blank. Compiles clean.
+  - Should be a compile error at stage4: a call-site expression naming the parameter it is filling has no reading that could work, so there is nothing to guess at. Found extracting Orbit's regions, where `:services=${services}` and `:span=${span}` both hit it.
+
 - [ ] import as
   - `<:import src="..." as="foo" />`
   - imported code shouldn't change, but a scope named "foo" should be "interposed"
