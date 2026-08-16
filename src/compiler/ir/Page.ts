@@ -33,6 +33,18 @@ export const HANDLE_VALUE_ATTR_PREFIX = 'handle-';
 // family of its own -- it is stripped before the rest of the name is parsed,
 // and the value it marks is an ordinary one. See docs/design/value-transfer.md
 export const SERVER_VALUE_ATTR_PREFIX = 'server-';
+/**
+ * `:if=${expr}` renders the element when the expression is truthy, and not
+ * at all otherwise.
+ *
+ * Named for a JS reserved word on purpose, and that is the whole reason the
+ * name was available: a value has to be something an expression can say, so
+ * `:if=${...}` was already refused as a declaration (see validateName). No
+ * page can have taken it, and none ever can -- which makes this the one
+ * namespace a directive can occupy without a prefix to keep it clear.
+ */
+export const IF_ATTR = 'if';
+export const IF_VALUE = 'if$';
 export const TEXT_VALUE_PREFIX = 't$';
 // compiled form of the ATTR prefixes above, as stored in Scope.values keys
 export const CLASS_VALUE_PREFIX = 'class$';

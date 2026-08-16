@@ -333,6 +333,20 @@ const CASES: Record<string, Case> = {
   },
 
   // -- Replication ----------------------------------------------------------
+  ':if=${expr}': {
+    works: async () => {
+      const p = await run('<html :on=${false}><body><i :if=${on}>here</i></body></html>');
+      // parked in its stencil rather than deleted, so it can come back
+      const live = () => p.body().replace(/<template>[\s\S]*?<\/template>/g, '');
+      expect(live()).not.toContain('<i>here</i>');
+      p.ctx.root.proxy['on'] = true;
+      expect(live()).toContain('<i>here</i>');
+      // truthiness, not `!= null` -- which is the whole difference from
+      // `:for-data` and the reason this directive exists
+      p.ctx.root.proxy['on'] = 0;
+      expect(live()).not.toContain('<i>here</i>');
+    },
+  },
   ':for-each=${expr}': {
     works: async () => {
       const p = await run('<html><body><i :for-each=${["a", "b"]}>${data}</i></body></html>');

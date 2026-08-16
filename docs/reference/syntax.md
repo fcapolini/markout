@@ -91,14 +91,14 @@ reserved word or a leading digit is refused for the same reason — `${if}`
 and `${9lives}` don't parse, so the value could be declared but never read:
 
 ```html
-<div :if=${ready}>          <!-- error: "if" is a reserved word -->
+<div :while=${ready}>       <!-- error: "while" is a reserved word -->
 <div :ready=${ready}>       <!-- fine -->
 ```
 
-Note what the first line *isn't*: `:if` is not a conditional. There is no
-`:if` directive — a bare `:name` always declares a value (see
-[replication](../concepts/replication.md) for how conditional rendering is
-expressed today).
+That rejection is what makes the reserved words available for something
+else. A name no page can declare is a name a **directive** can take with no
+prefix and no possibility of collision, which is where `:if` comes from —
+and the reason `${if}` not parsing is a feature rather than an awkwardness.
 
 The names in the dash-case families are element-facing — CSS properties,
 attribute names, event types — so they keep their dashes and this rule
@@ -327,10 +327,23 @@ it differs:
 
 | Syntax | Meaning |
 | --- | --- |
+| `:if=${expr}` | Render this element when the expression is truthy, not at all otherwise. Binds nothing. |
 | `:for-each=${expr}` | Repeat once per item in an iterable. `null`/`undefined` means zero items. |
 | `:for-as="name"` | Rename the per-item binding from the default `data`. |
 | `:for-key=${expr}` | Give each item an identity, so reordering moves replicas instead of rewriting them. Evaluated per item, and may read the per-item binding. Refused on `:for-data`, which has only ever one. |
 | `:for-data=${expr}` | Render once if `expr` is neither `null` nor `undefined`, not at all otherwise. Binds the item like `:for-each`. |
+
+`:if`, `:for-each` and `:for-data` all answer "how many times does this
+render", so an element may answer once: any two together is a compile error.
+
+`:if` and `:for-data` differ in the question they ask. `:for-data` is
+`!= null`, so `0` and `''` are data — right for an item, wrong for a
+condition. `:if` is plain truthiness, so `${count}` and `${name}` mean what
+they look like, and it binds no item: `data` inside an `:if` still means
+whatever it meant outside.
+
+Neither evaluates its body while it isn't showing, which is what makes
+`${user.name}` safe to write inside one.
 
 The host element becomes an inert `<template>` and every visible item is a
 clone of it. That `<template>` is still an element in the DOM, and the first

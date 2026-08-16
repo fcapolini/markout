@@ -22,6 +22,8 @@ import {
   FOR_DATA_ATTR,
   FOR_KEY_ATTR,
   FOR_KEY_VALUE,
+  IF_ATTR,
+  IF_VALUE,
   STYLE_VALUE_ATTR_PREFIX,
   STYLE_VALUE_PREFIX,
   TEXT_VALUE_PREFIX,
@@ -54,6 +56,7 @@ const KNOWN_VALUE_PREFIXES = [
   FOR_DATA_VALUE,
   FOR_AS_VALUE,
   FOR_KEY_VALUE,
+  IF_VALUE,
   CLASS_VALUE_ATTR_PREFIX,
   STYLE_VALUE_ATTR_PREFIX,
   EVENT_VALUE_ATTR_PREFIX,
@@ -120,7 +123,19 @@ function validateScope(page: Page, scope: Scope) {
   // this render -- so an element may only answer it once. And a key is what
   // tells replicas apart, which is nothing to ask of a thing that is either
   // there or not
-  if (scope.values.has(FOR_EACH_VALUE) && scope.values.has(FOR_DATA_VALUE)) {
+  // all three answer "how many times does this render", so an element may
+  // answer once. `:if` and `:for-data` are the same arity by two different
+  // tests, which is the pair most likely to be written together by accident
+  const arity = [FOR_EACH_VALUE, FOR_DATA_VALUE, IF_VALUE].filter(k => scope.values.has(k));
+  if (arity.length > 1 && scope.values.has(IF_VALUE)) {
+    addError(
+      page,
+      `Cannot use "${SPECIAL_ATTR_PREFIX}${IF_ATTR}" with ` +
+        `"${SPECIAL_ATTR_PREFIX}${arity.find(k => k !== IF_VALUE) === FOR_EACH_VALUE
+          ? FOR_EACH_ATTR : FOR_DATA_ATTR}" on the same element`,
+      scope.values.get(IF_VALUE)!.node.loc
+    );
+  } else if (scope.values.has(FOR_EACH_VALUE) && scope.values.has(FOR_DATA_VALUE)) {
     addError(
       page,
       `Cannot use "${SPECIAL_ATTR_PREFIX}${FOR_EACH_ATTR}" and ` +

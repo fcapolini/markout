@@ -115,6 +115,21 @@ defined, so a component whose body says `${data}` reads its own scope's
 value rather than the caller's item — and `:title=${title}` at the usage
 site still means the *caller's* `title`, never the definition's or itself.
 
+## A condition is not an arity
+
+`:if=${expr}` renders the element when the expression is truthy. It is the
+directive to reach for when the question is "should this be here", and it
+binds nothing:
+
+```html
+<p :if=${errors.length}>${errors.length} problems</p>
+```
+
+`:for-data` below answers the same arity — zero or one — but by a different
+test, and for a different purpose: it is `!= null`, so `0` and `''` remain
+data, and it binds the item so the body can read it. Use it when there is
+something to show; use `:if` when there is something to decide.
+
 ## Optional rendering
 
 `:for-data` is the single-item counterpart to `:for-each`: zero or one where

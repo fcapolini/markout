@@ -346,7 +346,7 @@
          :_tone=${toneOf(state)}
 >
   <span class="dash-dot bg-${_tone}"></span>
-  <span :for-data=${!quiet || null}
+  <span :if=${!quiet}
         class="text-capitalize">${state}</span>
 </:define>
 
