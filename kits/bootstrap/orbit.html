@@ -130,11 +130,15 @@
     collide with a name a component declares, and a reader can tell page
     state from local state by looking at the reference.
 
+    `<:logic>` is a scope and nothing else — it leaves no element behind,
+    which is what state declared at page level wants: there is nothing here
+    to style, to lay out, or to be counted by a `:nth-child` somewhere.
+
     The first block is data — what would come from a server. The second is
     what the user has chosen. The third is derived from the first two, and
     is the reason nothing below has to be kept in step by hand.
   -->
-  <span :aka="app"
+  <:logic :aka="app"
         /*
           ---------------------------------------------------------- data
 
@@ -224,7 +228,7 @@
           clearInterval(_timer);
           clearTimeout(_load);
         }}
-  ></span>
+  />
 
   <!--- ================================================== navigation bar -->
   <bs-navbar :sticky

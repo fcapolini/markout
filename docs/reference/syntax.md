@@ -401,10 +401,57 @@ rather than `:first-child`, and `:nth-of-type` rather than `:nth-child`. See
 | `<:include src="file.txt" as="pre" />` | Includes a file as a literal element named `pre` containing its text. |
 | `<:import src="file.htm" />` | Splices a fragment into the page; each file is only imported once per page. |
 | `<:define tag="x-y:button">...</:define>` | Declares a reusable custom tag. |
+| `<:logic :aka="x" :n=${1} />` | Declares a scope with no element of its own. |
 | `:when-used="tag-a tag-b"` | Keep this element only while one of those tags survives treeshaking. Build-time; nothing of it reaches the runtime. |
 | `<:slot />` | In a definition: where a usage site's content goes. Its own content is the fallback. |
 | `<:slot name="x" />` | A named slot. |
 | `:slot="x"` | On a usage site's child: which slot it fills. Unaddressed content fills the unnamed one. A literal, not an expression. |
+
+### `<:logic>` — a scope with no element
+
+Everything else that declares values is markup that happens to carry them.
+State that belongs to the page, rather than to anything on it, had nowhere
+to live but an element invented to hold it — and that element is then real:
+in the document, in the accessibility tree, and counted by every
+`:first-child` and `* + *` around it.
+
+```html
+<:logic :aka="app"
+        :services=${[]}
+        :span=${24}
+        :_healthy=${services.filter(s => s.state === 'ok').length} />
+
+<p>${app._healthy} of ${app.services.length} healthy</p>
+```
+
+It is a scope like any other — named with `:aka`, read as `app.something`,
+reactive, and bracketed by `:did-init` / `:will-dispose` — and it leaves
+nothing in the served page.
+
+The name is optional. Values on an unnamed one are reachable from nowhere,
+which is the point when what it declares is behaviour rather than data:
+
+```html
+<!-- a timer, and the value it writes; nothing needs to refer to this -->
+<:logic :_timer=${null}
+        :did-init=${() => _timer = setInterval(tick, 1000)}
+        :will-dispose=${() => clearInterval(_timer)} />
+```
+
+What it refuses, in both cases because there is no element:
+
+| | |
+| --- | --- |
+| `:class-`, `:style-`, `:on-`, plain attributes | nothing to apply them to |
+| `:for-each`, `:for-data`, `:if`, `:slot` | nothing to replicate, show, or slot |
+| content of any kind | it holds values, not markup |
+
+And where it refuses to go: inside a `:for-each`, a `:for-data`, an `:if`, a
+`<:define>`, or a custom tag's content. Each of those turns a declaration
+that reads as one-per-page into one per item, one per instance, or one that
+comes and goes — a timer started per row is not something to discover at
+runtime. Every one of them is a coherent feature on its own; none of them is
+this one.
 
 ### A base tag is a real element
 

@@ -42,6 +42,7 @@ import {
   FOR_KEY_VALUE,
   FOR_DATA_DEFAULT_NAME,
   DEFINE_DIRECTIVE_TAG,
+  LOGIC_DIRECTIVE_TAG,
   DEFINE_TAG_ATTR,
   DEFINE_NAME_MARKER,
   SLOT_DIRECTIVE_TAG,
@@ -81,6 +82,7 @@ export function stage1load(page: Page) {
   // expanding anything at all once a definition is based on another one
   // would work on a stencil that is about to be rewritten underneath it
   rejectDerivedDefines(page) || expandCustomTagUsages(page);
+  checkLogicPlacement(page);
   // after every usage has had its chance to clone a stencil with the slot
   // still in place. A directive tag isn't serialized -- children and all --
   // so an untouched <:slot> has to be replaced by its own content, which is
@@ -155,6 +157,10 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
     i++;
     if (child.nodeType === NodeType.ELEMENT) {
       const childEl = child as ServerElement;
+      if (childEl.tagName === LOGIC_DIRECTIVE_TAG) {
+        loadLogic(page, scope, childEl);
+        continue;
+      }
       if (childEl.tagName === DEFINE_DIRECTIVE_TAG) {
         // <:define> never itself becomes a live scope; expandDefine() moves
         // its content into an inert <template> stencil and returns the
@@ -303,6 +309,110 @@ function wrapInTemplate(e: ServerElement): ServerElement {
   parent.removeChild(e);
   template.appendChild(e);
   return template;
+}
+
+/** attribute families that need an element, and so cannot go on `<:logic>` */
+const LOGIC_FORBIDDEN_PREFIXES: [string, string][] = [
+  [CLASS_VALUE_ATTR_PREFIX, 'a class to put it on'],
+  [STYLE_VALUE_ATTR_PREFIX, 'a style to put it on'],
+  [EVENT_VALUE_ATTR_PREFIX, 'an element to listen to'],
+  [PRESENCE_VALUE_ATTR_PREFIX, 'an attribute to set'],
+  [PROP_VALUE_ATTR_PREFIX, 'a DOM property to set'],
+];
+const LOGIC_FORBIDDEN_ATTRS: [string, string][] = [
+  [FOR_EACH_ATTR, 'nothing to replicate'],
+  [FOR_DATA_ATTR, 'nothing to show or hide'],
+  [FOR_AS_ATTR, 'nothing to replicate'],
+  [FOR_KEY_ATTR, 'nothing to replicate'],
+  [IF_ATTR, 'nothing to show or hide'],
+  [SLOT_TARGET_ATTR, 'no markup to put in a slot'],
+  [WHEN_USED_ATTR, 'nothing to keep or drop'],
+];
+
+/**
+ * `<:logic>`: values, and nothing else.
+ *
+ * It becomes a scope like any other and then its element goes, which is the
+ * whole point -- the runtime has always allowed a scope with no DOM (see
+ * WebScope.init, which returns early for exactly this), so nothing about
+ * being live requires one. What required one was the compiler, which only
+ * knew how to hang values off markup.
+ *
+ * A name is optional. Its values are then reachable from nowhere, which
+ * sounds useless and is not: `:did-init` and `:handle-` are declarations of
+ * behaviour rather than of data, and a block that starts a timer or reacts
+ * to a value elsewhere has no reason to be referred to by anyone.
+ */
+function loadLogic(page: Page, parent: Scope, e: ServerElement): void {
+  for (const [prefix, why] of LOGIC_FORBIDDEN_PREFIXES) {
+    const found = e.getAttributeNames().find(n => n.startsWith(`${SPECIAL_ATTR_PREFIX}${prefix}`));
+    found && addError(page, `<${LOGIC_DIRECTIVE_TAG.toLowerCase()}> has no element, so "${found}" has ${why}`, e.loc);
+  }
+  for (const [attr, why] of LOGIC_FORBIDDEN_ATTRS) {
+    hasAttr(e, attr) &&
+      addError(page, `<${LOGIC_DIRECTIVE_TAG.toLowerCase()}> has no element, so ":${attr}" has ${why}`, e.loc);
+  }
+  for (const name of e.getAttributeNames()) {
+    name.startsWith(SPECIAL_ATTR_PREFIX) ||
+      addError(
+        page,
+        `<${LOGIC_DIRECTIVE_TAG.toLowerCase()}> has no element, so the plain attribute ` +
+          `"${name}" has nowhere to go`,
+        e.loc
+      );
+  }
+  // Nothing inside it, for now. Markup would need an element to live in and
+  // there is none; a nested <:logic> would work and is deliberately left
+  // out, since a construct is easier to open up later than to close down
+  const child = e.childNodes.find(
+    n => n.nodeType === NodeType.ELEMENT || typeof (n as ServerText).textContent !== 'string' ||
+      `${(n as ServerText).textContent}`.trim() !== ''
+  );
+  child &&
+    addError(page, `<${LOGIC_DIRECTIVE_TAG.toLowerCase()}> holds values, not markup -- it cannot have content`, e.loc);
+
+  const scope = new Scope(page, parent, e);
+  // taken down now, while the element is still in the tree: what it was
+  // written inside is the one thing removing it destroys
+  const ancestors: string[] = [];
+  for (let up = e.parentElement; up; up = up.parentElement) {
+    ancestors.push(up.tagName.toLowerCase());
+  }
+  page.logicScopes.set(scope, ancestors);
+  extractValues(page, scope, e);
+  e.parentElement?.removeChild(e);
+}
+
+/**
+ * Where a `<:logic>` may sit.
+ *
+ * Not in anything replicated or conditional, and not inside a definition or
+ * a slot. Each of those makes a declaration that reads as one-per-page into
+ * one-per-item, one-per-instance, or one that comes and goes -- and a timer
+ * started per row, or a name registered by twenty instances at once, is not
+ * something to discover at runtime. Every one of them is a coherent feature
+ * on its own; none of them is this one.
+ *
+ * Checked here rather than in loadLogic because none of it is known yet
+ * while loading: a usage site is expanded afterwards, and a definition's
+ * body is loaded before the page that uses it.
+ */
+function checkLogicPlacement(page: Page): void {
+  for (const [scope, ancestors] of page.logicScopes) {
+    let s: Scope | undefined = scope.parent;
+    let why = ancestors.some(tag => page.customTags.has(tag))
+      ? 'inside a custom tag, where it would belong to the call site'
+      : undefined;
+    while (s && !why) {
+      if (s.values.has(FOR_EACH_VALUE)) why = 'inside a ":for-each", which would declare it once per item';
+      else if (s.values.has(FOR_DATA_VALUE)) why = 'inside a ":for-data", which would take it away again';
+      else if (s.values.has(IF_VALUE)) why = 'inside an ":if", which would take it away again';
+      else if (page.definitionScopes.has(s)) why = 'inside a "<:define>", which would declare it once per instance';
+      else if (s.slotted) why = 'inside a slot, where it would belong to the call site';
+      s = s.parent;
+    }
+    why && addError(page, `<${LOGIC_DIRECTIVE_TAG.toLowerCase()}> cannot go ${why}`, scope.e?.loc);
+  }
 }
 
 // <:define tag="custom-name:base-tag" ...special-attrs...>children</:define>
