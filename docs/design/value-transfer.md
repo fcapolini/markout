@@ -326,6 +326,13 @@ of its own sources is pending, which matters for an *unguarded* chain
 (`${Promise.resolve(a * 10)}` computes `NaN` before `a` lands). Guarded
 chains no longer need it, because the guard now sees `undefined` and declines.
 
+That rule and the "one request per set of inputs" rule below are a pair, and
+were briefly in conflict: the first needs a value to re-evaluate once its
+source lands, and the first cut of the second forbade re-evaluating anything
+with a request in flight — which made the ordering rule inert, silently, with
+no test over the overlap. The discriminator is whether an input actually
+moved, not whether a cycle has passed.
+
 ### The first reading is discarded
 
 A dependent still evaluates once before its sources arrive — against
