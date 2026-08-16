@@ -15,6 +15,15 @@
   - What it needs: definitions expanded base-before-derived (a topological sort over `customTags`, plus a cycle error); `className` concatenated rather than assigned (`expandDefine` assigns, which is what silently dropped the base's classes); three-level value precedence -- base defaults, derived, usage site -- where the derived's expressions resolve against the DERIVED definition, neither the base nor the call site, which lands on the same `callSiteValues`/`detachedUsageSite` machinery as the entry above; a rule for whether a usage's content reaches the base's `<:slot>` when the derived declares none; and an error for `:aka` colliding between base and derived.
   - Items 3 and 4 there are the feature. They are precedence and slot-routing rules, which is where a language accumulates surprises it cannot later change, so they are worth deciding deliberately rather than under a deadline.
 
+- [ ] shrink the app props
+  - Measured on Orbit 2026-08-17, compiled (not dev): props are 311KB raw / 25KB gzipped, against 157KB / 19KB of markup and a 21KB / 7.2KB runtime -- 65% of everything the page ships that is not the runtime, for 838 scopes and 1591 values (~195 bytes raw per value, ~16 gzipped). A whole page is 55KB gzipped including framework, logic, markup and data; a hello-world is 7.5KB. Neither number is a problem. The raw one is the one to work on, because gzip already collapses the repetition and the browser still parses all 311KB.
+  - So this is a PARSE-and-allocate item, not a transfer item, and the two biggest costs are both shapes rather than content:
+    - dependency thunks: 2051 of them, 83KB, **26.8% of the props**, each `function(){return this.$value('_sum');}` to say what `'_sum'` says. Emitting deps as data -- a key, or a via-path and a key -- would take that to roughly a quarter of the size and allocate 2051 fewer closures at startup. The runtime already knows how to walk a `via`/`key` pair; `ValueDepRef` IS that pair, and stage7 turns it back into a function.
+    - `function(){return …;}` wrappers: ~27% of the props, and NOT replaceable by arrows as things stand, because the runtime evaluates with `exp.apply(scope.proxy)` and an arrow would capture the wrong `this`. Passing the scope as an ARGUMENT instead (`exp: s => s.x + 1`) buys both the wrapper and the shortening of 4988 `this.` to `s.`.
+  - Lower value, only worth doing alongside: one-letter keys for `exp`/`deps`/`values`/`children` (~26KB raw, but gzip eats nearly all of it).
+  - Not a redesign in either case, which is the point: the shape is compiled, so this is stage7 and the runtime's props contract agreeing on a cheaper encoding, with no page changing.
+  - Related, and already done: `--prod` on the demo server (2026-08-17). Dev props are 5.4x compiled ones, so the page anyone reaches for to measure markout used to answer with 83KB gzipped instead of 49KB.
+
 - [ ] import as
   - `<:import src="..." as="foo" />`
   - imported code shouldn't change, but a scope named "foo" should be "interposed"
