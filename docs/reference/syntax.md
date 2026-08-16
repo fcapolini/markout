@@ -201,6 +201,47 @@ keep updating as usual — which gives the one rule worth remembering:
 so it still tracks `user`. Marking `greeting` instead would pin it, and a
 later change to `user` would silently never reach it.
 
+### Async on the server
+
+A `:server-` expression may produce a promise. The server waits for it and
+sends what it resolved to, so the page is served complete:
+
+```html
+<html :server-rows=${fetch(url).then(r => r.json())}>
+  <body><div :for-each=${rows ?? []}>${data.name}</div></body>
+</html>
+```
+
+Async is allowed **exactly where the result can be sent**. An unmarked value's
+promise would have to resolve in the browser too, and hydration is
+synchronous — there is nothing there to wait with — so only `:server-` values
+are settled.
+
+One result may feed the next. The server keeps going until nothing is left in
+flight, so a value that needs another's result to build its request works:
+
+```html
+<html :server-user=${fetch('/me').then(r => r.json())}
+      :server-orders=${user ? fetch(`/orders/${user.id}`).then(r => r.json()) : null}>
+```
+
+Two limits bound the wait, and they mean different things. A **deadline**
+(5s) bounds how long a visitor waits for a slow network. A **depth cap** (5
+links) bounds how long a chain may get; a page past it has a bug, and saying
+so beats stalling until the deadline on every request.
+
+A value that rejects, times out, or is still waiting at the cap becomes
+`undefined` and is reported — the same rule an expression that throws already
+follows. The page is still served: the rest of it is what the visitor came
+for.
+
+NOTE: a promise is truthy, so a guard like `${user ? … : null}` runs once
+against the *promise* before `user` has resolved. That first result is
+discarded — a value is never settled while its own source is still in flight
+— but any work it started, such as a request built from a not-yet-resolved
+URL, has already been sent. Guard on the shape you expect (`${user?.id ? …}`)
+where that matters.
+
 Two things to know before using it:
 
 - **The result is published.** It travels in the page source as plain text, so

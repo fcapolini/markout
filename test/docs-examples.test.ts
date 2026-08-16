@@ -13,14 +13,14 @@ import { WebContext } from '../src/runtime/web/web-context';
 // Documentation that doesn't run is worse than none: it costs the reader the
 // time to find out, and it is exactly what goes stale first.
 
-function render(html: string) {
+async function render(html: string) {
   const page = new Page(parse(html, 'docs.html'));
   stage1load(page);
   stage2validate(page);
   stage3qualify(page);
   stage4resolve(page);
   stage7generate(page);
-  const runtimeErrors = page.errors.length ? [] : renderPage(page);
+  const runtimeErrors = page.errors.length ? [] : await renderPage(page);
   const markup = page.source.doc.toString();
   return {
     errors: page.errors,
@@ -32,14 +32,14 @@ function render(html: string) {
   };
 }
 
-function expectClean(result: ReturnType<typeof render>) {
+function expectClean(result: Awaited<ReturnType<typeof render>>) {
   expect(result.errors).toStrictEqual([]);
   expect(result.runtimeErrors).toStrictEqual([]);
 }
 
 describe('docs/concepts/values.md', () => {
-  it('renders the interpolated-attribute example', () => {
-    const result = render(
+  it('renders the interpolated-attribute example', async () => {
+    const result = await render(
       '<html :section=${{ id: "top", title: "Top" }}><body>' +
         "<a href=${'#' + section.id} aria-label=${'Go to ' + section.title}>x</a>" +
         '</body></html>'
@@ -50,8 +50,8 @@ describe('docs/concepts/values.md', () => {
     expect(result.body).toContain('aria-label="Go to Top"');
   });
 
-  it('renders the presence-not-value example', () => {
-    const result = render(
+  it('renders the presence-not-value example', async () => {
+    const result = await render(
       '<html :isOpen=${false} :canSubmit=${false}><body>' +
         '<sl-dialog :attr-open=${isOpen}>x</sl-dialog>' +
         '<button :attr-disabled=${!canSubmit}>Send</button>' +
@@ -65,8 +65,8 @@ describe('docs/concepts/values.md', () => {
     expect(result.body).toContain('required=""');
   });
 
-  it('removes an attribute whose expression is null', () => {
-    const result = render(
+  it('removes an attribute whose expression is null', async () => {
+    const result = await render(
       '<html :count=${0}><body>' +
         "<b title=${count > 0 ? 'yes' : null}>x</b>" +
         '</body></html>'
@@ -104,7 +104,7 @@ describe('docs/reference/syntax.md', () => {
     return ctx.root.proxy;
   }
 
-  it('keeps the type of an expression that fills the value, quoted or not', () => {
+  it('keeps the type of an expression that fills the value, quoted or not', async () => {
     const v = valuesOf(
       '<html :bare=${{ a: 1 }} :dq="${{ a: 1 }}" :sq=\'${{ a: 1 }}\'' +
         ' :num=${42} :dqNum="${42}"></html>'
@@ -116,7 +116,7 @@ describe('docs/reference/syntax.md', () => {
     expect(v['dqNum']).toBe(42);
   });
 
-  it('interpolates to a string once anything else is in the value', () => {
+  it('interpolates to a string once anything else is in the value', async () => {
     const v = valuesOf(
       '<html :mixed="n=${1}" :two="${1}${2}" :spaced=" ${1}"' +
         ' :plain="literal"></html>'
@@ -128,7 +128,7 @@ describe('docs/reference/syntax.md', () => {
     expect(v['plain']).toBe('literal');
   });
 
-  it('takes a literal arrow for callbacks, and nothing else', () => {
+  it('takes a literal arrow for callbacks, and nothing else', async () => {
     // the yes/error block under the binding table. Covered per-rule in
     // stage2-validate.test.ts against hand-built values; this checks the
     // documented markup itself, including the lifecycle families
@@ -154,7 +154,7 @@ describe('docs/reference/syntax.md', () => {
       .toContain('Nested functions must be arrow functions');
   });
 
-  it('passes an array through :prop- when the expression fills the value', () => {
+  it('passes an array through :prop- when the expression fills the value', async () => {
     const page = compile(
       '<html :items=${["a", "b"]}><body>' +
         '<sl-select :prop-options="${items}" :prop-label="one of ${items.length}">' +
@@ -173,11 +173,11 @@ describe('docs/reference/syntax.md', () => {
     expect(select.dom.label).toBe('one of 2');
   });
 
-  it('renders the commented, multi-line opening tag', () => {
+  it('renders the commented, multi-line opening tag', async () => {
     // written exactly as the section shows it, newlines and all: what makes
     // the shape usable is that attributes may span lines AND be annotated,
     // so the test would be worthless collapsed onto one
-    const result = render(
+    const result = await render(
       '<html><body>\n' +
         '<div class="my-component"\n' +
         '\n' +
@@ -198,8 +198,8 @@ describe('docs/reference/syntax.md', () => {
     expect(result.body).not.toContain('parameters');
   });
 
-  it('hides a single attribute behind a comment, as code does', () => {
-    const result = render(
+  it('hides a single attribute behind a comment, as code does', async () => {
+    const result = await render(
       '<html><body><div class="x"\n' +
         '  // :width=${100}\n' +
         '  :height=${20}\n' +
@@ -210,7 +210,7 @@ describe('docs/reference/syntax.md', () => {
     expect(result.body).toContain('20');
   });
 
-  it('runs an unterminated comment to EOF, surfacing as an unclosed tag', () => {
+  it('runs an unterminated comment to EOF, surfacing as an unclosed tag', async () => {
     // the diagnostic names the tag, not the comment -- worth stating in the
     // docs, because the message points somewhere other than the mistake
     const source = parse(
@@ -222,8 +222,8 @@ describe('docs/reference/syntax.md', () => {
 });
 
 describe('docs/concepts/scopes.md', () => {
-  it('renders the $id anchoring example', () => {
-    const result = render(
+  it('renders the $id anchoring example', async () => {
+    const result = await render(
       '<html><head><:define tag="bs-nav:nav" :_id=${$id}>' +
         '<button data-bs-target="#nav-${_id}" aria-controls="nav-${_id}">t</button>' +
         '<div class="collapse" id="nav-${_id}">c</div>' +
@@ -246,8 +246,8 @@ describe('docs/concepts/modules-and-components.md', () => {
     '<:define tag="my-card:div" class="card" :title="Untitled">' +
     '<h5>${title}</h5></:define>';
 
-  it('renders the parameters-and-defaults example', () => {
-    const result = render(
+  it('renders the parameters-and-defaults example', async () => {
+    const result = await render(
       `<html :post=\${{ name: "From data" }}><head>${CARD}</head><body>` +
         '<my-card /><my-card :title="Hello" /><my-card :title=${post.name} />' +
         '</body></html>'
@@ -259,8 +259,8 @@ describe('docs/concepts/modules-and-components.md', () => {
     expect(result.body).toContain('From data');
   });
 
-  it('renders the slot example, with and without content', () => {
-    const result = render(
+  it('renders the slot example, with and without content', async () => {
+    const result = await render(
       '<html><head><:define tag="my-card:div" class="card">' +
         '<div class="body"><:slot>Nothing here yet.</:slot></div>' +
         '</:define></head><body>' +
@@ -273,8 +273,8 @@ describe('docs/concepts/modules-and-components.md', () => {
     expect(result.body).toContain('<div class="body">Nothing here yet.</div>');
   });
 
-  it('renders the named-slot example', () => {
-    const result = render(
+  it('renders the named-slot example', async () => {
+    const result = await render(
       '<html><head><:define tag="my-panel:section" :title="T">' +
         '<header><:slot name="header">${title}</:slot></header>' +
         '<div class="body"><:slot /></div>' +
@@ -289,8 +289,8 @@ describe('docs/concepts/modules-and-components.md', () => {
     expect(result.body).toContain('Everything else fills the unnamed slot.');
   });
 
-  it('renders the composing example', () => {
-    const result = render(
+  it('renders the composing example', async () => {
+    const result = await render(
       '<html :posts=${[{ title: "One", tag: "a" }, { title: "Two", tag: "b" }]}>' +
         '<head><:define tag="my-badge:span" class="badge" :label="">${label}</:define>' +
         '<:define tag="my-card:div" class="card" :title="Untitled">' +
@@ -309,8 +309,8 @@ describe('docs/concepts/modules-and-components.md', () => {
     expect(live).toContain('<span class="badge">b</span>');
   });
 
-  it('renders the resolves-where-written example', () => {
-    const result = render(
+  it('renders the resolves-where-written example', async () => {
+    const result = await render(
       '<html :label=${"page"}><head>' +
         '<:define tag="my-box:div" :label=${"definition"}><:slot /></:define>' +
         '</head><body><my-box>${label}</my-box></body></html>'
@@ -323,11 +323,11 @@ describe('docs/concepts/modules-and-components.md', () => {
 });
 
 describe('docs/concepts/state.md', () => {
-  it('renders the durable-app-state example', () => {
+  it('renders the durable-app-state example', async () => {
     // the point of the snippet is that typing folds the note back into
     // `tracks` rather than leaving it in the element, so the assertion is on
     // the written-back attribute: that is the half a datasource could save
-    const result = render(
+    const result = await render(
       "<html><body :tracks=${[{ id: 'lantern', name: 'Lantern Season', note: 'capo 3' }]}>" +
         '<ol><li :for-each=${tracks} :for-key=${data.id}>' +
         '<input value=${data.note} :on-input=${e => tracks = tracks.map(t =>' +
@@ -340,8 +340,8 @@ describe('docs/concepts/state.md', () => {
     expect(live).toContain('value="capo 3"');
   });
 
-  it('renders the ephemeral-view-state example', () => {
-    const result = render(
+  it('renders the ephemeral-view-state example', async () => {
+    const result = await render(
       "<html><body :activeSeason=${'All'}>" +
         "<button :for-each=${['All', 'Spring']} :on-click=${() => activeSeason = data}>" +
         '${data}</button><p>${activeSeason}</p></body></html>'
@@ -358,8 +358,8 @@ describe('docs/concepts/state.md', () => {
 });
 
 describe('docs/concepts/replication.md', () => {
-  it('renders the :for-key example', () => {
-    const result = render(
+  it('renders the :for-key example', async () => {
+    const result = await render(
       '<html :rows=${[{ id: "a", label: "One" }, { id: "b", label: "Two" }]}>' +
         '<body><ul><li :for-each=${rows} :for-key=${data.id}>' +
         '<input> ${data.label}' +

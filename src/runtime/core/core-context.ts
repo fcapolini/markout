@@ -13,8 +13,29 @@ export type RuntimeErrorPhase =
   | 'propagate'
   | 'callback'
   | 'refresh'
+  // a `:server-` value's promise that never usefully arrived
+  | 'settle'
   // a `:server-` result the server could not send to the client
   | 'transfer';
+
+/** how long a whole render may wait for its `:server-` values, in total */
+export const DEFAULT_SETTLE_TIMEOUT_MS = 5000;
+/**
+ * How deep a chain of server values feeding each other may go. Small on
+ * purpose: two or three links is a real page, and more usually means a value
+ * feeding its own input, which would otherwise stall until the deadline on
+ * every single request while reporting nothing but slowness.
+ */
+export const DEFAULT_SETTLE_MAX_ROUNDS = 5;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => {
+    const timer = setTimeout(resolve, ms);
+    // Node keeps the process alive for a pending timer, and this one loses
+    // its race whenever the work finishes first -- which is the normal case
+    (timer as unknown as { unref?: () => void }).unref?.();
+  });
+}
 
 export interface RuntimeError {
   phase: RuntimeErrorPhase;
@@ -117,23 +138,38 @@ export class CoreContext {
    */
   collectState(): PageState {
     const state: PageState = {};
+    this.eachServerValue((scope, key, value) => {
+      (state[scope.uid] ??= {})[key] = value.value;
+    });
+    return state;
+  }
+
+  /**
+   * Visits every live `:server-` value in the tree.
+   *
+   * A stencil's values are prototypes for its replicas rather than bindings
+   * of its own, and nothing below one is evaluated either (see isStencil and
+   * unlinkInert). Visiting there would treat `undefined` as a result when it
+   * only means "never ran" -- and a `:for-data` guarding an absent item would
+   * produce one for every page that doesn't show it. Its REPLICAS are
+   * children too, and those are live, which is why this skips the prototype
+   * markup rather than the whole subtree.
+   *
+   * Walked fresh on each call rather than cached: settling a value can add or
+   * remove replicas, and a datasource that drives a `:for-each` brings whole
+   * new subtrees -- with server values of their own -- into being.
+   */
+  private eachServerValue(
+    visit: (scope: CoreScope, key: string, value: CoreValue) => void
+  ): void {
     const walk = (scope: CoreScope) => {
-      // A stencil's values are prototypes for its replicas rather than
-      // bindings of its own, and nothing below one is evaluated either (see
-      // isStencil and unlinkInert). Collecting there would send `undefined`
-      // for a value that was never run -- and a `:for-data` guarding an
-      // absent item would send one for every page that doesn't show it.
-      // Its REPLICAS are children too, and those are live, which is why this
-      // skips the prototype markup rather than the whole subtree.
       const stencil = scope.isStencil();
       const declared = stencil ? undefined : scope.props.values;
       if (declared) {
-        let own: { [key: string]: unknown } | undefined;
         for (const [key, valProps] of Object.entries(declared)) {
           if (!valProps.serverOnly) continue;
           const value = scope.values[key];
-          if (!value) continue;
-          (own ??= state[scope.uid] ??= {})[key] = value.value;
+          value && visit(scope, key, value);
         }
       }
       for (const child of scope.children) {
@@ -141,7 +177,120 @@ export class CoreContext {
       }
     };
     walk(this.root);
-    return state;
+  }
+
+  /**
+   * Waits for every `:server-` value that produced a promise, replacing each
+   * with what it resolved to.
+   *
+   * Async is allowed exactly where the result can be sent. A plain value's
+   * promise would have to resolve in the browser too, and hydration is
+   * synchronous, so there is nothing to wait with -- but a `:server-` value
+   * is settled here and travels as its result, which is what lets a
+   * datasource be an ordinary component:
+   *
+   *   <:define tag="std-data:span" :server-data=${fetch(src).then(r => r.json())} />
+   *
+   * This loops rather than awaiting once. One datasource's result can feed
+   * another's URL, and settling propagates, so a value that was `null` while
+   * its input was missing produces a promise of its own on the next pass.
+   * Waiting a single time would serialize the page with the second request
+   * still in flight.
+   *
+   * Two separate limits, because they mean different things. The deadline
+   * bounds how long a visitor waits for a slow network. `maxRounds` bounds
+   * how DEEP the waterfall may be, and a page that exceeds it has a bug --
+   * a value feeding its own input would otherwise stall every render until
+   * the deadline, reporting nothing but slowness.
+   *
+   * A value that rejects, times out, or is still pending at the cap becomes
+   * `undefined` and is reported -- the same rule an expression that throws
+   * already follows, and for the same reason: one fixed outcome beats a
+   * result you have to reconstruct from what happened to finish.
+   */
+  async settle(props?: { timeoutMs?: number; maxRounds?: number }): Promise<void> {
+    const timeoutMs = props?.timeoutMs ?? DEFAULT_SETTLE_TIMEOUT_MS;
+    const maxRounds = props?.maxRounds ?? DEFAULT_SETTLE_MAX_ROUNDS;
+    const deadline = Date.now() + timeoutMs;
+
+    for (let round = 0; ; round++) {
+      const pending: { value: CoreValue; promise: PromiseLike<unknown> }[] = [];
+      this.eachServerValue((_scope, _key, value) => {
+        const held = value.value as PromiseLike<unknown> | undefined;
+        if (held && typeof (held as { then?: unknown }).then === 'function') {
+          pending.push({ value, promise: held });
+        }
+      });
+      if (!pending.length) {
+        return;
+      }
+      if (round >= maxRounds) {
+        pending.forEach(p =>
+          this.abandon(p.value, `still pending after ${maxRounds} rounds: ` +
+            `a server value's result feeds another's input too deeply`)
+        );
+        return;
+      }
+
+      // Only the values whose own sources have settled. A promise is truthy,
+      // so a dependent guarded on one -- `${a ? fetch(a.next) : null}` -- has
+      // already run against the promise ITSELF and produced a result built
+      // from it. Freezing that is the same wrong answer the propagation queue
+      // is depth-ordered to avoid: it isn't stale, it's built from an input
+      // that was mid-flight. Left alone, the value keeps its expression, and
+      // settling its source re-evaluates it against the real thing.
+      const waiting = new Set(pending.map(p => p.value));
+      let batch = pending.filter(p => ![...p.value.src].some(src => waiting.has(src)));
+      if (!batch.length) {
+        // every pending value waits on another: nothing could be ordered
+        // first, so take them all and let the round cap bound it rather than
+        // spinning here reporting nothing
+        batch = pending;
+      }
+
+      const settled = new Map<CoreValue, { ok: true; v: unknown } | { ok: false; e: unknown }>();
+      await Promise.race([
+        Promise.all(
+          batch.map(p =>
+            Promise.resolve(p.promise).then(
+              v => void settled.set(p.value, { ok: true, v }),
+              e => void settled.set(p.value, { ok: false, e })
+            )
+          )
+        ),
+        sleep(Math.max(0, deadline - Date.now())),
+      ]);
+
+      for (const { value } of batch) {
+        const result = settled.get(value);
+        if (!result) {
+          // the deadline passed with this one still in flight. Reported and
+          // dropped rather than waited on: the page is what the visitor is
+          // here for, and a value that missed it can be produced again on a
+          // later request
+          this.abandon(value, `timed out after ${timeoutMs}ms`);
+          continue;
+        }
+        if (!result.ok) {
+          this.abandon(value, result.e instanceof Error ? result.e.message : `${result.e}`);
+          continue;
+        }
+        // `set()` rather than a plain assignment: it propagates, which is how
+        // the next link of a waterfall gets to run at all. It also discards
+        // the expression, which is right here -- the expression's job was to
+        // start the work, and re-running it would start it again
+        value.set(result.v);
+      }
+      // a settled value may have failed and become `undefined`, which can
+      // itself change what depends on it; the next pass sees whatever that
+      // produced
+    }
+  }
+
+  /** a server value that will never arrive: `undefined`, and reported */
+  private abandon(value: CoreValue, message: string) {
+    value.set(undefined);
+    this.onError('settle', new Error(message), value);
   }
 
   newScope(

@@ -29,7 +29,7 @@ function build(html: string) {
   return page;
 }
 
-function run(html: string) {
+async function run(html: string) {
   const page = build(html);
   const errors = page.errors.map(e => e.msg);
   if (errors.length) return { errors, log: [], ctx: undefined, served: [] as string[] };
@@ -37,7 +37,7 @@ function run(html: string) {
   const log: string[] = [];
   (globalThis as Record<string, unknown>).LIFECYCLE_LOG = log;
   // the served page first, to prove these do not run there
-  const served = renderPage(page).map((e: RuntimeError) => e.message);
+  const served = (await renderPage(page)).map((e: RuntimeError) => e.message);
   const atServe = [...log];
   log.length = 0;
   const ctx = new WebContext({
@@ -59,25 +59,25 @@ const PROBE =
   `:will-dispose=${NOTE('dispose')}>x</:define>`;
 
 describe('lifecycle callbacks', () => {
-  it('announces a scope and its markup, in that order', () => {
-    const { errors, log } = run(
+  it('announces a scope and its markup, in that order', async () => {
+    const { errors, log } = await run(
       `<html><head>${PROBE}</head><body><my-probe :tag="a" /></body></html>`
     );
     expect(errors).toStrictEqual([]);
     expect(log).toStrictEqual(['init a', 'attach a']);
   });
 
-  it('does not run any of them while serving', () => {
+  it('does not run any of them while serving', async () => {
     // browser-only, like `:handle-`: a served page has no view to drive, and
     // a timer started here would run on the server
-    const { atServe } = run(
+    const { atServe } = await run(
       `<html><head>${PROBE}</head><body><my-probe :tag="a" /></body></html>`
     );
     expect(atServe).toStrictEqual([]);
   });
 
-  it('detaches before disposing when a replica is dropped', () => {
-    const { ctx, log } = run(
+  it('detaches before disposing when a replica is dropped', async () => {
+    const { ctx, log } = await run(
       `<html :rows=${'${["a", "b"]}'}><head>${PROBE}</head>` +
         '<body><my-probe :for-each=${rows} :tag=${data} /></body></html>'
     );
@@ -89,10 +89,10 @@ describe('lifecycle callbacks', () => {
     expect(log).toStrictEqual(['detach b', 'dispose b']);
   });
 
-  it('detaches and attaches a :for-data region without ever disposing it', () => {
+  it('detaches and attaches a :for-data region without ever disposing it', async () => {
     // the case the second pair exists for: the scope never goes away, so a
     // component that only had `:will-dispose` would never hear about this
-    const { ctx, log } = run(
+    const { ctx, log } = await run(
       `<html :on=${'${true}'}><head>${PROBE}</head>` +
         '<body><div :for-data=${on}><my-probe :tag="r" /></div></body></html>'
     );
@@ -107,18 +107,18 @@ describe('lifecycle callbacks', () => {
     expect(log).toStrictEqual(['detach r', 'attach r']);
   });
 
-  it('says nothing at all for a stencil', () => {
+  it('says nothing at all for a stencil', async () => {
     // a `:for-each` host is a prototype, not a rendering. It evaluates none
     // of its values, and for the same reason reports none of its lifetime
-    const { log } = run(
+    const { log } = await run(
       `<html><head>${PROBE}</head>` +
         '<body><my-probe :for-each=${[]} :tag="never" /></body></html>'
     );
     expect(log).toStrictEqual([]);
   });
 
-  it('takes a subtree apart deepest first, and builds it parents first', () => {
-    const { ctx, log } = run(
+  it('takes a subtree apart deepest first, and builds it parents first', async () => {
+    const { ctx, log } = await run(
       '<html :on=${true}><head>' +
         '<:define tag="my-outer:div" :tag=${""} ' +
         `:did-attach=${NOTE('attach')} :will-detach=${NOTE('detach')}><:slot /></:define>` +
@@ -135,7 +135,7 @@ describe('lifecycle callbacks', () => {
     expect(log).toStrictEqual(['detach in', 'detach out']);
   });
 
-  it('refuses a callback the runtime has no moment for', () => {
+  it('refuses a callback the runtime has no moment for', async () => {
     // the failure mode these had while unimplemented: compiled, and never
     // called. A closed set of suffixes is what stops a typo doing that
     const p = build('<html><body><i :did-mount=${() => {}}>x</i></body></html>');
@@ -145,8 +145,8 @@ describe('lifecycle callbacks', () => {
     ]);
   });
 
-  it('keeps a failing callback from taking the rest of the teardown with it', () => {
-    const { ctx, log } = run(
+  it('keeps a failing callback from taking the rest of the teardown with it', async () => {
+    const { ctx, log } = await run(
       '<html :rows=${[1]}><head>' +
         '<:define tag="my-bad:i" :will-detach=${() => { throw new Error("boom"); }} ' +
         ':will-dispose=${() => { globalThis.LIFECYCLE_LOG.push("still ran"); }}>x</:define>' +

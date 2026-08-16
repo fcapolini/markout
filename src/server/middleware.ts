@@ -73,7 +73,7 @@ export function markout(props: MarkoutProps) {
       return serveErrorPage(page.source.errors, res);
     }
 
-    const runtimeErrors = renderPage(page);
+    const runtimeErrors = await renderPage(page);
     // always logged, whatever the mode
     runtimeErrors.forEach(e =>
       logger('error', `[markout] ${pathname} ${formatRuntimeError(e)}`)

@@ -1,7 +1,8 @@
 # Server-only values — `:server-`
 
-Status: **`:server-` is built** (step 1 below). The pending-work registry and
-async `renderPage` that a datasource component also needs are still proposed.
+Status: **built** — `:server-` values, and the async render that settles
+them (steps 1 and 2 below). What remains is `std-data` itself, which needs
+nothing further from the runtime.
 
 User-facing documentation lives in
 [the syntax reference](../reference/syntax.md#server-only-values); this file
@@ -264,16 +265,79 @@ honest.
 
 ## Order of work
 
-1. ~~**`:server-` end to end, synchronous only.**~~ **Done.** No fetch, no
-   async, no registry. `:server-t=${Date.now()}` renders once on the server and
-   does not flip on hydration.
-2. **Pending registry + async `renderPage`.** Independent of (1), provable
-   against a stub that just resolves a promise.
+1. ~~**`:server-` end to end, synchronous only.**~~ **Done.**
+2. ~~**Pending registry + async `renderPage`.**~~ **Done**, and smaller than
+   designed — see below.
 3. **`std-data` in std-kit**, built on both, with nothing runtime-specific of
    its own.
 
 The sequencing was the argument that this decomposition was right, and it
-held: step 1 shipped before anything about fetching is settled.
+held: step 1 shipped before anything about fetching was settled.
+
+## The registry turned out not to need an API
+
+The design called for `context.pending.add(promise)` — a registry page code
+would call into. It doesn't exist, because there is nothing for it to do that
+the existing marker doesn't already say.
+
+A `:server-` value whose expression returns a promise IS the registration.
+The server walks its server values, finds the thenables, waits, and replaces
+each with what it resolved to. So the datasource is:
+
+```html
+<:define tag="std-data:span" :src="" :server-data=${fetch(src).then(r => r.json())} />
+```
+
+with no new page-facing syntax at all. And it generalizes the way the registry
+was supposed to: a database read, a file read, anything async is a `:server-`
+value returning a promise.
+
+The rule that falls out is worth stating on its own, because it explains why
+this is not simply "async values": **async is allowed exactly where the
+result can be sent.** An unmarked value's promise would have to resolve in
+the browser too, and hydration is synchronous, so there is nothing to wait
+with. `:server-` is the marker that makes waiting meaningful, and it was
+already there.
+
+This also disposes of the hole the design warned about — that `fetch`'s own
+promise settles at headers-received, before `.json()` and the assignment have
+run. Nothing patches `fetch`; what is awaited is the value's whole
+expression, chain included, and the thing awaited is by construction the
+thing that produces the value.
+
+### Ordering, which the design missed
+
+A promise is truthy. So a dependent guarded on one — `${user ? fetch(...) : null}`
+— runs on the first pass against the *promise*, not against the user, and
+produces a result built from it. Settling everything in one batch freezes
+that: the waterfall test rendered `[object Promise]1` where it should have
+had `21`.
+
+So a value is settled only once none of its own sources are still pending.
+The bogus first result keeps its expression, and settling the source
+re-evaluates it against the real thing. This is the same failure the
+propagation queue is depth-ordered to avoid, in a second place: the value
+wasn't stale, it was built from an input that was mid-flight.
+
+What this does *not* undo is work that first pass already started. A request
+built from an unresolved URL has been sent by the time anything can notice.
+Guarding on shape (`${user?.id ? ... : null}`) avoids it; making an unsettled
+server value read as `undefined` to its dependents would avoid it generally,
+and is the open question below.
+
+### Two limits, not one
+
+A **deadline** (5s default) bounds how long a visitor waits on a slow
+network, budgeted across the whole render rather than per promise. A **depth
+cap** (5 rounds) bounds how long a chain of values feeding each other may
+get. They catch different things: without the cap, a page whose values feed
+each other too deeply stalls until the deadline on *every* request while
+reporting nothing but slowness.
+
+A value that rejects, times out, or is still pending at the cap becomes
+`undefined` and is reported under a `settle` phase — the rule an expression
+that throws already follows, for the reason it already gives: one fixed
+outcome beats a result reconstructed from whatever happened to finish.
 
 ## Settled along the way
 
@@ -290,6 +354,11 @@ held: step 1 shipped before anything about fetching is settled.
 - **Does `uid` hold up through nested custom-tag instances?** Replicas are
   now tested. A custom-tag instance inside a `:for-each` is not, and is the
   case most likely to surprise.
+- **Should an unsettled server value read as `undefined` to its dependents?**
+  It would make the truthiness guard work as written and stop a dependent
+  starting work from an input that hasn't arrived. The cost is a second
+  meaning for `undefined` on a value that may yet produce something, and a
+  non-destructive way to blank a value mid-render, which `set()` is not.
 - **`:server-` on a `:for-each` replica's per-item binding.** Still open: the
   binding is named by `:for-as`, so there is no attribute to refuse. Writing
   `:server-` on the alias is not currently expressible, which is why nothing

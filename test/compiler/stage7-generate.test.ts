@@ -68,7 +68,7 @@ describe('stage7-generate', () => {
     return v;
   }
 
-  it('should generate propsAST and propsString with the root scope id and name', () => {
+  it('should generate propsAST and propsString with the root scope id and name', async () => {
     stage4resolve(page);
     stage7generate(page);
 
@@ -79,7 +79,7 @@ describe('stage7-generate', () => {
     expect(page.propsString).toContain(root.id);
   });
 
-  it('should compile a literal value into an exp function returning that constant', () => {
+  it('should compile a literal value into an exp function returning that constant', async () => {
     addValue(root, 'count', parseExpr('42'));
 
     stage4resolve(page);
@@ -90,7 +90,7 @@ describe('stage7-generate', () => {
     expect(exp.apply({})).toBe(42);
   });
 
-  it('should compile a plain (non-`${}`) string value into an exp returning that literal string', () => {
+  it('should compile a plain (non-`${}`) string value into an exp returning that literal string', async () => {
     addValue(root, 'label', 'hello');
 
     stage4resolve(page);
@@ -101,7 +101,7 @@ describe('stage7-generate', () => {
     expect(exp.apply({})).toBe('hello');
   });
 
-  it('should treat a presence-only (null) value as true', () => {
+  it('should treat a presence-only (null) value as true', async () => {
     addValue(root, 'class$active', null);
 
     stage4resolve(page);
@@ -112,7 +112,7 @@ describe('stage7-generate', () => {
     expect(exp.apply({})).toBe(true);
   });
 
-  it('should qualify this.foo references and evaluate them against the given scope proxy', () => {
+  it('should qualify this.foo references and evaluate them against the given scope proxy', async () => {
     addValue(root, 'doubled', parseExpr('this.count * 2'));
 
     stage4resolve(page);
@@ -123,7 +123,7 @@ describe('stage7-generate', () => {
     expect(exp.apply({ count: 21 })).toBe(42);
   });
 
-  it('should compile deps into functions resolving via $value/$parent.$value', () => {
+  it('should compile deps into functions resolving via $value/$parent.$value', async () => {
     addValue(root, 'count', null);
     addValue(page.global, 'count', null);
     addValue(root, 'doubled', parseExpr('this.count * 2'));
@@ -159,7 +159,7 @@ describe('stage7-generate', () => {
     ]);
   });
 
-  it('should translate compiled key prefixes to the ones WebScope expects', () => {
+  it('should translate compiled key prefixes to the ones WebScope expects', async () => {
     addValue(root, 'on$click', parseExpr('() => {}'));
     const textAttr = new ServerAttribute(doc, null as any, ':t$0', null, LOC);
     textAttr.value = parseExpr('this.count');
@@ -181,7 +181,7 @@ describe('stage7-generate', () => {
     expect(keys).not.toContain('t$0');
   });
 
-  it('should recurse into child scopes', () => {
+  it('should recurse into child scopes', async () => {
     const child = new Scope(page, root, undefined, 'child');
     addValue(child, 'x', parseExpr('1'));
 
@@ -213,7 +213,7 @@ describe('stage7-generate bootstrap scripts', () => {
     ) as any[];
   }
 
-  it('should append a props script and an async runtime script to the end of body', () => {
+  it('should append a props script and an async runtime script to the end of body', async () => {
     const p = compilePage('<html><body></body></html>');
     const scripts = bodyScripts(p);
 
@@ -224,14 +224,14 @@ describe('stage7-generate bootstrap scripts', () => {
     expect(runtimeScript.getAttributeNode('async')).not.toBeNull();
   });
 
-  it('should honor a custom runtimeSrc', () => {
+  it('should honor a custom runtimeSrc', async () => {
     const p = compilePage('<html><body></body></html>', '/custom-runtime.js');
     const [, runtimeScript] = bodyScripts(p);
 
     expect(runtimeScript.getAttribute('src')).toBe('/custom-runtime.js');
   });
 
-  it('should escape a literal </script> found inside generated source', () => {
+  it('should escape a literal </script> found inside generated source', async () => {
     const p = compilePage(
       '<html :label=${"</script><script>alert(1)</script>"}></html>'
     );
@@ -254,7 +254,7 @@ describe('stage7-generate full pipeline: dependency codegen', () => {
     return p;
   }
 
-  it('compiles a same-scope reference from a plain child element into this.$value(key)', () => {
+  it('compiles a same-scope reference from a plain child element into this.$value(key)', async () => {
     // :count and ${count} end up on the same scope: <p> has no special
     // attribute of its own, so it doesn't get a scope and the
     // interpolation attaches to the enclosing <div>'s
@@ -272,7 +272,7 @@ describe('stage7-generate full pipeline: dependency codegen', () => {
     expect(generate(dep)).toContain("this.$value('count')");
   });
 
-  it('still compiles to this.$value(key) when the reference lives in its own nested (:aka) scope', () => {
+  it('still compiles to this.$value(key) when the reference lives in its own nested (:aka) scope', async () => {
     // ${count} qualifies to `this.count` regardless of which scope actually
     // owns it -- the scope-chain walk happens at runtime, in lookup(),
     // never at compile time -- so this must compile exactly like the
@@ -304,7 +304,7 @@ describe('stage7-generate full pipeline: nested :for-each', () => {
     return p;
   }
 
-  it('renders each sub-array with its own items, not the outer alias shadowing itself', () => {
+  it('renders each sub-array with its own items, not the outer alias shadowing itself', async () => {
     // regression test: :for-each's own alias (default 'data') used to be
     // qualified as a same-scope reference, so a nested :for-each=${data}
     // accidentally resolved to the alias IT was about to define instead of
@@ -316,7 +316,7 @@ describe('stage7-generate full pipeline: nested :for-each', () => {
     );
     expect(p.errors).toStrictEqual([]);
 
-    renderPage(p);
+    await renderPage(p);
     const markup = p.source.doc.body!.toString();
 
     expect(markup).toContain('<!---t0-->1<!---/-->');
@@ -326,7 +326,7 @@ describe('stage7-generate full pipeline: nested :for-each', () => {
     expect(markup).toContain('<!---t0-->5<!---/-->');
   });
 
-  it('still shadows correctly when both levels use the same custom :for-as alias', () => {
+  it('still shadows correctly when both levels use the same custom :for-as alias', async () => {
     // shadowKeyFor() must use the SCOPE'S OWN resolved alias (whatever
     // :for-as says), not a hardcoded 'data' -- verify that holds even when
     // the outer and inner :for-each deliberately reuse the same alias name
@@ -336,7 +336,7 @@ describe('stage7-generate full pipeline: nested :for-each', () => {
     );
     expect(p.errors).toStrictEqual([]);
 
-    renderPage(p);
+    await renderPage(p);
     const markup = p.source.doc.body!.toString();
 
     expect(markup).toContain('<!---t0-->1<!---/-->');
