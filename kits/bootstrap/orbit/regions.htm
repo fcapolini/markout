@@ -861,4 +861,139 @@
                 </div>
               </div>
   </:define>
+
+  <!---
+    Appearance and notifications.
+
+    `accent` and `dense` are declared on <html>, where the stylesheet can
+    read them, and a definition CAN reach them from there — the scope
+    chain ends at the page either way. It takes them as parameters
+    anyway, and writes through `:setAccent` and `:setDense`: a component
+    that assigns a page value directly works, and leaves no trace at the
+    usage site of what it touched.
+
+    The notification controls are the opposite case. They are named with
+    `:aka` here because nothing else declares them, and the two toasts
+    that quote the alert address reach them through this usage site's own
+    `:aka` — `prefs.contact.value`.
+  -->
+  <:define tag="orbit-settings:section"
+           class="dash-section"
+           id="settings"
+           :swatches=${[]}
+           :accent=${''}
+           :setAccent=${(hex) => hex}
+           :dense=${false}
+           :setDense=${(on) => on}
+           :errorRate=${0}
+           :onSave=${() => undefined}
+
+           /*
+             What the panel offers back. An `:aka` name is the definition's
+             own -- it is how this markup refers to its controls, not part
+             of the interface -- so the address the toasts quote is a value
+             declared here, and the control behind it stays private.
+           */
+           :address=${contact.value}
+  >
+            <div class="row g-4">
+              <div class="col-xl-6">
+                <dash-panel :heading="Appearance"
+                            :note="Both of these are page-level values, which is how the stylesheet can read them.">
+                  <div class="mb-3">
+                    <div class="form-label">Accent</div>
+                    <div class="d-flex gap-2">
+                      <!---
+                        Five buttons, one value: the stylesheet interpolates
+                        `accent`, so a click here restyles the page with no
+                        class toggled and no CSS variable written by hand.
+                      -->
+                      <bs-button :for-each=${swatches}
+                                 :for-as="hex"
+                                 :variant=${null}
+                                 :extra="dash-swatch"
+                                 :class-dash-picked=${accent === hex}
+                                 :style-background-color=${hex}
+                                 :on-click=${() => setAccent(hex)}
+                                 aria-label="Use ${hex} as the accent" />
+                    </div>
+                  </div>
+
+                  <bs-check :type="switch"
+                            :label="Compact rows"
+                            :help="Sets the cell padding used by both tables."
+                            :checked=${dense}
+                            :on-change=${ev => setDense(ev.target.checked)} />
+
+                  <hr>
+
+                  <p class="small text-body-secondary mb-0">
+                    Colour mode is the kit's own <code>bs-theme-toggle</code>, in
+                    the navigation bar: it writes Bootstrap's
+                    <code>data-bs-theme</code> before first paint, so the page
+                    never flashes the wrong mode.
+                  </p>
+                </dash-panel>
+              </div>
+
+              <div class="col-xl-6">
+                <dash-panel :heading="Notifications"
+                            :note="An ordinary form: every control names itself, and the summary reads them.">
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <bs-input :aka="contact"
+                                :label="Alert address"
+                                :type="email"
+                                :value="ops@orbit.dev"
+                                :check=${(v) => v.includes('@') && v.includes('.')}
+                                :message="That doesn't look like an email address."
+                                :extra="mb-0" />
+                    </div>
+                    <div class="col-md-6">
+                      <bs-select :aka="quiet"
+                                 :label="Quiet hours"
+                                 :value=${'22:00 – 07:00'}
+                                 :options=${['Never', '22:00 – 07:00', 'Weekends']}
+                                 :extra="mb-0" />
+                    </div>
+                  </div>
+
+                  <bs-range :aka="threshold"
+                            :label="Page me above this error rate"
+                            :showValue
+                            :min=${0}
+                            :max=${5}
+                            :step=${0.1}
+                            :value=${1.5}
+                            :extra="mt-3 mb-2" />
+
+                  <bs-check-group :aka="channels"
+                                  :legend="Deliver to"
+                                  :type="checkbox"
+                                  :inline
+                                  :value=${'Slack'}
+                                  :options=${['Email', 'Slack', 'SMS']} />
+
+                  <!--- not kept up to date — derived: it reads the controls above -->
+                  <bs-alert :variant=${contact._invalid ? 'danger' : 'secondary'}
+                            :extra="mb-3">
+                    <span :if=${contact._invalid}>
+                      Fix the alert address before saving.
+                    </span>
+                    <span :if=${!contact._invalid}>
+                      Paging <strong>${contact.value}</strong> over
+                      <strong>${channels.value}</strong> when errors pass
+                      <strong>${threshold.value}%</strong> — outside
+                      ${quiet.value === 'Never' ? 'no quiet hours' : quiet.value}.
+                      That is
+                      ${errorRate > threshold.value ? 'already the case right now.' : 'not the case right now.'}
+                    </span>
+                  </bs-alert>
+
+                  <bs-button :disabled=${contact._invalid}
+                             :on-click=${() => onSave()}>Save settings</bs-button>
+                </dash-panel>
+              </div>
+            </div>
+  </:define>
 </lib>
