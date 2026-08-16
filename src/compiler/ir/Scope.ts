@@ -67,6 +67,48 @@ export class Scope {
   }
 
   /**
+   * The scope this one's `:aka` name belongs to -- the compile-time mirror
+   * of CoreScope.nameSiteScope().
+   *
+   * The nearest enclosing NAMED scope in the markup this tag was written
+   * in. Everywhere in the language a name nests the way the markup nests:
+   * `<div :aka="ui"><span :aka="pane">` is `ui.pane`, and bare `pane` is an
+   * error. This is that rule, stated once, rather than the immediate parent
+   * -- which registered a name on whatever scope happened to be next, so an
+   * anonymous `<div :n=${1}>` in between left the name reachable from
+   * nowhere, and slotted markup, whose name jumped out to the call site,
+   * was flat when the markup said it was nested.
+   *
+   * Two things stop the walk short of a name. A definition's own markup
+   * ends at the definition: its `:aka`s are how it refers to its controls,
+   * not part of its interface, so they must not reach the page even through
+   * the instance's own name. And an instance reached from OUTSIDE -- the
+   * `child.slotted` test -- is markup the page wrote, so it is an enclosing
+   * scope like any other: it takes the name when it has one of its own, and
+   * is transparent when it does not, which is what keeps `<bs-toast
+   * :aka="saved">` inside an unnamed container reachable as `saved`.
+   */
+  nameSite(): Scope | undefined {
+    // see CoreScope.nameSiteScope() for why this is carried rather than
+    // re-read at each level
+    let outside = !!this.slotted;
+    let s = this.parent;
+    while (s && s !== this.page.global) {
+      const instance = s.usesTemplate !== undefined;
+      if (instance && !outside) return s;
+      // the runtime has no definition scopes -- a definition's markup only
+      // exists as instances -- so this is the compile-time spelling of the
+      // same wall
+      if (this.page.definitionScopes.has(s)) return s;
+      if (s.name) return s;
+      if (instance) outside = false;
+      else if (s.slotted) outside = true;
+      s = s.parent;
+    }
+    return this.parent;
+  }
+
+  /**
    * Where a lookup that STARTED here carries on -- the compile-time mirror
    * of CoreScope.lexicalParent().
    *
