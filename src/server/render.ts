@@ -22,7 +22,10 @@ import { escapeScriptText, serialize, UnserializableError } from "./serialize";
  * the caller decides what to do with them (log them, and in dev mode serve
  * an error page instead of this one).
  */
-export function renderPage(page: Page): RuntimeError[] {
+export async function renderPage(
+  page: Page,
+  settle?: { timeoutMs?: number; maxRounds?: number }
+): Promise<RuntimeError[]> {
   if (!page.propsString) {
     return [];
   }
@@ -37,6 +40,10 @@ export function renderPage(page: Page): RuntimeError[] {
     server: true,
   });
   ctx.refresh();
+  // async is what the server has that the browser doesn't: a `:server-` value
+  // may produce a promise, and this is where the page waits for it. Nothing
+  // is serialized until it has, or has given up
+  await ctx.settle(settle);
   emitState(page, ctx.collectState(), errors);
   return errors;
 }

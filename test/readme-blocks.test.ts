@@ -91,7 +91,7 @@ describe('README examples', () => {
         return;
       }
       expect(messages).toStrictEqual([]);
-      expect(renderPage(page)).toStrictEqual([]);
+      expect(await renderPage(page)).toStrictEqual([]);
     });
   }
 });

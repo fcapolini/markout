@@ -102,7 +102,7 @@ interface Probe {
 async function run(page: string, files?: Record<string, string>): Promise<Probe> {
   const compiled = await build(page, files);
   expect(compiled.errors.map(e => e.msg)).toStrictEqual([]);
-  const errors = renderPage(compiled);
+  const errors = await renderPage(compiled);
   expect(errors).toStrictEqual([]);
   const ctx = new WebContext({
     root: new Function(`return (${compiled.propsString});`)(),
@@ -129,7 +129,7 @@ async function run(page: string, files?: Record<string, string>): Promise<Probe>
 async function runInBrowser(page: string) {
   const compiled = await build(page);
   expect(compiled.errors.map(e => e.msg)).toStrictEqual([]);
-  expect(renderPage(compiled)).toStrictEqual([]);
+  expect(await renderPage(compiled)).toStrictEqual([]);
   const window = new Window();
   window.document.write(compiled.source.doc.toString());
   const errors: RuntimeError[] = [];

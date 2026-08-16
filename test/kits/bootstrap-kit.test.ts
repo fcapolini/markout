@@ -31,7 +31,7 @@ const PARTS_DIR = path.join(KIT_ROOT, 'bootstrap-kit/parts');
 async function compile(docroot: string, pathname: string) {
   const page = await new Compiler({ docroot }).compile(pathname);
   const errors = page.errors.map(e => e.msg);
-  const runtime = errors.length ? [] : renderPage(page).map(e => `${e.phase}: ${e.message}`);
+  const runtime = errors.length ? [] : (await renderPage(page)).map(e => `${e.phase}: ${e.message}`);
   return { page, errors, runtime, markup: page.source.doc.toString() };
 }
 

@@ -8,14 +8,14 @@ import { stage7generate } from '../../src/compiler/stages/stage7-generate';
 import { parse } from '../../src/html/parser';
 import { renderPage } from '../../src/server/render';
 
-function render(html: string) {
+async function render(html: string) {
   const page = new Page(parse(html, 'test.html'));
   stage1load(page);
   stage2validate(page);
   stage3qualify(page);
   stage4resolve(page);
   stage7generate(page);
-  const runtimeErrors = page.errors.length ? [] : renderPage(page);
+  const runtimeErrors = page.errors.length ? [] : await renderPage(page);
   const markup = page.source.doc.toString();
   return {
     errors: page.errors,
@@ -31,8 +31,8 @@ function render(html: string) {
 // walk that collects usages, so the tag survived into the served markup and
 // rendered nothing at all.
 describe('custom tags inside replicated markup', () => {
-  it('instantiates a component once per :for-each replica', () => {
-    const { errors, runtimeErrors, body } = render(
+  it('instantiates a component once per :for-each replica', async () => {
+    const { errors, runtimeErrors, body } = await render(
       '<html><head><:define tag="my-card:div" class="card" :title="T">' +
         '<h5>${title}</h5></:define></head>' +
         '<body><div :for-each=${["a", "b"]}><my-card :title=${data} /></div></body></html>'
@@ -48,12 +48,12 @@ describe('custom tags inside replicated markup', () => {
     expect(body).not.toContain('<my-card');
   });
 
-  it('replicates a custom tag that carries :for-each itself', () => {
+  it('replicates a custom tag that carries :for-each itself', async () => {
     // no wrapper element: the tag IS the replica. `:for-each` declares the
     // per-item name where the instance scope is defined -- at the usage site
     // -- so the attribute written beside it reads that name like any other
     // call-site expression
-    const { errors, runtimeErrors, body } = render(
+    const { errors, runtimeErrors, body } = await render(
       '<html><head><:define tag="my-card:div" class="card" :title="T">' +
         '<h5>${title}</h5></:define></head>' +
         '<body><my-card :for-each=${["a", "b"]} :title=${data} /></body></html>'
@@ -68,12 +68,12 @@ describe('custom tags inside replicated markup', () => {
     expect(live.match(/class="card"/g)!.length).toBe(2);
   });
 
-  it('keeps the definition blind to the name :for-each introduced', () => {
+  it('keeps the definition blind to the name :for-each introduced', async () => {
     // only the loop's alias crosses to the usage site. A definition resolves
     // where it was DEFINED, so `data` in its body is the page's value, never
     // the caller's item -- otherwise a component would silently read its
     // call site just by naming something the caller happened to loop over
-    const { errors, runtimeErrors, body } = render(
+    const { errors, runtimeErrors, body } = await render(
       '<html :data=${"page-data"}><head>' +
         '<:define tag="my-card:div" class="card">${data}</:define></head>' +
         '<body><my-card :for-each=${["a", "b"]} /></body></html>'
@@ -86,11 +86,11 @@ describe('custom tags inside replicated markup', () => {
     expect(live).not.toContain('>a<');
   });
 
-  it('does not let a usage-site value resolve to itself', () => {
+  it('does not let a usage-site value resolve to itself', async () => {
     // the alias is the ONLY name the loop adds at the usage site: passing a
     // page value through under its own name still means the page's, not this
     // attribute and not the definition's default
-    const { errors, runtimeErrors, body } = render(
+    const { errors, runtimeErrors, body } = await render(
       '<html :title=${"from-page"}><head>' +
         '<:define tag="my-card:div" class="card" :title="definition">${title}</:define>' +
         '</head><body><my-card :for-each=${[1]} :title=${title} /></body></html>'
@@ -103,11 +103,11 @@ describe('custom tags inside replicated markup', () => {
     expect(live).not.toContain('definition');
   });
 
-  it('lets markup slotted into a replicated tag see that name too', () => {
+  it('lets markup slotted into a replicated tag see that name too', async () => {
     // slotted content is written at the usage site like the attributes
     // beside it, so the same rule reaches it. Both forms: an attribute used
     // to be a compile error, and text used to compile and then render empty
-    const { errors, runtimeErrors, body } = render(
+    const { errors, runtimeErrors, body } = await render(
       '<html><head><:define tag="my-card:div" class="card"><:slot /></:define></head>' +
         '<body><my-card :for-each=${["a", "b"]}><i data-v=${data}>${data}</i></my-card>' +
         '</body></html>'
@@ -123,10 +123,10 @@ describe('custom tags inside replicated markup', () => {
     expect(live).toContain('<i data-v="b">b</i>');
   });
 
-  it('keeps slotted content resolving at the call site for everything else', () => {
+  it('keeps slotted content resolving at the call site for everything else', async () => {
     // the alias is an addition, not a replacement: a name the page declares
     // still resolves to the page's, and the definition's stays invisible
-    const { errors, runtimeErrors, body } = render(
+    const { errors, runtimeErrors, body } = await render(
       '<html :tone=${"page"}><head>' +
         '<:define tag="my-card:div" class="card" :tone=${"definition"}><:slot /></:define>' +
         '</head><body><my-card :for-each=${[1]}>${tone}</my-card></body></html>'
@@ -139,10 +139,10 @@ describe('custom tags inside replicated markup', () => {
     expect(live).not.toContain('definition');
   });
 
-  it('still expands a custom tag that merely sits inside a stencil', () => {
+  it('still expands a custom tag that merely sits inside a stencil', async () => {
     // the containment fix must not over-reach: a usage nested anywhere in
     // replicated markup is fine, it is only the host element that is refused
-    const { errors, runtimeErrors, body } = render(
+    const { errors, runtimeErrors, body } = await render(
       '<html><head><:define tag="my-card:div" class="card" :title="T">' +
         '<h5>${title}</h5></:define></head>' +
         '<body><ul><li :for-each=${["a", "b"]}><span><my-card :title=${data} /></span></li></ul></body></html>'
@@ -155,8 +155,8 @@ describe('custom tags inside replicated markup', () => {
     expect(body).toContain('>b<');
   });
 
-  it('lets one component use another', () => {
-    const { errors, runtimeErrors, body } = render(
+  it('lets one component use another', async () => {
+    const { errors, runtimeErrors, body } = await render(
       '<html><head>' +
         '<:define tag="my-badge:span" class="badge" :label="B">${label}</:define>' +
         '<:define tag="my-card:div" class="card" :title="T">' +
@@ -172,12 +172,12 @@ describe('custom tags inside replicated markup', () => {
     expect(body).not.toContain('<my-badge');
   });
 
-  it('keeps a definition reading its own scope, not the call site', () => {
+  it('keeps a definition reading its own scope, not the call site', async () => {
     // the point of the lexical/structural split: `gap` is declared BOTH on
     // the page (where the definition can see it) and on the element the tag
     // is used in. A component must read the one visible where it was
     // DEFINED, or dropping it into a new context would silently change it
-    const { errors, runtimeErrors, body } = render(
+    const { errors, runtimeErrors, body } = await render(
       '<html :gap=${1}><head><:define tag="my-gap:i">${gap}</:define></head>' +
         '<body><section :gap=${99}><my-gap /></section></body></html>'
     );
@@ -188,10 +188,10 @@ describe('custom tags inside replicated markup', () => {
     expect(body).not.toContain('>99<');
   });
 
-  it('still resolves a usage-site expression at the call site', () => {
+  it('still resolves a usage-site expression at the call site', async () => {
     // the other half of the same rule: this expression was written in the
     // page, so it reads the page's `gap` even though it lands on an instance
-    const { errors, runtimeErrors, body } = render(
+    const { errors, runtimeErrors, body } = await render(
       '<html><head><:define tag="my-gap:i" :n=${0}>${n}</:define></head>' +
         '<body><section :gap=${99}><my-gap :n=${gap} /></section></body></html>'
     );
@@ -205,8 +205,8 @@ describe('custom tags inside replicated markup', () => {
 // `<:slot>` marks where a definition takes the children written at a usage
 // site. They used to be dropped in silence.
 describe('slots', () => {
-  it('puts a usage site content where the definition asks for it', () => {
-    const { errors, runtimeErrors, body } = render(
+  it('puts a usage site content where the definition asks for it', async () => {
+    const { errors, runtimeErrors, body } = await render(
       '<html><head><:define tag="my-box:div" class="box">' +
         '<h5>head</h5><div class="body"><:slot /></div></:define></head>' +
         '<body><my-box><p>slotted</p></my-box></body></html>'
@@ -217,8 +217,8 @@ describe('slots', () => {
     expect(body).toContain('<div class="body"><p>slotted</p></div>');
   });
 
-  it('falls back to the slot own content when a usage supplies none', () => {
-    const { errors, body } = render(
+  it('falls back to the slot own content when a usage supplies none', async () => {
+    const { errors, body } = await render(
       '<html><head><:define tag="my-box:div"><:slot>nothing here</:slot></:define></head>' +
         '<body><my-box /></body></html>'
     );
@@ -229,13 +229,13 @@ describe('slots', () => {
     expect(body).not.toContain(':slot');
   });
 
-  it('resolves slotted text at the call site even when the usage has attributes', () => {
+  it('resolves slotted text at the call site even when the usage has attributes', async () => {
     // any `:` attribute gives the usage a scope of its own, and expansion
     // used to hand the instance a fresh call-site-values set at that point,
     // dropping the marking slotting had just put on the slotted TEXT. The
     // symptom was silent and backwards: `${tone}` written in the page read
     // the component's own `tone`, and only when the tag had an attribute
-    const { errors, runtimeErrors, body } = render(
+    const { errors, runtimeErrors, body } = await render(
       '<html :tone=${"page"}><head>' +
         '<:define tag="my-card:div" class="card" :tone=${"definition"}><:slot /></:define>' +
         '</head><body><my-card :x=${1}>${tone}</my-card></body></html>'
@@ -247,11 +247,11 @@ describe('slots', () => {
     expect(body).not.toContain('definition');
   });
 
-  it('resolves slotted markup against the call site, not the definition', () => {
+  it('resolves slotted markup against the call site, not the definition', async () => {
     // `label` exists on both: the slot content was written in the page, so it
     // must read the page's -- otherwise moving markup into a component would
     // silently change what it means
-    const { errors, runtimeErrors, body } = render(
+    const { errors, runtimeErrors, body } = await render(
       '<html :label=${"page"}><head>' +
         '<:define tag="my-box:div" :label=${"definition"}><:slot /></:define>' +
         '</head><body><my-box>${label}</my-box></body></html>'
@@ -263,11 +263,11 @@ describe('slots', () => {
     expect(body).not.toContain('definition');
   });
 
-  it('binds bare interpolated text alongside the definition own text', () => {
+  it('binds bare interpolated text alongside the definition own text', async () => {
     // text is bound by POSITION within a scope's territory, so slotted text
     // landing between the definition's own has to be re-keyed in document
     // order or every binding after it shifts
-    const { errors, runtimeErrors, body } = render(
+    const { errors, runtimeErrors, body } = await render(
       '<html :who=${"world"}><head>' +
         '<:define tag="my-box:div" :top=${"T"} :tail=${"E"}>' +
         '${top}<:slot />${tail}</:define>' +
@@ -279,8 +279,8 @@ describe('slots', () => {
     expect(body.replace(/<!--.*?-->/g, '')).toContain('T-hello world-E');
   });
 
-  it('gives every :for-each replica its own slotted content', () => {
-    const { errors, runtimeErrors, body } = render(
+  it('gives every :for-each replica its own slotted content', async () => {
+    const { errors, runtimeErrors, body } = await render(
       '<html><head><:define tag="my-box:div" class="box"><:slot /></:define></head>' +
         '<body><ul><li :for-each=${[1, 2]}><my-box>item ${data}</my-box></li></ul></body></html>'
     );
@@ -292,8 +292,8 @@ describe('slots', () => {
     expect(live).toContain('item <!---t0-->2');
   });
 
-  it('reports content given to a definition with no <:slot>', () => {
-    const { errors } = render(
+  it('reports content given to a definition with no <:slot>', async () => {
+    const { errors } = await render(
       '<html><head><:define tag="my-box:div">x</:define></head>' +
         '<body><my-box>dropped</my-box></body></html>'
     );
@@ -314,8 +314,8 @@ describe('named slots', () => {
     '<footer><:slot name="footer">(none)</:slot></footer>' +
     '</:define>';
 
-  it('routes each child to the slot it names, and the rest to the default', () => {
-    const { errors, runtimeErrors, body } = render(
+  it('routes each child to the slot it names, and the rest to the default', async () => {
+    const { errors, runtimeErrors, body } = await render(
       `<html :who=\${"world"}><head>${PANEL}</head><body>` +
         '<my-panel :title="T"><h2 :slot="header">Custom ${who}</h2>' +
         'body ${who}<p>more</p></my-panel></body></html>'
@@ -331,8 +331,8 @@ describe('named slots', () => {
     expect(body).not.toContain('slot=');
   });
 
-  it('falls back per slot, independently', () => {
-    const { errors, runtimeErrors, body } = render(
+  it('falls back per slot, independently', async () => {
+    const { errors, runtimeErrors, body } = await render(
       `<html><head>${PANEL}</head><body>` +
         '<my-panel :title="mine"><p :slot="footer">bye</p></my-panel></body></html>'
     );
@@ -345,7 +345,7 @@ describe('named slots', () => {
     expect(clean).toContain('<footer><p>bye</p></footer>');
   });
 
-  it('drops a component in the fallback of a slot that was filled', () => {
+  it('drops a component in the fallback of a slot that was filled', async () => {
     // the fallback is expanded before the slot is filled, so what stands in
     // the markup by then is the usage's `-u<id>` marker rather than its tag
     // -- and a filter looking for the ELEMENT inside the replaced region
@@ -359,7 +359,7 @@ describe('named slots', () => {
       '<div class="foot"><:slot name="foot">' +
       '<my-btn :kind="close">Close</my-btn></:slot></div>' +
       '</:define>';
-    const { errors, runtimeErrors, body } = render(
+    const { errors, runtimeErrors, body } = await render(
       `<html><head>${DIALOG}</head><body>` +
         '<my-dialog><p>one</p><span :slot="foot"><my-btn :kind="go">Go</my-btn></span></my-dialog>' +
         '<my-dialog><p>two</p></my-dialog>' +
@@ -376,8 +376,8 @@ describe('named slots', () => {
     expect(clean.match(/data-kind="close"/g)).toHaveLength(1);
   });
 
-  it('reports content addressed to a slot the definition has not got', () => {
-    const { errors } = render(
+  it('reports content addressed to a slot the definition has not got', async () => {
+    const { errors } = await render(
       `<html><head>${PANEL}</head><body>` +
         '<my-panel :title="T"><p :slot="sidebar">x</p></my-panel></body></html>'
     );
@@ -394,8 +394,8 @@ describe('custom tags inside slotted content', () => {
     '<:define tag="my-badge:span" class="badge" :label="B">${label}</:define>' +
     '<:define tag="my-card:div" class="card"><:slot /></:define>';
 
-  it('expands a component slotted into another component', () => {
-    const { errors, runtimeErrors, body } = render(
+  it('expands a component slotted into another component', async () => {
+    const { errors, runtimeErrors, body } = await render(
       `<html :who=\${"world"}><head>${LIB}</head><body>` +
         '<my-card><my-badge :label=${who} /> and ${who}</my-card></body></html>'
     );
@@ -409,8 +409,8 @@ describe('custom tags inside slotted content', () => {
     expect(body).not.toContain('<my-badge');
   });
 
-  it('resolves through two levels of slotting', () => {
-    const { errors, runtimeErrors, body } = render(
+  it('resolves through two levels of slotting', async () => {
+    const { errors, runtimeErrors, body } = await render(
       `<html :who=\${"deep"}><head>${LIB}</head><body>` +
         '<my-card><my-card><my-badge :label=${who} /></my-card></my-card>' +
         '</body></html>'
@@ -422,10 +422,10 @@ describe('custom tags inside slotted content', () => {
     expect(clean).toContain('<span class="badge">deep</span>');
   });
 
-  it('keeps the nested definition reading its own scope', () => {
+  it('keeps the nested definition reading its own scope', async () => {
     // `label` is declared on the page too: the badge's own body was written
     // in the definition, so it must still read the definition's default
-    const { errors, runtimeErrors, body } = render(
+    const { errors, runtimeErrors, body } = await render(
       `<html :label=\${"page"}><head>${LIB}</head><body>` +
         '<my-card><my-badge /></my-card></body></html>'
     );
@@ -446,8 +446,8 @@ describe('a slot inside the definition own :for-each', () => {
     '<li :for-each=${items}><:slot>item ${data}</:slot></li>' +
     '</:define>';
 
-  it('replicates the slot fallback once per item', () => {
-    const { errors, runtimeErrors, body } = render(
+  it('replicates the slot fallback once per item', async () => {
+    const { errors, runtimeErrors, body } = await render(
       `<html><head>${LIST}</head><body><my-list /></body></html>`
     );
 
@@ -459,12 +459,12 @@ describe('a slot inside the definition own :for-each', () => {
     expect(live).toContain('item <!---t0-->b');
   });
 
-  it('reports a usage that tries to fill it', () => {
+  it('reports a usage that tries to fill it', async () => {
     // the content would be stamped out per replica, but there is only one
     // set of scopes for it -- so this is refused rather than expanded wrong.
     // The message has to name the real problem: the slot IS there, and
     // saying otherwise sends the author looking in the wrong place
-    const { errors } = render(
+    const { errors } = await render(
       `<html><head>${LIST}</head><body><my-list><b>x</b></my-list></body></html>`
     );
 
@@ -473,8 +473,8 @@ describe('a slot inside the definition own :for-each', () => {
     expect(errors[0].msg).not.toContain('has no');
   });
 
-  it('reports it for a named slot too', () => {
-    const { errors } = render(
+  it('reports it for a named slot too', async () => {
+    const { errors } = await render(
       '<html><head><:define tag="my-list:ul" :items=${[1]}>' +
         '<li :for-each=${items}><:slot name="row" /></li>' +
         '</:define></head>' +
