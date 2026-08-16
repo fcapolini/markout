@@ -36,6 +36,20 @@ export class CoreValue<T = any> {
   cycle: number;
   exp?: ValueExp<T>;
   value: T | undefined;
+  /**
+   * A `:server-` expression's promise, while it is in flight.
+   *
+   * Held HERE rather than in `value`, so a promise is never something a page
+   * can see. Everything downstream is written against data -- `${rows.length}`,
+   * `${user ? ... : null}` -- and a promise standing in for the data it will
+   * become is the wrong shape for all of it: it is truthy, so guards pass; it
+   * has no `.length`; and `${'' + it}` renders "[object Promise]". Kept aside,
+   * a value that hasn't arrived reads as `undefined`, which is what "not there"
+   * already means everywhere else in this language.
+   *
+   * The server drains these (CoreContext.settle); nothing else looks at them.
+   */
+  pending?: PromiseLike<unknown>;
   /** longest path from a value with no sources; see depthNow() */
   depth = 0;
   private depthVersion = -1;
@@ -114,6 +128,8 @@ export class CoreValue<T = any> {
 
   set(value: T) {
     const old = this.value;
+    // whatever was in flight is answered for now, one way or another
+    this.pending = undefined;
     delete this.exp;
     // an expression value becoming static drops every edge into it, which
     // moves this value's depth and its dependents'. Rare, and the only way
@@ -134,7 +150,15 @@ export class CoreValue<T = any> {
   protected update() {
     const old = this.value;
     try {
-      this.value = this.exp!.apply(this.scope.proxy);
+      const next = this.exp!.apply(this.scope.proxy) as unknown;
+      // a server expression may answer with a promise; the promise is not
+      // the value, and never becomes one. See `pending`
+      const thenable =
+        this.props.serverOnly &&
+        !!next &&
+        typeof (next as { then?: unknown }).then === 'function';
+      this.pending = thenable ? (next as PromiseLike<unknown>) : undefined;
+      this.value = thenable ? undefined : (next as T);
     } catch (err) {
       // a failed expression yields `undefined`, always -- never whatever it
       // happened to hold before. Keeping the old value would make the result

@@ -305,25 +305,38 @@ run. Nothing patches `fetch`; what is awaited is the value's whole
 expression, chain included, and the thing awaited is by construction the
 thing that produces the value.
 
-### Ordering, which the design missed
+### A promise is never a value
 
-A promise is truthy. So a dependent guarded on one — `${user ? fetch(...) : null}`
-— runs on the first pass against the *promise*, not against the user, and
-produces a result built from it. Settling everything in one batch freezes
-that: the waterfall test rendered `[object Promise]1` where it should have
-had `21`.
+The first cut of this let the promise BE the value until it settled, and
+every problem that followed came from there. A promise is truthy, so
+`${user ? fetch(user.next) : null}` ran against the promise and built a
+request out of `[object Promise]`. It has no `.length`, so `${rows.length}`
+threw. Rendered, it printed `[object Promise]`. The waterfall test produced
+`[object Promise]1` where the answer was `21`.
 
-So a value is settled only once none of its own sources are still pending.
-The bogus first result keeps its expression, and settling the source
-re-evaluates it against the real thing. This is the same failure the
-propagation queue is depth-ordered to avoid, in a second place: the value
-wasn't stale, it was built from an input that was mid-flight.
+Each of those had its own patch until the rule underneath became obvious:
+**the runtime filters promises out of the reactive system.** A server value
+whose expression answers with a thenable holds it aside (`CoreValue.pending`)
+and reads as `undefined`. Pages are written against data; `undefined` is what
+"not there yet" already means everywhere else here; and nothing downstream
+needs to know promises exist at all.
 
-What this does *not* undo is work that first pass already started. A request
-built from an unresolved URL has been sent by the time anything can notice.
-Guarding on shape (`${user?.id ? ... : null}`) avoids it; making an unsettled
-server value read as `undefined` to its dependents would avoid it generally,
-and is the open question below.
+Ordering survives as a smaller rule: a value is still not settled while one
+of its own sources is pending, which matters for an *unguarded* chain
+(`${Promise.resolve(a * 10)}` computes `NaN` before `a` lands). Guarded
+chains no longer need it, because the guard now sees `undefined` and declines.
+
+### The first reading is discarded
+
+A dependent still evaluates once before its sources arrive — against
+`undefined` now rather than a promise — and `${rows.length}` on `undefined`
+throws just as surely. That is a value asked too early, not a broken page, so
+`renderPage` throws away everything reported before the results are in and
+takes the reading again once they are. Only `settle` failures survive the
+cut, being the one kind nothing later can turn into an answer.
+
+Without it, dev mode replaced the whole page with an error about a value that
+was perfectly fine a millisecond later — which is how this was found.
 
 ### Two limits, not one
 
@@ -365,11 +378,6 @@ props/state split exists to keep apart.
 - **Does `uid` hold up through nested custom-tag instances?** Replicas are
   now tested. A custom-tag instance inside a `:for-each` is not, and is the
   case most likely to surprise.
-- **Should an unsettled server value read as `undefined` to its dependents?**
-  It would make the truthiness guard work as written and stop a dependent
-  starting work from an input that hasn't arrived. The cost is a second
-  meaning for `undefined` on a value that may yet produce something, and a
-  non-destructive way to blank a value mid-render, which `set()` is not.
 - **`:server-` on a `:for-each` replica's per-item binding.** Still open: the
   binding is named by `:for-as`, so there is no attribute to refuse. Writing
   `:server-` on the alias is not currently expressible, which is why nothing
