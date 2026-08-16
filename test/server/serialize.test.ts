@@ -5,7 +5,7 @@ import {
   UnserializableError,
 } from '../../src/server/serialize';
 
-// A `:keep-` result crosses to the client as a JS literal rather than as
+// A `:server-` result crosses to the client as a JS literal rather than as
 // JSON, so what these assert is mostly that the things JSON would flatten
 // survive. See docs/design/value-transfer.md for why each one is on the list.
 //

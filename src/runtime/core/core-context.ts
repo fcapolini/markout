@@ -13,7 +13,7 @@ export type RuntimeErrorPhase =
   | 'propagate'
   | 'callback'
   | 'refresh'
-  // a `:keep-` result the server could not send to the client
+  // a `:server-` result the server could not send to the client
   | 'transfer';
 
 export interface RuntimeError {
@@ -31,7 +31,7 @@ export function formatRuntimeError(e: RuntimeError): string {
 }
 
 /**
- * What the server collected from `:keep-` values once its render settled,
+ * What the server collected from `:server-` values once its render settled,
  * keyed by scope uid and then by value key.
  *
  * Deliberately a second artifact rather than part of the props: the props are
@@ -51,7 +51,7 @@ export interface CoreContextProps {
    */
   onError?: (e: RuntimeError) => void;
   /**
-   * Results of the server's `:keep-` values, if this is a client rehydrating
+   * Results of the server's `:server-` values, if this is a client rehydrating
    * a served page. A value found here is built frozen -- with the result and
    * no expression -- instead of being derived again.
    */
@@ -104,14 +104,14 @@ export class CoreContext {
   init() {}
 
   /**
-   * Every `:keep-` value's result, for the server to send to the client.
+   * Every `:server-` value's result, for the server to send to the client.
    *
    * Call once the render has settled: it reads each value's current contents
    * rather than `get()`ting it, so a value still mid-flight would be
    * collected half-done rather than completed.
    *
    * A scope contributes under its `uid` (props.id plus replica path), which
-   * is what makes a kept value inside a `:for-each` land on the right
+   * is what makes a server-only value inside a `:for-each` land on the right
    * replica. A replica the client builds that the server never rendered
    * simply finds no entry and falls back to its expression.
    */
@@ -130,7 +130,7 @@ export class CoreContext {
       if (declared) {
         let own: { [key: string]: unknown } | undefined;
         for (const [key, valProps] of Object.entries(declared)) {
-          if (!valProps.keep) continue;
+          if (!valProps.serverOnly) continue;
           const value = scope.values[key];
           if (!value) continue;
           (own ??= state[scope.uid] ??= {})[key] = value.value;

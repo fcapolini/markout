@@ -1,6 +1,6 @@
-# Server-only values — `:keep-`
+# Server-only values — `:server-`
 
-Status: **`:keep-` is built** (step 1 below). The pending-work registry and
+Status: **`:server-` is built** (step 1 below). The pending-work registry and
 async `renderPage` that a datasource component also needs are still proposed.
 
 User-facing documentation lives in
@@ -35,11 +35,11 @@ for sequencing: this feature is worth building even if `std-data` never is.
 
 ## The contract
 
-> **`:keep-x=${expr}` — this expression runs on the server only. The client
+> **`:server-x=${expr}` — this expression runs on the server only. The client
 > receives its result.**
 
 That is the whole feature. Everything below follows from it, including why
-the result appears in the page source, and why dependents of a kept value
+the result appears in the page source, and why dependents of a server-only value
 still update normally.
 
 The value is **frozen** on the client: it arrives with a value and no
@@ -50,9 +50,9 @@ of an imperatively-written value should not re-run, a server-only expression
 
 The rule that follows, and the one thing to get right when using it:
 
-> **Keep the source, never the derivation.**
+> **Mark the source, never the derivation.**
 
-`:keep-user=${loadUser()}` with an ordinary `:greeting=${'Hi ' + user.name}`
+`:server-user=${loadUser()}` with an ordinary `:greeting=${'Hi ' + user.name}`
 is correct — `greeting` re-derives on the client and tracks `user` as usual.
 Marking `greeting` instead would pin it, and a later change to `user` would
 silently never reach it. The marker belongs on the value that cannot be
@@ -61,24 +61,20 @@ recomputed, not on anything computed from it.
 ## Syntax
 
 ```html
-<html :keep-session=${loadSession()}>
+<html :server-session=${loadSession()}>
 ```
 
-`:keep-name=${expr}` declares value `name` exactly as `:name=${expr}` does,
+`:server-name=${expr}` declares value `name` exactly as `:name=${expr}` does,
 and additionally marks it server-only. Consistent with the existing `:attr-`
 / `:prop-` / `:class-` / `:style-` prefix family, where the prefix names a
 behavior and the suffix names the target.
-
-The name is worth a second look before it ships: `:keep-` reads as "keep it
-around", when the contract is "runs on the server". `:server-`, `:pin-` and
-`:once-` are all closer to the meaning.
 
 ### What it may not combine with
 
 Plain named values only. A compile error on:
 
 - `:attr-`, `:prop-`, `:class-`, `:style-` — these are *derived from* values,
-  so once the value they read is kept they re-derive correctly for free.
+  so once the value they read is marked they re-derive correctly for free.
   Marking them too would store the same fact twice.
 - `:on-`, `:did-`, `:will-`, `:handle-` — these hold functions, which do not
   serialize, and are browser-only besides.
@@ -88,7 +84,7 @@ Plain named values only. A compile error on:
 
 ### Interaction with the two name conventions
 
-- `_private` composes fine: `:keep-_raw` is a kept internal value. The
+- `_private` composes fine: `:server-_raw` is a server-only internal value. The
   underscore is a naming convention, not a mechanism.
 - `k_comptime` does not, and should be a compile error. A `k_` value is
   substituted into its readers by stage5 and never reaches the runtime as a
@@ -104,7 +100,7 @@ Plain named values only. A compile error on:
 | `__MARKOUT_STATE` — this render's state | the server, post-render | the request | **no** |
 
 Folding the state into the props was considered and rejected. It is
-tempting — the props are already generated JS, so a kept value could simply
+tempting — the props are already generated JS, so a server-only value could simply
 be emitted as a literal in place of its `exp` — but it costs a **second full
 `escodegen` pass per request**, since stage7 has already serialized the tree
 by the time the render produces a value. That is per-request CPU
@@ -130,7 +126,7 @@ would serve one user's session to the next visitor.
 
 [`CoreScope.uid`](../../src/runtime/core/core-scope.ts#L102) is `props.id`
 plus the replica path, unique across `:for-each` replicas by construction. So
-the blob is `{ [uid]: { [key]: value } }` and a kept value inside a repeated
+the blob is `{ [uid]: { [key]: value } }` and a server-only value inside a repeated
 row keys correctly with nothing new invented. Confirmed by test rather than
 assumed: two replicas of one declaration collect and rehydrate separately.
 
@@ -193,7 +189,7 @@ the hundreds of kilobytes.
 ### What cannot travel
 
 Functions, symbols, DOM nodes, class instances. The compiler cannot catch
-these — `:keep-x=${something()}` has no static type — so it is a runtime
+these — `:server-x=${something()}` has no static type — so it is a runtime
 failure at serialize time, reported through
 [`CoreContext.onError`](../../src/runtime/core/core-context.ts#L108) like
 everything else, most likely under a new `'transfer'` phase in
@@ -209,7 +205,7 @@ expression failures. Dev is loud, production degrades to today's behavior.
 
 ### It is public
 
-A kept value is written into the page source in plain text. `:keep-` on
+A server-only value is written into the page source in plain text. `:server-` on
 anything derived from a session, a credential, or another user's row
 publishes it. This belongs in the docs beside the syntax, in those words.
 
@@ -245,17 +241,17 @@ honest.
 
 | Stage | Change |
 | --- | --- |
-| stage1-load | Recognizes and strips the `:keep-` prefix before the rest of the name is parsed, sets `Value.keep`, and raises the refusals. |
+| stage1-load | Recognizes and strips the `:server-` prefix before the rest of the name is parsed, sets `Value.serverOnly`, and raises the refusals. |
 | stage2-validate | None, in the end. The design put the refusals here, but stage1 is where the family prefix is determined, so checking there costs one `if` next to the information instead of re-deriving it from compiled names. |
 | stage3-qualify | None. This changes neither scoping nor qualification. |
-| stage4-resolve | None. A kept value's dependencies are ordinary dependencies. |
+| stage4-resolve | None. A server-only value's dependencies are ordinary dependencies. |
 | stage5-comptime | None. The `k_` refusal is deferred: comptime is still a placeholder, so `k_` means nothing yet and refusing the combination now would refuse something harmless. Noted in TODO.md's comptime entry instead. |
-| stage6-treeshake | None. A kept value nothing reads is dead by the existing rule and should still be dropped. |
-| stage7-generate | Emits `keep: true` in the value's props, and reserves the state `<script>` — but only on a page that has a kept value, so every other page's output is byte-for-byte what it was. |
+| stage6-treeshake | None. A server-only value nothing reads is dead by the existing rule and should still be dropped. |
+| stage7-generate | Emits `serverOnly: true` in the value's props, and reserves the state `<script>` — but only on a page that has one, so every other page's output is byte-for-byte what it was. |
 
 ### Runtime and server
 
-- `CoreValueProps.keep?: boolean`.
+- `CoreValueProps.serverOnly?: boolean`.
 - `CoreContext.collectKept()` — walk the scope tree, return `{ [uid]: { [key]: value } }`.
   Called server-side once the render has settled.
 - `CoreContext.applyState(blob)` — consulted at value construction per above.
@@ -268,8 +264,8 @@ honest.
 
 ## Order of work
 
-1. ~~**`:keep-` end to end, synchronous only.**~~ **Done.** No fetch, no
-   async, no registry. `:keep-t=${Date.now()}` renders once on the server and
+1. ~~**`:server-` end to end, synchronous only.**~~ **Done.** No fetch, no
+   async, no registry. `:server-t=${Date.now()}` renders once on the server and
    does not flip on hydration.
 2. **Pending registry + async `renderPage`.** Independent of (1), provable
    against a stub that just resolves a promise.
@@ -279,19 +275,22 @@ honest.
 The sequencing was the argument that this decomposition was right, and it
 held: step 1 shipped before anything about fetching is settled.
 
+## Settled along the way
+
+- **The name.** Started as `:keep-`, which described the plumbing rather than
+  the contract. Renamed to `:server-` before anything depended on it: the
+  attribute now says what the doc says, which is that the expression runs on
+  the server.
+
 ## Open questions
 
-- **The name.** `:keep-` describes the plumbing; the contract is "server-only
-  expression". Now documented, which is the point at which it gets expensive
-  to change — but it is still one constant plus its refusal messages, so the
-  window is not shut.
 - **Unknown keys.** In dev, served HTML can outlive a recompile, so the blob
   may name a scope the props no longer have. Currently ignored in silence;
   counting and reporting in dev is the likely refinement.
 - **Does `uid` hold up through nested custom-tag instances?** Replicas are
   now tested. A custom-tag instance inside a `:for-each` is not, and is the
   case most likely to surprise.
-- **`:keep-` on a `:for-each` replica's per-item binding.** Still open: the
+- **`:server-` on a `:for-each` replica's per-item binding.** Still open: the
   binding is named by `:for-as`, so there is no attribute to refuse. Writing
-  `:keep-` on the alias is not currently expressible, which is why nothing
+  `:server-` on the alias is not currently expressible, which is why nothing
   was built for it.

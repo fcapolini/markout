@@ -1,5 +1,5 @@
 /**
- * Serializes a `:keep-` result to a JavaScript literal.
+ * Serializes a `:server-` result to a JavaScript literal.
  *
  * A JS literal rather than JSON, because JSON loses things this language
  * treats as ordinary. `undefined` is the clearest case: a failed expression
@@ -176,7 +176,7 @@ function isPaired(s: string, i: number, code: number): boolean {
  * Escapes generated JS for embedding in an inline `<script>`.
  *
  * The props script has needed the `</script` half of this all along, where
- * the only source of one was a string the page's own author wrote. A kept
+ * the only source of one was a string the page's own author wrote. A server-only
  * value can carry bytes from anywhere -- a fetch response, a database row --
  * so this is a security boundary rather than a correctness detail, and it
  * covers `<!--` too: inside a script element that sequence opens a legacy

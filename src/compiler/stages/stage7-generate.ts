@@ -72,9 +72,9 @@ function injectBootstrapScripts(page: Page, runtimeSrc: string, dev: boolean) {
 
   // reserved here, filled by the server once its render has settled -- see
   // Page.stateScript for why the position is decided at compile time. Only
-  // when something will actually go in it: a page declaring no `:keep-`
+  // when something will actually go in it: a page declaring no `:server-`
   // value should be byte-for-byte what it was before this existed
-  if ([...page.values.values()].some(value => value.keep)) {
+  if ([...page.values.values()].some(value => value.serverOnly)) {
     page.stateScript = doc.createElement('script');
     body.appendChild(page.stateScript);
   }
@@ -161,9 +161,9 @@ function generateValueProps(value: Value, callSite?: boolean): ObjectExpression 
   // written at a custom-tag usage site: evaluated against the scope the tag
   // was written in, not against the instance (see CoreScope.newValue)
   callSite && props.push(property('callSite', literal(true)));
-  // `:keep-`: the server collects this value after rendering and sends the
+  // `:server-`: the server collects this value after rendering and sends the
   // result, which the client uses instead of running `exp` (see CoreContext)
-  value.keep && props.push(property('keep', literal(true)));
+  value.serverOnly && props.push(property('serverOnly', literal(true)));
   return objectExpression(props);
 }
 

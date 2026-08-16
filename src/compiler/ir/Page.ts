@@ -28,11 +28,11 @@ export const WILL_VALUE_ATTR_PREFIX = 'will-';
 // value whose expression CALLS the arrow with x, so the dependency on x
 // falls out of the ordinary extraction and needs no runtime of its own
 export const HANDLE_VALUE_ATTR_PREFIX = 'handle-';
-// `:keep-x=${...}`: this expression runs on the server only, and the client
+// `:server-x=${...}`: this expression runs on the server only, and the client
 // receives its result. Unlike the families above it is a MODIFIER, not a
 // family of its own -- it is stripped before the rest of the name is parsed,
 // and the value it marks is an ordinary one. See docs/design/value-transfer.md
-export const KEEP_VALUE_ATTR_PREFIX = 'keep-';
+export const SERVER_VALUE_ATTR_PREFIX = 'server-';
 export const TEXT_VALUE_PREFIX = 't$';
 // compiled form of the ATTR prefixes above, as stored in Scope.values keys
 export const CLASS_VALUE_PREFIX = 'class$';
@@ -117,7 +117,7 @@ export class Page {
   propsString?: string;
   /**
    * The empty `<script>` stage7 reserves between the props and the runtime,
-   * for the server to fill with this render's `:keep-` results.
+   * for the server to fill with this render's `:server-` results.
    *
    * Reserved at compile time rather than inserted afterwards because the
    * position is what matters: the runtime script is `async`, so it may

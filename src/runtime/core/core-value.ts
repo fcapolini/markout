@@ -16,13 +16,13 @@ export interface CoreValueProps<T> {
    */
   callSite?: boolean;
   /**
-   * Declared `:keep-name`: this expression runs on the server only. The
+   * Declared `:server-name`: this expression runs on the server only. The
    * server collects the result once the render has settled and sends it
    * alongside the props; the client builds the value from that result
    * instead, with no `exp` and no `deps` (see CoreContext.collectState and
    * CoreScope's constructor).
    */
-  keep?: boolean;
+  serverOnly?: boolean;
 }
 
 export class CoreValue<T = any> {
