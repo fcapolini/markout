@@ -420,10 +420,13 @@ describe('stage1-loader', () => {
 
     it('should reject a value name no expression could reference', () => {
       // the character check passes for every reserved word, so these used to
-      // declare a value in good order that nothing could ever name. `:if` is
-      // the one that matters: it is what someone arriving from another
-      // framework writes first, and it silently rendered the element
-      for (const name of ['if', 'class', 'for', 'return', 'true']) {
+      // declare a value in good order that nothing could ever name.
+      //
+      // `if` is no longer among them, and that rejection is why: a name a
+      // page can never take is a name a DIRECTIVE can, with no prefix and no
+      // possibility of collision. See `:if` -- and the same door is open for
+      // `switch`/`case`/`default` should they ever be wanted.
+      for (const name of ['class', 'for', 'return', 'true']) {
         const page = runLoaderFromMarkup(`<html :${name}=\${1}></html>`);
         expect(page.errors.map(e => e.msg)).toStrictEqual([
           `Invalid name: "${name}" is a reserved word or not a JS identifier, ` +

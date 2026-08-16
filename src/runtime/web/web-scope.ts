@@ -8,7 +8,7 @@ import {
   TemplateElement,
   Text,
 } from '../../html/dom';
-import { CoreScope, CoreScopeProps, RT_FOR_DATA_VALUE, cloneId } from '../core/core-scope';
+import { CoreScope, CoreScopeProps, RT_FOR_DATA_VALUE, RT_IF_VALUE, cloneId } from '../core/core-scope';
 import { CoreValue, CoreValueProps } from '../core/core-value';
 import {
   DOM_ATOMIC_TEXT_TAGS,
@@ -152,7 +152,11 @@ export class WebScope extends CoreScope {
     // one, which is the hidden case; when the server rendered it visible the
     // element sits immediately after the template instead, because that is
     // where showView() puts it
-    if (this.props.values?.[RT_FOR_DATA_VALUE] && !this.cloned && !this.templateEl) {
+    if (
+      (this.props.values?.[RT_FOR_DATA_VALUE] || this.props.values?.[RT_IF_VALUE]) &&
+      !this.cloned &&
+      !this.templateEl
+    ) {
       const previous = view.previousSibling;
       if (previous?.nodeType === NodeType.ELEMENT && (previous as Element).tagName === 'TEMPLATE') {
         this.templateEl = previous as Element;

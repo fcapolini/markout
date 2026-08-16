@@ -35,6 +35,7 @@ export function cloneId(baseId: string, index: number): string {
 }
 export const RT_FOR_EACH_VALUE = 'for$each';
 export const RT_FOR_DATA_VALUE = 'for$data';
+export const RT_IF_VALUE = 'if$';
 export const RT_FOR_OFFSET_VALUE = 'for$offset';
 export const RT_FOR_LENGTH_VALUE = 'for$length';
 export const RT_FOR_AS_VALUE = 'for$as';
@@ -539,6 +540,7 @@ export class CoreScope {
   isStencil(): boolean {
     if (this.cloned) return false;
     if (this.props.values?.[RT_FOR_EACH_VALUE]) return true;
+    if (this.props.values?.[RT_IF_VALUE]) return !this.showing;
     return !!this.props.values?.[RT_FOR_DATA_VALUE] && !this.showing;
   }
 
@@ -563,6 +565,7 @@ export class CoreScope {
       (key) =>
         key.startsWith('$') ||
         key.startsWith('for$') ||
+        key === RT_IF_VALUE ||
         key === alias
     );
   }
@@ -605,6 +608,10 @@ export class CoreScope {
       ret.setCB((_, v) => CoreScope.fordataCB(this, v));
       return ret;
     }
+    if (key === RT_IF_VALUE) {
+      ret.setCB((_, v) => CoreScope.ifCB(this, v));
+      return ret;
+    }
     return ret;
   }
 
@@ -637,10 +644,25 @@ export class CoreScope {
    * arity one. `0` and `''` are data, and a page that means "if" wants a
    * directive that says so.
    */
-  static fordataCB(that: CoreScope, v: any) {
-    const alias = that.aliasValue();
-    if (v != null) {
-      alias?.set(v);
+  /**
+   * Showing or hiding the one element this scope owns.
+   *
+   * Shared by `:for-data` and `:if`, which are the same arity asked two
+   * different questions. Nothing is cloned either way: the element moves
+   * between the document and the stencil it arrived in, so showing and
+   * hiding preserve whatever the DOM was holding -- focus, a scroll offset,
+   * a playing video -- which a rebuild would throw away.
+   */
+  private static toggle(
+    that: CoreScope,
+    show: boolean,
+    beforeShow?: () => void,
+    afterHide?: () => void
+  ) {
+    if (show) {
+      // before the early return, so an item that CHANGES while the region
+      // is already showing still reaches the body
+      beforeShow?.();
       if (that.showing) return;
       // set before refreshing: liveKeys() answers with everything only once
       // this scope counts as rendering
@@ -659,13 +681,46 @@ export class CoreScope {
     // before the markup goes, so a callback still has an element in the page
     that.detachSubtree();
     that.showing = false;
-    // NOT unlinkValues(): `for$data` has to stay linked to whatever it reads,
-    // or nothing will ever notice the value coming back and the region is
-    // hidden for good. Everything liveKeys() no longer covers goes, which is
-    // exactly the body
+    // NOT unlinkValues(): the directive's own value has to stay linked to
+    // whatever it reads, or nothing will ever notice it coming back and the
+    // region is hidden for good. Everything liveKeys() no longer covers
+    // goes, which is exactly the body
     that.unlinkInert();
-    alias?.set(undefined);
+    afterHide?.();
     that.hideView();
+  }
+
+  /**
+   * Zero or one, which is `:for-each`'s arity minus the copies.
+   *
+   * `!= null` rather than truthiness, deliberately: `:for-each` already says
+   * null and undefined mean nothing renders, and this is the same rule at
+   * arity one. `0` and `''` are data, and a page that means "if" has `:if`.
+   */
+  static fordataCB(that: CoreScope, v: any) {
+    const alias = that.aliasValue();
+    CoreScope.toggle(
+      that,
+      v != null,
+      () => alias?.set(v),
+      () => alias?.set(undefined)
+    );
+  }
+
+  /**
+   * The same arity, asked as a condition.
+   *
+   * Truthiness, so `${count}` and `${name}` mean what they look like, and no
+   * item binding: a condition is not something the body wants, and `data`
+   * inside an `:if` keeps meaning whatever it meant outside.
+   *
+   * Deliberately its own value key rather than compiling down to `for$data`
+   * with a `|| null` wrapper, which would have needed no runtime change at
+   * all -- that binds the condition as the region's item, which is the wart
+   * this directive exists to remove.
+   */
+  static ifCB(that: CoreScope, v: any) {
+    CoreScope.toggle(that, !!v);
   }
 
   /** puts this scope's element back in the document; DOM-side, so a no-op here */

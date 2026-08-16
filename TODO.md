@@ -37,7 +37,11 @@
 
 - [x] bootstrap wrapper library for adoptability and as a demonstration of components, reuse, and simplicity in authoring libraries, see [kitchen sink](https://getbootstrap.com/docs/5.3/examples/cheatsheet/)
 
-- [ ] `:if`. The kit and Orbit now write `:for-data=${cond || null}` for a condition (28 of them), which is a step up from the `:for-each=${cond ? [1] : []}` they used to: one optional scope rather than a replication host with an array, a stencil and a clone, which is the performance a real `:if` would buy. What is left for `:if` is the reading -- `|| null` is there only because `:for-data` keys on null and `false` is not null.
+- [x] `:if` -- added 2026-08-16. Truthiness, no item binding, no `:else`. The kit and Orbit's 28 conditions are now `:if=${cond}`, having passed through `:for-each=${cond ? [1] : []}` and `:for-data=${cond || null}` on the way.
+  - The name was free because the language already refused it: a value has to be something an expression can say, and `${if}` does not parse. So a reserved word is a namespace no page can occupy, and a directive can take one with no prefix and no possibility of collision. The rule a reader ends up with is "if you could have declared it, it is a value".
+  - Not every word that looks reserved is: acorn takes `let static async await yield of get set from as` as identifiers in sloppy mode, so those are NOT safe to claim -- a page can declare them today. The safe set is `if else for while do switch case default break continue return function class extends super this new delete typeof instanceof in void var const try catch finally throw with debugger import export null true false`.
+
+- [ ] `:switch`/`:case`/`:default`, postponed. All three names are reserved, so they are available on the same argument as `:if`. It beats `:else` structurally: `:else` needs sibling adjacency (which element, across what whitespace), while cases are CHILDREN of the switch, which the compiler already models. Decisions if it happens: strict equality like JS, first match wins with no fallthrough, `:case` must be a direct child, guards come free via `:switch=${true}`, and a non-matching branch evaluates nothing. Cost: it needs a container element, which `:if` does not.
 
 - [ ] an "additional classes" attribute for cumulative CSS classes in components: we decided not to include that behavior in `class` attribute as Vue does for our "no-magic" policy, but an explicit construct for achieving the same result is needed
 

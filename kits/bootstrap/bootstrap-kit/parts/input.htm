@@ -51,7 +51,7 @@
                      .filter(s => s).join(' ')}
   >
     <!--- plain layout: label, control, feedback -->
-    <div :for-data=${!floating || null}>
+    <div :if=${!floating}>
       <label class="form-label"
              for=${_id}
              :for-data=${label}>${label}</label>
@@ -77,7 +77,7 @@
     </div>
 
     <!--- floating layout: control, then label -->
-    <div class="form-floating" :for-data=${floating || null}>
+    <div class="form-floating" :if=${floating}>
       <input class=${_class}
              id=${_id}
              type=${type}

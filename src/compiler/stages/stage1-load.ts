@@ -33,6 +33,8 @@ import {
   FOR_DATA_ATTR,
   FOR_AS_ATTR,
   FOR_KEY_ATTR,
+  IF_ATTR,
+  IF_VALUE,
   FOR_EACH_VALUE,
   FOR_DATA_VALUE,
   FOR_AS_VALUE,
@@ -113,6 +115,7 @@ const LIFECYCLE_SUFFIXES = new Set([
 // fixed attribute names that name something other than a declared value, so
 // there is nothing for `:server-` to mark on one
 const SERVER_REJECTED_ATTRS = new Set([
+  IF_ATTR,
   SLOT_TARGET_ATTR,
   SCOPE_NAME_ATTR,
   FOR_EACH_ATTR,
@@ -161,7 +164,10 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
       // element is itself a live rendering
       if (needsStencil(childEl)) {
         const stencil = wrapInTemplate(childEl);
-        hasAttr(childEl, FOR_DATA_ATTR) && page.optionalStencils.add(stencil);
+        // an OPTIONAL stencil is one whose element may be in the page: both
+        // arities of "zero or one" park their element rather than clone it
+        (hasAttr(childEl, FOR_DATA_ATTR) || hasAttr(childEl, IF_ATTR)) &&
+          page.optionalStencils.add(stencil);
       }
       load(page, scope, childEl);
       continue;
@@ -238,7 +244,7 @@ function isDynamic(attr: ServerAttribute): boolean {
  * rendering, and the runtime decides how many times it appears.
  */
 function needsStencil(e: ServerElement): boolean {
-  return hasAttr(e, FOR_EACH_ATTR) || hasAttr(e, FOR_DATA_ATTR);
+  return hasAttr(e, FOR_EACH_ATTR) || hasAttr(e, FOR_DATA_ATTR) || hasAttr(e, IF_ATTR);
 }
 
 function hasAttr(e: ServerElement, name: string): boolean {
@@ -1052,6 +1058,13 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     }
     if (name === FOR_EACH_ATTR) {
       scope.values.set(FOR_EACH_VALUE, new Value(FOR_EACH_VALUE, attr, scope, page.createValueId()));
+      continue;
+    }
+    if (name === IF_ATTR) {
+      // before the family dispatch, which would send it through
+      // validateName and refuse it for being a reserved word -- which is
+      // exactly why the name was free to take
+      scope.values.set(IF_VALUE, new Value(IF_VALUE, attr, scope, page.createValueId()));
       continue;
     }
     if (name === FOR_DATA_ATTR) {
