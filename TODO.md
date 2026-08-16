@@ -8,6 +8,18 @@
   - the objective is of course to prevent name collisions between libraries
 
 - [ ] check rehydration w/ claude: given the same `props`, client side we come up w/ the same values, what will change will be data sources and interaction, correct?
+  - Answered, and the answer is "not always" — see the value-transfer design below. Same props give the same values only where every expression is reproducible in the browser.
+
+- [ ] server-only values — `:keep-name=${expr}` means "this expression runs on the server only; the client receives its result". Full design in [docs/design/value-transfer.md](docs/design/value-transfer.md).
+  - Motivation is three classes of value hydration currently gets wrong: state assigned imperatively (a fetch payload exists nowhere in the served HTML, so SSR'd content is *wiped* on hydration), values derived from server-only inputs (file, env, DB, session), and non-deterministic ones (`Date.now()`, `Math.random()`) which don't break but visibly flip.
+  - The value is **frozen** client-side — it arrives with `val` and no `exp`/`deps`, the inert shape `CoreGlobal` already uses. Freezing is correct for all three classes, not a compromise. The usage rule that follows: **keep the source, never the derivation** — mark `:keep-user=${loadUser()}` and let `:greeting=${'Hi ' + user.name}` re-derive, or pinning the derivation silently decouples it.
+  - **Two globals**: `__MARKOUT_PROPS` (app descriptor, function of the source, cacheable) and `__MARKOUT_STATE` (this render's state, per-request, never cacheable). Fusing them was considered and rejected: it costs a second full `escodegen` pass per request, mixes third-party bytes into the same script as all generated code, and closes the door on caching the expensive half. Nothing caches today, which is what makes the per-request half safe — and the split is the constraint any future page cache has to respect.
+  - Format is a **JS object literal, not JSON**, so `undefined` (load-bearing: a failed expression yields `undefined` and never `null`), `Date`/`Map`/`Set`/`BigInt`/`NaN`/`-0` and cycles all survive with no tagged encoding. `JSON.parse('…')` parses ~2x faster and is the right trade only at hundreds of KB; deferred deliberately.
+  - Escaping becomes security-relevant once a fetched payload lands in a `<script>`: `escapeScriptClose` handles `</script` but not `<!--`, and it was written for compiler-generated code, not hostile data.
+  - Build step 1 (`:keep-` alone, synchronous) before anything about fetching: it closes the non-determinism mismatches on its own and doesn't depend on the async work.
+  - Name is still open — `:keep-` describes the plumbing, not the contract. `:server-`/`:pin-`/`:once-` are closer. Unrenameable once documented.
+
+- [ ] pending-work registry + async `renderPage`, so the server can wait for in-flight work before serializing. `middleware.ts` is already async and `doc.toString()` comes after the render call, so the plumbing is local. Notes: the registry must track *the work that mutates the DOM*, not `fetch` itself (fetch's promise settles at headers-received, before `.json()` and the assignment have run); it must loop rather than await once, since one datasource's result can feed another's URL; and it needs an iteration cap distinct from the wall-clock timeout, so a self-feeding page reports a bug instead of stalling to the deadline every time. Timeout semantics follow the existing precedent — report, leave the value unset, still serve the page.
 
 - [x] bootstrap wrapper library for adoptability and as a demonstration of components, reuse, and simplicity in authoring libraries, see [kitchen sink](https://getbootstrap.com/docs/5.3/examples/cheatsheet/)
 
