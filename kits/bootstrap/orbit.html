@@ -100,6 +100,27 @@
     }
 
     /*
+      Smooth scrolling from the platform rather than from scrollspy's
+      `data-bs-smooth-scroll`, which does its own `scrollTo` off the
+      section's offsetTop and so ignores the scroll margins below. A plain
+      anchor jump honours them, and gets deep links for free.
+    */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /*
+      Overview is not really a section you scroll to, it is where the page
+      starts -- the title and the window controls above it belong to it as
+      much as the figures do. So its anchor lands at the top rather than
+      just below the header: a scroll margin taller than everything above it
+      clamps the jump to zero, whatever height that header happens to be.
+    */
+    #overview {
+      scroll-margin-top: 20rem;
+    }
+
+    /*
       Scrollspy highlights whichever section is in the band it watches, and
       at the very top of the page none is: the first section starts below
       that band. So nothing is marked, and the sidebar reads as though we
@@ -206,7 +227,6 @@
       data-bs-spy="scroll"
       data-bs-target="#dash-side-nav"
       data-bs-root-margin="0px 0px -60%"
-      data-bs-smooth-scroll="true"
       tabindex="0"
 
       // ---------------------------------------------------------- data
