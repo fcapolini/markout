@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Compiler } from '../../src/compiler';
 import { Server } from '../../src/server';
 import { renderPage } from '../../src/server/render';
+import { openOperationsDb } from '../../kits/bootstrap/orbit-db';
 
 /**
  * The Bootstrap kit, compiled and rendered as a page would be.
@@ -28,10 +29,23 @@ import { renderPage } from '../../src/server/render';
 const KIT_ROOT = path.resolve(__dirname, '../../kits/bootstrap');
 const PARTS_DIR = path.join(KIT_ROOT, 'bootstrap-kit/parts');
 
+/**
+ * Orbit reads its data from an operations database, which its own dev server
+ * supplies (kits/bootstrap/server.ts). Compiling it here means being that
+ * host: the compiler is told the NAME so it can enforce where `db` may be
+ * read, and the render is given the object.
+ */
+const globals = { db: openOperationsDb() };
+
 async function compile(docroot: string, pathname: string) {
-  const page = await new Compiler({ docroot }).compile(pathname);
+  const page = await new Compiler({
+    docroot,
+    serverGlobals: Object.keys(globals),
+  }).compile(pathname);
   const errors = page.errors.map(e => e.msg);
-  const runtime = errors.length ? [] : (await renderPage(page)).map(e => `${e.phase}: ${e.message}`);
+  const runtime = errors.length
+    ? []
+    : (await renderPage(page, { globals })).map(e => `${e.phase}: ${e.message}`);
   return { page, errors, runtime, markup: page.source.doc.toString() };
 }
 
@@ -183,6 +197,45 @@ describe('the showcase', () => {
  * all and are exactly where a propagation bug shows up as stale content and
  * nothing else.
  */
+describe('the demo application: served from a database', () => {
+  // Orbit is the round trip end to end: its data is queried while rendering,
+  // arrives in the markup, and the queries themselves stay behind.
+  it('renders rows the database answered with', async () => {
+    const { markup } = await compile(KIT_ROOT, '/demo.html');
+    expect(markup).toContain('edge-router');
+    expect(markup).toContain('auth-service');
+    expect(markup).toContain('d-2481');
+  });
+
+  it('follows a chain where one answer decides the next question', async () => {
+    // `incidents` cannot be asked for until `services` has answered -- which
+    // incidents matter depends on which services are unwell -- so this text
+    // is in the page only if the render waited twice
+    const { markup } = await compile(KIT_ROOT, '/demo.html');
+    expect(markup).toContain('billing unreachable in eu-west');
+  });
+
+  it('sends no trace of the queries', async () => {
+    const { markup } = await compile(KIT_ROOT, '/demo.html');
+    for (const trace of ['db.services', 'db.metrics', 'db.incidents', 'this.db', 'forServices']) {
+      expect(markup).not.toContain(trace);
+    }
+  });
+
+  it('refuses to read the database anywhere the browser would go', async () => {
+    // the guarantee is compile-time, so it holds for this page like any
+    // other: `db` outside a `:server-` value does not build
+    const docroot = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-'));
+    fs.writeFileSync(
+      path.join(docroot, 'bad.html'),
+      '<html><body>${db.services.all()}</body></html>'
+    );
+    const { errors } = await compile(docroot, '/bad.html');
+    expect(errors.join()).toMatch(/supplied to the server/);
+    fs.rmSync(docroot, { recursive: true, force: true });
+  });
+});
+
 describe('the demo application', () => {
   let result: Awaited<ReturnType<typeof compile>>;
 
@@ -447,7 +500,7 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     }
     fs.writeFileSync(path.join(docroot, 'demo.html'), offline);
 
-    server = await new Server({ docroot, port: 0, logger: () => {} }).start();
+    server = await new Server({ docroot, port: 0, logger: () => {}, globals }).start();
     browser = await chromium.launch();
   }, 60000);
 
@@ -559,7 +612,46 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
    * content that is one step behind and nothing else, which is why these
    * assertions compare what is on screen rather than counting calls.
    */
-  describe('the demo application', () => {
+  describe('the demo application: served from a database', () => {
+  // Orbit is the round trip end to end: its data is queried while rendering,
+  // arrives in the markup, and the queries themselves stay behind.
+  it('renders rows the database answered with', async () => {
+    const { markup } = await compile(KIT_ROOT, '/demo.html');
+    expect(markup).toContain('edge-router');
+    expect(markup).toContain('auth-service');
+    expect(markup).toContain('d-2481');
+  });
+
+  it('follows a chain where one answer decides the next question', async () => {
+    // `incidents` cannot be asked for until `services` has answered -- which
+    // incidents matter depends on which services are unwell -- so this text
+    // is in the page only if the render waited twice
+    const { markup } = await compile(KIT_ROOT, '/demo.html');
+    expect(markup).toContain('billing unreachable in eu-west');
+  });
+
+  it('sends no trace of the queries', async () => {
+    const { markup } = await compile(KIT_ROOT, '/demo.html');
+    for (const trace of ['db.services', 'db.metrics', 'db.incidents', 'this.db', 'forServices']) {
+      expect(markup).not.toContain(trace);
+    }
+  });
+
+  it('refuses to read the database anywhere the browser would go', async () => {
+    // the guarantee is compile-time, so it holds for this page like any
+    // other: `db` outside a `:server-` value does not build
+    const docroot = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-'));
+    fs.writeFileSync(
+      path.join(docroot, 'bad.html'),
+      '<html><body>${db.services.all()}</body></html>'
+    );
+    const { errors } = await compile(docroot, '/bad.html');
+    expect(errors.join()).toMatch(/supplied to the server/);
+    fs.rmSync(docroot, { recursive: true, force: true });
+  });
+});
+
+describe('the demo application', () => {
     const rows = '#deployments tbody tr';
     const services = '#deployments tbody td.fw-semibold';
     const commits = '#deployments td.dash-mono';
