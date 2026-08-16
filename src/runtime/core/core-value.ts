@@ -148,6 +148,16 @@ export class CoreValue<T = any> {
   }
 
   protected update() {
+    // One request at a time. A server value settling propagates, and that
+    // re-evaluates everything in the new cycle that reads what changed --
+    // including OTHER server values whose own request is still in the air.
+    // Re-running one is a second request whose answer is then thrown away,
+    // since the loop settles it with the first: on a page with ten sources
+    // it turned ten requests into twenty-one. Whatever is in flight is the
+    // answer; nothing here can improve on waiting for it.
+    if (this.pending) {
+      return;
+    }
     const old = this.value;
     try {
       const next = this.exp!.apply(this.scope.proxy) as unknown;
