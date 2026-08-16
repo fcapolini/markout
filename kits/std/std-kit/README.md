@@ -38,7 +38,7 @@ lifetime and somewhere to keep state, and that is what a kit part is for.
 Fetch a URL, hand the page what came back.
 
 ```html
-<std-data :aka="people" :src=${origin + '/people.json'} />
+<std-data :aka="people" :url="/people.json" />
 
 <table :for-data=${people.data}>
   <tr :for-each=${data.rows}>
@@ -53,7 +53,7 @@ there is no flash — `${rows}` in the page is `${rows}` in the markup.
 
 | Parameter | Default | Meaning |
 | --- | --- | --- |
-| `:src` | `""` | The URL. Nothing is fetched without one. |
+| `:url` | `""` | Where to fetch. Nothing happens without one. Page-relative is fine. |
 | `:client` | `false` | Fetch in the browser instead of while rendering. |
 
 | Reads | Meaning |
@@ -66,19 +66,25 @@ there is no flash — `${rows}` in the page is `${rows}` in the markup.
 It renders nothing. It still has to *be* somewhere, and where it is written
 is where its name resolves, so put it at the top of the region that reads it.
 
-### A served URL must be absolute
+### The URL means the same thing in both modes
 
-The server has no notion of the page's own origin — there is no request in
-the language — so `:src="/people.json"` cannot be fetched while rendering.
-State the base once on the page and compose:
+`:url="/people.json"` works served or `:client`, because the component
+resolves it against `$origin` — which the server takes from the request and
+the browser from `location`. Without that the two would disagree: a server
+has no page to be relative *to*, so a bare path there is not a different
+address, it is not an address at all.
+
+A URL that *changes* refetches, in the browser, since that is where the
+change happened:
 
 ```html
-<html :origin="https://example.test">
-  <std-data :src=${origin + '/people.json'} />
+<std-data :aka="people" :url=${`/people/${page}.json`} />
 ```
 
-A `:client` datasource has no such trouble: a browser knows where it is, so a
-plain path is fine there.
+The first evaluation is the one that differs between the modes. A served
+datasource already has its answer and does not fetch again on arrival — that
+second request is the thing this design exists to avoid. A `:client` one has
+nothing yet, so it does.
 
 ### `:client`, and what not to publish
 
@@ -88,7 +94,7 @@ another user's row — belongs behind `:client`, which leaves the render alone
 and fetches on arrival:
 
 ```html
-<std-data :aka="mine" :client :src="/api/me" />
+<std-data :aka="mine" :client :url="/api/me" />
 <p>${mine.loading ? 'Loading…' : mine.data?.name}</p>
 ```
 
@@ -132,9 +138,10 @@ replaces it first — which is also how a page would supply its own.
 
 ## Notes on the awkward corners
 
-- **`:handle-`, not `:did-init`.** The browser fetch is triggered by a
-  `:handle-` on the URL rather than by an init callback, so a `:src` that
-  changes refetches instead of being read once.
+- **`:handle-`, not `:did-init`.** The browser fetch hangs off a `:handle-`
+  on the resolved URL rather than an init callback, so a `:url` that changes
+  refetches instead of being read once. A `_started` flag is what makes the
+  *first* call behave differently in the two modes.
 - **`_served` is the only value that crosses.** Everything else here is
   derived from it and re-derives in the browser as usual — keep the source,
   never the derivation.

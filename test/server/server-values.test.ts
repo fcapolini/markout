@@ -196,3 +196,30 @@ describe(':server- when a result cannot be sent', () => {
     expect(typeof rehydrate(page, readState(page)).root.proxy.f).toBe('function');
   });
 });
+
+describe('$origin', () => {
+  it('is what the caller supplied, on both sides', async () => {
+    // the same fact reached two different ways -- from the request while
+    // rendering, from `location.origin` in the browser -- which is the whole
+    // reason it is a name rather than something each page states for itself
+    const page = compile('<html><body><i>${$origin}</i></body></html>');
+    expect(await renderPage(page, { origin: 'https://example.test' })).toStrictEqual([]);
+    expect(page.source.doc.toString()).toContain('https://example.test');
+  });
+
+  it('is undefined when nobody supplied one', async () => {
+    // a page compiled outside any server has no origin, and saying so beats
+    // inventing one that the browser would then disagree with
+    const page = compile('<html><body><i>${$origin ?? "none"}</i></body></html>');
+    expect(await renderPage(page)).toStrictEqual([]);
+    expect(page.source.doc.toString()).toContain('none');
+  });
+
+  it('cannot be shadowed, unlike the other globals', async () => {
+    // `$` is reserved in a DECLARED name, so a page cannot take this one over
+    // the way it can take over `Math`. That is what the `$` is for: the list
+    // it sits on is otherwise JavaScript's, and this name is the runtime's
+    const page = compile('<html :$origin=${"mine"}><body>${$origin}</body></html>');
+    expect(page.errors.map(e => e.msg).join()).toMatch(/Invalid name/);
+  });
+});

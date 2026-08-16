@@ -24,7 +24,7 @@ import { escapeScriptText, serialize, UnserializableError } from "./serialize";
  */
 export async function renderPage(
   page: Page,
-  settle?: { timeoutMs?: number; maxRounds?: number }
+  props?: { origin?: string; settle?: { timeoutMs?: number; maxRounds?: number } }
 ): Promise<RuntimeError[]> {
   if (!page.propsString) {
     return [];
@@ -38,12 +38,13 @@ export async function renderPage(
     // property bindings have nothing to write into a served page (see
     // WebContextProps.server); everything else renders as usual
     server: true,
+    origin: props?.origin,
   });
   ctx.refresh();
   // async is what the server has that the browser doesn't: a `:server-` value
   // may produce a promise, and this is where the page waits for it. Nothing
   // is serialized until it has, or has given up
-  await ctx.settle(settle);
+  await ctx.settle(props?.settle);
   emitState(page, ctx.collectState(), errors);
   return errors;
 }

@@ -73,7 +73,7 @@ export function markout(props: MarkoutProps) {
       return serveErrorPage(page.source.errors, res);
     }
 
-    const runtimeErrors = await renderPage(page);
+    const runtimeErrors = await renderPage(page, { origin: originOf(req) });
     // always logged, whatever the mode
     runtimeErrors.forEach(e =>
       logger('error', `[markout] ${pathname} ${formatRuntimeError(e)}`)
@@ -87,6 +87,20 @@ export function markout(props: MarkoutProps) {
     res.header('Content-Type', 'text/html;charset=UTF-8');
     res.send('<!doctype html>\n' + html);
   }
+}
+
+/**
+ * The page's own origin, as `$origin` -- what a browser would call
+ * `location.origin` for the same page.
+ *
+ * `req.protocol` and `req.host` already honour `X-Forwarded-*` when Express
+ * is configured to trust its proxy, which is where a deployment behind one
+ * has to say so; getting it wrong here would show up as a `:server-` fetch
+ * addressed to the wrong host rather than as a subtle mismatch.
+ */
+function originOf(req: Request): string | undefined {
+  const host = req.get('host');
+  return host ? `${req.protocol}://${host}` : undefined;
 }
 
 async function isDirectory(requestPath: string, docroot: string): Promise<boolean> {

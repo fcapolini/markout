@@ -24,9 +24,10 @@ const CALLBACK_VALUE_PREFIXES = [EVENT_VALUE_PREFIX, DID_VALUE_PREFIX, WILL_VALU
 // imported -- as with the RT_ keys above, the compiler doesn't depend on
 // runtime code -- and a test asserts the two lists stay identical.
 export const GLOBAL_NAMES = new Set([
+  '$origin',
   'Array', 'BigInt', 'Boolean', 'Date', 'Error', 'Infinity', 'Intl', 'JSON',
   'Map', 'Math', 'NaN', 'Number', 'Object', 'Promise', 'RegExp', 'Set',
-  'String', 'Symbol', 'WeakMap', 'WeakSet', 'clearInterval', 'clearTimeout',
+  'String', 'Symbol', 'URL', 'WeakMap', 'WeakSet', 'clearInterval', 'clearTimeout',
   'console', 'decodeURI', 'decodeURIComponent', 'encodeURI',
   'encodeURIComponent', 'fetch', 'globalThis', 'isFinite', 'isNaN', 'parseFloat',
   'parseInt', 'queueMicrotask', 'setInterval', 'setTimeout',

@@ -7,17 +7,7 @@
   rows below are in the HTML, not fetched into it. Nothing about this page
   waits for the network once it has arrived.
 -->
-<html lang="en"
-      // The server has no notion of the page's own origin -- there is no
-      // request in the language -- so a URL it is to fetch has to be
-      // absolute. A page states its own base once, here, rather than every
-      // datasource repeating it. The browser has no such trouble, which is
-      // why the client-side example further down uses a plain path.
-      //
-      // This is the dev server's default port. Serve on another and the
-      // fetch is refused, which the page below shows rather than hides --
-      // worth seeing once, since it is the sharpest edge this kit has.
-      :origin="http://127.0.0.1:3000">
+<html lang="en" :which=${1}>
   <head>
     <:import src="/std-kit/all.htm" />
     <title>std-kit</title>
@@ -32,8 +22,13 @@
   <body>
     <h1>std-kit</h1>
 
-    <!--- Served: fetched during the render, and in the page as it arrives. -->
-    <std-data :aka="people" :src=${origin + '/index-data.json'} />
+    <!---
+      Fetched during the render, and in the page as it arrives. The URL is
+      page-relative in both modes: the component resolves it against
+      `$origin`, which the server takes from the request and the browser from
+      `location`, so the two always agree.
+    -->
+    <std-data :aka="people" :url=${'/index-data' + which + '.json'} />
 
     <h2>${people.data?.title ?? 'Loading…'}</h2>
     <p class="note">Fetched by ${people.data?.fetchedBy ?? '—'}.</p>
@@ -50,25 +45,35 @@
     </table>
 
     <p>
-      <button :on-click=${() => people.reload()}
+      <button :on-click=${() => { which = which === 1 ? 2 : 1; }}
               :attr-disabled=${people.loading}>
-        ${people.loading ? 'Reloading…' : 'Reload in the browser'}
+        ${people.loading ? 'Loading…' : 'Switch source'}
       </button>
       <span class="note">
-        The page did not need this. It is here to show that a served
-        datasource can still be refreshed on demand.
+        A URL that changes refetches — in the browser, since that is where the
+        click happened. The heading says which file answered.
+      </span>
+    </p>
+
+    <p>
+      <button :on-click=${() => people.reload()} :attr-disabled=${people.loading}>
+        ${people.loading ? 'Reloading…' : 'Reload'}
+      </button>
+      <span class="note">
+        The page never needed this. It is here because a served datasource
+        should still be refreshable on demand — nothing refetches on arrival.
       </span>
     </p>
 
     <h2>Fetched in the browser instead</h2>
     <p class="note">
       <code>:client</code> leaves the render alone and fetches on arrival, so
-      nothing appears in the served HTML. That is what to use for anything
-      the page should not publish — and the URL can be relative, because a
-      browser knows where it is.
+      nothing appears in the served HTML. That is what to use for anything the
+      page should not publish — a served result is written into the source in
+      plain text.
     </p>
 
-    <std-data :aka="late" :client :src="/index-data.json" />
+    <std-data :aka="late" :client :url="/index-data2.json" />
     <p>${late.loading ? 'Loading…' : (late.error ?? late.data?.title ?? '—')}</p>
   </body>
 </html>

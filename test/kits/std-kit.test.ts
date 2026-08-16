@@ -21,7 +21,7 @@ import type { PageState } from '../../src/runtime/core/core-context';
 const KIT_ROOT = path.resolve(__dirname, '../../kits/std');
 
 const PAYLOAD = {
-  title: 'Example data',
+  title: 'Example data 1',
   fetchedBy: 'the server, while rendering',
   rows: [
     { id: 1, name: 'Ada Lovelace', role: 'Analyst' },
@@ -44,12 +44,14 @@ function stubFetch(body: unknown, init?: { ok?: boolean; status?: number }) {
   return calls;
 }
 
+const ORIGIN = 'http://x.test';
+
 async function compile(pathname: string) {
   const page = await new Compiler({ docroot: KIT_ROOT }).compile(pathname);
   const errors = page.errors.map(e => e.msg);
   const runtime = errors.length
     ? []
-    : (await renderPage(page)).map(e => `${e.phase}: ${e.message}`);
+    : (await renderPage(page, { origin: ORIGIN })).map(e => `${e.phase}: ${e.message}`);
   return { page, errors, runtime, markup: page.source.doc.toString() };
 }
 
@@ -89,12 +91,12 @@ describe('std-kit: the showcase', () => {
     expect(html).toContain('the server, while rendering');
   });
 
-  it('fetches once, from the absolute URL the page states', async () => {
+  it('fetches once, resolving the page-relative url against $origin', async () => {
     const calls = stubFetch(PAYLOAD);
     await compile('/index.html');
     // exactly one: the `:client` datasource on the same page must not have
     // fetched here, and the served one must not have fetched twice
-    expect(calls).toStrictEqual(['http://127.0.0.1:3000/index-data.json']);
+    expect(calls).toStrictEqual(['http://x.test/index-data1.json']);
   });
 
   it('sends the payload as state, so hydration does not lose it', async () => {
@@ -121,9 +123,9 @@ describe('std-data: the served mode', () => {
   }
 
   it('renders what the server fetched', async () => {
-    const r = await renderInline(':src="http://x.test/d.json"', '<i>${d.data.title}</i>');
+    const r = await renderInline(':url="http://x.test/d.json"', '<i>${d.data.title}</i>');
     expect(r.errors).toStrictEqual([]);
-    expect(live(r.markup)).toContain('<i>Example data</i>');
+    expect(live(r.markup)).toContain('<i>Example data 1</i>');
   });
 
   it('fetches nothing without a src', async () => {
@@ -139,7 +141,7 @@ describe('std-data: the served mode', () => {
     // has to reach the page. Reported as a runtime error it would land in a
     // server log the visitor never sees, and the page would render blank
     stubFetch(null, { ok: false, status: 404 });
-    const r = await renderInline(':src="http://x.test/missing.json"', '<i>${d.error}</i>');
+    const r = await renderInline(':url="http://x.test/missing.json"', '<i>${d.error}</i>');
     expect(r.errors).toStrictEqual([]);
     expect(r.runtime).toStrictEqual([]);
     expect(live(r.markup)).toContain('<i>404 Not Found</i>');
@@ -147,14 +149,14 @@ describe('std-data: the served mode', () => {
 
   it('carries a network failure back the same way', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
-    const r = await renderInline(':src="http://x.test/d.json"', '<i>${d.error}</i>');
+    const r = await renderInline(':url="http://x.test/d.json"', '<i>${d.error}</i>');
     expect(r.runtime).toStrictEqual([]);
     expect(live(r.markup)).toContain('ECONNREFUSED');
   });
 
   it('leaves the render alone in :client mode', async () => {
     const calls = stubFetch(PAYLOAD);
-    const r = await renderInline(':client :src="/d.json"', '<i>${d.data ?? "none"}</i>');
+    const r = await renderInline(':client :url="/d.json"', '<i>${d.data ?? "none"}</i>');
     expect(r.errors).toStrictEqual([]);
     expect(calls).toStrictEqual([]);
     expect(live(r.markup)).toContain('<i>none</i>');
