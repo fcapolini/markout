@@ -142,9 +142,9 @@
       since the moment scrollspy marks anything this stops matching.
 
       `:first-of-type`, not `:first-child`: a `:for-each` leaves its stencil
-      in the DOM as a template element, which is an element like any other
-      and therefore the first child. Anything written against a replicated
-      list has to count types rather than children.
+      in the DOM as a <template>, which is an element like any other and
+      therefore the first child. Anything written against a replicated list
+      has to count types rather than children.
     */
     #dash-side-nav:not(:has(.active)) > li:first-of-type > .nav-link {
       color: var(--bs-nav-pills-link-active-color);
