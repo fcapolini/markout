@@ -30,7 +30,19 @@ export function stage3qualify(page: Page) {
 
 function qualifyScope(scope: Scope) {
   for (const [name, value] of scope.values) {
-    qualifyValue(shadowKeyFor(scope, name), value);
+    // A value written at a usage site does not shadow-skip.
+    //
+    // The rule below turns a value that reads its OWN name into a read of
+    // the enclosing one, which is what `<div :n=${n + 1}>` means. But a
+    // usage-site value only lives on this instance -- it resolves at the
+    // CALL SITE, where its name is not declared and there is nothing to
+    // skip. Applying it there sent `<x-tag :items=${items} />` looking one
+    // scope too far up, so it reported `link: unresolved dependency` at
+    // runtime and rendered blank, for the most natural thing to write.
+    qualifyValue(
+      scope.callSiteValues?.has(name) ? '' : shadowKeyFor(scope, name),
+      value
+    );
   }
   for (const [name, value] of scope.textValues) {
     qualifyValue(name, value);

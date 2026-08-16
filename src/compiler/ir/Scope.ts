@@ -14,6 +14,17 @@ export class Scope {
   name?: string;
   /** set for a custom-tag usage scope: the id of the <:define> scope it instantiates from */
   usesTemplate?: string;
+  /**
+   * Set on the scope a usage ELEMENT was loaded into, once its values have
+   * been handed to the instance and it has been spliced out of the tree.
+   *
+   * It keeps its parent link, and its values keep pointing at it, because an
+   * expression written at a usage site resolves there. But it does not exist
+   * at runtime -- those values live on the instance and resolve against the
+   * call site -- so resolution has to start one level up, at the scope this
+   * one stood in front of. See stage4's `resolvesFrom`.
+   */
+  detachedUsageSite?: boolean;
   /** plain attributes supplied at a custom-tag usage site */
   attributes?: Map<string, string | null>;
   /**

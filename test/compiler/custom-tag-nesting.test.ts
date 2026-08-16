@@ -486,3 +486,64 @@ describe('a slot inside the definition own :for-each', () => {
     expect(errors[0].msg).toContain(':for-each');
   });
 });
+
+/**
+ * A parameter filled with the page value of the same name.
+ *
+ * `<x-tag :items=${items} />` where the definition declares `:items` is the
+ * most natural thing to write and used to be the one that broke. A
+ * usage-site value lives on the instance but resolves at the CALL SITE, and
+ * two rules disagreed about that: stage3 saw a value reading its own name
+ * and applied the shadow-skip meant for `<div :n=${n + 1}>`, while stage4
+ * resolved against the scope the usage element was loaded into -- which
+ * holds the value, so its own name shadowed it there too.
+ *
+ * Both hops landed one scope past the call site. It compiled clean and the
+ * runtime reported `link: unresolved dependency` -- a message its own
+ * comment reserves for markout bugs rather than page bugs -- with the
+ * component rendering blank.
+ */
+describe('a usage-site value naming its own parameter', () => {
+  it('reads the page value, not the parameter it fills', async () => {
+    const r = await render(
+      '<html><head><:define tag="x-same:div" :items=${[]}>${items.length}</:define></head>' +
+        '<body :items=${[1, 2, 3]}><x-same :items=${items} /></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    expect(r.runtimeErrors).toStrictEqual([]);
+    expect(r.body).toContain('3');
+  });
+
+  it('does the same for a differently named one, which always worked', async () => {
+    const r = await render(
+      '<html><head><:define tag="x-diff:div" :rows=${[]}>${rows.length}</:define></head>' +
+        '<body :items=${[1, 2]}><x-diff :rows=${items} /></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    expect(r.body).toContain('2');
+  });
+
+  it('still lets a replicated usage read its own per-item alias', async () => {
+    // the exception the fix has to keep: a usage carrying `:for-each` binds
+    // the alias on itself, and its own values have to see it -- which is
+    // what the runtime's LoopSiteScope is for
+    const r = await render(
+      '<html><head><:define tag="x-row:i" :label=${\'\'}>${label}</:define></head>' +
+        '<body><x-row :for-each=${[7, 8]} :label=${data} /></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    expect(r.runtimeErrors).toStrictEqual([]);
+    expect(r.body).toContain('7');
+    expect(r.body).toContain('8');
+  });
+
+  it('still shadow-skips for an ordinary value reading its own name', async () => {
+    // unchanged: this one is not a usage-site value, so `n` here means the
+    // enclosing `n`, which is the rule `:for-each` relies on
+    const r = await render(
+      '<html :n=${1}><body><div :n=${n + 1}>${n}</div></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    expect(r.body).toContain('2');
+  });
+});
