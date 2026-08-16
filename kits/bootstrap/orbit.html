@@ -76,6 +76,9 @@
         where the regions below can see them. Passing a number formatter to
         every region would be noise rather than an interface.
       */
+      :_sum=${(list) => list.reduce((a, b) => a + b, 0)}
+      :_mean=${(list) => list.length ? _sum(list) / list.length : 0}
+      :_change=${(a, b) => b ? ((a - b) / b) * 100 : 0}
       :_num=${(n) => Intl.NumberFormat('en-US').format(Math.round(n))}
       :_compact=${(n) => Intl.NumberFormat('en-US', {
         notation: 'compact', maximumFractionDigits: 1 }).format(n)}
@@ -164,9 +167,6 @@
       :_faultsNow=${faults.slice(-span)}
       :_latencyNow=${latencies.slice(-span)}
 
-      :_sum=${(list) => list.reduce((a, b) => a + b, 0)}
-      :_mean=${(list) => list.length ? _sum(list) / list.length : 0}
-      :_change=${(a, b) => b ? ((a - b) / b) * 100 : 0}
 
       :_requests=${_sum(_now)}
       :_requestsDelta=${_change(_sum(_now), _sum(_before))}
@@ -282,82 +282,29 @@
         <!--- ---------------------------------------------- page header -->
         <orbit-header :healthy=${_healthy}
                       :total=${services.length}
-                      :readings=${span}
+                      :span=${span}
                       :live=${liveFeed}
                       :setSpan=${(n) => span = n}
                       :onExport=${() => exported.open = true} />
 
-        <!--- ------------------------------------------- system banner -->
-        <!---
-          An optional region: `:for-data` renders once if its value is there
-          and not at all otherwise, and binds it as `data`. That is what
-          makes `${data.title}` safe to write — nothing in here is evaluated
-          while there is no incident to evaluate it against. Acknowledging
-          empties `incidents`, and the banner, the navbar badge and the
-          incident panel all go at once.
-        -->
-        <bs-alert :for-data=${incidents[0]}
-                  :variant="danger"
-                  :extra="d-flex flex-wrap justify-content-between align-items-center gap-3">
-          <span>
-            <strong>${incidents.length} open incident${incidents.length === 1 ? '' : 's'}.</strong>
-            ${data.title}, ${_ago(data.since)}.
-          </span>
-          <span class="d-flex gap-2">
-            <bs-link :href="#incidents" :button :variant="light" :size="sm">Details</bs-link>
-            <bs-button :variant="danger"
-                       :size="sm"
-                       :on-click=${() => incidents = []}>Acknowledge</bs-button>
-          </span>
-        </bs-alert>
-
+        <orbit-banner :incidents=${incidents}
+                      :acknowledge=${() => incidents = []} />
         <div class="dash-rows">
 
           <!--- ------------------------------------------------- the KPIs -->
-          <section class="dash-section" id="overview">
-            <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-4">
-              <div class="col">
-                <dash-stat :caption="Requests"
-                           :figure=${_compact(_requests)}
-                           :delta=${_requestsDelta}
-                           :trend=${_now}>
-                  vs. the ${span} readings before
-                </dash-stat>
-              </div>
-
-              <div class="col">
-                <dash-stat :caption="Error rate"
-                           :figure=${_errorRate.toFixed(2)}
-                           :unit="%"
-                           :tone=${_errorRate > 0.5 ? 'danger' : 'success'}
-                           :delta=${_change(_sum(_faultsNow), _sum(faults.slice(-span * 2, -span)))}
-                           :trend=${_faultsNow}>
-                  ${_num(_sum(_faultsNow))} failed requests
-                </dash-stat>
-              </div>
-
-              <div class="col">
-                <dash-stat :caption="p50 latency"
-                           :figure=${Math.round(_latency)}
-                           :unit="ms"
-                           :delta=${_change(_mean(_latencyNow), _mean(latencies.slice(-span * 2, -span)))}
-                           :tone=${_latency > 140 ? 'warning' : 'success'}
-                           :trend=${_latencyNow}>
-                  budget is 150ms
-                </dash-stat>
-              </div>
-
-              <div class="col">
-                <dash-stat :caption="Availability"
-                           :figure=${_uptime.toFixed(2)}
-                           :unit="%"
-                           :trend=${services.map(s => s.uptime)}
-                           :tone=${_uptime > 99.9 ? 'success' : 'warning'}>
-                  ${_healthy}/${services.length} services in budget
-                </dash-stat>
-              </div>
-            </div>
-          </section>
+          <orbit-kpis :span=${span}
+                      :services=${services}
+                      :healthy=${_healthy}
+                      :requests=${_requests}
+                      :requestsDelta=${_requestsDelta}
+                      :requestsTrend=${_now}
+                      :errorRate=${_errorRate}
+                      :faultsNow=${_faultsNow}
+                      :faultsDelta=${_change(_sum(_faultsNow), _sum(faults.slice(-span * 2, -span)))}
+                      :latency=${_latency}
+                      :latencyNow=${_latencyNow}
+                      :latencyDelta=${_change(_mean(_latencyNow), _mean(latencies.slice(-span * 2, -span)))}
+                      :uptime=${_uptime} />
 
           <!--- ------------------------------------------- traffic + mix -->
           <section class="dash-section" id="traffic">
@@ -1187,8 +1134,8 @@
   </bs-toast-container>
 
   <!--- ==================================================== the footer -->
-  <orbit-footer :serviceCount=${services.length}
-                :deployCount=${deploys.length}
+  <orbit-footer :services=${services}
+                :deploys=${deploys}
                 :requests=${_requests} />
 
 </body>

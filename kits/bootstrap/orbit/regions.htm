@@ -77,7 +77,7 @@
            class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4"
            :healthy=${0}
            :total=${0}
-           :readings=${24}
+           :span=${24}
            :live=${false}
            :setSpan=${(n) => n}
            :onExport=${() => undefined}>
@@ -91,7 +91,7 @@
               <h1 class="h3 mb-0 mt-1">Operations</h1>
               <p class="text-body-secondary mb-0">
                 ${healthy} of ${total} services healthy ·
-                last ${readings} readings ·
+                last ${span} readings ·
                 <span :class-text-success=${live}
                       :class-text-body-secondary=${!live}>${live ? 'live' : 'paused'}</span>
               </p>
@@ -108,7 +108,7 @@
                            :for-as="n"
                            :variant="secondary"
                            :outline
-                           :active=${readings === n}
+                           :active=${span === n}
                            :on-click=${() => setSpan(n)}>${n}h</bs-button>
               </bs-button-group>
 
@@ -133,8 +133,8 @@
   <!--- What the page adds up to, in one line. -->
   <:define tag="orbit-footer:footer"
            class="border-top mt-4"
-           :serviceCount=${0}
-           :deployCount=${0}
+           :services=${[]}
+           :deploys=${[]}
            :requests=${0}>
       <div class="container-fluid px-3 px-lg-4 py-4 small text-body-secondary d-flex flex-wrap justify-content-between gap-2">
         <span>
@@ -144,9 +144,110 @@
           <code>&lt;body&gt;</code>.
         </span>
         <span>
-          ${serviceCount} services · ${deployCount} deployments ·
+          ${services.length} services · ${deploys.length} deployments ·
           ${_num(requests)} requests in the window
         </span>
       </div>
+  </:define>
+
+  <!---
+    The open-incident banner, and the one button that clears them.
+
+    Its root is a plain <div> rather than the alert itself: a definition's
+    base tag has to be a real element, and `bs-alert` is a component. So
+    this is the one region that wraps rather than replaces what was there.
+  -->
+  <:define tag="orbit-banner:div"
+           :incidents=${[]}
+           :acknowledge=${() => undefined}>
+          <!---
+            An optional region: `:for-data` renders once if its value is there
+            and not at all otherwise, and binds it as `data`. That is what
+            makes `${data.title}` safe to write — nothing in here is evaluated
+            while there is no incident to evaluate it against. Acknowledging
+            empties `incidents`, and the banner, the navbar badge and the
+            incident panel all go at once.
+          -->
+          <bs-alert :for-data=${incidents[0]}
+                    :variant="danger"
+                    :extra="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <span>
+              <strong>${incidents.length} open incident${incidents.length === 1 ? '' : 's'}.</strong>
+              ${data.title}, ${_ago(data.since)}.
+            </span>
+            <span class="d-flex gap-2">
+              <bs-link :href="#incidents" :button :variant="light" :size="sm">Details</bs-link>
+              <bs-button :variant="danger"
+                         :size="sm"
+                         :on-click=${() => acknowledge()}>Acknowledge</bs-button>
+            </span>
+          </bs-alert>
+  </:define>
+
+  <!---
+    The four figures at the top.
+
+    Every number is computed by the page: this renders, it does not derive.
+    That is why the list is long -- each tile wants a figure, a change and a
+    series, and saying so is the point of passing them.
+  -->
+  <:define tag="orbit-kpis:section"
+           class="dash-section"
+           id="overview"
+           :span=${24}
+           :services=${[]}
+           :healthy=${0}
+           :requests=${0}
+           :requestsDelta=${0}
+           :requestsTrend=${[]}
+           :errorRate=${0}
+           :faultsNow=${[]}
+           :faultsDelta=${0}
+           :latency=${0}
+           :latencyNow=${[]}
+           :latencyDelta=${0}
+           :uptime=${0}>
+              <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-4">
+                <div class="col">
+                  <dash-stat :caption="Requests"
+                             :figure=${_compact(requests)}
+                             :delta=${requestsDelta}
+                             :trend=${requestsTrend}>
+                    vs. the ${span} readings before
+                  </dash-stat>
+                </div>
+
+                <div class="col">
+                  <dash-stat :caption="Error rate"
+                             :figure=${errorRate.toFixed(2)}
+                             :unit="%"
+                             :tone=${errorRate > 0.5 ? 'danger' : 'success'}
+                             :delta=${faultsDelta}
+                             :trend=${faultsNow}>
+                    ${_num(_sum(faultsNow))} failed requests
+                  </dash-stat>
+                </div>
+
+                <div class="col">
+                  <dash-stat :caption="p50 latency"
+                             :figure=${Math.round(latency)}
+                             :unit="ms"
+                             :delta=${latencyDelta}
+                             :tone=${latency > 140 ? 'warning' : 'success'}
+                             :trend=${latencyNow}>
+                    budget is 150ms
+                  </dash-stat>
+                </div>
+
+                <div class="col">
+                  <dash-stat :caption="Availability"
+                             :figure=${uptime.toFixed(2)}
+                             :unit="%"
+                             :trend=${services.map(s => s.uptime)}
+                             :tone=${uptime > 99.9 ? 'success' : 'warning'}>
+                    ${healthy}/${services.length} services in budget
+                  </dash-stat>
+                </div>
+              </div>
   </:define>
 </lib>
