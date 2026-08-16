@@ -3,6 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import fs from "fs";
 import path from "path";
 import { Compiler } from "../compiler";
+import type { Page } from "../compiler/ir/Page";
 import { DEFAULT_RUNTIME_SRC } from "../compiler/stages/stage7-generate";
 import { formatRuntimeError, RuntimeError } from "../runtime/core/core-context";
 import { defaultLogger, MarkoutLogger } from "./logger";
@@ -51,6 +52,70 @@ export interface MarkoutProps {
   globals?: { [name: string]: unknown };
 }
 
+/**
+ * Compiled pages, kept in memory until anything under the docroot changes.
+ *
+ * Compiling Orbit costs ~120ms against ~40ms to render it, so without this
+ * every request pays for reading and compiling the page and every file it
+ * imports -- which is most of what a visitor clicking around the demo would
+ * be measuring. The COMPILER's output is what is cached, never the HTML:
+ * a `:server-` value runs per request by definition, and serving yesterday's
+ * answer would make the one feature that distinguishes this framework look
+ * like a bug.
+ *
+ * Invalidation is deliberately blunt. Any change anywhere under the docroot
+ * empties the whole cache, rather than working out which pages saw the file
+ * that moved -- the preprocessor does record every file it read, so the
+ * precise version is available, but a dev server recompiling a handful of
+ * pages it did not have to is not worth the chance of missing one it did.
+ *
+ * If the watcher cannot be established, nothing is cached at all. A stale
+ * page is a worse failure than a slow one, and it is the kind someone
+ * debugs for an hour before suspecting the server.
+ */
+function pageCache(
+  docroot: string,
+  logger: MarkoutLogger,
+  compile: (pathname: string) => Promise<Page>
+) {
+  const entries = new Map<string, { page: Page; last: Promise<unknown> }>();
+  let watcher: fs.FSWatcher | undefined;
+  try {
+    watcher = fs.watch(docroot, { recursive: true }, () => entries.clear());
+    // never a reason to hold the process open: this exists to make an
+    // already-running server faster, not to keep one alive
+    watcher.unref();
+  } catch (err) {
+    logger('info', `[markout] no file watcher (${err}) -- compiling every request`);
+  }
+
+  return {
+    /**
+     * The compiled page, and a turn in the queue for rendering it.
+     *
+     * Renders are serialized per page because rendering writes into that
+     * page's document -- which is the whole reason it can be reused, and
+     * also the reason two overlapping requests must not be inside it at
+     * once. They would interleave halfway through and each would serve
+     * a document holding half of the other's data.
+     */
+    async use<T>(pathname: string, render: (page: Page) => Promise<T>): Promise<T> {
+      const hit = watcher && entries.get(pathname);
+      const page = hit ? hit.page : await compile(pathname);
+      if (!watcher) {
+        return render(page);
+      }
+      const entry = entries.get(pathname) ?? { page, last: Promise.resolve() };
+      entries.set(pathname, entry);
+      const turn = entry.last.then(() => render(page), () => render(page));
+      // the queue must survive a failed render, or one thrown error leaves
+      // every later request for that page waiting on a promise nobody settles
+      entry.last = turn.catch(() => undefined);
+      return turn;
+    },
+  };
+}
+
 export function markout(props: MarkoutProps) {
   const docroot = props.docroot || process.cwd();
   const dev = props.dev ?? false;
@@ -62,6 +127,7 @@ export function markout(props: MarkoutProps) {
     serverGlobals: globals ? Object.keys(globals) : undefined,
   });
   const clientCode = loadClientCode();
+  const cache = pageCache(docroot, logger, pathname => compiler.compile(pathname));
 
   return async function (req: Request, res: Response, next: NextFunction) {
     const i = req.path.lastIndexOf('.');
@@ -82,31 +148,43 @@ export function markout(props: MarkoutProps) {
       return;
     }
 
-    const page = await compiler.compile(pathname);
-    if (page.source.errors.length) {
+    // a union rather than two calls, so that everything touching the
+    // page's document happens inside its turn in the queue
+    type Served =
+      | { errors: PageError[] }
+      | { runtimeErrors: RuntimeError[]; html: string };
+    const served: Served = await cache.use<Served>(pathname, async page => {
+      if (page.source.errors.length) {
+        return { errors: page.source.errors };
+      }
+      const runtimeErrors = await renderPage(page, { origin: originOf(req), globals });
+      // serialized HERE, inside this page's turn rather than after it: the
+      // document holds this request's data only until the next render
+      // starts writing over it
+      return { runtimeErrors, html: page.source.doc.toString() };
+    });
+
+    if ('errors' in served) {
       if (
-        page.source.errors.length === 1 &&
-        page.source.errors[0].msg === `File not found "${pathname}"`
+        served.errors.length === 1 &&
+        served.errors[0].msg === `File not found "${pathname}"`
       ) {
         res.sendStatus(404);
         return;
       }
-      return serveErrorPage(page.source.errors, res);
+      return serveErrorPage(served.errors, res);
     }
 
-    const runtimeErrors = await renderPage(page, { origin: originOf(req), globals });
     // always logged, whatever the mode
-    runtimeErrors.forEach(e =>
+    served.runtimeErrors.forEach(e =>
       logger('error', `[markout] ${pathname} ${formatRuntimeError(e)}`)
     );
-    if (dev && runtimeErrors.length) {
-      return serveRuntimeErrorPage(runtimeErrors, res);
+    if (dev && served.runtimeErrors.length) {
+      return serveRuntimeErrorPage(served.runtimeErrors, res);
     }
 
-    let doc = page.source.doc;
-    const html = doc.toString();
     res.header('Content-Type', 'text/html;charset=UTF-8');
-    res.send('<!doctype html>\n' + html);
+    res.send('<!doctype html>\n' + served.html);
   }
 }
 
