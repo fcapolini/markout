@@ -1,5 +1,6 @@
 import { assert, describe, it } from 'vitest';
 import { parse } from '../../src/html/parser';
+import { NodeType } from '../../src/html/dom';
 
 /**
  * These tests state the escaping *rules* rather than pinning examples, so a
@@ -226,5 +227,80 @@ describe('serialization', () => {
       const twice = serialize(once);
       assert.equal(twice, once);
     });
+  });
+});
+
+/**
+ * HTML's raw text and escapable raw text elements hold text, not markup: a
+ * browser reads to the closing tag without ever looking for another one
+ * (spec 13.2.5.1). These used to be parsed as markup, so a stylesheet could
+ * not say `<template>` in a comment -- it reported a tag nobody wrote, and
+ * the page 500'd -- and a `<textarea>` showing example markup got real
+ * elements inside it.
+ */
+/** the first element with this tag, anywhere in the tree */
+function firstTag(node: any, tag: string): any {
+  if (node.tagName === tag) return node;
+  for (const c of node.childNodes ?? []) {
+    const found = firstTag(c, tag);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+describe('text-holding elements contain no markup', () => {
+  const CASES: [string, string][] = [
+    ['a tag name in a CSS comment', '/* see <template> */ p { color: red }'],
+    ['a tag in a content string', 'p::before { content: "<b>" }'],
+    ['a bare < in a selector', 'a<b { color: red }'],
+  ];
+
+  CASES.forEach(([what, css]) => {
+    it(`<style> parses ${what} as text`, () => {
+      const html = `<html><head><style>${css}</style></head><body>x</body></html>`;
+      // raw text: what went in is what comes out, entities and all
+      // (serialize() also asserts the parse reported nothing)
+      assert.equal(contentOf('style', serialize(html)), css);
+    });
+  });
+
+  it('<textarea> keeps markup as text rather than elements', () => {
+    const html = '<html><body><textarea>a <b>x</b> c</textarea></body></html>';
+    const src = parse(html, 't');
+    assert.deepEqual(src.errors.map(e => e.msg), []);
+    const ta = firstTag(src.doc, 'TEXTAREA');
+    assert.deepEqual(
+      ta.childNodes.map((n: any) => n.nodeType),
+      [NodeType.TEXT],
+      'a browser has no <b> element in here'
+    );
+    // escapable raw text: serialized back with `<` escaped, so re-reading it
+    // cannot turn the payload into a tag
+    assert.equal(contentOf('textarea', serialize(html)), 'a &lt;b&gt;x&lt;/b&gt; c');
+  });
+
+  it('<title> does the same', () => {
+    const src = parse('<html><head><title>a <b>x</b></title></head><body>y</body></html>', 't');
+    assert.deepEqual(src.errors.map(e => e.msg), []);
+    const t = firstTag(src.doc, 'TITLE');
+    assert.deepEqual(t.childNodes.map((n: any) => n.nodeType), [NodeType.TEXT]);
+  });
+
+  it('still interpolates, which is what a reactive stylesheet needs', () => {
+    const src = parse(
+      '<html :c=${"red"}><head><style>p { color: ${c} }</style></head><body>x</body></html>',
+      't'
+    );
+    assert.deepEqual(src.errors.map(e => e.msg), []);
+    const style = firstTag(src.doc, 'STYLE');
+    // one node holding the whole thing, expression included -- see
+    // ATOMIC_TEXT_TAGS on why it cannot be split
+    assert.equal(style.childNodes.length, 1);
+    assert.notEqual(typeof style.childNodes[0].textContent, 'string');
+  });
+
+  it('reports an unterminated one rather than swallowing the page', () => {
+    const src = parse('<html><head><style>p { color: red }</head><body>x</body></html>', 't');
+    assert.match(src.errors.map(e => e.msg).join(), /Unterminated/);
   });
 });

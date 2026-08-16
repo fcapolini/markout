@@ -8,7 +8,14 @@ export const SKIP_CONTENT_TAGS = new Set(['SCRIPT', 'CODE']);
 // elements whose content is text rather than markup: an interpolation
 // inside one can't be wrapped in comment markers, because the browser reads
 // those back as literal characters rather than as comments. They hold their
-// whole content as one node instead, with the marker just outside the tag
+// whole content as one node instead, with the marker just outside the tag.
+//
+// Nothing in one is a tag, either -- these are HTML's raw text and escapable
+// raw text elements, and a browser reads to the closing tag without ever
+// looking for another one. So `p::before { content: "<b>" }` is a string,
+// `a<b {}` is a selector, and a CSS comment may say `<template>` without
+// opening anything. Parsing them as markup produced errors about tags
+// nobody wrote (spec 13.2.5.1)
 export const ATOMIC_TEXT_TAGS = new Set(['STYLE', 'TITLE', 'TEXTAREA']);
 // raw text elements: entities are neither decoded on parse nor emitted on
 // serialization, as browsers don't decode them either (HTML spec 13.2.5.1)
@@ -199,6 +206,21 @@ function parseElement(
             !RAW_TEXT_TAGS.has(e.tagName)
           )
         );
+      }
+      i1 = res.i2;
+    } else if (ATOMIC_TEXT_TAGS.has(e.tagName)) {
+      // read to the closing tag without looking for others, then hand the
+      // span to parseText -- which routes it to parseAtomicText, so `${...}`
+      // in a stylesheet or a title still works
+      const res = skipContent(e.tagName, src, i1, errors);
+      if (!res) {
+        errors.push(
+          new PageError('error', `Unterminated tag ${e.tagName}`, src.loc(i1, i1))
+        );
+        throw new ParseAbort();
+      }
+      if (res.i0 > i1) {
+        parseText(e, src, i1, res.i0, errors);
       }
       i1 = res.i2;
     } else {
