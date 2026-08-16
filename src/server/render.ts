@@ -14,7 +14,7 @@ import { escapeScriptText, serialize, UnserializableError } from "./serialize";
  * instead of shipping empty interpolation gaps for the client to fill in.
  *
  * Then fills the `<script>` stage7 reserved with whatever the page's
- * `:keep-` values produced, so the client can use those results rather than
+ * `:server-` values produced, so the client can use those results rather than
  * deriving them again -- which for a server-only expression it could not do
  * at all. See docs/design/value-transfer.md.
  *
@@ -42,7 +42,7 @@ export function renderPage(page: Page): RuntimeError[] {
 }
 
 /**
- * Writes the collected `:keep-` results into the reserved `<script>`.
+ * Writes the collected `:server-` results into the reserved `<script>`.
  *
  * Serialized one value at a time so that one unsendable result costs only
  * itself: the rest of the page's state still reaches the client, and the
@@ -79,7 +79,7 @@ function emitState(page: Page, state: PageState, errors: RuntimeError[]) {
   }
   if (!scopes.length) {
     // nothing to send: leave no empty script behind, which is the common
-    // case for any page that declares no `:keep-` value at all
+    // case for any page that declares no `:server-` value at all
     script.parentElement?.removeChild(script);
     return;
   }

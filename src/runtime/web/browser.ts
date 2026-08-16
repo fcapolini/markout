@@ -28,7 +28,7 @@ export function init(): WebContext | undefined {
     root,
     doc: document as unknown as MarkoutDocument,
     dev,
-    // results of the server's `:keep-` values, absent on a page that declared
+    // results of the server's `:server-` values, absent on a page that declared
     // none. A value named here is built from its result instead of from its
     // expression, which for a server-only expression is the only way it can
     // exist in the browser at all

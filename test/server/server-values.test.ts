@@ -11,7 +11,7 @@ import { CoreContext, STATE_GLOBAL } from '../../src/runtime/core/core-context';
 import type { PageState } from '../../src/runtime/core/core-context';
 import type { CoreScope, CoreScopeProps } from '../../src/runtime/core/core-scope';
 
-// End to end: the server renders, collects its `:keep-` values, and writes
+// End to end: the server renders, collects its `:server-` values, and writes
 // them into the reserved script; a client built from the same props plus that
 // state gets the server's results rather than deriving its own.
 //
@@ -64,10 +64,10 @@ function sequence(...values: number[]) {
   vi.spyOn(Math, 'random').mockImplementation(() => values[Math.min(i++, values.length - 1)]);
 }
 
-describe(':keep- end to end', () => {
+describe(':server- end to end', () => {
   it('sends the server\'s result and the client uses it', () => {
     sequence(0.25, 0.75);
-    const page = compile('<html :keep-r=${Math.random()}><body>${r}</body></html>');
+    const page = compile('<html :server-r=${Math.random()}><body>${r}</body></html>');
     expect(renderPage(page)).toStrictEqual([]);
 
     // the server evaluated it once, and the markup shows that result
@@ -85,7 +85,7 @@ describe(':keep- end to end', () => {
     // the control for the test above: without the state the same props do
     // re-run the expression, which is exactly the flip this feature prevents
     sequence(0.25, 0.75);
-    const page = compile('<html :keep-r=${Math.random()}><body>${r}</body></html>');
+    const page = compile('<html :server-r=${Math.random()}><body>${r}</body></html>');
     renderPage(page);
     expect(rehydrate(page, undefined).root.proxy.r).toBe(0.75);
   });
@@ -98,13 +98,13 @@ describe(':keep- end to end', () => {
     expect(rehydrate(page, readState(page)).root.proxy.r).toBe(0.75);
   });
 
-  it('freezes the kept value but not what reads it', () => {
+  it('freezes the server-only value but not what reads it', () => {
     // a dependent value is an ordinary one: it re-derives on the client, and
     // still tracks its own dependencies afterwards. Only the marked value is
     // pinned -- which is why the rule is to keep the source, not the derivation
     sequence(0.5);
     const page = compile(
-      '<html :keep-base=${Math.random()} :n=${1}><body>${base * n}</body></html>'
+      '<html :server-base=${Math.random()} :n=${1}><body>${base * n}</body></html>'
     );
     expect(renderPage(page)).toStrictEqual([]);
     const ctx = rehydrate(page, readState(page));
@@ -116,7 +116,7 @@ describe(':keep- end to end', () => {
 
   it('carries the types JSON would flatten', () => {
     const page = compile(
-      '<html :keep-d=${new Date(1700000000000)} :keep-u=${undefined}>' +
+      '<html :server-d=${new Date(1700000000000)} :server-u=${undefined}>' +
         '<body>${d}${u}</body></html>'
     );
     expect(renderPage(page)).toStrictEqual([]);
@@ -127,14 +127,14 @@ describe(':keep- end to end', () => {
   });
 });
 
-describe(':keep- inside a :for-each', () => {
+describe(':server- inside a :for-each', () => {
   it('keys each replica separately', () => {
     // the open question the design left: `uid` is props.id plus the replica
     // path, so two replicas of one declaration must not collide -- otherwise
     // every row in a list would be handed the first row's result
     sequence(0.1, 0.2, 0.9);
     const page = compile(
-      '<html><body><div :for-each=${[1, 2]} :keep-r=${Math.random()}>${r}</div></body></html>'
+      '<html><body><div :for-each=${[1, 2]} :server-r=${Math.random()}>${r}</div></body></html>'
     );
     expect(renderPage(page)).toStrictEqual([]);
 
@@ -153,7 +153,7 @@ describe(':keep- inside a :for-each', () => {
   it('gives each replica back its own result on the client', () => {
     sequence(0.1, 0.2, 0.9);
     const page = compile(
-      '<html><body><div :for-each=${[1, 2]} :keep-r=${Math.random()}>${r}</div></body></html>'
+      '<html><body><div :for-each=${[1, 2]} :server-r=${Math.random()}>${r}</div></body></html>'
     );
     renderPage(page);
     const ctx = rehydrate(page, readState(page));
@@ -168,14 +168,14 @@ describe(':keep- inside a :for-each', () => {
     // entry would be `undefined` standing in for "never ran"
     sequence(0.5);
     const page = compile(
-      '<html><body><div :for-data=${null} :keep-r=${Math.random()}>${r}</div></body></html>'
+      '<html><body><div :for-data=${null} :server-r=${Math.random()}>${r}</div></body></html>'
     );
     expect(renderPage(page)).toStrictEqual([]);
     expect(readState(page)).toBeUndefined();
   });
 });
 
-describe(':keep- when a result cannot be sent', () => {
+describe(':server- when a result cannot be sent', () => {
   it('reports it, ships the rest, and lets that one re-derive', () => {
     // one unsendable value must not cost the page its other state, and must
     // not pass silently: a page that quietly sent less than it meant to
@@ -183,7 +183,7 @@ describe(':keep- when a result cannot be sent', () => {
     // anything that explains it
     sequence(0.25, 0.75);
     const page = compile(
-      '<html :keep-f=${() => 1} :keep-r=${Math.random()}><body>${r}${f}</body></html>'
+      '<html :server-f=${() => 1} :server-r=${Math.random()}><body>${r}${f}</body></html>'
     );
     const errors = renderPage(page);
     expect(errors).toHaveLength(1);
