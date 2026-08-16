@@ -16,6 +16,8 @@ export interface ServerProps {
   dev?: boolean;
   /** gzip/deflate responses for clients that accept them */
   compress?: boolean;
+  /** objects pages may reach from a `:server-` value; see MarkoutProps */
+  globals?: { [name: string]: unknown };
 }
 
 export class Server {

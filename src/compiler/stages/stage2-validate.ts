@@ -105,6 +105,17 @@ export function stage2validate(page: Page) {
 }
 
 function validateScope(page: Page, scope: Scope) {
+  // a scope named over a supplied global would shadow it by navigation --
+  // `db.users` would find the scope, not the database -- so the name is
+  // refused rather than allowed to quietly win
+  if (scope.name && page.serverGlobals.has(scope.name)) {
+    addError(
+      page,
+      `Cannot name a scope "${scope.name}": it is supplied to the server`,
+      scope.values.values().next().value?.node.loc
+    );
+  }
+
   // the two replication arities are the same question -- how many times does
   // this render -- so an element may only answer it once. And a key is what
   // tells replicas apart, which is nothing to ask of a thing that is either
@@ -142,6 +153,18 @@ function validateScope(page: Page, scope: Scope) {
 }
 
 function validateValue(page: Page, name: string, value: Value) {
+  // Declaring one of these would shadow it, since resolution reaches the
+  // global scope only after walking the chain -- and shadowing a database
+  // handle is not a thing anyone means to do. Unlike `Math`, which a page
+  // may deliberately take over, these were put there by the host
+  if (page.serverGlobals.has(name)) {
+    addError(
+      page,
+      `Cannot declare "${name}": it is supplied to the server`,
+      value.node.loc || undefined
+    );
+    return;
+  }
   // Check that value names don't contain '$' (reserved for language features)
   if (stripKnownPrefix(name).includes('$')) {
     addError(
