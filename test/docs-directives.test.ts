@@ -451,6 +451,21 @@ const CASES: Record<string, Case> = {
       expect(p.body()).toContain('<b>fallback</b>');
     },
   },
+  ':when-used="tag-a tag-b"': {
+    works: async () => {
+      const p = await run(
+        '<html><head>' +
+          '<style :when-used="x-kept">.kept{}</style>' +
+          '<style :when-used="x-gone">.gone{}</style>' +
+          '<:define tag="x-kept:i">k</:define><:define tag="x-gone:i">g</:define>' +
+          '</head><body><x-kept /></body></html>'
+      );
+      const html = p.doc.toString();
+      expect(html).toContain('.kept{}');
+      // the unused component's stylesheet goes with the component
+      expect(html).not.toContain('.gone{}');
+    },
+  },
   '<:slot name="x" />': {
     works: async () => {
       const p = await run(

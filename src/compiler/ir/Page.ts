@@ -43,6 +43,21 @@ export const SERVER_VALUE_ATTR_PREFIX = 'server-';
  * page can have taken it, and none ever can -- which makes this the one
  * namespace a directive can occupy without a prefix to keep it clear.
  */
+/**
+ * `:when-used="tag-a tag-b"` keeps this element only while at least one of
+ * those custom tags survives treeshaking.
+ *
+ * Build-time, and nothing about it reaches the runtime -- unlike `:if`,
+ * which asks its question on every change. It exists for the assets a
+ * component needs and a page without that component does not: a stylesheet,
+ * a `<link>`, a `<script>`.
+ *
+ * Named rather than inferred from the fragment a style was declared in. A
+ * stylesheet sitting next to some `<:define>`s is not necessarily THEIR
+ * stylesheet -- Orbit's is the page's -- so "these definitions died, so
+ * these styles are dead" would be wrong, not merely surprising.
+ */
+export const WHEN_USED_ATTR = 'when-used';
 export const IF_ATTR = 'if';
 export const IF_VALUE = 'if$';
 export const TEXT_VALUE_PREFIX = 't$';
@@ -117,6 +132,8 @@ export class Page {
    * walking back up to it.
    */
   defineStencils: Map<string, ServerElement>;
+  /** elements carrying `:when-used`, and the tags each waits on */
+  whenUsed: Map<ServerElement, string[]>;
   /** the <:define> scopes themselves -- excluded from their parent's
    * compiled children by stage7-generate, since they're never live at
    * their own natural position, only instantiated per usage site */
@@ -187,6 +204,7 @@ export class Page {
     this.definitionScopes = new Set();
     this.usedTags = new Set();
     this.defineStencils = new Map();
+    this.whenUsed = new Map();
     this.values = new Map();
   }
 

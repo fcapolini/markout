@@ -401,6 +401,7 @@ rather than `:first-child`, and `:nth-of-type` rather than `:nth-child`. See
 | `<:include src="file.txt" as="pre" />` | Includes a file as a literal element named `pre` containing its text. |
 | `<:import src="file.htm" />` | Splices a fragment into the page; each file is only imported once per page. |
 | `<:define tag="x-y:button">...</:define>` | Declares a reusable custom tag. |
+| `:when-used="tag-a tag-b"` | Keep this element only while one of those tags survives treeshaking. Build-time; nothing of it reaches the runtime. |
 | `<:slot />` | In a definition: where a usage site's content goes. Its own content is the fallback. |
 | `<:slot name="x" />` | A named slot. |
 | `:slot="x"` | On a usage site's child: which slot it fills. Unaddressed content fills the unnamed one. A literal, not an expression. |
@@ -417,6 +418,32 @@ identifiers rather than [reserved words](#values), which is a deliberate
 trade: no reserved word reads as well as either. The price is that a page
 cannot declare values named `aka` or `slot`, and the error above is what
 keeps that price visible rather than silent.
+
+### Shipping a component's assets
+
+An unused `<:define>` is dropped, but a `<style>` next to it is not — and
+should not be, since a stylesheet beside some definitions is not
+necessarily *their* stylesheet. `:when-used` is how an asset says it is:
+
+```html
+<lib>
+  <style :when-used="x-chart">.x-chart { … }</style>
+  <:define tag="x-chart:div">…</:define>
+</lib>
+```
+
+A page that never writes `<x-chart>` gets neither the definition nor its
+CSS. One that does gets both. Naming more than one tag keeps the element
+while any of them survives, which is what a stylesheet shared by a family
+of components wants.
+
+This is decided when the page is built, so unlike [`:if`](#values) it costs
+nothing at runtime — the element is there or it is not, and the attribute
+never reaches the browser. It gives the element no scope either.
+
+A name no `<:define>` declares is a compile error. That is the point: a
+renamed component would otherwise leave its stylesheet waiting on a name
+nothing will ever use, and every page would silently lose the styling.
 
 ### A fragment has one root
 

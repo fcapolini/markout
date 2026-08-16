@@ -35,6 +35,7 @@ import {
   FOR_KEY_ATTR,
   IF_ATTR,
   IF_VALUE,
+  WHEN_USED_ATTR,
   FOR_EACH_VALUE,
   FOR_DATA_VALUE,
   FOR_AS_VALUE,
@@ -117,6 +118,7 @@ const LIFECYCLE_SUFFIXES = new Set([
 // there is nothing for `:server-` to mark on one
 const SERVER_REJECTED_ATTRS = new Set([
   IF_ATTR,
+  WHEN_USED_ATTR,
   SLOT_TARGET_ATTR,
   SCOPE_NAME_ATTR,
   FOR_EACH_ATTR,
@@ -217,9 +219,13 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
 
 function needsScope(e: ServerElement): boolean {
   for (const attr of e.attributes as ServerAttribute[]) {
-    // `:slot` only says where this element goes; on its own it's no reason
-    // to give it a scope (and a data-markout id) it would never use
+    // `:slot` only says where this element goes, and `:when-used` only
+    // whether it survives compilation; on their own neither is a reason to
+    // give the element a scope (and a data-markout id) it would never use.
+    // A `<style :when-used=...>` given one took its own text with it, so the
+    // stylesheet rendered empty and its binding had nothing to write to
     if (attr.name === `${SPECIAL_ATTR_PREFIX}${SLOT_TARGET_ATTR}`) continue;
+    if (attr.name === `${SPECIAL_ATTR_PREFIX}${WHEN_USED_ATTR}`) continue;
     if (attr.name.startsWith(SPECIAL_ATTR_PREFIX)) return true;
     // a plain attribute with an interpolated value is reactive too, so its
     // element needs its own scope to hold the resulting attr$ value -- were
@@ -1101,6 +1107,17 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     }
     if (name === FOR_EACH_ATTR) {
       scope.values.set(FOR_EACH_VALUE, new Value(FOR_EACH_VALUE, attr, scope, page.createValueId()));
+      continue;
+    }
+    if (name === WHEN_USED_ATTR) {
+      // recorded here, before the family dispatch would read `when-` as a
+      // prefix and refuse `used` for the dash. Build-time only: stage6 keeps
+      // or drops the element and nothing of this reaches the runtime
+      if (!literalOnly(page, attr, WHEN_USED_ATTR, 'list of tag names')) continue;
+      const tags = `${attr.value ?? ''}`.split(/\s+/).filter(t => t).map(t => t.toLowerCase());
+      tags.length
+        ? page.whenUsed.set(e, tags)
+        : addError(page, `"${SPECIAL_ATTR_PREFIX}${WHEN_USED_ATTR}" needs at least one tag name`, attr.loc);
       continue;
     }
     if (name === IF_ATTR) {
