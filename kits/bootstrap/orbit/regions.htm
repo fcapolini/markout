@@ -64,4 +64,89 @@
                      :extra="small d-inline-block mt-3">Manage plan</bs-link>
           </dash-panel>
   </:define>
+
+  <!---
+    Title, health summary, and the controls that write the window.
+
+    `setSpan` and `onExport` are callbacks rather than values this writes:
+    the window and the export dialog belong to the page, and this is the
+    thing that asks for them to change. That is the kit's own convention —
+    callbacks are values, not events.
+  -->
+  <:define tag="orbit-header:div"
+           class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4"
+           :healthy=${0}
+           :total=${0}
+           :readings=${24}
+           :live=${false}
+           :setSpan=${(n) => n}
+           :onExport=${() => undefined}>
+            <div>
+              <bs-breadcrumb :extra="small"
+                             :items=${[
+                               { name: 'Orbit', link: '#overview' },
+                               { name: 'Production', link: '#overview' },
+                               { name: 'Console' },
+                             ]} />
+              <h1 class="h3 mb-0 mt-1">Operations</h1>
+              <p class="text-body-secondary mb-0">
+                ${healthy} of ${total} services healthy ·
+                last ${readings} readings ·
+                <span :class-text-success=${live}
+                      :class-text-body-secondary=${!live}>${live ? 'live' : 'paused'}</span>
+              </p>
+            </div>
+
+            <div class="d-flex flex-wrap align-items-center gap-2">
+              <!---
+                The window is one number and these buttons write it. Every
+                figure and chart is an expression over it, so this is the
+                whole implementation of "change the range".
+              -->
+              <bs-button-group :label="Window" :size="sm">
+                <bs-button :for-each=${[6, 12, 24]}
+                           :for-as="n"
+                           :variant="secondary"
+                           :outline
+                           :active=${readings === n}
+                           :on-click=${() => setSpan(n)}>${n}h</bs-button>
+              </bs-button-group>
+
+              <bs-dropdown :label="Export"
+                           :variant="secondary"
+                           :outline
+                           :size="sm"
+                           :align="end"
+                           :items=${[
+                             { name: 'Download CSV', select: () => onExport() },
+                             { name: 'Copy API query', select: () => onExport() },
+                             { divider: true },
+                             { name: 'Schedule a report', disabled: true },
+                           ]} />
+
+              <bs-button :size="sm"
+                         :toggle="modal"
+                         :target="#dash-new-deploy">New deployment</bs-button>
+            </div>
+  </:define>
+
+  <!--- What the page adds up to, in one line. -->
+  <:define tag="orbit-footer:footer"
+           class="border-top mt-4"
+           :serviceCount=${0}
+           :deployCount=${0}
+           :requests=${0}>
+      <div class="container-fluid px-3 px-lg-4 py-4 small text-body-secondary d-flex flex-wrap justify-content-between gap-2">
+        <span>
+          Orbit — a demo application for the
+          <a href="/index.html">Markout Bootstrap kit</a>.
+          Nothing here talks to a server; the data is declared on
+          <code>&lt;body&gt;</code>.
+        </span>
+        <span>
+          ${serviceCount} services · ${deployCount} deployments ·
+          ${_num(requests)} requests in the window
+        </span>
+      </div>
+  </:define>
 </lib>
