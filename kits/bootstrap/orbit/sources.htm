@@ -1,0 +1,36 @@
+<!---
+  Where Orbit's data comes from: one element per endpoint of its own API
+  (see ../server.ts), fetched by `std-data` while the page renders.
+
+  `<:include>` rather than `<:import>`: these are instances, not definitions,
+  and an instance is spliced exactly where it is named. That matters here --
+  a scope's name resolves where its markup is WRITTEN, so bringing this file
+  in at the top of <body> is what puts `servicesSrc` and the rest within
+  reach of the values <body> derives from them.
+-->
+<lib>
+<!---
+  Orbit's data, one element per endpoint. They render nothing; where they are
+  WRITTEN is where their names resolve, so they sit at the top of the page
+  that reads them.
+
+  `incidentsSrc` is the interesting one: its URL is built out of another
+  source's answer, so it cannot even be asked for until `services` has
+  replied. The render waits for the first, then for the second, and still
+  serves a finished page — which one round of fetching could not do.
+-->
+<std-data :aka="servicesSrc"  :url="/api/services" />
+<std-data :aka="deploysSrc"   :url="/api/deploys" />
+<std-data :aka="activitySrc"  :url="/api/activity" />
+<std-data :aka="todosSrc"     :url="/api/todos" />
+<std-data :aka="trafficSrc"   :url="/api/metrics/traffic" />
+<std-data :aka="faultsSrc"    :url="/api/metrics/faults" />
+<std-data :aka="latenciesSrc" :url="/api/metrics/latencies" />
+<std-data :aka="endpointsSrc" :url="/api/metrics/endpoints" />
+<std-data :aka="zonesSrc"     :url="/api/metrics/zones" />
+<std-data :aka="incidentsSrc"
+          :url=${servicesSrc.data
+            ? '/api/incidents?services='
+              + servicesSrc.data.filter(s => s.state !== 'ok').map(s => s.id).join(',')
+            : ''} />
+</lib>

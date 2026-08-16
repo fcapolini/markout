@@ -510,6 +510,8 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
       recursive: true,
       dereference: true,
     });
+    // Orbit's own parts: its components and its datasources
+    fs.cpSync(path.join(KIT_ROOT, 'orbit'), path.join(docroot, 'orbit'), { recursive: true });
     fs.mkdirSync(path.join(docroot, 'vendor'));
     fs.writeFileSync(path.join(docroot, 'vendor/bootstrap.js'), STUB);
     fs.writeFileSync(path.join(docroot, 'vendor/bootstrap.css'), '');

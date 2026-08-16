@@ -1,0 +1,197 @@
+<!---
+  Orbit's own tags: the shapes this dashboard repeats, on top of the ones the
+  Bootstrap kit supplies.
+
+  Four of them, and note what they are NOT: wrappers that forward a class.
+  Each removes something a person would otherwise keep right by hand -- the
+  panel's header/tools/body structure, the arithmetic behind a sparkline, the
+  colour a status maps to.
+
+  A page defining its own components is the ordinary case rather than a
+  special one: these are written exactly as the kit's are, and the only thing
+  that makes them the application's rather than the library's is which file
+  they live in. `<:import>` rather than `<:include>` because a file is
+  imported once per page however many times it is named, which is what a
+  definition wants and an instance does not.
+-->
+<lib>
+
+<!---
+  A dashboard panel: a card with a heading, an optional tools area in the
+  header, and a body.
+
+  Built from Bootstrap's card classes rather than by wrapping `bs-card`,
+  for a language reason worth knowing: a `<:slot>` has to sit in the
+  definition's own markup, not inside another component's slotted content.
+-->
+<:define tag="dash-panel:div"
+
+         // parameters
+         :extra=${null}       // extra classes for this instance
+         :heading=${''}
+         :note=${null}        // a line of explanation under the heading
+         :flush=${false}      // no body padding, for a table or a list
+
+         // private
+         :_class=${['card h-100', extra].filter(s => s).join(' ')}
+
+         class=${_class}
+>
+  <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <span class="fw-semibold">${heading}</span>
+      <span class="d-block small text-body-secondary"
+            :for-data=${note}>${note}</span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <:slot name="tools" />
+    </div>
+  </div>
+
+  <div class="card-body" :class-p-0=${flush}>
+    <:slot />
+  </div>
+</:define>
+
+<!---
+  A sparkline, and the arithmetic that turns a list of numbers into one.
+
+  Everything here is a value: the scale, the points, the path, the last
+  marker. Hand a different array to `:points` and all of them follow —
+  which is what the live ticker relies on, and what the tab strip over the
+  traffic chart relies on too.
+
+  `:for-each` deliberately does not appear inside the `<svg>`: replication
+  leaves an inert `<template>` behind, and a browser does not treat one
+  inside foreign content as a template. Each shape is a computed string.
+-->
+<:define tag="dash-chart:div"
+         class="dash-chart ${extra ?? ''}"
+
+         // parameters
+         :extra=${null}       // extra classes for this instance
+         :points=${[]}
+         :stroke=${'var(--dash-accent)'}
+         :fill=${true}
+         :tall=${false}
+
+         // private: the plot box, in the chart's own coordinates. A tall
+         // chart is taller in its own units as well as in CSS, so the
+         // stroke and the marker keep their proportions either way.
+         //
+         // The band the readings actually cover, not zero to peak: a
+         // series that only moves between 99.4 and 100 is still a shape.
+         :_h=${tall ? 90 : 30}
+         :_top=${2}
+         :_low=${points.length ? Math.min(...points) : 0}
+         :_high=${points.length ? Math.max(...points) : 1}
+         :_range=${Math.max(_high - _low, Math.abs(_high) / 1000, 1e-6)}
+         :_xy=${points.map((v, i) => [
+           points.length < 2 ? 0 : (i / (points.length - 1)) * 100,
+           _top + (1 - (v - _low) / _range) * (_h - _top * 2),
+         ])}
+         :_line=${_xy.map(p => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join(' ')}
+         :_area=${`0,${_h} ${_line} 100,${_h}`}
+         :_last=${_xy.length ? _xy[_xy.length - 1] : [0, 0]}
+
+         // The marker is drawn as STROKE rather than as a shape. The box
+         // is stretched to fill its element (`preserveAspectRatio="none"`)
+         // and x and y are stretched by different amounts, so a <circle>
+         // comes out as an ellipse — wider the wider the chart. A
+         // zero-length path with a round cap is a dot whose size comes
+         // from `stroke-width`, and `vector-effect="non-scaling-stroke"`
+         // keeps that in device pixels, so it stays round at any size.
+         :_dot=${`M ${_last[0].toFixed(2)} ${_last[1].toFixed(2)}` +
+                 ` L ${_last[0].toFixed(2)} ${_last[1].toFixed(2)}`}
+>
+  <svg viewBox="0 0 100 ${_h}"
+       preserveAspectRatio="none"
+       style="height: ${tall ? '11rem' : '2.5rem'}"
+       role="img"
+       aria-label="Trend of the last ${points.length} readings">
+    <polyline points=${_area}
+              fill=${stroke}
+              fill-opacity=${fill ? '0.12' : '0'}
+              stroke="none" />
+
+    <polyline points=${_line}
+              fill="none"
+              stroke=${stroke}
+              stroke-width="2"
+              stroke-linejoin="round"
+              stroke-linecap="round"
+              vector-effect="non-scaling-stroke" />
+
+    <path d=${_dot}
+          fill="none"
+          stroke=${stroke}
+          stroke-width="5"
+          stroke-linecap="round"
+          vector-effect="non-scaling-stroke" />
+  </svg>
+</:define>
+
+<!---
+  A KPI tile. `:trend` is the same array the chart takes, so the number
+  and the line under it can never disagree — they are the one value read
+  twice.
+-->
+<:define tag="dash-stat:div"
+         class="card dash-stat h-100 ${extra ?? ''}"
+
+         // parameters
+         :extra=${null}       // extra classes for this instance
+         :caption=${''}
+         :figure=${''}
+         :unit=${null}
+         :delta=${null}       // a number: the change, in percent
+         :trend=${[]}
+         :tone=${null}        // overrides the sign-derived colour
+
+         // private
+         :_tone=${tone ?? (delta == null ? 'secondary' : delta >= 0 ? 'success' : 'danger')}
+         :_arrow=${delta == null ? '' : delta >= 0 ? '▲' : '▼'}
+>
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start gap-2">
+      <div class="text-body-secondary small text-uppercase">${caption}</div>
+      <bs-badge :variant=${_tone}
+                :pill
+                :for-data=${delta}>${_arrow} ${Math.abs(delta).toFixed(1)}%</bs-badge>
+    </div>
+
+    <div class="dash-figure mt-1">${figure}<span class="fs-6 fw-normal text-body-secondary"
+                                                 :for-data=${unit}> ${unit}</span></div>
+
+    <div class="mt-2">
+      <dash-chart :points=${trend} />
+    </div>
+
+    <div class="small text-body-secondary">
+      <:slot />
+    </div>
+  </div>
+</:define>
+
+<!---
+  A status, as a coloured dot and a word. `toneOf` is declared on <html>,
+  which is what lets a definition written in <head> and a table cell
+  written in <body> agree on what "degraded" looks like.
+-->
+<:define tag="dash-dot:span"
+         class="d-inline-flex align-items-center gap-2 ${extra ?? ''}"
+
+         // parameters
+         :extra=${null}       // extra classes for this instance
+         :state=${'ok'}
+         :quiet=${false}      // the dot alone, without the word
+
+         // private
+         :_tone=${toneOf(state)}
+>
+  <span class="dash-dot bg-${_tone}"></span>
+  <span :for-each=${quiet ? [] : [1]}
+        class="text-capitalize">${state}</span>
+</:define>
+
+</lib>
