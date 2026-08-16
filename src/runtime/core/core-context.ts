@@ -267,26 +267,31 @@ export class CoreContext {
       if (round >= maxRounds) {
         pending.forEach(p =>
           this.abandon(p.value, `still pending after ${maxRounds} rounds: ` +
-            `a server value's result feeds another's input too deeply`)
+            `a server value's result feeds another's input too deeply, ` +
+            `or two of them wait on each other`)
         );
         return;
       }
 
-      // Only the values whose own sources have settled. A promise is truthy,
-      // so a dependent guarded on one -- `${a ? fetch(a.next) : null}` -- has
-      // already run against the promise ITSELF and produced a result built
-      // from it. Freezing that is the same wrong answer the propagation queue
-      // is depth-ordered to avoid: it isn't stale, it's built from an input
-      // that was mid-flight. Left alone, the value keeps its expression, and
-      // settling its source re-evaluates it against the real thing.
+      // Only the values whose own sources have arrived.
+      //
+      // A guarded chain no longer needs this -- `${a ? f(a) : null}` sees
+      // `undefined` while `a` is in flight and declines, since a promise is
+      // never a value. An UNGUARDED one still does: `${Promise.resolve(a * 10)}`
+      // computes `NaN` from that same `undefined` and asks for it in earnest.
+      // Settling that freezes the answer, because settling drops the
+      // expression, and `NaN` is then what the page renders -- with nothing
+      // reported, which is the one outcome this language does not produce.
+      // Skipped instead, the value keeps its expression, and its source
+      // landing re-evaluates it against the real thing.
+      //
+      // Nothing rescues a batch where every pending value waits on another
+      // -- two server values each holding a promise of the other, which
+      // compiles. Settling them anyway would hand the page whatever garbage
+      // they computed from each other's absence; leaving them alone costs a
+      // few empty rounds and then says so.
       const waiting = new Set(pending.map(p => p.value));
-      let batch = pending.filter(p => ![...p.value.src].some(src => waiting.has(src)));
-      if (!batch.length) {
-        // every pending value waits on another: nothing could be ordered
-        // first, so take them all and let the round cap bound it rather than
-        // spinning here reporting nothing
-        batch = pending;
-      }
+      const batch = pending.filter(p => ![...p.value.src].some(src => waiting.has(src)));
 
       const settled = new Map<CoreValue, { ok: true; v: unknown } | { ok: false; e: unknown }>();
       await Promise.race([

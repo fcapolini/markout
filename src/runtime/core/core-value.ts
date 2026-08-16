@@ -50,6 +50,34 @@ export class CoreValue<T = any> {
    * The server drains these (CoreContext.settle); nothing else looks at them.
    */
   pending?: PromiseLike<unknown>;
+  /**
+   * What this value's sources held when its in-flight request was built.
+   *
+   * Only kept while `pending` is set, and only for a server value, so an
+   * ordinary value carries none of this: it exists to answer one question,
+   * asked once per re-read of a value that is already waiting.
+   */
+  private srcSnapshot?: unknown[];
+
+  private snapshotSources() {
+    const seen: unknown[] = [];
+    this.src.forEach(o => seen.push(o.value));
+    this.srcSnapshot = seen;
+  }
+
+  private sourcesMoved(): boolean {
+    const was = this.srcSnapshot;
+    if (!was || was.length !== this.src.size) {
+      return true;
+    }
+    let i = 0;
+    let moved = false;
+    this.src.forEach(o => {
+      moved = moved || o.value !== was[i++];
+    });
+    return moved;
+  }
+
   /** longest path from a value with no sources; see depthNow() */
   depth = 0;
   private depthVersion = -1;
@@ -148,14 +176,20 @@ export class CoreValue<T = any> {
   }
 
   protected update() {
-    // One request at a time. A server value settling propagates, and that
-    // re-evaluates everything in the new cycle that reads what changed --
-    // including OTHER server values whose own request is still in the air.
-    // Re-running one is a second request whose answer is then thrown away,
-    // since the loop settles it with the first: on a page with ten sources
-    // it turned ten requests into twenty-one. Whatever is in flight is the
-    // answer; nothing here can improve on waiting for it.
-    if (this.pending) {
+    // One request per set of inputs.
+    //
+    // A value with sources re-evaluates whenever it is read in a new cycle,
+    // and settling anything opens one -- so a server value whose request is
+    // still in the air gets asked again, and again, for exactly the same
+    // thing. On a page with ten sources that was twenty-one requests, every
+    // duplicate's answer discarded because the loop settles each with the
+    // first promise it saw.
+    //
+    // But it must NOT hold when an input actually moved: that is the case
+    // where the request in flight was built from something that has since
+    // arrived, and asking again is the whole point. So the test is whether
+    // anything it reads has changed, not merely whether a cycle has passed.
+    if (this.pending && !this.sourcesMoved()) {
       return;
     }
     const old = this.value;
@@ -169,6 +203,7 @@ export class CoreValue<T = any> {
         typeof (next as { then?: unknown }).then === 'function';
       this.pending = thenable ? (next as PromiseLike<unknown>) : undefined;
       this.value = thenable ? undefined : (next as T);
+      this.pending && this.snapshotSources();
     } catch (err) {
       // a failed expression yields `undefined`, always -- never whatever it
       // happened to hold before. Keeping the old value would make the result

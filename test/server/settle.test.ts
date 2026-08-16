@@ -128,6 +128,39 @@ describe('settling a waterfall', () => {
     expect(Object.values(readState(page)!)[0]).toStrictEqual({ a: 2, b: 20, c: 21 });
   });
 
+  it('waits for a source even when nothing guards the read', async () => {
+    // The case the ordering rule is for, and the only one left now that a
+    // promise is never a value: `a` reads `undefined` while it is in flight,
+    // so this computes NaN and asks for it in earnest. Settling that would
+    // freeze NaN -- settling drops the expression -- and the page would
+    // render it with nothing reported. Skipped instead, `a` landing
+    // re-evaluates it against the real number.
+    const page = compile(
+      '<html :server-a=${Promise.resolve(2)}' +
+        ' :server-b=${Promise.resolve(a * 10)}>' +
+        '<body><i>${b}</i></body></html>'
+    );
+    expect(await renderPage(page)).toStrictEqual([]);
+    expect(body(page)).toContain('<i>20</i>');
+  });
+
+  it('reports two server values that wait on each other', async () => {
+    // this compiles: neither reads ITSELF, which is all the compiler
+    // refuses. Nothing can be ordered first, so nothing is settled -- and
+    // saying so beats handing the page whatever each computed from the
+    // other's absence
+    const page = compile(
+      '<html :server-a=${Promise.resolve(b)} :server-b=${Promise.resolve(a)}>' +
+        '<body>${a}${b}</body></html>'
+    );
+    const started = Date.now();
+    const errors = await renderPage(page, { settle: { maxRounds: 3, timeoutMs: 30_000 } });
+    expect(Date.now() - started).toBeLessThan(2_000);
+    expect(errors).toHaveLength(2);
+    expect(errors.every(e => e.phase === 'settle')).toBe(true);
+    expect(errors[0].message).toMatch(/wait on each other/);
+  });
+
   it('stops a chain deeper than the cap, without waiting for the deadline', async () => {
     // each link costs a round, so the cap is a limit on DEPTH. A page past it
     // is reported as a page bug rather than stalling to the deadline on every
