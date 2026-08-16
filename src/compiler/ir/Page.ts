@@ -99,6 +99,24 @@ export class Page {
   global: Scope;
   /** custom tag name -> its <:define> scope, populated by stage1-load */
   customTags: Map<string, Scope>;
+  /**
+   * Custom tags a usage site was actually found for, recorded as stage1
+   * expands them.
+   *
+   * Deliberately not derived from `usesTemplate`: a usage that supplies
+   * slotted content renders from a per-usage variant of the definition's
+   * template, so those ids do not answer "which definitions were used".
+   */
+  usedTags: Set<string>;
+  /**
+   * Custom tag name -> the `<template>` its markup was wrapped in.
+   *
+   * Recorded where that wrapping happens, because it cannot be found
+   * afterwards: a template holds its children on a content fragment and
+   * nulls their `parentElement`, exactly as a browser does, so there is no
+   * walking back up to it.
+   */
+  defineStencils: Map<string, ServerElement>;
   /** the <:define> scopes themselves -- excluded from their parent's
    * compiled children by stage7-generate, since they're never live at
    * their own natural position, only instantiated per usage site */
@@ -167,6 +185,8 @@ export class Page {
     this.optionalStencils = new Set();
     this.slottedInto = new Map();
     this.definitionScopes = new Set();
+    this.usedTags = new Set();
+    this.defineStencils = new Map();
     this.values = new Map();
   }
 

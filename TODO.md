@@ -66,7 +66,10 @@
 
 - [ ] a page with NO expressions at all still ships `<script src="/.markout.js">`. Comptime constants and `<:define>` treeshaking both reduce the payload but neither reaches zero JS on their own; the runtime should be elided when nothing reactive survives compilation. This is what would make "zero-cost design system" literal rather than rhetorical.
 
-- [ ] treeshake should remove unused `<:defines>`
+- [x] treeshake removes unused `<:define>`s -- 2026-08-16. A tag is used if stage1 expanded a usage site for it anywhere, including inside another definition's body; anything else loses its `<template>` stencil. Orbit drops 9 of 48 for ~3KB raw, 0.5KB gzipped.
+  - Only markup: a definition's SCOPE was never in the props, since stage7 already filters definitions out of their parent's children. So the ceiling is what the unused components' markup weighs, which is why this is not a payload feature -- see the compact-codegen commit, which was 80%.
+  - Deliberately conservative: a component reachable only through a definition that is itself unused survives. Removing it needs the usage graph rather than a flat set, and getting that wrong deletes markup a page needs.
+  - Its real value is the item below: it is a prerequisite for eliding the runtime when nothing reactive survives.
 
 - [ ] The CLI joins the docroot onto cwd, so absolute paths don't work
 
