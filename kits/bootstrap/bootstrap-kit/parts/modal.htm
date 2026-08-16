@@ -50,10 +50,12 @@
            data-bs-backdrop=${staticBackdrop ? 'static' : null}
            data-bs-keyboard=${staticBackdrop ? 'false' : null}
 
-           // `globalThis` rather than a bare `bootstrap`: the standard
-           // library is on the scope chain, a page's own libraries are not,
-           // and going through `globalThis` is what keeps "this line needs a
-           // browser" visible in the line
+           /*
+             `globalThis` rather than a bare `bootstrap`: the standard
+             library is on the scope chain, a page's own libraries are not,
+             and going through `globalThis` is what keeps "this line needs a
+             browser" visible in the line
+           */
            :handle-open=${(v) => {
              // only while this markup is in the page: a `:for-data` region
              // can take it out with `open` still true, and Bootstrap asked
@@ -62,22 +64,24 @@
              const modal = globalThis.bootstrap.Modal.getOrCreateInstance($dom);
              v ? modal.show() : modal.hide();
            }}
-           // Bootstrap's plugins own DOM outside this element -- a backdrop,
-           // a popper, a body class -- so an element removed without a
-           // dispose() leaves it behind. `:will-detach` rather than
-           // `:will-dispose`: a `:for-data` region takes its markup out of
-           // the page without its scope going anywhere, and the leak is the
-           // same either way
-           // Bootstrap's plugins own DOM and page state outside this
-           // element -- a backdrop, a scroll lock on <body> -- and
-           // `dispose()` releases the plugin without undoing any of it for
-           // one that is still open. So the element is put back the way it
-           // was found, which is what a page removing an open modal
-           // would otherwise be left needing to do by hand.
-           //
-           // `:will-detach` rather than `:will-dispose`: a `:for-data`
-           // region takes its markup out of the page without its scope going
-           // anywhere, and the leak is identical either way
+           /*
+             Bootstrap's plugins own DOM outside this element -- a backdrop,
+             a popper, a body class -- so an element removed without a
+             dispose() leaves it behind. `:will-detach` rather than
+             `:will-dispose`: a `:for-data` region takes its markup out of
+             the page without its scope going anywhere, and the leak is the
+             same either way
+             Bootstrap's plugins own DOM and page state outside this
+             element -- a backdrop, a scroll lock on <body> -- and
+             `dispose()` releases the plugin without undoing any of it for
+             one that is still open. So the element is put back the way it
+             was found, which is what a page removing an open modal
+             would otherwise be left needing to do by hand.
+
+             `:will-detach` rather than `:will-dispose`: a `:for-data`
+             region takes its markup out of the page without its scope going
+             anywhere, and the leak is identical either way
+           */
            :will-detach=${() => {
              const doc = globalThis.document;
              globalThis.bootstrap.Modal.getInstance($dom)?.dispose();

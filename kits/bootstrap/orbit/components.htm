@@ -75,12 +75,14 @@
          :fill=${true}
          :tall=${false}
 
-         // private: the plot box, in the chart's own coordinates. A tall
-         // chart is taller in its own units as well as in CSS, so the
-         // stroke and the marker keep their proportions either way.
-         //
-         // The band the readings actually cover, not zero to peak: a
-         // series that only moves between 99.4 and 100 is still a shape.
+         /*
+           private: the plot box, in the chart's own coordinates. A tall
+           chart is taller in its own units as well as in CSS, so the
+           stroke and the marker keep their proportions either way.
+
+           The band the readings actually cover, not zero to peak: a
+           series that only moves between 99.4 and 100 is still a shape.
+         */
          :_h=${tall ? 90 : 30}
          :_top=${2}
          :_low=${points.length ? Math.min(...points) : 0}
@@ -94,13 +96,15 @@
          :_area=${`0,${_h} ${_line} 100,${_h}`}
          :_last=${_xy.length ? _xy[_xy.length - 1] : [0, 0]}
 
-         // The marker is drawn as STROKE rather than as a shape. The box
-         // is stretched to fill its element (`preserveAspectRatio="none"`)
-         // and x and y are stretched by different amounts, so a <circle>
-         // comes out as an ellipse — wider the wider the chart. A
-         // zero-length path with a round cap is a dot whose size comes
-         // from `stroke-width`, and `vector-effect="non-scaling-stroke"`
-         // keeps that in device pixels, so it stays round at any size.
+         /*
+           The marker is drawn as STROKE rather than as a shape. The box
+           is stretched to fill its element (`preserveAspectRatio="none"`)
+           and x and y are stretched by different amounts, so a <circle>
+           comes out as an ellipse — wider the wider the chart. A
+           zero-length path with a round cap is a dot whose size comes
+           from `stroke-width`, and `vector-effect="non-scaling-stroke"`
+           keeps that in device pixels, so it stays round at any size.
+         */
          :_dot=${`M ${_last[0].toFixed(2)} ${_last[1].toFixed(2)}` +
                  ` L ${_last[0].toFixed(2)} ${_last[1].toFixed(2)}`}
 >

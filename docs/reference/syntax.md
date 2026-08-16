@@ -309,6 +309,12 @@ it differs:
 | `:for-key=${expr}` | Give each item an identity, so reordering moves replicas instead of rewriting them. Evaluated per item, and may read the per-item binding. Refused on `:for-data`, which has only ever one. |
 | `:for-data=${expr}` | Render once if `expr` is neither `null` nor `undefined`, not at all otherwise. Binds the item like `:for-each`. |
 
+The host element becomes an inert `<template>` and every visible item is a
+clone of it. That `<template>` is still an element in the DOM, and the first
+one — so CSS written against a replicated list has to use `:first-of-type`
+rather than `:first-child`, and `:nth-of-type` rather than `:nth-child`. See
+[replication](../concepts/replication.md#the-stencil-is-a-real-element-and-css-can-see-it).
+
 ## Modules and components
 
 | Syntax | Meaning |

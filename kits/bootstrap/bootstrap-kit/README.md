@@ -102,6 +102,10 @@ caller wants on top:
 <bs-alert :variant="warning" :extra="mb-0">Careful</bs-alert>
 ```
 
+**Comments in a tag: `//` for one line, `/* … */` for more.** Both are
+stripped at parse time. A run of `//` lines reads as a stack of fragments;
+one block says it once.
+
 **Lists are arrays.** `:items`, `:options`, `:columns`, `:rows`, `:slides`.
 The default value of each is the shape it expects — read the definition to
 see it.
