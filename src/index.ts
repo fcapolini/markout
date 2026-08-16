@@ -21,11 +21,17 @@ async function main() {
     .argument('<pathname>', 'path to directory containing HTML files (docroot)')
     .option('-p, --port <number>', 'port number, default: 3000')
     .option('-d, --dev', 'dev mode: show runtime expression errors in the page')
+    .option('-c, --compress', 'compress responses (gzip/deflate) when the client accepts it')
     .action((pathname, options) => {
       console.log(`Starting server for ${pathname}...`);
       const docroot = path.normalize(path.join(process.cwd(), pathname));
       const port = Number.parseInt(options.port) || 3000;
-      new Server({ docroot, port, dev: !!options.dev }).start();
+      new Server({
+        docroot,
+        port,
+        dev: !!options.dev,
+        compress: !!options.compress,
+      }).start();
     });
 
   if (process.argv.length === 2) {

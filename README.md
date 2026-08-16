@@ -94,6 +94,15 @@ page loads appear in a panel at the bottom of it:
 npx markout ./demo --dev
 ```
 
+`-c`/`--compress` gzips rendered pages and static files for clients whose
+`Accept-Encoding` allows it. It's off by default: compressing costs CPU per
+request, and behind a reverse proxy that already does it the work would be
+done twice.
+
+```sh
+npx markout ./demo --compress
+```
+
 ## Integrated reactivity example
 
 ```html
