@@ -99,4 +99,35 @@ describe('CLI', () => {
       await rm(docroot, { recursive: true, force: true });
     }
   });
+
+  it('compresses responses with --compress', async () => {
+    const docroot = await mkdtemp(path.join(root, '.cli-test-'));
+    const pathname = path.relative(root, docroot);
+    const port = await availablePort();
+    // above compression's 1kb default threshold
+    const filler = 'compressible body. '.repeat(100);
+    await writeFile(
+      path.join(docroot, 'index.html'),
+      `<html><body>${filler}</body></html>`
+    );
+
+    try {
+      child = spawn(
+        process.execPath,
+        [tsx, entry, pathname, '--port', `${port}`, '--compress'],
+        { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] }
+      );
+      const output = await waitForOutput(child, `127.0.0.1:${port}/`);
+      const response = await fetch(`http://127.0.0.1:${port}/index.html`, {
+        headers: { 'Accept-Encoding': 'gzip' },
+      });
+
+      expect(output).toContain('compression enabled');
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-encoding')).toBe('gzip');
+      expect(await response.text()).toContain('compressible body.');
+    } finally {
+      await rm(docroot, { recursive: true, force: true });
+    }
+  });
 });

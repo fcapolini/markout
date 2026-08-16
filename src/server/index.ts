@@ -1,3 +1,4 @@
+import compression from "compression";
 import express, { Application } from "express";
 import http from "http";
 import exitHook from './exit-hook';
@@ -13,6 +14,8 @@ export interface ServerProps {
   logger?: MarkoutLogger;
   /** surface runtime expression errors in the page; see MarkoutProps */
   dev?: boolean;
+  /** gzip/deflate responses for clients that accept them */
+  compress?: boolean;
 }
 
 export class Server {
@@ -33,6 +36,8 @@ export class Server {
     }
     const config = this.props;
     const app = (this.app = express());
+    // before any middleware that can write a body, so it wraps them all
+    config.compress && app.use(compression());
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
     // see https://expressjs.com/en/guide/behind-proxies.html
@@ -47,6 +52,7 @@ export class Server {
     this.logger('info', `[server] docroot ${config.docroot}`);
     this.logger('info', `[server] address http://127.0.0.1:${this.port}/`);
     config.dev && this.logger('info', '[server] dev mode: runtime errors will be shown in the page');
+    config.compress && this.logger('info', '[server] compression enabled');
     exitHook(() => this.logger('info', '[server] will exit'));
     process.on('uncaughtException', err => {
       this.logger('error', err.stack ? err.stack : `${err}`);

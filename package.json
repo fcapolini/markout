@@ -14,7 +14,7 @@
     "clean": "rm -rf dist",
     "dev": "tsx src/index.ts -d ./demo",
     "dev:bench": "tsx src/index.ts -d ./bench",
-    "dev:bootstrap-kit": "tsx src/index.ts -d ./kits/bootstrap",
+    "dev:bootstrap-kit": "tsx src/index.ts -c ./kits/bootstrap",
     "test": "vitest run",
     "test:watch": "vitest",
     "test-coverage": "vitest run --coverage",
@@ -39,6 +39,7 @@
   "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
+    "@types/compression": "^1.8.1",
     "@types/escodegen": "^0.0.10",
     "@types/estraverse": "^5.1.7",
     "@types/estree": "^1.0.9",
@@ -57,6 +58,7 @@
   "dependencies": {
     "acorn": "^8.18.0",
     "commander": "^15.0.0",
+    "compression": "^1.8.1",
     "entities": "^7.0.1",
     "escodegen": "^2.1.0",
     "estraverse": "^5.3.0",
