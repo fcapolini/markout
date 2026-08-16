@@ -402,6 +402,7 @@ rather than `:first-child`, and `:nth-of-type` rather than `:nth-child`. See
 | `<:import src="file.htm" />` | Splices a fragment into the page; each file is only imported once per page. |
 | `<:define tag="x-y:button">...</:define>` | Declares a reusable custom tag. |
 | `<:logic :aka="x" :n=${1} />` | Declares a scope with no element of its own. |
+| `<:define tag="x-y:logic">` | A custom tag whose instances are scopes with no element. |
 | `:when-used="tag-a tag-b"` | Keep this element only while one of those tags survives treeshaking. Build-time; nothing of it reaches the runtime. |
 | `<:slot />` | In a definition: where a usage site's content goes. Its own content is the fallback. |
 | `<:slot name="x" />` | A named slot. |
@@ -453,10 +454,38 @@ comes and goes — a timer started per row is not something to discover at
 runtime. Every one of them is a coherent feature on its own; none of them is
 this one.
 
+### `:logic` as a base tag — a definition with no element
+
+The same idea as `<:logic>`, one level up: that one is a scope with no
+element, this is a tag whose *instances* are.
+
+```html
+<:define tag="std-data:logic" :url="" :data=${null} … />
+
+<std-data :aka="rows" :url="/api/rows" />
+<p>${rows.data?.length ?? 0} rows</p>
+```
+
+A component that is a source rather than a sight — a datasource, a router,
+a media query, a socket — otherwise pays for an element per usage and an
+attribute to hide it. This is `std-data`'s own definition, and what it used
+to be was `tag="std-data:span" hidden`.
+
+It takes the same refusals as `<:logic>`: nothing that needs an element to
+apply to, and no content. It does **not** take `<:logic>`'s placement
+rules — a `<:logic>` is a singleton declaration, so it is refused where it
+would silently become many, while an instance is written deliberately and
+`<std-data :for-each=${urls} />` means exactly what it says.
+
+The base tag is spelled out rather than left off. `tag="my-panel"` with no
+base at all would read as this, and it is much more often a typo — so it
+stays the error it has always been.
+
 ### A base tag is a real element
 
 The part after the colon in `tag="x-y:button"` is the element the
-definition becomes, and it has to be one HTML already has. A definition
+definition becomes, and it has to be one HTML already has — or `logic`,
+for a definition that becomes no element at all (above). A definition
 cannot be based on another definition:
 
 ```html

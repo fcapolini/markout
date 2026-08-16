@@ -452,6 +452,17 @@ const CASES: Record<string, Case> = {
       expect(p.doc.toString()).not.toContain('logic');
     },
   },
+  '<:define tag="x-y:logic">': {
+    works: async () => {
+      const p = await run(
+        '<html><head><:define tag="my-src:logic" :n=${1} :doubled=${n * 2} /></head>' +
+          '<body><my-src :aka="a" :n=${21} /><i>${a.doubled}</i></body></html>'
+      );
+      expect(p.body()).toContain('42');
+      // instances of it are scopes and nothing else
+      expect(p.doc.toString()).not.toContain('<my-src');
+    },
+  },
   '<:slot />': {
     works: async () => {
       const p = await run(

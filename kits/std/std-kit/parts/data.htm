@@ -25,12 +25,13 @@
     page gets fresh data without paying for a second request it usually
     doesn't need.
 
-    Renders nothing: it is a source, not a sight. It still has to BE
-    somewhere, and where it is written is where its name resolves, so put it
-    at the top of the region that reads it.
+    Renders nothing, and has no element to render: `:logic` as a base tag
+    means the instances are scopes and nothing more, so a page's sources
+    leave no trace in its markup. It still has to BE somewhere, and where it
+    is written is where its name resolves, so put it at the top of the
+    region that reads it.
   -->
-  <:define tag="std-data:span"
-           hidden
+  <:define tag="std-data:logic"
 
            // parameters
            :url=""                    // where to fetch; nothing happens without one
