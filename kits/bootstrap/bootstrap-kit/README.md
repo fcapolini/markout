@@ -43,6 +43,13 @@ definition wants to arrive once per page however often it is named, and an
 instance wants to be spliced exactly where it is written, because that is
 where its name resolves.
 
+`orbit/sources.htm` also shows the token pattern working for an application's
+own fragment: its root carries `:apiBase="/api"`, which lands on whatever
+contains the `<:include>` unless that element declares it, so a page points
+Orbit at another host without the fragment changing. That is the same
+mechanism as `k_bsCssUrl` below — not something kits get and applications
+don't.
+
 ## Tests
 
 `test/kits/bootstrap-kit.test.ts`, in two tiers:
