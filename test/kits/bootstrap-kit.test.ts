@@ -211,7 +211,7 @@ describe('the showcase', () => {
  * The demo application, which tests what the showcase can't.
  *
  * The showcase is a catalogue: each component on its own, next to the last.
- * `demo.html` is one page built OUT of them, and every bug it turned up
+ * `orbit.html` is one page built OUT of them, and every bug it turned up
  * while it was being written lived where two features meet rather than in
  * either one -- a slot filled with a `:for-each`, a slot fallback holding a
  * component, a derived value reading another derived value, a replica
@@ -227,7 +227,7 @@ describe('the demo application: served from a database', () => {
   // Orbit is the round trip end to end: its data is queried while rendering,
   // arrives in the markup, and the queries themselves stay behind.
   it('renders rows the database answered with', async () => {
-    const { markup } = await compile(KIT_ROOT, '/demo.html');
+    const { markup } = await compile(KIT_ROOT, '/orbit.html');
     expect(markup).toContain('edge-router');
     expect(markup).toContain('auth-service');
     expect(markup).toContain('d-2481');
@@ -237,12 +237,12 @@ describe('the demo application: served from a database', () => {
     // `incidents` cannot be asked for until `services` has answered -- which
     // incidents matter depends on which services are unwell -- so this text
     // is in the page only if the render waited twice
-    const { markup } = await compile(KIT_ROOT, '/demo.html');
+    const { markup } = await compile(KIT_ROOT, '/orbit.html');
     expect(markup).toContain('billing unreachable in eu-west');
   });
 
   it('sends no trace of the queries', async () => {
-    const { markup } = await compile(KIT_ROOT, '/demo.html');
+    const { markup } = await compile(KIT_ROOT, '/orbit.html');
     for (const trace of ['db.services', 'db.metrics', 'db.incidents', 'this.db', 'forServices']) {
       expect(markup).not.toContain(trace);
     }
@@ -281,7 +281,7 @@ describe('the demo application: served from a database', () => {
     // is left with nothing to fetch, which is the whole claim
     const calls = (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock;
     const before = calls.calls.length;
-    await compile(KIT_ROOT, '/demo.html');
+    await compile(KIT_ROOT, '/orbit.html');
     const asked = calls.calls.slice(before).map(c => new URL(`${c[0]}`).pathname);
     expect(asked).toContain('/api/services');
     expect(asked).toContain('/api/incidents');
@@ -293,7 +293,7 @@ describe('the demo application', () => {
   let result: Awaited<ReturnType<typeof compile>>;
 
   beforeAll(async () => {
-    result = await compile(KIT_ROOT, '/demo.html');
+    result = await compile(KIT_ROOT, '/orbit.html');
   });
 
   it('compiles and renders with nothing reported', () => {
@@ -532,7 +532,7 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     fs.cpSync(path.join(KIT_ROOT, 'bootstrap-kit'), path.join(docroot, 'bootstrap-kit'), {
       recursive: true,
     });
-    // demo.html imports the std kit for `std-data`; the symlink in the kit
+    // orbit.html imports the std kit for `std-data`; the symlink in the kit
     // is followed by cpSync's dereference, so the copy is self-contained
     fs.cpSync(path.join(KIT_ROOT, 'std-kit'), path.join(docroot, 'std-kit'), {
       recursive: true,
@@ -548,7 +548,7 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     // the real demo, pointed at the stub. The URL tokens are what makes
     // that possible without forking the page: it imports the kit exactly as
     // it does when served, and only where Bootstrap comes from changes
-    const demo = fs.readFileSync(path.join(KIT_ROOT, 'demo.html'), 'utf8');
+    const demo = fs.readFileSync(path.join(KIT_ROOT, 'orbit.html'), 'utf8');
     const offline = demo.replace(
       '<head>',
       '<head :k_bsCssUrl="/vendor/bootstrap.css"\n' +
@@ -558,9 +558,9 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     );
     if (offline === demo) {
       // a silent no-op here would put the CDN back in the test run
-      throw new Error('demo.html: no bare <head> to point at the stub');
+      throw new Error('orbit.html: no bare <head> to point at the stub');
     }
-    fs.writeFileSync(path.join(docroot, 'demo.html'), offline);
+    fs.writeFileSync(path.join(docroot, 'orbit.html'), offline);
 
     // the kit's OWN app, so the browser drives the same API routes the dev
     // server serves rather than a second copy of them
@@ -682,7 +682,7 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
   // Orbit is the round trip end to end: its data is queried while rendering,
   // arrives in the markup, and the queries themselves stay behind.
   it('renders rows the database answered with', async () => {
-    const { markup } = await compile(KIT_ROOT, '/demo.html');
+    const { markup } = await compile(KIT_ROOT, '/orbit.html');
     expect(markup).toContain('edge-router');
     expect(markup).toContain('auth-service');
     expect(markup).toContain('d-2481');
@@ -692,12 +692,12 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     // `incidents` cannot be asked for until `services` has answered -- which
     // incidents matter depends on which services are unwell -- so this text
     // is in the page only if the render waited twice
-    const { markup } = await compile(KIT_ROOT, '/demo.html');
+    const { markup } = await compile(KIT_ROOT, '/orbit.html');
     expect(markup).toContain('billing unreachable in eu-west');
   });
 
   it('sends no trace of the queries', async () => {
-    const { markup } = await compile(KIT_ROOT, '/demo.html');
+    const { markup } = await compile(KIT_ROOT, '/orbit.html');
     for (const trace of ['db.services', 'db.metrics', 'db.incidents', 'this.db', 'forServices']) {
       expect(markup).not.toContain(trace);
     }
@@ -736,7 +736,7 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     // is left with nothing to fetch, which is the whole claim
     const calls = (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock;
     const before = calls.calls.length;
-    await compile(KIT_ROOT, '/demo.html');
+    await compile(KIT_ROOT, '/orbit.html');
     const asked = calls.calls.slice(before).map(c => new URL(`${c[0]}`).pathname);
     expect(asked).toContain('/api/services');
     expect(asked).toContain('/api/incidents');
@@ -750,7 +750,7 @@ describe('the demo application', () => {
     const commits = '#deployments td.dash-mono';
 
     it('hydrates without reporting anything', async () => {
-      const { page, failures } = await open('/demo.html');
+      const { page, failures } = await open('/orbit.html');
       try {
         expect(await page.locator('#markout-errors').count()).toBe(0);
         expect(failures).toStrictEqual([]);
@@ -763,7 +763,7 @@ describe('the demo application', () => {
     });
 
     it('filters a table nothing is listening to', async () => {
-      const { page, failures } = await open('/demo.html');
+      const { page, failures } = await open('/orbit.html');
       try {
         await page.locator('#deployments input[type="text"]').fill('auth');
 
@@ -778,7 +778,7 @@ describe('the demo application', () => {
     });
 
     it('sorts by whichever column was asked for', async () => {
-      const { page } = await open('/demo.html');
+      const { page } = await open('/orbit.html');
       try {
         // the headers are buttons calling one function that flips two
         // values; the row order is an expression over them
@@ -795,7 +795,7 @@ describe('the demo application', () => {
     });
 
     it('shows the page it says it is showing', async () => {
-      const { page } = await open('/demo.html');
+      const { page } = await open('/orbit.html');
       try {
         const first = await page.locator(commits).allInnerTexts();
         expect(first).toHaveLength(6);
@@ -816,7 +816,7 @@ describe('the demo application', () => {
     });
 
     it('writes back into the array a checkbox came from', async () => {
-      const { page } = await open('/demo.html');
+      const { page } = await open('/orbit.html');
       try {
         expect(await page.locator('#activity').innerText()).toContain('2/5 done');
 
@@ -832,7 +832,7 @@ describe('the demo application', () => {
     });
 
     it('restyles the page from one value', async () => {
-      const { page } = await open('/demo.html');
+      const { page } = await open('/orbit.html');
       try {
         // the stylesheet interpolates `accent`; nothing toggles a class
         const swatch = page.locator('#settings .dash-swatch').nth(2);

@@ -25,7 +25,7 @@ npm run dev:bootstrap-kit
 ```
 
 That serves two pages: `/index.html`, the showcase, which is every component
-one after another; and `/demo.html`, an operations dashboard built out of
+one after another; and `/orbit.html`, an operations dashboard built out of
 them, which is what they look like wired to one page's data.
 
 The dev server is `kits/bootstrap/server.ts` rather than the CLI, because
@@ -35,7 +35,7 @@ renders its pages. Orbit reads that API with `std-data` from the std kit,
 which fetches while the page renders — so the served console is complete and
 the browser asks for nothing.
 
-Orbit is four files, which is the shape an application takes: `demo.html` for
+Orbit is four files, which is the shape an application takes: `orbit.html` for
 its state, layout and logic; `orbit/components.htm` for the tags it defines
 on top of the kit's; `orbit/sources.htm` for where its data comes from; and
 `server.ts` for its API. The first is imported, the second included — a
