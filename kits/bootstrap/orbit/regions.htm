@@ -492,6 +492,217 @@
               </div>
   </:define>
 
+  <!---
+    The heart of the page: a search box, two selects, a sort order and a
+    page number, and a table that is an expression over all five. Nothing
+    here listens for anything — the controls are named with `:aka`, their
+    `:value` is an ordinary value, and the rows read them, so the count,
+    the table and the pagination cannot disagree.
+
+    The sort order and the page number are declared HERE, and that is the
+    reason this one is worth extracting: they are the table's own state,
+    nothing outside it has an opinion about which column is sorting, and
+    on <body> they sat among the values the whole application shares.
+    What genuinely crosses the boundary is the selection — the detail
+    panel reads it too — so it stays outside and arrives as a parameter,
+    with `:choose` as the one way back out.
+  -->
+  <:define tag="orbit-deployments:section"
+           class="dash-section"
+           id="deployments"
+           :deploys=${[]}
+           :failed=${0}
+           :chosen=${null}
+           :choose=${(row) => row}
+
+           // the table's own state: which column, which way, which page
+           :sortKey=${'ago'}
+           :sortDir=${'asc'}
+           :pageNo=${1}
+
+           /*
+             Sorting is two values and one function that flips them; the
+             table header calls it and the row order follows. There is no
+             second place where "the current order" is written down.
+           */
+           :_sortBy=${(key) => {
+             if (sortKey === key) {
+               sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+             } else {
+               sortKey = key;
+               sortDir = 'asc';
+             }
+             pageNo = 1;
+           }}
+
+           /*
+             Called from outside, through the usage site's `:aka`, when
+             something has just been added and has to be visible: newest
+             first, on the first page. The alternative is the caller
+             writing all three values itself, which is the component's
+             state leaking back out one assignment at a time.
+           */
+           :showNewest=${() => {
+             pageNo = 1;
+             sortKey = 'ago';
+             sortDir = 'asc';
+           }}
+  >
+            <dash-panel :heading="Deployments" :flush>
+              <div :slot="tools" class="small text-body-secondary">
+                ${failed} failed in the last 24h
+              </div>
+
+              <div class="p-3 border-bottom">
+                <div class="row g-2 align-items-end">
+                  <div class="col-md-4">
+                    <bs-input :aka="hunt"
+                              :label="Search"
+                              :size="sm"
+                              :extra="mb-0"
+                              :placeholder="service, commit or author" />
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <bs-select :aka="envPick"
+                               :label="Environment"
+                               :size="sm"
+                               :extra="mb-0"
+                               :placeholder="All"
+                               :options=${['production', 'staging']} />
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <bs-select :aka="statePick"
+                               :label="Status"
+                               :size="sm"
+                               :extra="mb-0"
+                               :placeholder="Any"
+                               :options=${['shipped', 'running', 'queued', 'failed']} />
+                  </div>
+                  <div class="col-md-2">
+                    <bs-select :aka="pageSize"
+                               :label="Per page"
+                               :size="sm"
+                               :extra="mb-0"
+                               :value=${'6'}
+                               :options=${['6', '10', '20']} />
+                  </div>
+                </div>
+              </div>
+
+              <!---
+                The derived list lives on this element rather than on the
+                section, next to its only reader: a value is visible to
+                every descendant, so "next to what needs it" is always an
+                option.
+              -->
+              <div :_perPage=${Number(pageSize.value ?? 6)}
+                   :_needle=${(hunt.value ?? '').trim().toLowerCase()}
+
+                   :_matched=${deploys.filter(d =>
+                     (!_needle
+                       || d.service.includes(_needle)
+                       || d.commit.includes(_needle)
+                       || d.author.includes(_needle))
+                     && (!envPick.value || d.env === envPick.value)
+                     && (!statePick.value || d.state === statePick.value))}
+
+                   :_ordered=${[...(_matched)].sort((a, b) => {
+                     const x = a[sortKey];
+                     const y = b[sortKey];
+                     const cmp = typeof x === 'number' ? x - y : String(x).localeCompare(String(y));
+                     return sortDir === 'asc' ? cmp : -cmp;
+                   })}
+
+                   :_pages=${Math.max(1, Math.ceil(_ordered.length / _perPage))}
+                   :_page=${Math.min(pageNo, _pages)}
+                   :_shown=${_ordered.slice((_page - 1) * _perPage, _page * _perPage)}
+
+                   // the arrow drawn next to whichever column is sorting
+                   :_mark=${(key) => key === sortKey ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
+              >
+                <table class="table dash-table table-hover align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th scope="col" :for-each=${[
+                            { key: 'service', name: 'Service' },
+                            { key: 'env', name: 'Environment' },
+                            { key: 'commit', name: 'Commit' },
+                            { key: 'author', name: 'Author' },
+                            { key: 'state', name: 'Status' },
+                            { key: 'secs', name: 'Duration' },
+                            { key: 'ago', name: 'When' },
+                          ]}
+                          :for-as="col">
+                        <bs-button :variant="link"
+                                   :size="sm"
+                                   :extra="p-0 text-decoration-none fw-semibold text-body"
+                                   :on-click=${() => _sortBy(col.key)}>${col.name}${_mark(col.key)}</bs-button>
+                      </th>
+                      <th scope="col"><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    <tr :for-each=${_shown}
+                        :for-as="row"
+                        :for-key=${row.id}
+                        :class-table-active=${chosen && chosen.id === row.id}
+                        :on-click=${() => choose(row)}>
+                      <td class="fw-semibold">${row.service}</td>
+                      <td>
+                        <bs-badge :variant=${row.env === 'production' ? 'dark' : 'secondary'}>
+                          ${row.env}
+                        </bs-badge>
+                      </td>
+                      <td class="dash-mono">${row.commit}</td>
+                      <td class="text-body-secondary">${row.author}</td>
+                      <td>
+                        <span class="d-inline-flex align-items-center gap-2">
+                          <bs-spinner :if=${row.state === 'running'}
+                                      :small
+                                      :variant="info"
+                                      :label="Deploying" />
+                          <dash-dot :state=${row.state} />
+                        </span>
+                      </td>
+                      <td>${row.secs ? _secs(row.secs) : '—'}</td>
+                      <td class="text-body-secondary">${_ago(row.ago)}</td>
+                      <td class="text-end">
+                        <bs-button :size="sm"
+                                   :variant="secondary"
+                                   :outline
+                                   :on-click=${() => choose(row)}>Open</bs-button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <!--- nothing matched: another one-or-zero region -->
+                <div class="p-5 text-center text-body-secondary"
+                     :if=${!_shown.length}>
+                  <p class="mb-2">No deployment matches those filters.</p>
+                  <p class="small mb-0">
+                    ${deploys.length} deployments in total, ${_matched.length} after filtering.
+                  </p>
+                </div>
+
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 p-3 border-top">
+                  <span class="small text-body-secondary">
+                    Showing ${_shown.length} of ${_matched.length}
+                    <span :if=${!(_matched.length === deploys.length)}
+                          >(${deploys.length} unfiltered)</span>
+                  </span>
+
+                  <bs-pagination :current=${_page}
+                                 :pages=${_pages}
+                                 :size="sm"
+                                 :label="Deployment pages"
+                                 :select=${(n) => pageNo = n} />
+                </div>
+              </div>
+            </dash-panel>
+  </:define>
+
   <!--- Open incidents, and the button that closes one. -->
   <:define tag="orbit-incidents:section"
            class="dash-section"
