@@ -8,6 +8,7 @@ import { WebContext } from './web-context';
 // this deliberately avoids depending on the project's Node-oriented lib.dom-less
 // tsconfig: declare just the globals actually used, instead of pulling in "DOM"
 declare const window: Record<string, unknown>;
+declare const location: { origin: string };
 declare const document: {
   readyState: string;
   addEventListener(type: string, listener: () => void): void;
@@ -33,6 +34,10 @@ export function init(): WebContext | undefined {
     // expression, which for a server-only expression is the only way it can
     // exist in the browser at all
     state: window[STATE_GLOBAL] as PageState | undefined,
+    // the same fact the server rendered with, arrived at the other way round.
+    // Not carried in the state: each side knows its own, and a mismatch would
+    // mean the page is being served from somewhere it doesn't think it is
+    origin: typeof location === 'undefined' ? undefined : location.origin,
   });
   context.refresh();
   return context;

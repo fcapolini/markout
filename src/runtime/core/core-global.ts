@@ -26,12 +26,25 @@ import { CoreValueProps } from './core-value';
  *
  *   :handle-open=${(v) => globalThis.bootstrap.Modal...}   // browser-only, and says so
  *
+ * `$origin` is the exception to all of the above: it is not read off
+ * `globalThis` at all, but supplied by whoever built the context -- from the
+ * request on the server, from `location.origin` in the browser. It is here
+ * because it means the same thing in both, which is the same bar every other
+ * name on this list has to clear; it is spelled with a `$` because it is the
+ * runtime's rather than JavaScript's. Nothing else about the request is
+ * offered, and deliberately: headers, cookies and method have no browser
+ * counterpart, so a page reading one would render something it cannot
+ * hydrate to -- and would publish a session while doing it.
+ *
  * A page value of the same name shadows the global, since resolution only
  * reaches here after walking the scope chain.
  *
  * Kept in step with the compiler's copy in stage4-resolve.ts by a test.
  */
+export const ORIGIN_GLOBAL = '$origin';
+
 export const GLOBAL_NAMES = [
+  ORIGIN_GLOBAL,
   'Array',
   'BigInt',
   'Boolean',
@@ -50,6 +63,7 @@ export const GLOBAL_NAMES = [
   'Set',
   'String',
   'Symbol',
+  'URL',
   'WeakMap',
   'WeakSet',
   'clearInterval',

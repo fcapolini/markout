@@ -1,4 +1,4 @@
-import { CoreGlobal } from './core-global';
+import { CoreGlobal, ORIGIN_GLOBAL } from './core-global';
 import { CoreScope, CoreScopeProps } from './core-scope';
 import { CoreValue, CoreValueProps } from './core-value';
 
@@ -77,6 +77,16 @@ export interface CoreContextProps {
    * no expression -- instead of being derived again.
    */
   state?: PageState;
+  /**
+   * The page's own origin (`https://example.test`), as `$origin`.
+   *
+   * Supplied rather than discovered, because the two sides discover it
+   * differently -- from the request while rendering, from `location.origin`
+   * in the browser -- and the whole value of the name is that they agree.
+   * Absent, `$origin` is `undefined`, which is what a page compiled outside
+   * any server should see.
+   */
+  origin?: string;
 }
 
 export class CoreContext {
@@ -96,7 +106,10 @@ export class CoreContext {
 
   constructor(props: CoreContextProps) {
     this.props = props;
-    this.global = new CoreGlobal(this, props.addedGlobals);
+    this.global = new CoreGlobal(this, {
+      ...(props.origin === undefined ? {} : { [ORIGIN_GLOBAL]: { val: props.origin } }),
+      ...props.addedGlobals,
+    });
     this.init();
     this.root = this.newScope(props.root, this, this.global);
   }

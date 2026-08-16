@@ -383,11 +383,36 @@ Available: `Array`, `BigInt`, `Boolean`, `Date`, `Error`, `Infinity`, `Intl`,
 `console`, `decodeURI`, `decodeURIComponent`, `encodeURI`,
 `encodeURIComponent`, `fetch`, `globalThis`, `isFinite`, `isNaN`,
 `parseFloat`, `parseInt`, `queueMicrotask`, `setInterval`, `setTimeout`,
-`structuredClone`, `undefined`.
+`structuredClone`, `URL`, `undefined`, and `$origin`.
 
-The timers and `fetch` are on the list for the same reason as the rest: they
-exist in both environments, and the places that call them — `:on-` and
-`:handle-` bodies — only run in one.
+The timers, `fetch` and `URL` are on the list for the same reason as the
+rest: they exist in both environments, and the places that call them — `:on-`
+and `:handle-` bodies — only run in one.
+
+### `$origin`
+
+The odd one out, and the only name here that isn't JavaScript's: the page's
+own origin, `https://example.test`. The server takes it from the request, the
+browser from `location.origin`, and it means the same thing in both — which
+is the bar everything on this list has to clear.
+
+It exists because the server has no page to be relative *to*. A `:server-`
+value fetching `/data.json` is not asking for a different address, it is not
+asking for an address at all, so something has to say where the page is:
+
+```html
+<html :server-rows=${fetch($origin + '/data.json').then(r => r.json())}>
+```
+
+It is spelled with a `$` because it is the runtime's rather than
+JavaScript's, and that also means a page cannot declare a value over it —
+`$` is reserved in a declared name. Where there is no server, it is
+`undefined`.
+
+Nothing else about the request is offered, and that is deliberate. Headers,
+cookies and the method have no browser counterpart, so a page reading one
+would render something it cannot hydrate to — and would publish a session
+while doing it.
 
 Because it is the last link, a declared value of the same name shadows it —
 `:Math=${...}` means yours from there down.

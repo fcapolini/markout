@@ -1,5 +1,5 @@
 {
-  "title": "Example data",
+  "title": "Example data 2",
   "fetchedBy": "the server, while rendering",
   "rows": [
     { "id": 1, "name": "Ada Lovelace", "role": "Analyst" },

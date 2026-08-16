@@ -105,7 +105,7 @@ describe('settling a waterfall', () => {
         '<body>${c}</body></html>'
     );
     const started = Date.now();
-    const errors = await renderPage(page, { maxRounds: 2, timeoutMs: 30_000 });
+    const errors = await renderPage(page, { settle: { maxRounds: 2, timeoutMs: 30_000 } });
     expect(Date.now() - started).toBeLessThan(2_000);
     expect(errors).toHaveLength(1);
     expect(errors[0].phase).toBe('settle');
@@ -134,7 +134,7 @@ describe('when a :server- promise does not arrive', () => {
       '<html :server-slow=${new Promise(() => {})} :server-fast=${Promise.resolve(1)}>' +
         '<body><i>${fast}</i></body></html>'
     );
-    const errors = await renderPage(page, { timeoutMs: 50 });
+    const errors = await renderPage(page, { settle: { timeoutMs: 50 } });
     expect(errors).toHaveLength(1);
     expect(errors[0].phase).toBe('settle');
     expect(errors[0].key).toBe('slow');
@@ -152,7 +152,7 @@ describe('when a :server- promise does not arrive', () => {
         ' :server-c=${new Promise(() => {})}><body>${a}${b}${c}</body></html>'
     );
     const started = Date.now();
-    const errors = await renderPage(page, { timeoutMs: 60 });
+    const errors = await renderPage(page, { settle: { timeoutMs: 60 } });
     const elapsed = Date.now() - started;
     expect(errors).toHaveLength(3);
     expect(elapsed).toBeLessThan(400);

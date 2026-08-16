@@ -33,17 +33,23 @@
            hidden
 
            // parameters
-           :src=""                    // the URL; nothing is fetched without one
+           :url=""                    // where to fetch; nothing happens without one
            :client=${false}           // fetch in the browser instead of here
+
+           // Resolved against the page's own origin, so `:url="/data.json"`
+           // means the same thing in both modes. It has to be: the server has
+           // no page to be relative TO, and a bare path there is not a
+           // different address, it is not an address at all.
+           :_url=${url ? new URL(url, $origin ?? undefined).href : null}
 
            // What the server fetched, and the only thing here that crosses.
            // Never rejects: a 404 is a fact about the page's data, not a
            // fault in the render, so it is carried back as a value the page
            // can show rather than reported to a log the visitor can't see.
            :server-_served=${
-             (client || !src)
+             (client || !_url)
                ? null
-               : fetch(src)
+               : fetch(_url)
                    .then((res) => res.ok
                      ? res.json().then((body) => ({ body }))
                      : { error: `${res.status} ${res.statusText}` })
@@ -61,9 +67,9 @@
            :loading=${false}
 
            :reload=${() => {
-             if (!src) { return; }
+             if (!_url) { return; }
              loading = true;
-             fetch(src)
+             fetch(_url)
                .then((res) => res.ok
                  ? res.json().then((body) => { _fetched = body; _failed = null; })
                  : Promise.reject(new Error(`${res.status} ${res.statusText}`)))
@@ -71,12 +77,21 @@
                .then(() => { loading = false; });
            }}
 
-           // `:handle-` rather than `:did-init`, so a `:src` that changes
-           // refetches instead of being read once. Browser-only, which is
-           // what keeps this from running during the render; and it takes
-           // the URL, so it fires again whenever that URL is a new one
-           :_wanted=${client ? src : null}
-           :handle-_wanted=${(v) => { v && reload(); }}
+           // `:handle-` rather than `:did-init`, because it takes the URL:
+           // it runs once when the page comes up AND again whenever that URL
+           // becomes a different one, which is what makes `:url` behave the
+           // way it reads. Browser-only, so none of this touches the render.
+           //
+           // The first call is the one that differs between the modes. A
+           // served datasource already HAS its answer, so fetching again on
+           // arrival would be the second request this whole design exists to
+           // avoid; a `:client` one has nothing yet, so it must. Every later
+           // call means the URL genuinely changed, and both modes refetch.
+           :_started=${false}
+           :handle-_url=${(v) => {
+             v && (client || _started) && reload();
+             _started = true;
+           }}
   />
 
 </lib>
