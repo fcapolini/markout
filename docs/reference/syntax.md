@@ -247,7 +247,7 @@ Two things to know before using it:
 - **It has to be sendable.** Numbers, strings, plain objects and arrays,
   `undefined`, `Date`, `Map`, `Set`, `RegExp`, `BigInt`. Not functions, not
   class instances, not a structure that refers to itself — those are reported
-  as errors, and the value falls back to being derived in the browser.
+  as errors, and the value is `undefined` in the browser.
 
 `:server-` marks declared values only. It is an error on `:attr-`, `:class-`,
 `:style-`, `:prop-` (which re-derive for free once the value they read is

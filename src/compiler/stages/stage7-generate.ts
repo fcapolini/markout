@@ -42,8 +42,28 @@ export function stage7generate(
 ) {
   const root = page.global.children[0];
   if (root) {
-    page.propsAST = generateScope(root);
+    page.propsAST = generateScope(root, false);
     page.propsString = generate(page.propsAST);
+    // The browser gets a different copy, with every `:server-` expression
+    // taken out of it. Two reasons, and the first is the serious one:
+    //
+    //  - a server expression is the one thing on the page written to run
+    //    where the visitor cannot see. `${db.orders.forUser(id)}` in the
+    //    served source publishes the query, the table names and the shape of
+    //    an internal API to anyone who opens View Source, for code the
+    //    browser was never going to run.
+    //  - it could not run it anyway. The client builds these values from the
+    //    result the server sent; falling back to an expression that reaches
+    //    for something only the server has can only throw. Absent a result,
+    //    `undefined` is the honest answer -- and the one every other failure
+    //    in this language already gives.
+    //
+    // Only generated a second time when there is something to take out, so a
+    // page with no server value pays nothing and produces what it always did.
+    const hasServerValues = [...page.values.values()].some(v => v.serverOnly);
+    page.clientPropsString = hasServerValues
+      ? generate(generateScope(root, true))
+      : page.propsString;
     injectBootstrapScripts(page, runtimeSrc, dev);
   }
   return page;
@@ -52,7 +72,7 @@ export function stage7generate(
 function injectBootstrapScripts(page: Page, runtimeSrc: string, dev: boolean) {
   const doc = page.source.doc;
   const body = doc.body;
-  if (!body || !page.propsString) {
+  if (!body || !page.clientPropsString) {
     return;
   }
 
@@ -60,7 +80,7 @@ function injectBootstrapScripts(page: Page, runtimeSrc: string, dev: boolean) {
   propsScript.appendChild(
     new ServerText(
       doc,
-      `window.${PROPS_GLOBAL} = ${escapeScriptClose(page.propsString)};` +
+      `window.${PROPS_GLOBAL} = ${escapeScriptClose(page.clientPropsString)};` +
         // tells the browser runtime to surface expression errors in the page
         // the same way SSR just did, instead of only logging them
         (dev ? `window.${DEV_GLOBAL} = true;` : ''),
@@ -95,13 +115,13 @@ function escapeScriptClose(js: string): string {
   return js.replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');
 }
 
-function generateScope(scope: Scope): ObjectExpression {
+function generateScope(scope: Scope, forClient: boolean): ObjectExpression {
   const valueProps: Property[] = [];
   for (const [name, value] of scope.values) {
     valueProps.push(
       valueProperty(
         toRuntimeKey(name),
-        generateValueProps(value, scope.callSiteValues?.has(name))
+        generateValueProps(value, scope.callSiteValues?.has(name), forClient)
       )
     );
   }
@@ -109,7 +129,7 @@ function generateScope(scope: Scope): ObjectExpression {
     valueProps.push(
       valueProperty(
         toRuntimeKey(name),
-        generateValueProps(value, scope.callSiteValues?.has(name))
+        generateValueProps(value, scope.callSiteValues?.has(name), forClient)
       )
     );
   }
@@ -148,12 +168,26 @@ function generateScope(scope: Scope): ObjectExpression {
   // a <:define> scope is never itself live at its own (natural, nested)
   // position -- only usage-site instances of it are, elsewhere in the tree
   const children = scope.children.filter(child => !scope.page.definitionScopes.has(child));
-  props.push(property('children', arrayExpression(children.map(generateScope))));
+  props.push(
+    property('children', arrayExpression(children.map(c => generateScope(c, forClient))))
+  );
 
   return objectExpression(props);
 }
 
-function generateValueProps(value: Value, callSite?: boolean): ObjectExpression {
+function generateValueProps(
+  value: Value,
+  callSite?: boolean,
+  forClient?: boolean
+): ObjectExpression {
+  if (forClient && value.serverOnly) {
+    // the mark and nothing else: the client reads its result out of the
+    // page's state, and has neither the expression nor the dependency edges
+    // that would let it try to produce one of its own. Absent a result the
+    // value is simply `undefined` -- see stage7generate for why that is the
+    // wanted outcome rather than a lost fallback
+    return objectExpression([property('serverOnly', literal(true))]);
+  }
   const props = [
     property('exp', functionExpression(generateExpBody(value))),
     property('deps', arrayExpression(value.deps.map(makeDep))),

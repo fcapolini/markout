@@ -153,8 +153,11 @@ export class CoreScope {
         // CoreGlobal uses, for the same reason. Dropping `deps` matters:
         // kept, they would leave sources enqueuing a value whose get()
         // returns immediately, which is edges and propagation for nothing.
-        // A server-only value absent from the state (its result failed to
-        // serialize) falls back to its expression rather than to nothing
+        //
+        // Absent from the state, it is `undefined`: stage7 does not send the
+        // browser these expressions at all, so there is nothing here to fall
+        // back TO -- which is the wanted outcome, since an expression that
+        // reaches for something only the server has could only throw
         const frozen =
           valProps.serverOnly && state && key in state ? { val: state[key] } : undefined;
         this.values[key] = this.newValue(key, frozen ?? valProps, props.values);

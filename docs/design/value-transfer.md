@@ -132,7 +132,7 @@ row keys correctly with nothing new invented. Confirmed by test rather than
 assumed: two replicas of one declaration collect and rehydrate separately.
 
 Replicas degrade correctly for free: a replica the client builds that the
-server never rendered has no entry and falls back to its expression.
+server never rendered has no entry, and is `undefined` there.
 
 ### Stencils are skipped
 
@@ -150,8 +150,8 @@ would ship a spurious entry.
 
 So collection skips a stencil's own values *and its prototype markup*, but
 still descends into its replicas, which are children of the host too and are
-live. The clients falls back correctly with no matching rule of its own: a
-stencil simply finds no entry.
+live. The client needs no matching rule of its own: a stencil simply finds
+no entry.
 
 ## Format: a JS literal, not JSON
 
@@ -196,13 +196,13 @@ failure at serialize time, reported through
 everything else, most likely under a new `'transfer'` phase in
 `RuntimeErrorPhase`.
 
-There is an honest tension. TODO.md's comptime rule says never fall back
-silently to the behavior the marker was meant to avoid, but unlike comptime
-this cannot be a build error, and a page whose serialization failed still has
-to serve. The proposal: report it, let the value fall back to its expression
-on the client, and in dev serve the runtime-error page as
+Reported, and the value is `undefined` on the client -- there is no
+expression there to fall back to, since stage7 does not send it. That is the
+right outcome rather than a lost fallback: a server-only expression re-run in
+the browser reaches for something only the server has, so it could only
+throw. In dev the runtime-error page is served as
 [middleware.ts:81](../../src/server/middleware.ts#L81) already does for
-expression failures. Dev is loud, production degrades to today's behavior.
+expression failures; in production the page serves and the value is empty.
 
 ### It is public
 

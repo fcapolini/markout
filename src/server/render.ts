@@ -53,10 +53,10 @@ export async function renderPage(
  * Writes the collected `:server-` results into the reserved `<script>`.
  *
  * Serialized one value at a time so that one unsendable result costs only
- * itself: the rest of the page's state still reaches the client, and the
- * value that failed falls back to its expression there. It is reported
- * either way -- a page that silently sent less than it meant to would show
- * the failure as a binding that renders wrong, far from its cause.
+ * itself: the rest of the page's state still reaches the client, and only
+ * the value that failed is `undefined` there. It is reported either way --
+ * a page that silently sent less than it meant to would show the failure as
+ * a binding that renders wrong, far from its cause.
  */
 function emitState(page: Page, state: PageState, errors: RuntimeError[]) {
   const script = page.stateScript;
