@@ -51,10 +51,16 @@ export class Server {
     app.use(express.static(config.docroot));
     this.server = app.listen(config.port);
     this.port = (this.server?.address() as AddressInfo).port;
+    // what it is, then that it is up -- the address goes LAST so that a
+    // reader who has seen it has seen the whole configuration. Anything
+    // watching the console for readiness keys off that line, and with it
+    // logged first the lines after it were a race: the CLI test caught the
+    // output at the address and asserted on a `compression enabled` that had
+    // not been written yet, roughly one run in five
     this.logger('info', `[server] docroot ${config.docroot}`);
-    this.logger('info', `[server] address http://127.0.0.1:${this.port}/`);
     config.dev && this.logger('info', '[server] dev mode: runtime errors will be shown in the page');
     config.compress && this.logger('info', '[server] compression enabled');
+    this.logger('info', `[server] address http://127.0.0.1:${this.port}/`);
     exitHook(() => this.logger('info', '[server] will exit'));
     process.on('uncaughtException', err => {
       this.logger('error', err.stack ? err.stack : `${err}`);
