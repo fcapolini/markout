@@ -78,7 +78,9 @@ import { DOM_ID_ATTR, DOM_TEXT_MARKER1, DOM_TEXT_MARKER2, DOM_USE_MARKER } from 
 
 export function stage1load(page: Page) {
   page.main = load(page, page.global, page.source.doc.documentElement!, 'page');
-  expandCustomTagUsages(page);
+  // expanding anything at all once a definition is based on another one
+  // would work on a stencil that is about to be rewritten underneath it
+  rejectDerivedDefines(page) || expandCustomTagUsages(page);
   // after every usage has had its chance to clone a stencil with the slot
   // still in place. A directive tag isn't serialized -- children and all --
   // so an untouched <:slot> has to be replaced by its own content, which is
@@ -344,6 +346,41 @@ function expandDefine(page: Page, defineEl: ServerElement): ServerElement | unde
   // moves the child onto its content fragment and nulls its parentElement
   page.defineStencils.set(customName, template);
   return inner;
+}
+
+/**
+ * Refuses a `<:define>` whose base tag is another definition.
+ *
+ * `tag="my-card:my-box"` reads like specialization, and markout has no such
+ * thing: a definition's base tag has to be a real element. What it did
+ * instead was worse than refusing it. `expandDefine` leaves the base tag as
+ * an ELEMENT inside the new stencil, so `<my-box>` in there is an ordinary
+ * usage site -- expandCustomTagUsages finds it, expands it, and replaces the
+ * very element `page.customTags` had just registered `my-card` against. The
+ * page then compiled clean, rendered clean, and showed nothing where the
+ * usages were.
+ *
+ * Reported here rather than in expandDefine because that runs mid-load,
+ * when `customTags` holds only the definitions seen so far -- and a
+ * definition may be written after its base, or imported from another file.
+ *
+ * @returns whether anything was refused
+ */
+function rejectDerivedDefines(page: Page): boolean {
+  let found = false;
+  for (const [name, scope] of page.customTags) {
+    const base = scope.e?.tagName.toLowerCase();
+    if (!base || !page.customTags.has(base)) continue;
+    found = true;
+    addError(
+      page,
+      `<${DEFINE_DIRECTIVE_TAG.toLowerCase()} ${DEFINE_TAG_ATTR}="${name}:${base}"> is ` +
+        `based on <${base}>, which is itself a definition -- a base tag has to be a ` +
+        `real element. Define <${name}> on a plain tag and put <${base}> inside it`,
+      scope.e?.loc
+    );
+  }
+  return found;
 }
 
 // runs after load() so page.customTags is fully populated regardless of
