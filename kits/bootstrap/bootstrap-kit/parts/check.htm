@@ -131,7 +131,7 @@
            :for-data=${label}>
       <span>${label}</span>
       <span class="text-body-secondary"
-            :for-each=${showValue ? [1] : []}>${value}</span>
+            :for-data=${showValue || null}>${value}</span>
     </label>
 
     <input class="form-range"

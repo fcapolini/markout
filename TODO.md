@@ -37,6 +37,8 @@
 
 - [x] bootstrap wrapper library for adoptability and as a demonstration of components, reuse, and simplicity in authoring libraries, see [kitchen sink](https://getbootstrap.com/docs/5.3/examples/cheatsheet/)
 
+- [ ] `:if`. The kit and Orbit now write `:for-data=${cond || null}` for a condition (28 of them), which is a step up from the `:for-each=${cond ? [1] : []}` they used to: one optional scope rather than a replication host with an array, a stencil and a clone, which is the performance a real `:if` would buy. What is left for `:if` is the reading -- `|| null` is there only because `:for-data` keys on null and `false` is not null.
+
 - [ ] an "additional classes" attribute for cumulative CSS classes in components: we decided not to include that behavior in `class` attribute as Vue does for our "no-magic" policy, but an explicit construct for achieving the same result is needed
 
 - [ ] component kits from npm packages, using e.g. `<:import npm="@markout/bootstrap-kit" />` (preprocessor already supports additional root folders I think)

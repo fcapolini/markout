@@ -532,7 +532,7 @@
                   -->
                   <dash-panel :heading="Cost forecast"
                               :note=${forecast ? 'Billing period ends in ' + forecast.days + ' days' : 'Loading…'}>
-                    <div :for-each=${forecast ? [] : [1]}>
+                    <div :for-data=${!forecast || null}>
                       <bs-placeholder :cols=${8} /><br>
                       <bs-placeholder :cols=${5} /><br>
                       <bs-placeholder :cols=${11} />
@@ -767,7 +767,7 @@
                       <td class="text-body-secondary">${row.author}</td>
                       <td>
                         <span class="d-inline-flex align-items-center gap-2">
-                          <bs-spinner :for-each=${row.state === 'running' ? [1] : []}
+                          <bs-spinner :for-data=${row.state === 'running' || null}
                                       :small
                                       :variant="info"
                                       :label="Deploying" />
@@ -788,7 +788,7 @@
 
                 <!--- nothing matched: another one-or-zero region -->
                 <div class="p-5 text-center text-body-secondary"
-                     :for-each=${_shown.length ? [] : [1]}>
+                     :for-data=${!_shown.length || null}>
                   <p class="mb-2">No deployment matches those filters.</p>
                   <p class="small mb-0">
                     ${deploys.length} deployments in total, ${_matched.length} after filtering.
@@ -798,7 +798,7 @@
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 p-3 border-top">
                   <span class="small text-body-secondary">
                     Showing ${_shown.length} of ${_matched.length}
-                    <span :for-each=${_matched.length === deploys.length ? [] : [1]}
+                    <span :for-data=${!(_matched.length === deploys.length) || null}
                           >(${deploys.length} unfiltered)</span>
                   </span>
 
@@ -839,7 +839,7 @@
                   </bs-accordion>
 
                   <div class="text-center py-4"
-                       :for-each=${incidents.length ? [] : [1]}>
+                       :for-data=${!incidents.length || null}>
                     <p class="mb-1">Nothing open.</p>
                     <p class="small text-body-secondary mb-0">
                       Every incident has been acknowledged.
@@ -1043,10 +1043,10 @@
                   <!--- not kept up to date — derived: it reads the controls above -->
                   <bs-alert :variant=${contact._invalid ? 'danger' : 'secondary'}
                             :extra="mb-3">
-                    <span :for-each=${contact._invalid ? [1] : []}>
+                    <span :for-data=${contact._invalid || null}>
                       Fix the alert address before saving.
                     </span>
-                    <span :for-each=${contact._invalid ? [] : [1]}>
+                    <span :for-data=${!contact._invalid || null}>
                       Paging <strong>${contact.value}</strong> over
                       <strong>${channels.value}</strong> when errors pass
                       <strong>${threshold.value}%</strong> — outside
@@ -1127,11 +1127,11 @@
       <bs-alert :variant=${toneOf(data.state)}
                 :heading=${data.state === 'failed' ? 'This deployment failed' : null}
                 :extra="small">
-        <span :for-each=${data.state === 'failed' ? [1] : []}>
+        <span :for-data=${data.state === 'failed' || null}>
           The rollout was stopped after health checks failed on two nodes. The
           previous commit is still serving traffic.
         </span>
-        <span :for-each=${data.state === 'failed' ? [] : [1]}>
+        <span :for-data=${!(data.state === 'failed') || null}>
           Rollout of <span class="dash-mono">${data.commit}</span> to
           ${data.env} is ${data.state}.
         </span>

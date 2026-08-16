@@ -38,7 +38,7 @@
            class=${_class}
   >
     <img class="card-img-top"
-         :for-each=${image && !imageBottom ? [1] : []}
+         :for-data=${image && !imageBottom || null}
          src=${image}
          alt=${imageAlt}>
 
@@ -66,7 +66,7 @@
          :for-data=${footer}>${footer}</div>
 
     <img class="card-img-bottom"
-         :for-each=${image && imageBottom ? [1] : []}
+         :for-data=${image && imageBottom || null}
          src=${image}
          alt=${imageAlt}>
   </:define>

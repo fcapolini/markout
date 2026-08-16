@@ -38,7 +38,7 @@
            data-bs-interval=${interval}
            data-bs-theme=${dark ? 'dark' : null}
   >
-    <div class="carousel-indicators" :for-each=${indicators ? [1] : []}>
+    <div class="carousel-indicators" :for-data=${indicators || null}>
       <button type="button"
               :for-each=${_slides}
               :for-as="slide"
@@ -58,7 +58,7 @@
              src=${slide.image}
              alt=${slide.alt ?? ''}>
         <div class="carousel-caption d-none d-md-block"
-             :for-each=${captions && (slide.title || slide.text) ? [1] : []}>
+             :for-data=${(captions && (slide.title || slide.text)) || null}>
           <h5 :for-data=${slide.title}>${slide.title}</h5>
           <p :for-data=${slide.text}>${slide.text}</p>
         </div>
@@ -67,7 +67,7 @@
 
     <button class="carousel-control-prev"
             type="button"
-            :for-each=${controls ? [1] : []}
+            :for-data=${controls || null}
             data-bs-target=${_selector}
             data-bs-slide="prev">
       <span class="carousel-control-prev-icon" aria-hidden="true"></span>
@@ -76,7 +76,7 @@
 
     <button class="carousel-control-next"
             type="button"
-            :for-each=${controls ? [1] : []}
+            :for-data=${controls || null}
             data-bs-target=${_selector}
             data-bs-slide="next">
       <span class="carousel-control-next-icon" aria-hidden="true"></span>
