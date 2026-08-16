@@ -291,13 +291,13 @@ Available: `Array`, `BigInt`, `Boolean`, `Date`, `Error`, `Infinity`, `Intl`,
 `JSON`, `Map`, `Math`, `NaN`, `Number`, `Object`, `Promise`, `RegExp`, `Set`,
 `String`, `Symbol`, `WeakMap`, `WeakSet`, `clearInterval`, `clearTimeout`,
 `console`, `decodeURI`, `decodeURIComponent`, `encodeURI`,
-`encodeURIComponent`, `globalThis`, `isFinite`, `isNaN`, `parseFloat`,
-`parseInt`, `queueMicrotask`, `setInterval`, `setTimeout`,
+`encodeURIComponent`, `fetch`, `globalThis`, `isFinite`, `isNaN`,
+`parseFloat`, `parseInt`, `queueMicrotask`, `setInterval`, `setTimeout`,
 `structuredClone`, `undefined`.
 
-The timers are on the list for the same reason as the rest: they exist in
-both environments, and the places that call them — `:on-` and `:handle-`
-bodies — only run in one.
+The timers and `fetch` are on the list for the same reason as the rest: they
+exist in both environments, and the places that call them — `:on-` and
+`:handle-` bodies — only run in one.
 
 Because it is the last link, a declared value of the same name shadows it —
 `:Math=${...}` means yours from there down.
@@ -307,7 +307,7 @@ because of one.
 
 ### What is deliberately not on the list
 
-`document`, `localStorage`, `fetch`, `setTimeout`, and whatever libraries the
+`document`, `localStorage`, and whatever libraries the
 page loads exist in the browser and not on the server. Naming one directly
 would give a page an expression that works in one half of an isomorphic
 render and throws in the other, with nothing in the source to say which.

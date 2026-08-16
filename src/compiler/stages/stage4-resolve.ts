@@ -28,7 +28,7 @@ export const GLOBAL_NAMES = new Set([
   'Map', 'Math', 'NaN', 'Number', 'Object', 'Promise', 'RegExp', 'Set',
   'String', 'Symbol', 'WeakMap', 'WeakSet', 'clearInterval', 'clearTimeout',
   'console', 'decodeURI', 'decodeURIComponent', 'encodeURI',
-  'encodeURIComponent', 'globalThis', 'isFinite', 'isNaN', 'parseFloat',
+  'encodeURIComponent', 'fetch', 'globalThis', 'isFinite', 'isNaN', 'parseFloat',
   'parseInt', 'queueMicrotask', 'setInterval', 'setTimeout',
   'structuredClone', 'undefined',
 ]);

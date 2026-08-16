@@ -11,12 +11,13 @@ import { CoreValueProps } from './core-value';
  * standard library has to be here for expressions to be plain JavaScript,
  * which is the whole premise of `${...}`.
  *
- * The timers are here for the same reason, even though they do something
- * rather than compute something: they exist in both environments, and the
- * places that call them -- `:on-` and `:handle-` bodies -- only run in one.
+ * The timers and `fetch` are here for the same reason, even though they do
+ * something rather than compute something: they exist in both environments,
+ * and the places that call them -- `:on-` and `:handle-` bodies -- only run
+ * in one.
  *
- * What is NOT here is as deliberate: `document`, `localStorage`, `fetch`,
- * and whatever libraries a page loads all exist in the browser and not on
+ * What is NOT here is as deliberate: `document`, `localStorage`, and
+ * whatever libraries a page loads all exist in the browser and not on
  * the server. Naming one directly would give a page an expression
  * that works in one half of an isomorphic render and throws in the other,
  * with nothing in the source to say so. They are reached through
@@ -58,6 +59,7 @@ export const GLOBAL_NAMES = [
   'decodeURIComponent',
   'encodeURI',
   'encodeURIComponent',
+  'fetch',
   'globalThis',
   'isFinite',
   'isNaN',
@@ -75,12 +77,12 @@ export const GLOBAL_NAMES = [
  * constructors or namespaces.
  *
  * An expression reaches one as `this.setTimeout(...)`, where `this` is the
- * scope's proxy -- and a browser's timers insist on the global object as
- * their receiver, so an unbound one throws "Illegal invocation" the first
- * time a `:did-init` calls it. They are bound here rather than left to the
- * caller: reaching for `globalThis.setTimeout` to work around it would say
- * "this line needs a browser" about a name that is on the list precisely
- * because it doesn't.
+ * scope's proxy -- and a browser's timers and `fetch` insist on the global
+ * object as their receiver, so an unbound one throws "Illegal invocation"
+ * the first time a `:did-init` calls it. They are bound here rather than
+ * left to the caller: reaching for `globalThis.setTimeout` to work around it
+ * would say "this line needs a browser" about a name that is on the list
+ * precisely because it doesn't.
  *
  * Only these. Binding a constructor (`Array`, `Promise`) would drop the
  * statics hanging off it, so `Array.from(...)` -- which the kit's own
@@ -94,6 +96,7 @@ const BOUND_GLOBAL_NAMES = new Set([
   'decodeURIComponent',
   'encodeURI',
   'encodeURIComponent',
+  'fetch',
   'isFinite',
   'isNaN',
   'parseFloat',
