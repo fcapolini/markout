@@ -23,6 +23,11 @@ export class Value {
   id: string;
   /** dependencies extracted by stage4-resolve; empty until that stage runs */
   deps: ValueDepRef[] = [];
+  /**
+   * Declared `:keep-name`: the expression runs on the server only, and the
+   * client is handed its result instead of re-deriving it.
+   */
+  keep = false;
 
   constructor(name: string, node: ServerAttribute | ServerText, scope: Scope, id?: string) {
     this.name = name;

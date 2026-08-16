@@ -49,6 +49,7 @@ import {
   PRESENCE_VALUE_PREFIX,
   PROP_VALUE_ATTR_PREFIX,
   PROP_VALUE_PREFIX,
+  KEEP_VALUE_ATTR_PREFIX,
 } from '../ir/Page';
 import { NodeType } from '../../html/dom';
 import { ATOMIC_TEXT_TAGS } from '../../html/parser';
@@ -107,6 +108,17 @@ const LIFECYCLE_SUFFIXES = new Set([
   `${DID_VALUE_ATTR_PREFIX}attach`,
   `${WILL_VALUE_ATTR_PREFIX}detach`,
   `${WILL_VALUE_ATTR_PREFIX}dispose`,
+]);
+
+// fixed attribute names that name something other than a declared value, so
+// there is nothing for `:keep-` to mark on one
+const KEEP_REJECTED_ATTRS = new Set([
+  SLOT_TARGET_ATTR,
+  SCOPE_NAME_ATTR,
+  FOR_EACH_ATTR,
+  FOR_DATA_ATTR,
+  FOR_AS_ATTR,
+  FOR_KEY_ATTR,
 ]);
 
 function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope {
@@ -1003,6 +1015,26 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
       continue;
     }
     let name = attr.name.slice(SPECIAL_ATTR_PREFIX.length);
+    // `:keep-` is a modifier, not a family of its own: strip it up front so
+    // the rest of the name parses exactly as it would without it, and what it
+    // marks stays an ordinary value
+    let keep = false;
+    if (name.startsWith(KEEP_VALUE_ATTR_PREFIX)) {
+      keep = true;
+      name = name.slice(KEEP_VALUE_ATTR_PREFIX.length);
+    }
+    // the fixed attribute names below don't declare values at all, so there
+    // is nothing for "runs on the server only" to mean on one
+    if (keep && KEEP_REJECTED_ATTRS.has(name)) {
+      addError(
+        page,
+        `"${SPECIAL_ATTR_PREFIX}${KEEP_VALUE_ATTR_PREFIX}${name}" is not a value: ` +
+          `"${SPECIAL_ATTR_PREFIX}${KEEP_VALUE_ATTR_PREFIX}" marks a declared value ` +
+          `as server-only`,
+        attr.loc
+      );
+      continue;
+    }
     if (name === SLOT_TARGET_ATTR) {
       // addressed to a slot, not a value of its own: kept aside here because
       // the `:` attributes are stripped at the end of this function, long
@@ -1104,9 +1136,25 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
       );
       continue;
     }
+    // every family here either derives from a value (`:attr-`, `:class-`,
+    // `:style-`, `:prop-`) or holds a function (`:on-`, `:did-`, `:will-`,
+    // `:handle-`). The first four re-derive correctly on the client once the
+    // value they read is kept, so marking them too would send the same fact
+    // twice; the last four don't serialize and are browser-only besides
+    if (keep && compiledPrefix) {
+      addError(
+        page,
+        `"${SPECIAL_ATTR_PREFIX}${KEEP_VALUE_ATTR_PREFIX}" cannot be combined with ` +
+          `"${SPECIAL_ATTR_PREFIX}${prefix}": keep the value it reads instead`,
+        loc
+      );
+      continue;
+    }
     name = compiledPrefix + suffix;
     prefix === HANDLE_VALUE_ATTR_PREFIX && desugarHandler(attr, suffix);
-    scope.values.set(name, new Value(name, attr, scope, page.createValueId()));
+    const value = new Value(name, attr, scope, page.createValueId());
+    value.keep = keep;
+    scope.values.set(name, value);
   }
   // both families are now scope values: leaving them behind would serialize
   // an expression object as an empty attribute, which the runtime would then

@@ -135,6 +135,9 @@ export class CoreScope {
     // (e.g. to locate a scope's DOM element within its parent's own)
     this.init();
     if (props.values) {
+      // what the server produced for this scope's `:keep-` values, if this is
+      // a client rehydrating a served page
+      const state = this.ctx.props.state?.[this.uid];
       for (const [key, valProps] of Object.entries(props.values)) {
         // a replica shares the host's props.values (so it gets its own
         // CoreValues from the same declarations), but for$each is the
@@ -145,7 +148,16 @@ export class CoreScope {
         // set: N wasted links, N wasted re-evaluations on every change of
         // that array, purely additive cost that made a 10k-row mount OOM
         if (key === RT_FOR_EACH_VALUE && this.cloned) continue;
-        this.values[key] = this.newValue(key, valProps, props.values);
+        // a `:keep-` value the server already produced: built frozen, with
+        // the result and neither `exp` nor `deps` -- the inert shape
+        // CoreGlobal uses, for the same reason. Dropping `deps` matters:
+        // kept, they would leave sources enqueuing a value whose get()
+        // returns immediately, which is edges and propagation for nothing.
+        // A kept value absent from the state (its result failed to
+        // serialize) falls back to its expression rather than to nothing
+        const frozen =
+          valProps.keep && state && key in state ? { val: state[key] } : undefined;
+        this.values[key] = this.newValue(key, frozen ?? valProps, props.values);
       }
       this.values[RT_VALUE_FN_KEY] = this.newValue(RT_VALUE_FN_KEY, {
         val: (key: string) => this.lookup(key),

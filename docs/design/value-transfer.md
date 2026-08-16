@@ -1,6 +1,11 @@
 # Server-only values — `:keep-`
 
-Status: **proposed**, nothing built. Written to be argued with before it is.
+Status: **`:keep-` is built** (step 1 below). The pending-work registry and
+async `renderPage` that a datasource component also needs are still proposed.
+
+User-facing documentation lives in
+[the syntax reference](../reference/syntax.md#server-only-values); this file
+keeps the reasoning and the decisions taken along the way.
 
 ## The problem
 
@@ -126,10 +131,30 @@ would serve one user's session to the next visitor.
 [`CoreScope.uid`](../../src/runtime/core/core-scope.ts#L102) is `props.id`
 plus the replica path, unique across `:for-each` replicas by construction. So
 the blob is `{ [uid]: { [key]: value } }` and a kept value inside a repeated
-row keys correctly with nothing new invented.
+row keys correctly with nothing new invented. Confirmed by test rather than
+assumed: two replicas of one declaration collect and rehydrate separately.
 
 Replicas degrade correctly for free: a replica the client builds that the
 server never rendered has no entry and falls back to its expression.
+
+### Stencils are skipped
+
+Found while testing the above, and not anticipated: collecting naively
+produced *three* entries for a two-item `:for-each` — one per replica, plus
+one for the host.
+
+A `:for-each` host is a stencil ([`isStencil()`](../../src/runtime/core/core-scope.ts#L516)):
+its element is only ever cloned, so its values are prototypes for the
+replicas rather than bindings of its own and are never evaluated. Collecting
+there sends `undefined` standing in for "never ran". The same applies to a
+`:for-data` with nothing to show, where it would be worse — the guard exists
+precisely so the body doesn't evaluate, so every page not showing the item
+would ship a spurious entry.
+
+So collection skips a stencil's own values *and its prototype markup*, but
+still descends into its replicas, which are children of the host too and are
+live. The clients falls back correctly with no matching rule of its own: a
+stencil simply finds no entry.
 
 ## Format: a JS literal, not JSON
 
@@ -148,11 +173,15 @@ This matters because JSON loses things this language treats as ordinary:
 - **`Date`, `Map`, `Set`, `BigInt`.** `structuredClone` and `BigInt` are both
   on the globals list, so the language already presents these as unremarkable.
 - **`NaN`, `-0`.**
-- **Cycles**, trivially reachable in any object graph a page assembles. These
-  need an IIFE rather than a plain literal, and are the only case that does.
-
 A literal costs nothing to gain all of that, so there is no tagged encoding
 and no revival pass.
+
+**Cycles are refused, not encoded.** Encoding them means hoisting every
+container into a var and filling it afterwards, which changes the shape of
+*all* output to serve a case a server-only value is unlikely to reach. A
+clear error beats a format nobody can read in a page's source. The same
+decision means two references to one object arrive as two objects: structure
+survives the trip, identity does not.
 
 **Deliberate deferral:** `JSON.parse('…')` parses roughly twice as fast as
 equivalent object-literal source in V8, which is why bundlers reach for it on
@@ -216,13 +245,13 @@ honest.
 
 | Stage | Change |
 | --- | --- |
-| stage1-load | Recognize the `:keep-` prefix where the other prefixes are parsed; strip it; set `Value.keep = true`. |
-| stage2-validate | The refusals above: the binding families, text values, `k_` names. |
+| stage1-load | Recognizes and strips the `:keep-` prefix before the rest of the name is parsed, sets `Value.keep`, and raises the refusals. |
+| stage2-validate | None, in the end. The design put the refusals here, but stage1 is where the family prefix is determined, so checking there costs one `if` next to the information instead of re-deriving it from compiled names. |
 | stage3-qualify | None. This changes neither scoping nor qualification. |
 | stage4-resolve | None. A kept value's dependencies are ordinary dependencies. |
-| stage5-comptime | None beyond stage2's `k_` refusal. |
+| stage5-comptime | None. The `k_` refusal is deferred: comptime is still a placeholder, so `k_` means nothing yet and refusing the combination now would refuse something harmless. Noted in TODO.md's comptime entry instead. |
 | stage6-treeshake | None. A kept value nothing reads is dead by the existing rule and should still be dropped. |
-| stage7-generate | Emit `keep: true` in the value's props. One boolean per kept value. |
+| stage7-generate | Emits `keep: true` in the value's props, and reserves the state `<script>` — but only on a page that has a kept value, so every other page's output is byte-for-byte what it was. |
 
 ### Runtime and server
 
@@ -239,28 +268,30 @@ honest.
 
 ## Order of work
 
-1. **`:keep-` end to end, synchronous only.** No fetch, no async, no registry.
-   `:keep-t=${Date.now()}` renders once on the server and does not flip on
-   hydration. Complete and testable on its own, and it closes the class-3
-   mismatches that exist today.
+1. ~~**`:keep-` end to end, synchronous only.**~~ **Done.** No fetch, no
+   async, no registry. `:keep-t=${Date.now()}` renders once on the server and
+   does not flip on hydration.
 2. **Pending registry + async `renderPage`.** Independent of (1), provable
    against a stub that just resolves a promise.
 3. **`std-data` in std-kit**, built on both, with nothing runtime-specific of
    its own.
 
-The sequencing is the argument that this decomposition was right: step 1
-ships value before anything about fetching is settled.
+The sequencing was the argument that this decomposition was right, and it
+held: step 1 shipped before anything about fetching is settled.
 
 ## Open questions
 
 - **The name.** `:keep-` describes the plumbing; the contract is "server-only
-  expression". Decide before it is documented, since it is unrenameable after.
+  expression". Now documented, which is the point at which it gets expensive
+  to change — but it is still one constant plus its refusal messages, so the
+  window is not shut.
 - **Unknown keys.** In dev, served HTML can outlive a recompile, so the blob
-  may name a scope the props no longer have. Ignore silently, or count and
-  report in dev? Leaning: ignore, report the count in dev only.
-- **Does `uid` hold up through nested custom-tag instances?** It should — a
-  usage instance is a child of the root scope with its own `props.id` — but
-  it needs a test with an instance inside a `:for-each` before it is asserted.
-- **`:keep-` on a `:for-each` replica's per-item binding** — nonsensical, and
-  probably a fourth refusal in stage2, but the spelling isn't obvious since
-  the binding is named by `:for-as`.
+  may name a scope the props no longer have. Currently ignored in silence;
+  counting and reporting in dev is the likely refinement.
+- **Does `uid` hold up through nested custom-tag instances?** Replicas are
+  now tested. A custom-tag instance inside a `:for-each` is not, and is the
+  case most likely to surprise.
+- **`:keep-` on a `:for-each` replica's per-item binding.** Still open: the
+  binding is named by `:for-as`, so there is no attribute to refuse. Writing
+  `:keep-` on the alias is not currently expressible, which is why nothing
+  was built for it.

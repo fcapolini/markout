@@ -70,6 +70,15 @@ function injectBootstrapScripts(page: Page, runtimeSrc: string, dev: boolean) {
   );
   body.appendChild(propsScript);
 
+  // reserved here, filled by the server once its render has settled -- see
+  // Page.stateScript for why the position is decided at compile time. Only
+  // when something will actually go in it: a page declaring no `:keep-`
+  // value should be byte-for-byte what it was before this existed
+  if ([...page.values.values()].some(value => value.keep)) {
+    page.stateScript = doc.createElement('script');
+    body.appendChild(page.stateScript);
+  }
+
   const runtimeScript = doc.createElement('script');
   runtimeScript.setAttribute('src', runtimeSrc, body.loc);
   runtimeScript.setAttribute('async', null, body.loc);
@@ -77,9 +86,13 @@ function injectBootstrapScripts(page: Page, runtimeSrc: string, dev: boolean) {
 }
 
 // a literal `</script` inside generated source (e.g. from a string a user
-// wrote in a template expression) would otherwise close the tag early
+// wrote in a template expression) would otherwise close the tag early, and
+// `<!--` opens a legacy comment inside which the parser stops recognizing
+// the closing tag at all. Deliberately duplicated in server/serialize.ts
+// rather than shared: that copy escapes bytes from outside the page, so it
+// is a security boundary and belongs with the code that produces them.
 function escapeScriptClose(js: string): string {
-  return js.replace(/<\/script/gi, '<\\/script');
+  return js.replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');
 }
 
 function generateScope(scope: Scope): ObjectExpression {
@@ -148,6 +161,9 @@ function generateValueProps(value: Value, callSite?: boolean): ObjectExpression 
   // written at a custom-tag usage site: evaluated against the scope the tag
   // was written in, not against the instance (see CoreScope.newValue)
   callSite && props.push(property('callSite', literal(true)));
+  // `:keep-`: the server collects this value after rendering and sends the
+  // result, which the client uses instead of running `exp` (see CoreContext)
+  value.keep && props.push(property('keep', literal(true)));
   return objectExpression(props);
 }
 

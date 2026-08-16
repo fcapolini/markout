@@ -12,7 +12,9 @@ export type RuntimeErrorPhase =
   | 'update'
   | 'propagate'
   | 'callback'
-  | 'refresh';
+  | 'refresh'
+  // a `:keep-` result the server could not send to the client
+  | 'transfer';
 
 export interface RuntimeError {
   phase: RuntimeErrorPhase;
@@ -28,6 +30,18 @@ export function formatRuntimeError(e: RuntimeError): string {
   return `markout [${e.phase}]${where}: ${e.message}`;
 }
 
+/**
+ * What the server collected from `:keep-` values once its render settled,
+ * keyed by scope uid and then by value key.
+ *
+ * Deliberately a second artifact rather than part of the props: the props are
+ * a function of the source and could be cached, while this is a function of
+ * the request and never can be. See docs/design/value-transfer.md.
+ */
+export type PageState = { [uid: string]: { [key: string]: unknown } };
+
+export const STATE_GLOBAL = '__MARKOUT_STATE';
+
 export interface CoreContextProps {
   root: CoreScopeProps;
   addedGlobals?: { [key: string | symbol]: CoreValueProps<any> };
@@ -36,6 +50,12 @@ export interface CoreContextProps {
    * Used by the server to collect them for the dev-mode overlay.
    */
   onError?: (e: RuntimeError) => void;
+  /**
+   * Results of the server's `:keep-` values, if this is a client rehydrating
+   * a served page. A value found here is built frozen -- with the result and
+   * no expression -- instead of being derived again.
+   */
+  state?: PageState;
 }
 
 export class CoreContext {
@@ -82,6 +102,47 @@ export class CoreContext {
    * Called after Global is created but before scopes are.
    */
   init() {}
+
+  /**
+   * Every `:keep-` value's result, for the server to send to the client.
+   *
+   * Call once the render has settled: it reads each value's current contents
+   * rather than `get()`ting it, so a value still mid-flight would be
+   * collected half-done rather than completed.
+   *
+   * A scope contributes under its `uid` (props.id plus replica path), which
+   * is what makes a kept value inside a `:for-each` land on the right
+   * replica. A replica the client builds that the server never rendered
+   * simply finds no entry and falls back to its expression.
+   */
+  collectState(): PageState {
+    const state: PageState = {};
+    const walk = (scope: CoreScope) => {
+      // A stencil's values are prototypes for its replicas rather than
+      // bindings of its own, and nothing below one is evaluated either (see
+      // isStencil and unlinkInert). Collecting there would send `undefined`
+      // for a value that was never run -- and a `:for-data` guarding an
+      // absent item would send one for every page that doesn't show it.
+      // Its REPLICAS are children too, and those are live, which is why this
+      // skips the prototype markup rather than the whole subtree.
+      const stencil = scope.isStencil();
+      const declared = stencil ? undefined : scope.props.values;
+      if (declared) {
+        let own: { [key: string]: unknown } | undefined;
+        for (const [key, valProps] of Object.entries(declared)) {
+          if (!valProps.keep) continue;
+          const value = scope.values[key];
+          if (!value) continue;
+          (own ??= state[scope.uid] ??= {})[key] = value.value;
+        }
+      }
+      for (const child of scope.children) {
+        (!stencil || child.cloned) && walk(child);
+      }
+    };
+    walk(this.root);
+    return state;
+  }
 
   newScope(
     props: CoreScopeProps,

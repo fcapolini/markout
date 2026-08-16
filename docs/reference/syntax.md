@@ -46,6 +46,7 @@ NOTE: "on its own" is literal — whitespace is text like any other, so
 | Syntax | Meaning |
 | --- | --- |
 | `:name=${expr}` | Declares a reactive value on the current scope. |
+| `:keep-name=${expr}` | Declares value `name`, but the expression runs on the **server only** — the client is handed its result. Server-only. |
 | `:aka="name"` | Names the current scope so descendants can reference it. |
 | `:attr-name=${expr}` | Toggles whether attribute `name` is PRESENT, as boolean and custom-element attributes need. Bare `:attr-name` implies `true`. `.` and `:` are allowed, for `data-x.y` and `xlink:href`. |
 | `:prop-name=${expr}` | Assigns the element's JS property `name`, for what an attribute can't carry. Browser-only: skipped when server rendering. |
@@ -163,6 +164,57 @@ function:
 
 The ban on classic functions is wider than these three: one may not appear
 anywhere inside any `${...}`, for the same reason.
+
+### Server-only values
+
+Hydration re-derives every value by running its expression again in the
+browser. `:keep-name=${expr}` says that this one can't be run there:
+
+```html
+<html :keep-startedAt=${Date.now()}>
+  <body>Started at ${startedAt}</body>
+</html>
+```
+
+The server evaluates it once, sends the result alongside the page, and the
+client uses that result — so `startedAt` is the same number in both, instead
+of the server's value being replaced by the browser's the moment the page
+comes alive.
+
+It is for expressions that **cannot** be re-run, not for ones that are merely
+slow. Three kinds qualify: a value only the server can produce (a file, an
+environment variable, a session), one that isn't deterministic (`Date.now()`,
+`Math.random()`), and one assigned imperatively later, which has no expression
+to re-run at all.
+
+The value is **frozen** in the browser: it arrives with a result and no
+expression, so nothing re-derives it. Values that *read* it are ordinary and
+keep updating as usual — which gives the one rule worth remembering:
+
+> Keep the source, never the derivation.
+
+```html
+<html :keep-user=${{ name: 'Ada' }} :greeting=${'Hi ' + user.name}>
+```
+
+`user` is kept because the browser can't produce it; `greeting` is left alone
+so it still tracks `user`. Marking `greeting` instead would pin it, and a
+later change to `user` would silently never reach it.
+
+Two things to know before using it:
+
+- **The result is published.** It travels in the page source as plain text, so
+  never mark anything derived from a credential, a session, or another user's
+  data.
+- **It has to be sendable.** Numbers, strings, plain objects and arrays,
+  `undefined`, `Date`, `Map`, `Set`, `RegExp`, `BigInt`. Not functions, not
+  class instances, not a structure that refers to itself — those are reported
+  as errors, and the value falls back to being derived in the browser.
+
+`:keep-` marks declared values only. It is an error on `:attr-`, `:class-`,
+`:style-`, `:prop-` (which re-derive for free once the value they read is
+kept), on the callback families (which hold functions), and on `:aka`,
+`:slot` and the `:for-` attributes, which name no value.
 
 ## Comments inside a tag
 
