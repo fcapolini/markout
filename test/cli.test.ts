@@ -26,12 +26,27 @@ async function availablePort(): Promise<number> {
   return port;
 }
 
-async function waitForOutput(process: ChildProcess, text: string): Promise<string> {
+/**
+ * Runs until every one of `texts` has been printed, then hands back
+ * everything printed so far.
+ *
+ * All of them, rather than one readiness marker, because what comes back is
+ * a SNAPSHOT: resolving on the address line and then asserting about another
+ * line was a race the server's log order happened to lose about one run in
+ * five. The server now prints the address last for that reason, and waiting
+ * on each string the caller cares about is what keeps this from depending on
+ * that staying true.
+ */
+async function waitForOutput(
+  process: ChildProcess,
+  texts: string | string[]
+): Promise<string> {
+  const wanted = Array.isArray(texts) ? texts : [texts];
   return new Promise((resolve, reject) => {
     let output = '';
     const onData = (chunk: Buffer) => {
       output += chunk.toString();
-      if (output.includes(text)) {
+      if (wanted.every(text => output.includes(text))) {
         resolve(output);
       }
     };
@@ -117,7 +132,10 @@ describe('CLI', () => {
         [tsx, entry, pathname, '--port', `${port}`, '--compress'],
         { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] }
       );
-      const output = await waitForOutput(child, `127.0.0.1:${port}/`);
+      const output = await waitForOutput(child, [
+        `127.0.0.1:${port}/`,
+        'compression enabled',
+      ]);
       const response = await fetch(`http://127.0.0.1:${port}/index.html`, {
         headers: { 'Accept-Encoding': 'gzip' },
       });
