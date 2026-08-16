@@ -447,6 +447,7 @@ function expandCustomTagUsages(page: Page): void {
       // still resolve through
       const index = loadedUsageScope.parent!.children.indexOf(loadedUsageScope);
       loadedUsageScope.parent!.children.splice(index, 1);
+      loadedUsageScope.detachedUsageSite = true;
     }
 
     // read now, not when the usage was collected: expanding an outer usage

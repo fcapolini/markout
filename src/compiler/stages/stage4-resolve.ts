@@ -1,7 +1,14 @@
 import * as estraverse from 'estraverse';
 import type { Node } from 'estree';
 import type { Page } from '../ir/Page';
-import { DID_VALUE_PREFIX, EVENT_VALUE_PREFIX, HANDLE_VALUE_PREFIX, WILL_VALUE_PREFIX } from '../ir/Page';
+import {
+  DID_VALUE_PREFIX,
+  EVENT_VALUE_PREFIX,
+  FOR_DATA_VALUE,
+  FOR_EACH_VALUE,
+  HANDLE_VALUE_PREFIX,
+  WILL_VALUE_PREFIX,
+} from '../ir/Page';
 import type { Scope } from '../ir/Scope';
 import type { Value, ValueDepRef } from '../ir/Value';
 
@@ -152,6 +159,33 @@ function resolveValue(name: string, value: Value, page: Page) {
 }
 
 /**
+ * The scope a chain resolves against, which is not always the one the value
+ * lives on.
+ *
+ * A value written at a usage site keeps the scope its ELEMENT was loaded
+ * into -- spliced out of the tree, but still holding it, so its own name
+ * would resolve to itself here. That scope does not exist at runtime: the
+ * value lives on the instance and evaluates against the call site
+ * (CoreScope.hostFor). Starting one level up is what the runtime does, and
+ * what keeps the dependency this stage records true of it.
+ */
+function resolvesFrom(value: Value): Scope {
+  const scope = value.scope;
+  if (!scope.detachedUsageSite) {
+    return scope;
+  }
+  // Unless the usage replicates. `<my-tag :for-each=${rows} :x=${data} />`
+  // binds the per-item alias on the usage itself, and its own values have
+  // to see it -- which is what the runtime's LoopSiteScope is for. There the
+  // call site DOES carry the alias, so this scope is the right place to
+  // start after all.
+  if (scope.values.has(FOR_EACH_VALUE) || scope.values.has(FOR_DATA_VALUE)) {
+    return scope;
+  }
+  return scope.parent ?? scope;
+}
+
+/**
  * Records, for every scope, which scopes named themselves in it.
  *
  * A scope's name belongs where its markup was WRITTEN, and stage1-load moves
@@ -290,7 +324,7 @@ function chainSegments(node: Node): string[] | undefined {
  */
 function resolveChain(segments: string[], value: Value, page: Page): ValueDepRef | undefined {
   const via: string[] = [];
-  let target: Scope = value.scope;
+  let target: Scope = resolvesFrom(value);
 
   // every segment but the last is a candidate navigation; the last is always
   // a key, so that `this.foo` on a named scope depends on the scope-valued
