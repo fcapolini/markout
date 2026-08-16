@@ -1,8 +1,8 @@
 # Server-only values — `:server-`
 
-Status: **built** — `:server-` values, and the async render that settles
-them (steps 1 and 2 below). What remains is `std-data` itself, which needs
-nothing further from the runtime.
+Status: **built**, all three steps. `std-data` lives in
+[std-kit](../../kits/std/std-kit/README.md) and has no runtime special case
+of its own, which was the claim this whole line of work set out to test.
 
 User-facing documentation lives in
 [the syntax reference](../reference/syntax.md#server-only-values); this file
@@ -268,8 +268,8 @@ honest.
 1. ~~**`:server-` end to end, synchronous only.**~~ **Done.**
 2. ~~**Pending registry + async `renderPage`.**~~ **Done**, and smaller than
    designed — see below.
-3. **`std-data` in std-kit**, built on both, with nothing runtime-specific of
-   its own.
+3. ~~**`std-data` in std-kit**, built on both, with nothing runtime-specific
+   of its own.~~ **Done**, and it is 30 lines of markup with no new syntax.
 
 The sequencing was the argument that this decomposition was right, and it
 held: step 1 shipped before anything about fetching was settled.
@@ -345,6 +345,17 @@ outcome beats a result reconstructed from whatever happened to finish.
   the contract. Renamed to `:server-` before anything depended on it: the
   attribute now says what the doc says, which is that the expression runs on
   the server.
+
+## What the kit found
+
+Writing the component turned up one gap that is about the language rather
+than about this design: **a page cannot know its own origin**, so a served
+fetch needs an absolute URL while a `:client` one takes a plain path. The
+showcase works around it by stating `:origin` once, which also makes it
+sensitive to the dev server's port. Recorded in TODO.md, since the fix is a
+request context and that is a larger question — it would be the first thing
+in the language that varies per visitor, which is precisely what the
+props/state split exists to keep apart.
 
 ## Open questions
 

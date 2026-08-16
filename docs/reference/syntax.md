@@ -120,9 +120,6 @@ A stencil announces nothing. A `:for-each` host and a `:for-data` region with
 nothing to show evaluate none of their values, and for the same reason they
 report none of these — what a stencil is, is a prototype.
 
-Until the runtime half exists, treat them as reserved. `:on-` handlers are
-the working way to run code.
-
 ### Handlers, and the imperative corner
 
 Almost everything is declarative: state what a thing should be, and the

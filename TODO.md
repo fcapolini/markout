@@ -1,4 +1,8 @@
 
+- [ ] no request context: a page cannot know its own origin, so a `:server-` fetch has to be given an ABSOLUTE url. `kits/std/index.html` works around it by stating `:origin` once and composing (`:src=${origin + '/index-data.json'}`), which also means the showcase silently degrades to its error state if the dev server runs on a port other than 3000. A browser has no such trouble, so `:client` datasources take a plain path -- the asymmetry is the tell.
+  - What is missing is small and awkward in equal measure: the render has no handle on the request that caused it. `$request` (or origin alone) would fix the fetch case, but it is the first thing in the language that varies per visitor, which is exactly the thing the props/state split exists to keep separate -- anything read from it is uncacheable by construction, and a page that reads a header and forgets to mark the result `:server-` would render one visitor's answer and hydrate to another's.
+  - Cheaper half-step worth considering first: let the server resolve a root-relative `:server-` fetch against its own address, so `:src="/data.json"` just works and the asymmetry with `:client` disappears. That needs no new language surface, only a base the server already knows.
+
 - [ ] import as
   - `<:import src="..." as="foo" />`
   - imported code shouldn't change, but a scope named "foo" should be "interposed"
