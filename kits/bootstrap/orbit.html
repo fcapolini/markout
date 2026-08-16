@@ -36,10 +36,10 @@
     server.ts             its API, with markout as middleware
 
   A region is a component rather than an included chunk, and the difference
-  is the parameter list: `<orbit-sidebar :requests=${_requests} />` says what
-  that part of the page reads, so this file still shows where its state
-  goes. An include would splice markup that reaches in for whatever it
-  likes, with nothing recording what it touched.
+  is the parameter list: `<orbit-sidebar :requests=${app._requests} />`
+  says what that part of the page reads, so this file still shows where its
+  state goes. An include would splice markup that reaches in for whatever
+  it likes, with nothing recording what it touched.
 
   Serve it with `npm run dev:bootstrap-kit`, then open
   http://localhost:3000/orbit.html
@@ -99,12 +99,11 @@
 </head>
 
 <!---
-  ============================================================ the model
+  ============================================================= the page
 
-  Everything the application knows, declared where every part of it can be
-  read. The first block is data — what would come from a server. The second
-  is what the user has chosen. The third is derived from the first two, and
-  is the reason nothing below has to be kept in step by hand.
+  <body> carries what belongs to the DOCUMENT and nothing else: the
+  scrollspy wiring and the page background. What the application knows is
+  declared one element further in, in a scope of its own.
 -->
 <body class="bg-body-tertiary"
 
@@ -118,100 +117,114 @@
       data-bs-target="#dash-side-nav"
       data-bs-root-margin="0px 0px -60%"
       tabindex="0"
-
-      /*
-        ---------------------------------------------------------- data
-
-        Every array below comes from Orbit's API (see server.ts), fetched by
-        `std-data` WHILE THE PAGE RENDERS -- so the console arrives complete
-        and the browser asks for nothing. The sources themselves are the
-        elements at the top of the page; these are the names the rest of it
-        reads, and nothing past this block knows where they came from.
-      */
-      :services=${servicesSrc.data ?? []}
-      :deploys=${deploysSrc.data ?? []}
-      :feed=${activitySrc.data ?? []}
-      :todos=${todosSrc.data ?? []}
-
-      /*
-        Forty-eight readings, oldest first — one per hour, so that the
-        widest window still has a full window before it to be compared with
-      */
-      :traffic=${trafficSrc.data ?? []}
-      :faults=${faultsSrc.data ?? []}
-      :latencies=${latenciesSrc.data ?? []}
-
-      :endpoints=${endpointsSrc.data ?? []}
-      :zones=${zonesSrc.data ?? []}
-      :incidents=${incidentsSrc.data ?? []}
-
-      :swatches=${['#6f42c1', '#0d6efd', '#20c997', '#fd7e14', '#d63384']}
-
-      // ------------------------------------------------- what was chosen
-      :span=${24}          // the window, in readings
-      :liveFeed=${true}    // is the ticker running
-      :chosen=${null}      // the deployment the detail panel is showing
-      :forecast=${null}    // arrives a moment after load, see :did-init
-
-      /*
-        ------------------------------------------------------- derived
-        A window over each series, and the window before it — which is all
-        it takes to have a "vs. previous period" figure that is always
-        right, because there is nowhere else for it to be written down.
-      */
-      :_now=${traffic.slice(-span)}
-      :_before=${traffic.slice(-span * 2, -span)}
-      :_faultsNow=${faults.slice(-span)}
-      :_latencyNow=${latencies.slice(-span)}
-
-
-      :_requests=${_sum(_now)}
-      :_requestsDelta=${_change(_sum(_now), _sum(_before))}
-      :_errorRate=${_sum(_now) ? (_sum(_faultsNow) / _sum(_now)) * 100 : 0}
-      :_latency=${_mean(_latencyNow)}
-      :_uptime=${services.length
-        ? _sum(services.map(s => s.uptime)) / services.length
-        : 0}
-
-      :_healthy=${services.filter(s => s.state === 'ok').length}
-      :_failedDeploys=${deploys.filter(d => d.state === 'failed').length}
-      :_doneTodos=${todos.filter(t => t.done).length}
-
-
-      /*
-        ------------------------------------------------------- lifecycle
-        `:did-init` and `:will-dispose` bracket the scope: what it set up
-        when it came into being, and has to let go of when it stops
-        existing. Both are browser-only, so the served page is the same
-        whether or not the ticker ever runs.
-      */
-      :_timer=${null}
-      :_load=${null}
-      :did-init=${() => {
-        _timer = setInterval(() => {
-          if (!liveFeed) return;
-          const last = traffic[traffic.length - 1];
-          const next = Math.max(1200, Math.round(last + (Math.random() - 0.45) * 900));
-          traffic = [...traffic.slice(1), next];
-          faults = [...faults.slice(1), Math.max(2, Math.round(next / 480 + (Math.random() - 0.5) * 8))];
-          latencies = [...latencies.slice(1), Math.max(60, Math.round(96 + next / 90 + (Math.random() - 0.5) * 20))];
-        }, 2000);
-
-        // a panel whose value hasn't arrived yet: `forecast` is null until
-        // this resolves, and the placeholders below are the region that
-        // shows while it is
-        _load = setTimeout(() => {
-          forecast = { spend: 8420, budget: 12000, projected: 11180, days: 11 };
-        }, 1400);
-      }}
-      :will-dispose=${() => {
-        clearInterval(_timer);
-        clearTimeout(_load);
-      }}
 >
 
   <:include src="/orbit/sources.htm" />
 
+  <!---
+    ============================================================ the model
+
+    Everything the application knows, in one named scope rather than loose
+    on <body>. `:aka` is what makes it one: every name below reads as
+    `app.something` from anywhere else on the page, so none of them can
+    collide with a name a component declares, and a reader can tell page
+    state from local state by looking at the reference.
+
+    The first block is data — what would come from a server. The second is
+    what the user has chosen. The third is derived from the first two, and
+    is the reason nothing below has to be kept in step by hand.
+  -->
+  <span :aka="app"
+        /*
+          ---------------------------------------------------------- data
+
+          Every array below comes from Orbit's API (see server.ts), fetched by
+          `std-data` WHILE THE PAGE RENDERS -- so the console arrives complete
+          and the browser asks for nothing. The sources themselves are the
+          elements at the top of the page; these are the names the rest of it
+          reads, and nothing past this block knows where they came from.
+        */
+        :services=${servicesSrc.data ?? []}
+        :deploys=${deploysSrc.data ?? []}
+        :feed=${activitySrc.data ?? []}
+        :todos=${todosSrc.data ?? []}
+
+        /*
+          Forty-eight readings, oldest first — one per hour, so that the
+          widest window still has a full window before it to be compared with
+        */
+        :traffic=${trafficSrc.data ?? []}
+        :faults=${faultsSrc.data ?? []}
+        :latencies=${latenciesSrc.data ?? []}
+
+        :endpoints=${endpointsSrc.data ?? []}
+        :zones=${zonesSrc.data ?? []}
+        :incidents=${incidentsSrc.data ?? []}
+
+        :swatches=${['#6f42c1', '#0d6efd', '#20c997', '#fd7e14', '#d63384']}
+
+        // ------------------------------------------------- what was chosen
+        :span=${24}          // the window, in readings
+        :liveFeed=${true}    // is the ticker running
+        :chosen=${null}      // the deployment the detail panel is showing
+        :forecast=${null}    // arrives a moment after load, see :did-init
+
+        /*
+          ------------------------------------------------------- derived
+          A window over each series, and the window before it — which is all
+          it takes to have a "vs. previous period" figure that is always
+          right, because there is nowhere else for it to be written down.
+        */
+        :_now=${traffic.slice(-span)}
+        :_before=${traffic.slice(-span * 2, -span)}
+        :_faultsNow=${faults.slice(-span)}
+        :_latencyNow=${latencies.slice(-span)}
+
+
+        :_requests=${_sum(_now)}
+        :_requestsDelta=${_change(_sum(_now), _sum(_before))}
+        :_errorRate=${_sum(_now) ? (_sum(_faultsNow) / _sum(_now)) * 100 : 0}
+        :_latency=${_mean(_latencyNow)}
+        :_uptime=${services.length
+          ? _sum(services.map(s => s.uptime)) / services.length
+          : 0}
+
+        :_healthy=${services.filter(s => s.state === 'ok').length}
+        :_failedDeploys=${deploys.filter(d => d.state === 'failed').length}
+        :_doneTodos=${todos.filter(t => t.done).length}
+
+
+        /*
+          ------------------------------------------------------- lifecycle
+          `:did-init` and `:will-dispose` bracket the scope: what it set up
+          when it came into being, and has to let go of when it stops
+          existing. Both are browser-only, so the served page is the same
+          whether or not the ticker ever runs.
+        */
+        :_timer=${null}
+        :_load=${null}
+        :did-init=${() => {
+          _timer = setInterval(() => {
+            if (!liveFeed) return;
+            const last = traffic[traffic.length - 1];
+            const next = Math.max(1200, Math.round(last + (Math.random() - 0.45) * 900));
+            traffic = [...traffic.slice(1), next];
+            faults = [...faults.slice(1), Math.max(2, Math.round(next / 480 + (Math.random() - 0.5) * 8))];
+            latencies = [...latencies.slice(1), Math.max(60, Math.round(96 + next / 90 + (Math.random() - 0.5) * 20))];
+          }, 2000);
+
+          // a panel whose value hasn't arrived yet: `forecast` is null until
+          // this resolves, and the placeholders below are the region that
+          // shows while it is
+          _load = setTimeout(() => {
+            forecast = { spend: 8420, budget: 12000, projected: 11180, days: 11 };
+          }, 1400);
+        }}
+        :will-dispose=${() => {
+          clearInterval(_timer);
+          clearTimeout(_load);
+        }}
+  ></span>
 
   <!--- ================================================== navigation bar -->
   <bs-navbar :sticky
@@ -228,16 +241,16 @@
 
     <div :slot="end" class="d-flex align-items-center gap-2">
       <!--- one list: the count, the menu and the banner below all read it -->
-      <bs-dropdown :label="Alerts ${incidents.length ? `(${incidents.length})` : ''}"
+      <bs-dropdown :label="Alerts ${app.incidents.length ? `(${app.incidents.length})` : ''}"
                    :variant="secondary"
                    :outline
                    :size="sm"
                    :align="end"
                    :items=${[
-                     { header: incidents.length ? 'Open incidents' : 'Nothing open' },
-                     ...incidents.map(i => ({ name: `#${i.id} — ${i.title}`, link: '#incidents' })),
+                     { header: app.incidents.length ? 'Open incidents' : 'Nothing open' },
+                     ...app.incidents.map(i => ({ name: `#${i.id} — ${i.title}`, link: '#incidents' })),
                      { divider: true },
-                     { name: 'Acknowledge all', select: () => incidents = [] },
+                     { name: 'Acknowledge all', select: () => app.incidents = [] },
                    ]} />
 
       <bs-button :size="sm"
@@ -255,54 +268,54 @@
     <div class="row g-4">
 
       <!--- ============================================== sidebar (wide) -->
-      <orbit-sidebar :requests=${_requests} />
+      <orbit-sidebar :requests=${app._requests} />
 
       <!--- ================================================ main content -->
       <div class="col-lg-10">
 
         <!--- ---------------------------------------------- page header -->
-        <orbit-header :healthy=${_healthy}
-                      :total=${services.length}
-                      :span=${span}
-                      :live=${liveFeed}
-                      :setSpan=${(n) => span = n}
-                      :onExport=${() => exported.open = true} />
+        <orbit-header :healthy=${app._healthy}
+                      :total=${app.services.length}
+                      :span=${app.span}
+                      :live=${app.liveFeed}
+                      :setSpan=${(n) => app.span = n}
+                      :onExport=${() => toasts.exported.open = true} />
 
-        <orbit-banner :incidents=${incidents}
-                      :acknowledge=${() => incidents = []} />
+        <orbit-banner :incidents=${app.incidents}
+                      :acknowledge=${() => app.incidents = []} />
         <div class="dash-rows">
 
           <!--- ------------------------------------------------- the KPIs -->
-          <orbit-kpis :span=${span}
-                      :services=${services}
-                      :healthy=${_healthy}
-                      :requests=${_requests}
-                      :requestsDelta=${_requestsDelta}
-                      :requestsTrend=${_now}
-                      :errorRate=${_errorRate}
-                      :faultsNow=${_faultsNow}
-                      :faultsDelta=${_change(_sum(_faultsNow), _sum(faults.slice(-span * 2, -span)))}
-                      :latency=${_latency}
-                      :latencyNow=${_latencyNow}
-                      :latencyDelta=${_change(_mean(_latencyNow), _mean(latencies.slice(-span * 2, -span)))}
-                      :uptime=${_uptime} />
+          <orbit-kpis :span=${app.span}
+                      :services=${app.services}
+                      :healthy=${app._healthy}
+                      :requests=${app._requests}
+                      :requestsDelta=${app._requestsDelta}
+                      :requestsTrend=${app._now}
+                      :errorRate=${app._errorRate}
+                      :faultsNow=${app._faultsNow}
+                      :faultsDelta=${_change(_sum(app._faultsNow), _sum(app.faults.slice(-app.span * 2, -app.span)))}
+                      :latency=${app._latency}
+                      :latencyNow=${app._latencyNow}
+                      :latencyDelta=${_change(_mean(app._latencyNow), _mean(app.latencies.slice(-app.span * 2, -app.span)))}
+                      :uptime=${app._uptime} />
 
           <!--- ------------------------------------------- traffic + mix -->
-          <orbit-traffic :live=${liveFeed}
-                         :setLive=${(v) => liveFeed = v}
-                         :errorRate=${_errorRate}
-                         :requestsTrend=${_now}
-                         :faultsNow=${_faultsNow}
-                         :latencyNow=${_latencyNow}
-                         :zones=${zones}
-                         :forecast=${forecast}
-                         :latency=${_latency}
-                         :requests=${_requests} />
+          <orbit-traffic :live=${app.liveFeed}
+                         :setLive=${(v) => app.liveFeed = v}
+                         :errorRate=${app._errorRate}
+                         :requestsTrend=${app._now}
+                         :faultsNow=${app._faultsNow}
+                         :latencyNow=${app._latencyNow}
+                         :zones=${app.zones}
+                         :forecast=${app.forecast}
+                         :latency=${app._latency}
+                         :requests=${app._requests} />
 
           <!--- ---------------------------------------------- services -->
-          <orbit-services :services=${services}
-                          :endpoints=${endpoints}
-                          :healthy=${_healthy} />
+          <orbit-services :services=${app.services}
+                          :endpoints=${app.endpoints}
+                          :healthy=${app._healthy} />
 
           <!--- ------------------------------------------- deployments -->
           <!---
@@ -311,23 +324,23 @@
             also reads, and the one call that moves the selection on.
           -->
           <orbit-deployments :aka="table"
-                             :deploys=${deploys}
-                             :failed=${_failedDeploys}
-                             :chosen=${chosen}
-                             :choose=${(row) => { chosen = row; detail.open = true; }} />
+                             :deploys=${app.deploys}
+                             :failed=${app._failedDeploys}
+                             :chosen=${app.chosen}
+                             :choose=${(row) => { app.chosen = row; detail.open = true; }} />
 
           <!--- ---------------------------------------------- incidents -->
-          <orbit-incidents :incidents=${incidents}
+          <orbit-incidents :incidents=${app.incidents}
                            :resolve=${(id) => {
-                             incidents = incidents.filter(x => x.id !== id);
-                             resolved.open = true;
+                             app.incidents = app.incidents.filter(x => x.id !== id);
+                             toasts.resolved.open = true;
                            }} />
 
           <!--- ------------------------------------ activity and tasks -->
-          <orbit-activity :feed=${feed}
-                          :todos=${todos}
-                          :doneTodos=${_doneTodos}
-                          :setTodos=${(next) => todos = next} />
+          <orbit-activity :feed=${app.feed}
+                          :todos=${app.todos}
+                          :doneTodos=${app._doneTodos}
+                          :setTodos=${(next) => app.todos = next} />
 
           <!--- ----------------------------------------------- settings -->
           <!---
@@ -337,13 +350,13 @@
             which quote the alert address it publishes.
           -->
           <orbit-settings :aka="prefs"
-                          :swatches=${swatches}
+                          :swatches=${app.swatches}
                           :accent=${accent}
                           :setAccent=${(hex) => accent = hex}
                           :dense=${dense}
                           :setDense=${(on) => dense = on}
-                          :errorRate=${_errorRate}
-                          :onSave=${() => saved.open = true} />
+                          :errorRate=${app._errorRate}
+                          :onSave=${() => toasts.saved.open = true} />
 
         </div>
       </div>
@@ -382,10 +395,10 @@
     selection.
   -->
   <bs-offcanvas :aka="detail"
-                :title=${chosen ? `Deployment ${chosen.id}` : 'Deployment'}
+                :title=${app.chosen ? `Deployment ${app.chosen.id}` : 'Deployment'}
                 :placement="end"
                 :scroll>
-    <div :for-data=${chosen}>
+    <div :for-data=${app.chosen}>
       <div class="d-flex align-items-center gap-2 mb-3">
         <dash-dot :state=${data.state} />
         <bs-badge :variant=${data.env === 'production' ? 'dark' : 'secondary'}>${data.env}</bs-badge>
@@ -435,10 +448,10 @@
         <bs-button :variant="danger"
                    :outline
                    :on-click=${() => {
-                     deploys = deploys.filter(x => x.id !== data.id);
-                     chosen = null;
+                     app.deploys = app.deploys.filter(x => x.id !== data.id);
+                     app.chosen = null;
                      detail.open = false;
-                     removed.open = true;
+                     toasts.removed.open = true;
                    }}>Delete record</bs-button>
       </div>
     </div>
@@ -459,7 +472,7 @@
     <bs-select :aka="ndService"
                :label="Service"
                :placeholder="Choose a service…"
-               :options=${services.map(s => s.name)} />
+               :options=${app.services.map(s => s.name)} />
 
     <bs-select :aka="ndEnv"
                :label="Environment"
@@ -487,8 +500,8 @@
       <bs-button :variant="secondary" :dismiss="modal">Cancel</bs-button>
       <bs-button :disabled=${!ndService.value || ndCommit._invalid || !ndCommit.value}
                  :on-click=${() => {
-                   deploys = [{
-                     id: `d-${2482 + deploys.length}`,
+                   app.deploys = [{
+                     id: `d-${2482 + app.deploys.length}`,
                      service: ndService.value,
                      env: ndEnv.value,
                      commit: ndCommit.value,
@@ -496,22 +509,31 @@
                      state: ndMigrate.checked ? 'queued' : 'running',
                      secs: 0,
                      ago: 0,
-                   }, ...deploys];
-                   feed = [{
+                   }, ...app.deploys];
+                   app.feed = [{
                      who: 'you',
                      what: `started a deployment of ${ndService.value} to ${ndEnv.value}`,
                      ago: 0,
                      kind: 'info',
-                   }, ...feed];
+                   }, ...app.feed];
                    // newest first, first page, so it is where it is looked for
                    table.showNewest();
                    newDeploy.open = false;
-                   shipped.open = true;
+                   toasts.shipped.open = true;
                  }}>Deploy</bs-button>
     </div>
   </bs-modal>
 
   <!--- ---------------------------------------------------- the toasts -->
+  <!---
+    Five of one kind of thing, so they get a name of their own. The `:aka`
+    goes on a plain wrapper rather than on `bs-toast-container`: a name
+    written inside a component's slot belongs to the scope the TAG was
+    written in, so `<div :aka="toasts">` out here is what these register
+    against. Putting it on the container instead would read as though it
+    owned them, and `toasts.saved` would be a compile error saying so.
+  -->
+  <div :aka="toasts">
   <bs-toast-container :placement="bottom-end">
     <bs-toast :aka="shipped" :title="Deployment queued" :time="just now" :variant="success">
       It is at the top of the table, and in the activity feed.
@@ -522,22 +544,23 @@
     </bs-toast>
 
     <bs-toast :aka="resolved" :title="Incident resolved" :time="just now">
-      ${incidents.length} still open.
+      ${app.incidents.length} still open.
     </bs-toast>
 
     <bs-toast :aka="removed" :title="Record deleted" :time="just now" :variant="warning">
-      ${deploys.length} deployments left.
+      ${app.deploys.length} deployments left.
     </bs-toast>
 
     <bs-toast :aka="exported" :title="Export started" :time="just now">
       The file will be mailed to ${prefs.address} when it is ready.
     </bs-toast>
   </bs-toast-container>
+  </div>
 
   <!--- ==================================================== the footer -->
-  <orbit-footer :services=${services}
-                :deploys=${deploys}
-                :requests=${_requests} />
+  <orbit-footer :services=${app.services}
+                :deploys=${app.deploys}
+                :requests=${app._requests} />
 
 </body>
 
