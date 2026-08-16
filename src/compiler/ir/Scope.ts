@@ -66,6 +66,30 @@ export class Scope {
     return this.lexicalParent ?? this.parent;
   }
 
+  /**
+   * Where a lookup that STARTED here carries on -- the compile-time mirror
+   * of CoreScope.lexicalParent().
+   *
+   * The runtime keeps two questions apart that `lexical()` answers with one.
+   * Where a scope's `:aka` name is registered is the scope its tag was
+   * WRITTEN in (CoreScope.nameSiteScope), and that is what `lexical()`
+   * models -- correctly, since it is how a name is found at all. Where a
+   * lookup CONTINUES is a different chain, and for a custom-tag instance it
+   * is the page root: a definition must see only what was visible where it
+   * was defined, never what its call site happens to declare.
+   *
+   * Conflating them let `outer.inner` resolve by walking out of an instance
+   * into the markup around it -- a path the runtime has no edge for. So
+   * `<my-box :aka="toasts"><bs-toast :aka="shipped" /></my-box>` accepted
+   * `toasts.shipped` at compile time and failed at link time, two scopes
+   * from anything naming either of them. `shipped` is registered at the
+   * call site (its tag was written there, in a slot) and reachable as
+   * itself; through the instance it is reachable from nowhere.
+   */
+  resolvesVia(): Scope | undefined {
+    return this.usesTemplate !== undefined ? this.page.main : this.lexical();
+  }
+
   constructor(page: Page, parent?: Scope, e?: ServerElement, name?: string) {
     this.page = page;
     this.id = page.createScopeId();
