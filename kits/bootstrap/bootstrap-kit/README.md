@@ -35,6 +35,14 @@ renders its pages. Orbit reads that API with `std-data` from the std kit,
 which fetches while the page renders — so the served console is complete and
 the browser asks for nothing.
 
+Orbit is four files, which is the shape an application takes: `demo.html` for
+its state, layout and logic; `orbit/components.htm` for the tags it defines
+on top of the kit's; `orbit/sources.htm` for where its data comes from; and
+`server.ts` for its API. The first is imported, the second included — a
+definition wants to arrive once per page however often it is named, and an
+instance wants to be spliced exactly where it is written, because that is
+where its name resolves.
+
 ## Tests
 
 `test/kits/bootstrap-kit.test.ts`, in two tiers:
