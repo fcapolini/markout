@@ -53,6 +53,7 @@ import {
   PROP_VALUE_PREFIX,
   SERVER_VALUE_ATTR_PREFIX,
 } from '../ir/Page';
+import { COMPTIME_PREFIX } from './stage5-comptime';
 import { NodeType } from '../../html/dom';
 import { ATOMIC_TEXT_TAGS } from '../../html/parser';
 import { DOM_ID_ATTR, DOM_TEXT_MARKER1, DOM_TEXT_MARKER2, DOM_USE_MARKER } from '../../runtime/web/web-context';
@@ -1201,6 +1202,19 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
         page,
         `"${SPECIAL_ATTR_PREFIX}${SERVER_VALUE_ATTR_PREFIX}" cannot be combined with ` +
           `"${SPECIAL_ATTR_PREFIX}${prefix}": mark the value it reads instead`,
+        loc
+      );
+      continue;
+    }
+    // a `k_` value is substituted into its readers by stage5 and never
+    // reaches the runtime as a cell, so there is nothing left for the
+    // server to send
+    if (serverOnly && suffix.startsWith(COMPTIME_PREFIX)) {
+      addError(
+        page,
+        `"${SPECIAL_ATTR_PREFIX}${SERVER_VALUE_ATTR_PREFIX}${suffix}" is both ` +
+          `compile-time and server-only: a "${COMPTIME_PREFIX}" value is ` +
+          `substituted into its readers, so nothing of it exists to send`,
         loc
       );
       continue;
