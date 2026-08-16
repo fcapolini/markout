@@ -1,0 +1,16 @@
+<lib>
+
+<:define tag="std-data:script"
+         :src=""
+         :args="${null}
+         :data=${{}}
+         :err=${null}
+
+         _request=${
+          fetch(args)
+            .then((res) => data = res)
+            .catch((err) => this.err = err);
+         }
+/>
+
+</lib>
