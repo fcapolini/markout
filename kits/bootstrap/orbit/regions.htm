@@ -1,0 +1,67 @@
+<!---
+  Orbit's regions.
+
+  Each is a component rather than an included chunk, and the difference is
+  the parameter list. A usage site says what the region reads, so
+  `orbit.html` still shows where its state goes; an include would splice
+  markup that reaches into <body> for whatever it likes, with nothing
+  recording which of the page's forty-odd values it touched.
+
+  What they do NOT take is the page-wide helpers. `_num`, `_ago`, `toneOf`
+  and the rest live on <html>, where a definition can see them, because
+  passing a formatter to every region would be noise rather than an
+  interface.
+-->
+<lib>
+  <:import src="/bootstrap-kit/all.htm" />
+  <:import src="/orbit/components.htm" />
+
+  <!---
+    The nav rail and the plan meter, beside the content on wide screens.
+
+    Its root carries the column classes the page used to write, so the
+    markup it produces is what was there before -- a component whose root
+    IS the region rather than a wrapper around it.
+  -->
+  <:define tag="orbit-sidebar:div"
+           class="col-lg-2 d-none d-lg-block dash-side"
+           :requests=${0}>
+          <bs-nav :vertical
+                  :variant="pills"
+                  :extra="mb-4"
+                  id="dash-side-nav"
+                  :items=${[
+                    { name: 'Overview', link: '#overview' },
+                    { name: 'Traffic', link: '#traffic' },
+                    { name: 'Services', link: '#services' },
+                    { name: 'Deployments', link: '#deployments' },
+                    { name: 'Incidents', link: '#incidents' },
+                    { name: 'Activity', link: '#activity' },
+                    { name: 'Settings', link: '#settings' },
+                  ]} />
+
+          <dash-panel :heading="Plan usage">
+            <div class="small text-body-secondary d-flex justify-content-between">
+              <span>Requests</span>
+              <span>${_compact(requests)} / 2M</span>
+            </div>
+            <bs-progress :value=${Math.min(100, (requests / 2000000) * 100)}
+                         :height="0.5rem"
+                         :name="Request quota"
+                         :extra="mb-3" />
+
+            <div class="small text-body-secondary d-flex justify-content-between">
+              <span>Seats</span>
+              <span>18 / 25</span>
+            </div>
+            <bs-progress :value=${72}
+                         :variant="info"
+                         :height="0.5rem"
+                         :name="Seats used" />
+
+            <bs-link :href="#settings"
+                     :variant="primary"
+                     :extra="small d-inline-block mt-3">Manage plan</bs-link>
+          </dash-panel>
+  </:define>
+</lib>
