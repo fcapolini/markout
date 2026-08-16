@@ -236,6 +236,41 @@ function isDynamic(attr: ServerAttribute): boolean {
 }
 
 /**
+ * The two attributes that name something at COMPILE time rather than
+ * holding a value: `:aka` and `:slot`.
+ *
+ * Both are ordinary identifiers rather than reserved words, which is a
+ * deliberate trade -- `:aka` and `:slot` say what they mean and no reserved
+ * word does -- and the price is that a page cannot declare values of those
+ * names. That price is only worth paying if taking the name is loud:
+ * `:slot=${x}` used to stringify the expression into a slot target and
+ * address `[object Object]`, which matched no slot and dropped the content
+ * in silence.
+ *
+ * Neither could work as an expression anyway. A scope's name is resolved by
+ * the compiler, and which slot content fills is decided while the tree is
+ * being assembled -- long before anything is evaluated.
+ */
+function literalOnly(
+  page: Page,
+  attr: ServerAttribute,
+  attrName: string,
+  what: string
+): boolean {
+  if (!isDynamic(attr)) {
+    return true;
+  }
+  addError(
+    page,
+    `"${SPECIAL_ATTR_PREFIX}${attrName}" takes a literal ${what}, not an ` +
+      `expression: it is resolved when the page is compiled, so there is ` +
+      `nothing to evaluate it against`,
+    attr.valueLoc ?? attr.loc
+  );
+  return false;
+}
+
+/**
  * Whether this element's own markup has to be kept out of the live tree.
  *
  * True of both replication families, for the same reason and with different
@@ -1045,6 +1080,7 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
       // addressed to a slot, not a value of its own: kept aside here because
       // the `:` attributes are stripped at the end of this function, long
       // before expandCustomTagUsages() gets to read it
+      if (!literalOnly(page, attr, SLOT_TARGET_ATTR, 'slot name')) continue;
       page.slotTargets.set(e, `${attr.value ?? ''}`);
       continue;
     }
@@ -1053,6 +1089,7 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
         addError(page, `Cannot redefine scope name: "${scope.name}"`, attr.loc);
         continue;
       }
+      if (!literalOnly(page, attr, SCOPE_NAME_ATTR, 'name')) continue;
       scope.name = validateName(page, attr.value, attr.valueLoc, NAME_CHARS.plain, true);
       continue;
     }
