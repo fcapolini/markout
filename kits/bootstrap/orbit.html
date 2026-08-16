@@ -29,10 +29,17 @@
   Three files, which is the shape an application takes rather than a
   convenience:
 
-    orbit.html            this page — its state, its layout, its logic
-    orbit/components.htm the tags it defines on top of the kit's
-    orbit/sources.htm    where its data comes from
-    server.ts            its API, with markout as middleware
+    orbit.html            its state, its logic, and what each region reads
+    orbit/regions.htm     the regions themselves, as components
+    orbit/components.htm  the small tags those are built from
+    orbit/sources.htm     where its data comes from
+    server.ts             its API, with markout as middleware
+
+  A region is a component rather than an included chunk, and the difference
+  is the parameter list: `<orbit-sidebar :requests=${_requests} />` says what
+  that part of the page reads, so this file still shows where its state
+  goes. An include would splice markup that reaches in for whatever it
+  likes, with nothing recording what it touched.
 
   Serve it with `npm run dev:bootstrap-kit`, then open
   http://localhost:3000/orbit.html
@@ -57,7 +64,26 @@
         ok: 'success', healthy: 'success', shipped: 'success',
         degraded: 'warning', queued: 'secondary', running: 'info',
         down: 'danger', failed: 'danger',
-      })[s] ?? 'secondary'}>
+      })[s] ?? 'secondary'}
+
+      /*
+        ------------------------------------------------------ formatting
+        Ordinary functions in ordinary values. `Intl` and `Math` are on the
+        scope chain's last link, so an expression is plain JavaScript.
+
+        Here rather than on <body> for the same reason `toneOf` is: a
+        component's expressions resolve against the page scope, so this is
+        where the regions below can see them. Passing a number formatter to
+        every region would be noise rather than an interface.
+      */
+      :_num=${(n) => Intl.NumberFormat('en-US').format(Math.round(n))}
+      :_compact=${(n) => Intl.NumberFormat('en-US', {
+        notation: 'compact', maximumFractionDigits: 1 }).format(n)}
+      :_ago=${(m) => m < 1 ? 'just now'
+        : m < 60 ? `${Math.round(m)}m ago`
+        : m < 1440 ? `${Math.round(m / 60)}h ago`
+        : `${Math.round(m / 1440)}d ago`}
+      :_secs=${(s) => s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`}>
 
 <head>
   <:import src="/bootstrap-kit/all.htm" />
@@ -66,6 +92,7 @@
   <meta name="description"
         content="A dashboard application built with the Markout Bootstrap kit.">
   <:import src="/orbit/components.htm" />
+  <:import src="/orbit/regions.htm" />
 </head>
 
 <!---
@@ -153,19 +180,6 @@
       :_failedDeploys=${deploys.filter(d => d.state === 'failed').length}
       :_doneTodos=${todos.filter(t => t.done).length}
 
-      /*
-        ------------------------------------------------------ formatting
-        Ordinary functions in ordinary values. `Intl` and `Math` are on the
-        scope chain's last link, so an expression is plain JavaScript.
-      */
-      :_num=${(n) => Intl.NumberFormat('en-US').format(Math.round(n))}
-      :_compact=${(n) => Intl.NumberFormat('en-US', {
-        notation: 'compact', maximumFractionDigits: 1 }).format(n)}
-      :_ago=${(m) => m < 1 ? 'just now'
-        : m < 60 ? `${Math.round(m)}m ago`
-        : m < 1440 ? `${Math.round(m / 60)}h ago`
-        : `${Math.round(m / 1440)}d ago`}
-      :_secs=${(s) => s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`}
 
       /*
         --------------------------------------------------------- actions
@@ -260,45 +274,7 @@
     <div class="row g-4">
 
       <!--- ============================================== sidebar (wide) -->
-      <div class="col-lg-2 d-none d-lg-block dash-side">
-        <bs-nav :vertical
-                :variant="pills"
-                :extra="mb-4"
-                id="dash-side-nav"
-                :items=${[
-                  { name: 'Overview', link: '#overview' },
-                  { name: 'Traffic', link: '#traffic' },
-                  { name: 'Services', link: '#services' },
-                  { name: 'Deployments', link: '#deployments' },
-                  { name: 'Incidents', link: '#incidents' },
-                  { name: 'Activity', link: '#activity' },
-                  { name: 'Settings', link: '#settings' },
-                ]} />
-
-        <dash-panel :heading="Plan usage">
-          <div class="small text-body-secondary d-flex justify-content-between">
-            <span>Requests</span>
-            <span>${_compact(_requests)} / 2M</span>
-          </div>
-          <bs-progress :value=${Math.min(100, (_requests / 2000000) * 100)}
-                       :height="0.5rem"
-                       :name="Request quota"
-                       :extra="mb-3" />
-
-          <div class="small text-body-secondary d-flex justify-content-between">
-            <span>Seats</span>
-            <span>18 / 25</span>
-          </div>
-          <bs-progress :value=${72}
-                       :variant="info"
-                       :height="0.5rem"
-                       :name="Seats used" />
-
-          <bs-link :href="#settings"
-                   :variant="primary"
-                   :extra="small d-inline-block mt-3">Manage plan</bs-link>
-        </dash-panel>
-      </div>
+      <orbit-sidebar :requests=${_requests} />
 
       <!--- ================================================ main content -->
       <div class="col-lg-10">
