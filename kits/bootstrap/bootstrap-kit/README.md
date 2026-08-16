@@ -141,10 +141,19 @@ does is written `:for-data=${header}`, and its body may read that value as
 `data`. Nothing in there evaluates while the value is absent, which is what
 makes `${data.name}` safe to write.
 
-Boolean flags still can't use it — `:for-data` shows for anything that isn't
-`null`, so `false` would render — so a dozen regions in the kit are still
-written `:for-each=${dismissible ? [1] : []}`. Those are waiting on an `:if`
-rather than working around `:for-data`.
+A boolean flag needs mapping to null, since `:for-data` shows for anything
+that isn't `null` and `false` would render:
+
+```html
+<bs-close :for-data=${dismissible || null} />
+<span :for-data=${!split || null}>${label}</span>
+```
+
+That reads worse than an `:if` would, and an `:if` is still the answer. But
+it beats what the kit used to write — `:for-each=${dismissible ? [1] : []}`,
+a one-item list standing in for a condition — and it costs less at runtime,
+since a region is one optional scope rather than a replication host with an
+array, a stencil and a clone.
 
 Optional parts of a component are parameters, and a named slot where markup
 belongs — `bs-card`'s header is both: `:header` sets the text, and a

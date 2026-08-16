@@ -213,6 +213,25 @@ export class CoreScope {
     }
   }
 
+  /**
+   * Builds the subtree a stencil skipped, once it stops being one.
+   *
+   * A `:for-data` region is a stencil until it has something to show, so at
+   * construction its children are not built -- and nothing built them
+   * later. A `:for-each` inside one still worked, because replicas are
+   * cloned from props on demand and never needed the prototype; an ordinary
+   * child scope did not exist at all, so `<div :for-data=${true}><i
+   * :n=${1}>${n}</i></div>` rendered an empty `<i>`.
+   *
+   * Only ever grows a subtree that was never there: hiding a region keeps
+   * its scopes, since showing and hiding are meant to preserve what the DOM
+   * was holding.
+   */
+  protected buildSubtree() {
+    if (this.children.length || !this.props.children?.length) return;
+    this.props.children.forEach(p => this.ctx.newScope(p, this.ctx, this));
+  }
+
   dispose() {
     if (!this.parent) return;
     // detaching before disposing, deepest first: a scope takes apart what it
@@ -627,6 +646,9 @@ export class CoreScope {
       // this scope counts as rendering
       that.showing = true;
       that.showView();
+      // after showView, so anything built here finds its element in the
+      // page rather than parked in the template
+      that.buildSubtree();
       that.ctx.refresh(that);
       // the markup is back in the page without any scope having been built,
       // so nothing queued itself; the region says so on their behalf

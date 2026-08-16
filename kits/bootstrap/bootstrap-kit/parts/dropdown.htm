@@ -47,7 +47,7 @@
     <!--- a split button keeps the label clickable on its own -->
     <button type="button"
             class=${_btnClass}
-            :for-each=${split ? [1] : []}>${label}</button>
+            :for-data=${split || null}>${label}</button>
 
     <button type="button"
             id=${_id}
@@ -56,9 +56,9 @@
             :class-dropdown-toggle-split=${split}
             data-bs-toggle="dropdown"
             aria-expanded="false">
-      <span :for-each=${split ? [] : [1]}>${label}</span>
+      <span :for-data=${!split || null}>${label}</span>
       <span class="visually-hidden"
-            :for-each=${split ? [1] : []}>Toggle dropdown</span>
+            :for-data=${split || null}>Toggle dropdown</span>
     </button>
 
     <ul class="dropdown-menu"
@@ -67,13 +67,13 @@
         aria-labelledby=${_id}>
       <li :for-each=${items} :for-as="item">
         <hr class="dropdown-divider"
-            :for-each=${item.divider ? [1] : []}>
+            :for-data=${item.divider || null}>
 
         <h6 class="dropdown-header"
             :for-data=${item.header}>${item.header}</h6>
 
         <a class="dropdown-item"
-           :for-each=${item.divider || item.header ? [] : [1]}
+           :for-data=${!(item.divider || item.header) || null}
            :class-active=${item.active}
            :class-disabled=${item.disabled}
            href=${item.link ?? null}

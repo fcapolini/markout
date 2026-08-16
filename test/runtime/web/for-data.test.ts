@@ -193,3 +193,71 @@ describe(':for-data', () => {
     ]);
   });
 });
+
+/**
+ * A region's own child scopes.
+ *
+ * These are built lazily, because a `:for-data` is a stencil until it has
+ * something to show and a stencil deliberately does not build its subtree --
+ * evaluating against an item that is never there is the failure the
+ * directive exists to prevent. What was missing is the other half: growing
+ * that subtree once the region stops being a stencil.
+ *
+ * `:for-each` inside one always worked, which is why this survived so long:
+ * replicas are cloned from props on demand and never needed the prototype.
+ * An ordinary child scope simply did not exist, so its bindings had nowhere
+ * to write and the region rendered empty -- silently, since nothing failed.
+ */
+describe(':for-data: child scopes', () => {
+  it('builds them when the region is showing from the first evaluation', () => {
+    const r = run('<html><body><div :for-data=${true}><i :n=${41 + 1}>${n}</i></div></body></html>');
+    expect(r.errors).toStrictEqual([]);
+    expect(r.runtime).toStrictEqual([]);
+    expect(r.markup()).toContain('<i><!---t0-->42<!---/--></i>');
+  });
+
+  it('builds them when the region arrives later', () => {
+    const r = run(
+      '<html :on=${null}><body><div :for-data=${on}><i :n=${7}>${n}</i></div></body></html>'
+    );
+    const live = () => r.markup().slice(r.markup().indexOf('</template>'));
+    expect(live()).not.toContain('<i');
+    r.ctx!.root.proxy['on'] = true;
+    expect(live()).toContain('<i><!---t0-->7<!---/--></i>');
+  });
+
+  it('keeps them across a hide and a show', () => {
+    // the element is moved rather than rebuilt, so what the DOM was holding
+    // survives -- and so should the scopes that drive it
+    const r = run(
+      '<html :on=${true}><body><div :for-data=${on}><i :n=${3}>${n}</i></div></body></html>'
+    );
+    const live = () => r.markup().slice(r.markup().indexOf('</template>'));
+    expect(live()).toContain('<i><!---t0-->3<!---/--></i>');
+    r.ctx!.root.proxy['on'] = null;
+    expect(live()).not.toContain('<i');
+    r.ctx!.root.proxy['on'] = true;
+    expect(live()).toContain('<i><!---t0-->3<!---/--></i>');
+  });
+
+  it('reads the region item from a child scope', () => {
+    const r = run(
+      '<html :u=${{ name: "Ada" }}><body><div :for-data=${u}>' +
+        '<i :who=${data.name}>${who}</i></div></body></html>'
+    );
+    expect(r.runtime).toStrictEqual([]);
+    expect(r.markup()).toContain('<i><!---t0-->Ada<!---/--></i>');
+  });
+
+  it('still evaluates nothing while there is nothing to show', () => {
+    // the guarantee the directive is for: a child scope reading `data.name`
+    // must not run against an absent item
+    const r = run(
+      '<html :u=${null}><body><div :for-data=${u}>' +
+        '<i :who=${data.name}>${who}</i></div></body></html>'
+    );
+    expect(r.runtime).toStrictEqual([]);
+    const body = r.markup();
+    expect(body.slice(body.indexOf('</template>'))).not.toContain('<i');
+  });
+});

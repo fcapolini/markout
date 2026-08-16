@@ -55,7 +55,7 @@
               aria-selected=${item.active ? 'true' : 'false'}>${item.name}</button>
 
       <a class="nav-link"
-         :for-each=${toggle ? [] : [1]}
+         :for-data=${!toggle || null}
          :class-active=${item.active}
          :class-disabled=${item.disabled}
          href=${item.link ?? null}
