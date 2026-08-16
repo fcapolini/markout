@@ -3,7 +3,7 @@ import type { CoreScopeProps } from "../runtime/core/core-scope";
 import type { PageState, RuntimeError } from "../runtime/core/core-context";
 import { STATE_GLOBAL } from "../runtime/core/core-context";
 import type { Page } from "../compiler/ir/Page";
-import { ServerText } from "../html/server-dom";
+import { ServerText, type ServerNode } from "../html/server-dom";
 import { escapeScriptText, serialize, UnserializableError } from "./serialize";
 
 /**
@@ -82,12 +82,23 @@ export async function renderPage(
  * the value that failed is `undefined` there. It is reported either way --
  * a page that silently sent less than it meant to would show the failure as
  * a binding that renders wrong, far from its cause.
+ *
+ * Idempotent, which the rest of a render already was: a compiled page is
+ * cached and rendered once per request, so everything here has to land in
+ * the same shape every time rather than accumulate. Writing the markup is
+ * naturally repeatable -- the second render overwrites what the first one
+ * wrote, which is the same thing hydration does in the browser -- and this
+ * was the one place that was not: it APPENDED, so a page served twice
+ * carried two `window.__MARKOUT_STATE = ...` assignments, and served ten
+ * times carried ten.
  */
 function emitState(page: Page, state: PageState, errors: RuntimeError[]) {
   const script = page.stateScript;
   if (!script) {
     return;
   }
+  // whatever a previous render left here answers for the previous request
+  [...script.childNodes].forEach(n => script.removeChild(n));
   const scopes: string[] = [];
   for (const [uid, values] of Object.entries(state)) {
     const parts: string[] = [];
@@ -112,9 +123,21 @@ function emitState(page: Page, state: PageState, errors: RuntimeError[]) {
   }
   if (!scopes.length) {
     // nothing to send: leave no empty script behind, which is the common
-    // case for any page that declares no `:server-` value at all
-    script.parentElement?.removeChild(script);
+    // case for any page that declares no `:server-` value at all. Where it
+    // stood is remembered, because a later render of this same page may
+    // have something to send and would otherwise have nowhere to put it
+    if (script.parentNode) {
+      page.stateScriptAt = {
+        parent: script.parentNode,
+        before: (script.nextSibling as ServerNode | null) ?? undefined,
+      };
+      script.parentNode.removeChild(script);
+    }
     return;
+  }
+  if (!script.parentNode && page.stateScriptAt) {
+    const { parent, before } = page.stateScriptAt;
+    before ? parent.insertBefore(script, before) : parent.appendChild(script);
   }
   script.appendChild(
     new ServerText(

@@ -1,5 +1,5 @@
 import { PageError, Source } from '../../html/parser';
-import type { ServerElement } from '../../html/server-dom';
+import type { ServerContainerNode, ServerElement, ServerNode } from '../../html/server-dom';
 import type { Node } from 'estree';
 import { DIRECTIVE_TAG_PREFIX } from '../../html/dom';
 import { Scope } from './Scope';
@@ -224,6 +224,9 @@ export class Page {
    * arrive too late. Removed again if the render produces nothing to send.
    */
   stateScript?: ServerElement;
+  /** where `stateScript` stood, if a render took it out for having nothing
+   *  to say -- so a later render of the same cached page can put it back */
+  stateScriptAt?: { parent: ServerContainerNode; before?: ServerNode };
 
   constructor(source: Source, global?: Scope) {
     this.source = source;
