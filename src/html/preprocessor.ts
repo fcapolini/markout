@@ -68,8 +68,14 @@ export class Preprocessor {
         if (p.childNodes[i].nodeType === NodeType.ELEMENT) {
           const e = p.childNodes[i] as dom.ServerElement;
           if (e.tagName === GROUP_DIRECTIVE_TAG) {
-            e.childNodes.forEach(n => (n.parentElement = p));
-            p.childNodes.splice(i, 1, ...e.childNodes);
+            // copied first: retargeting below must not read a list that the
+            // splice is about to consume
+            const kids = [...e.childNodes];
+            kids.forEach(n => {
+              n.parentElement = p;
+              (n as dom.ServerNode).parentNode = p;
+            });
+            p.childNodes.splice(i, 1, ...kids);
             continue;
           }
           flattenGroups(e);
@@ -247,6 +253,7 @@ export class Preprocessor {
       new dom.ServerText(e.ownerDocument, loaded.text, d.node.loc, false)
     );
     e.parentElement = d.parent;
+    (e as dom.ServerNode).parentNode = d.parent;
     d.parent.childNodes.splice(i, 0, e);
   }
 
@@ -295,7 +302,22 @@ export class Preprocessor {
         nn.pop();
       }
     }
-    nn.forEach(n => (n.parentElement = d.parent));
+    // BOTH pointers, and that is the whole of this fix.
+    //
+    // `parentNode` is what insertBefore/removeChild read, and what a node's
+    // membership actually is; `parentElement` only answers "which element
+    // contains me". Setting one and splicing by hand left every included
+    // node listed by the page's body while still claiming the included
+    // file's root as its parent -- so anything that later tried to replace
+    // one operated on a document nobody serves. Custom-tag usages written
+    // in an included file were never expanded for exactly that reason:
+    // stage1 removed the tag from the fragment it came from and left the
+    // copy in the page, which then rendered as an unknown element with a
+    // scope and no instance behind it, in silence.
+    nn.forEach(n => {
+      n.parentElement = d.parent;
+      (n as dom.ServerNode).parentNode = d.parent;
+    });
     d.parent.childNodes.splice(i, 0, ...nn);
   }
 
