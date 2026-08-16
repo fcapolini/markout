@@ -872,6 +872,29 @@ describe('stage1-loader', () => {
       expect(outer.children.some(c => c.usesTemplate === inner.id)).toBe(true);
     });
 
+    it('refuses an :aka on the <:define> itself', () => {
+      // it named nothing: the attribute was copied onto the base element and
+      // then dropped, so every use of the name failed to resolve while the
+      // one line that caused it looked like the line that should have
+      // worked. A definition is a tag, and a name on a tag would answer for
+      // every instance of it at once
+      const page = runLoaderFromMarkup(
+        `<html><head><:define tag="my-box:div" :aka="boxy" :n=\${7}><:slot /></:define></head>` +
+        `<body><my-box /></body></html>`
+      );
+      expect(page.errors).toHaveLength(1);
+      expect(page.errors[0].msg).toMatch(/cannot carry ":aka"/);
+    });
+
+    it('still takes an :aka on a usage site, and inside a body', () => {
+      const page = runLoaderFromMarkup(
+        `<html><head><:define tag="my-box:div" :n=\${7}>` +
+        `<span :aka="inner" :k=\${1}></span></:define></head>` +
+        `<body><my-box :aka="mine" /></body></html>`
+      );
+      expect(page.errors).toStrictEqual([]);
+    });
+
     it('refuses a definition based on another definition', () => {
       // it reads like specialization and is not implemented. What made it
       // worth an error of its own is what it did instead: the base tag is
