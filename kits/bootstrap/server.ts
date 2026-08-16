@@ -64,8 +64,22 @@ export function createOrbitApp(props: OrbitAppProps): Express {
 
 if (require.main === module) {
   const port = Number(process.env.PORT) || 3000;
-  createOrbitApp({ docroot: __dirname, dev: true }).listen(port, () => {
+  // `--prod` serves what a deployed page weighs.
+  //
+  // Worth a flag rather than a comment somewhere: dev mode keeps every
+  // expression readable, which costs about five times the props of a
+  // compiled build, and this is the page anyone measuring markout will
+  // reach for. Left as the only option, the easy number to get is the
+  // wrong one by a factor nobody would guess.
+  const dev = !process.argv.includes('--prod');
+  createOrbitApp({ docroot: __dirname, dev }).listen(port, () => {
     console.log(`bootstrap kit  http://127.0.0.1:${port}/index.html`);
     console.log(`orbit          http://127.0.0.1:${port}/orbit.html`);
+    console.log(
+      dev
+        ? 'mode           dev -- readable expressions, NOT representative of what a\n' +
+          '               deployed page weighs. Re-run with --prod to measure.'
+        : 'mode           prod -- what a deployed page weighs'
+    );
   });
 }
