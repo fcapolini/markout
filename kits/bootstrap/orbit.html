@@ -280,55 +280,12 @@
       <div class="col-lg-10">
 
         <!--- ---------------------------------------------- page header -->
-        <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
-          <div>
-            <bs-breadcrumb :extra="small"
-                           :items=${[
-                             { name: 'Orbit', link: '#overview' },
-                             { name: 'Production', link: '#overview' },
-                             { name: 'Console' },
-                           ]} />
-            <h1 class="h3 mb-0 mt-1">Operations</h1>
-            <p class="text-body-secondary mb-0">
-              ${_healthy} of ${services.length} services healthy ·
-              last ${span} readings ·
-              <span :class-text-success=${liveFeed}
-                    :class-text-body-secondary=${!liveFeed}>${liveFeed ? 'live' : 'paused'}</span>
-            </p>
-          </div>
-
-          <div class="d-flex flex-wrap align-items-center gap-2">
-            <!---
-              The window is one number and these buttons write it. Every
-              figure and chart is an expression over it, so this is the
-              whole implementation of "change the range".
-            -->
-            <bs-button-group :label="Window" :size="sm">
-              <bs-button :for-each=${[6, 12, 24]}
-                         :for-as="n"
-                         :variant="secondary"
-                         :outline
-                         :active=${span === n}
-                         :on-click=${() => span = n}>${n}h</bs-button>
-            </bs-button-group>
-
-            <bs-dropdown :label="Export"
-                         :variant="secondary"
-                         :outline
-                         :size="sm"
-                         :align="end"
-                         :items=${[
-                           { name: 'Download CSV', select: () => exported.open = true },
-                           { name: 'Copy API query', select: () => exported.open = true },
-                           { divider: true },
-                           { name: 'Schedule a report', disabled: true },
-                         ]} />
-
-            <bs-button :size="sm"
-                       :toggle="modal"
-                       :target="#dash-new-deploy">New deployment</bs-button>
-          </div>
-        </div>
+        <orbit-header :healthy=${_healthy}
+                      :total=${services.length}
+                      :readings=${span}
+                      :live=${liveFeed}
+                      :setSpan=${(n) => span = n}
+                      :onExport=${() => exported.open = true} />
 
         <!--- ------------------------------------------- system banner -->
         <!---
@@ -1230,20 +1187,9 @@
   </bs-toast-container>
 
   <!--- ==================================================== the footer -->
-  <footer class="border-top mt-4">
-    <div class="container-fluid px-3 px-lg-4 py-4 small text-body-secondary d-flex flex-wrap justify-content-between gap-2">
-      <span>
-        Orbit — a demo application for the
-        <a href="/index.html">Markout Bootstrap kit</a>.
-        Nothing here talks to a server; the data is declared on
-        <code>&lt;body&gt;</code>.
-      </span>
-      <span>
-        ${services.length} services · ${deploys.length} deployments ·
-        ${_num(_requests)} requests in the window
-      </span>
-    </div>
-  </footer>
+  <orbit-footer :serviceCount=${services.length}
+                :deployCount=${deploys.length}
+                :requests=${_requests} />
 
 </body>
 
