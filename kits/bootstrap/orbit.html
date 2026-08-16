@@ -330,107 +330,20 @@
                           :setTodos=${(next) => todos = next} />
 
           <!--- ----------------------------------------------- settings -->
-          <section class="dash-section" id="settings">
-            <div class="row g-4">
-              <div class="col-xl-6">
-                <dash-panel :heading="Appearance"
-                            :note="Both of these are page-level values, which is how the stylesheet can read them.">
-                  <div class="mb-3">
-                    <div class="form-label">Accent</div>
-                    <div class="d-flex gap-2">
-                      <!---
-                        Five buttons, one value: the stylesheet interpolates
-                        `accent`, so a click here restyles the page with no
-                        class toggled and no CSS variable written by hand.
-                      -->
-                      <bs-button :for-each=${swatches}
-                                 :for-as="hex"
-                                 :variant=${null}
-                                 :extra="dash-swatch"
-                                 :class-dash-picked=${accent === hex}
-                                 :style-background-color=${hex}
-                                 :on-click=${() => accent = hex}
-                                 aria-label="Use ${hex} as the accent" />
-                    </div>
-                  </div>
-
-                  <bs-check :type="switch"
-                            :label="Compact rows"
-                            :help="Sets the cell padding used by both tables."
-                            :checked=${dense}
-                            :on-change=${ev => dense = ev.target.checked} />
-
-                  <hr>
-
-                  <p class="small text-body-secondary mb-0">
-                    Colour mode is the kit's own <code>bs-theme-toggle</code>, in
-                    the navigation bar: it writes Bootstrap's
-                    <code>data-bs-theme</code> before first paint, so the page
-                    never flashes the wrong mode.
-                  </p>
-                </dash-panel>
-              </div>
-
-              <div class="col-xl-6">
-                <dash-panel :heading="Notifications"
-                            :note="An ordinary form: every control names itself, and the summary reads them.">
-                  <div class="row g-3">
-                    <div class="col-md-6">
-                      <bs-input :aka="contact"
-                                :label="Alert address"
-                                :type="email"
-                                :value="ops@orbit.dev"
-                                :check=${(v) => v.includes('@') && v.includes('.')}
-                                :message="That doesn't look like an email address."
-                                :extra="mb-0" />
-                    </div>
-                    <div class="col-md-6">
-                      <bs-select :aka="quiet"
-                                 :label="Quiet hours"
-                                 :value=${'22:00 – 07:00'}
-                                 :options=${['Never', '22:00 – 07:00', 'Weekends']}
-                                 :extra="mb-0" />
-                    </div>
-                  </div>
-
-                  <bs-range :aka="threshold"
-                            :label="Page me above this error rate"
-                            :showValue
-                            :min=${0}
-                            :max=${5}
-                            :step=${0.1}
-                            :value=${1.5}
-                            :extra="mt-3 mb-2" />
-
-                  <bs-check-group :aka="channels"
-                                  :legend="Deliver to"
-                                  :type="checkbox"
-                                  :inline
-                                  :value=${'Slack'}
-                                  :options=${['Email', 'Slack', 'SMS']} />
-
-                  <!--- not kept up to date — derived: it reads the controls above -->
-                  <bs-alert :variant=${contact._invalid ? 'danger' : 'secondary'}
-                            :extra="mb-3">
-                    <span :if=${contact._invalid}>
-                      Fix the alert address before saving.
-                    </span>
-                    <span :if=${!contact._invalid}>
-                      Paging <strong>${contact.value}</strong> over
-                      <strong>${channels.value}</strong> when errors pass
-                      <strong>${threshold.value}%</strong> — outside
-                      ${quiet.value === 'Never' ? 'no quiet hours' : quiet.value}.
-                      That is
-                      ${_errorRate > threshold.value ? 'already the case right now.' : 'not the case right now.'}
-                    </span>
-                  </bs-alert>
-
-                  <bs-button :disabled=${contact._invalid}
-                             :on-click=${() => saved.open = true}>Save settings</bs-button>
-                </dash-panel>
-              </div>
-            </div>
-          </section>
+          <!---
+            The two appearance values are written through callbacks, so
+            this line still records that the settings panel is what
+            changes them. `prefs` names the panel for the toasts below,
+            which quote the alert address it publishes.
+          -->
+          <orbit-settings :aka="prefs"
+                          :swatches=${swatches}
+                          :accent=${accent}
+                          :setAccent=${(hex) => accent = hex}
+                          :dense=${dense}
+                          :setDense=${(on) => dense = on}
+                          :errorRate=${_errorRate}
+                          :onSave=${() => saved.open = true} />
 
         </div>
       </div>
@@ -605,7 +518,7 @@
     </bs-toast>
 
     <bs-toast :aka="saved" :title="Settings saved" :time="just now">
-      Alerts will go to ${contact.value}.
+      Alerts will go to ${prefs.address}.
     </bs-toast>
 
     <bs-toast :aka="resolved" :title="Incident resolved" :time="just now">
@@ -617,7 +530,7 @@
     </bs-toast>
 
     <bs-toast :aka="exported" :title="Export started" :time="just now">
-      The file will be mailed to ${contact.value} when it is ready.
+      The file will be mailed to ${prefs.address} when it is ready.
     </bs-toast>
   </bs-toast-container>
 
