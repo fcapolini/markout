@@ -1,16 +1,82 @@
 <lib>
 
-<:define tag="std-data:script"
-         :src=""
-         :args="${null}
-         :data=${{}}
-         :err=${null}
+  <!---
+    A datasource: fetch a URL, hand the page what came back.
 
-         _request=${
-          fetch(args)
-            .then((res) => data = res)
-            .catch((err) => this.err = err);
-         }
-/>
+    The whole point of this part is that it is an ORDINARY component. There
+    is nothing about it the runtime knows: `:server-` says its expression
+    runs while rendering, the server waits for the promise before it
+    serializes, and the result travels with the page. See
+    docs/design/value-transfer.md.
+
+    So the served markup is complete, the browser fetches nothing, and there
+    is no flash — a `${rows}` in the page is already `${rows}` in the HTML.
+
+    Two modes, and the default is the one that renders:
+
+    - **served** (default). The server fetches, and the result crosses in the
+      page. One request per page load, and the data is in the source.
+    - **`:client`**. The server does nothing and the browser fetches on
+      arrival. For anything the page should NOT publish — a session, another
+      user's row — since a served value is written into the page as plain
+      text where anyone can read it.
+
+    `reload()` refetches in the browser in either mode, which is how a served
+    page gets fresh data without paying for a second request it usually
+    doesn't need.
+
+    Renders nothing: it is a source, not a sight. It still has to BE
+    somewhere, and where it is written is where its name resolves, so put it
+    at the top of the region that reads it.
+  -->
+  <:define tag="std-data:span"
+           hidden
+
+           // parameters
+           :src=""                    // the URL; nothing is fetched without one
+           :client=${false}           // fetch in the browser instead of here
+
+           // What the server fetched, and the only thing here that crosses.
+           // Never rejects: a 404 is a fact about the page's data, not a
+           // fault in the render, so it is carried back as a value the page
+           // can show rather than reported to a log the visitor can't see.
+           :server-_served=${
+             (client || !src)
+               ? null
+               : fetch(src)
+                   .then((res) => res.ok
+                     ? res.json().then((body) => ({ body }))
+                     : { error: `${res.status} ${res.statusText}` })
+                   .catch((err) => ({ error: `${err}` }))
+           }
+
+           // what a browser fetch produced, if one has run
+           :_fetched=${null}
+           :_failed=${null}
+
+           // the source of truth for readers. A browser fetch wins when there
+           // has been one, since it is the newer of the two
+           :data=${_fetched ?? _served?.body ?? null}
+           :error=${_failed ?? _served?.error ?? null}
+           :loading=${false}
+
+           :reload=${() => {
+             if (!src) { return; }
+             loading = true;
+             fetch(src)
+               .then((res) => res.ok
+                 ? res.json().then((body) => { _fetched = body; _failed = null; })
+                 : Promise.reject(new Error(`${res.status} ${res.statusText}`)))
+               .catch((err) => { _failed = `${err}`; })
+               .then(() => { loading = false; });
+           }}
+
+           // `:handle-` rather than `:did-init`, so a `:src` that changes
+           // refetches instead of being read once. Browser-only, which is
+           // what keeps this from running during the render; and it takes
+           // the URL, so it fires again whenever that URL is a new one
+           :_wanted=${client ? src : null}
+           :handle-_wanted=${(v) => { v && reload(); }}
+  />
 
 </lib>

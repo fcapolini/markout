@@ -15,6 +15,7 @@
     "dev": "tsx src/index.ts -d ./demo",
     "dev:bench": "tsx src/index.ts -d ./bench",
     "dev:bootstrap-kit": "tsx src/index.ts -c ./kits/bootstrap",
+    "dev:std-kit": "tsx src/index.ts -d ./kits/std",
     "test": "vitest run",
     "test:watch": "vitest",
     "test-coverage": "vitest run --coverage",

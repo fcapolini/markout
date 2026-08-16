@@ -1,9 +1,74 @@
-<html lang="en">
+<!---
+  std-kit showcase. Run it with:
+
+      npm run dev:std-kit
+
+  Then view the SOURCE of the served page, which is the actual point: the
+  rows below are in the HTML, not fetched into it. Nothing about this page
+  waits for the network once it has arrived.
+-->
+<html lang="en"
+      // The server has no notion of the page's own origin -- there is no
+      // request in the language -- so a URL it is to fetch has to be
+      // absolute. A page states its own base once, here, rather than every
+      // datasource repeating it. The browser has no such trouble, which is
+      // why the client-side example further down uses a plain path.
+      //
+      // This is the dev server's default port. Serve on another and the
+      // fetch is refused, which the page below shows rather than hides --
+      // worth seeing once, since it is the sharpest edge this kit has.
+      :origin="http://127.0.0.1:3000">
   <head>
-    <:import src="/std-kit/all.htm"
+    <:import src="/std-kit/all.htm" />
+    <title>std-kit</title>
+    <style>
+      body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem auto; max-width: 44rem; }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid #ddd; }
+      .note { color: #666; font-size: .9em; }
+      .error { color: #b00; }
+    </style>
   </head>
   <body>
-    <std-data :aka="sampleData" src="index-data.json" />
-    <div :for-data="${sampleData.data.title}">${data}</div>
+    <h1>std-kit</h1>
+
+    <!--- Served: fetched during the render, and in the page as it arrives. -->
+    <std-data :aka="people" :src=${origin + '/index-data.json'} />
+
+    <h2>${people.data?.title ?? 'Loading…'}</h2>
+    <p class="note">Fetched by ${people.data?.fetchedBy ?? '—'}.</p>
+
+    <p class="error" :for-data=${people.error}>Could not load: ${data}</p>
+
+    <!--- `:for-as` names each binding, so the nested one doesn't shadow. -->
+    <table :for-data=${people.data} :for-as="payload">
+      <tr><th>Name</th><th>Role</th></tr>
+      <tr :for-each=${payload.rows} :for-as="person" :for-key=${person.id}>
+        <td>${person.name}</td>
+        <td>${person.role}</td>
+      </tr>
+    </table>
+
+    <p>
+      <button :on-click=${() => people.reload()}
+              :attr-disabled=${people.loading}>
+        ${people.loading ? 'Reloading…' : 'Reload in the browser'}
+      </button>
+      <span class="note">
+        The page did not need this. It is here to show that a served
+        datasource can still be refreshed on demand.
+      </span>
+    </p>
+
+    <h2>Fetched in the browser instead</h2>
+    <p class="note">
+      <code>:client</code> leaves the render alone and fetches on arrival, so
+      nothing appears in the served HTML. That is what to use for anything
+      the page should not publish — and the URL can be relative, because a
+      browser knows where it is.
+    </p>
+
+    <std-data :aka="late" :client :src="/index-data.json" />
+    <p>${late.loading ? 'Loading…' : (late.error ?? late.data?.title ?? '—')}</p>
   </body>
 </html>
