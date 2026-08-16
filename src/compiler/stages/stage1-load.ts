@@ -333,6 +333,9 @@ function expandDefine(page: Page, defineEl: ServerElement): ServerElement | unde
   parent.insertBefore(template, defineEl);
   parent.removeChild(defineEl);
   template.appendChild(inner);
+  // noted now because it cannot be found later: appendChild on a template
+  // moves the child onto its content fragment and nulls its parentElement
+  page.defineStencils.set(customName, template);
   return inner;
 }
 
@@ -365,7 +368,9 @@ function expandCustomTagUsages(page: Page): void {
   collect(page.source.doc.documentElement!);
 
   for (const usageEl of usages) {
-    const defScope = page.customTags.get(usageEl.tagName.toLowerCase())!;
+    const tagName = usageEl.tagName.toLowerCase();
+    page.usedTags.add(tagName);
+    const defScope = page.customTags.get(tagName)!;
     const loadedUsageScope = findScopeForElement(page.main, usageEl);
     // reuses the definition's own values/children by reference, and sits
     // where the usage physically sits -- so a usage inside a :for-each is
