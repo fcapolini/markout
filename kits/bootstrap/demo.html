@@ -15,13 +15,12 @@
   over a series, and a panel that is "loading" is a region whose value hasn't
   arrived yet.
 
-  And no API. The `:server-` values below run while the page renders, against
-  a database the server was started with (`orbit-db.ts`), so the console
-  arrives complete: every row you see is in the HTML, the browser fetches
-  nothing, and the queries that produced it are not in the page at all.
-  Nothing else here changed when the data stopped being a literal, which is
-  the point worth noticing -- the filters, charts and tables are the same
-  expressions over the same arrays.
+  And no client fetching. Orbit has an API of its own (`server.ts`), and the
+  `std-data` elements below call it WHILE THE PAGE RENDERS, so the console
+  arrives complete: every row you see is already in the HTML and the browser
+  asks for nothing. Nothing else here changed when the data stopped being a
+  literal, which is the point worth noticing -- the filters, charts and
+  tables are the same expressions over the same arrays.
 
   The one deliberate exception is `forecast`, further down: it is still
   filled in after load, because a panel with a loading state is a thing worth
@@ -52,6 +51,7 @@
 
 <head>
   <:import src="/bootstrap-kit/all.htm" />
+  <:import src="/std-kit/all.htm" />
 
   <title>Orbit — Operations</title>
   <meta name="description"
@@ -361,31 +361,26 @@
       tabindex="0"
 
       // ---------------------------------------------------------- data
-      :server-services=${db.services.all()}
-
-      :server-deploys=${db.deploys.recent()}
+      //
+      // Every array below comes from Orbit's API (see server.ts), fetched by
+      // `std-data` WHILE THE PAGE RENDERS -- so the console arrives complete
+      // and the browser asks for nothing. The sources themselves are the
+      // elements at the top of the page; these are the names the rest of it
+      // reads, and nothing past this block knows where they came from.
+      :services=${servicesSrc.data ?? []}
+      :deploys=${deploysSrc.data ?? []}
+      :feed=${activitySrc.data ?? []}
+      :todos=${todosSrc.data ?? []}
 
       // Forty-eight readings, oldest first — one per hour, so that the
       // widest window still has a full window before it to be compared with
-      :server-traffic=${db.metrics.traffic()}
-      :server-faults=${db.metrics.faults()}
-      :server-latencies=${db.metrics.latencies()}
+      :traffic=${trafficSrc.data ?? []}
+      :faults=${faultsSrc.data ?? []}
+      :latencies=${latenciesSrc.data ?? []}
 
-      :server-endpoints=${db.metrics.endpoints()}
-
-      :server-zones=${db.metrics.zones()}
-
-      :server-feed=${db.activity.feed()}
-
-      // The second link of a chain, and the reason the page can be served
-      // complete at all: this query cannot be ASKED until `services` has
-      // answered, because which incidents matter depends on which services
-      // are unwell. The render waits for the first, then for this one.
-      :server-incidents=${services
-        ? db.incidents.forServices(services.filter(s => s.state !== 'ok').map(s => s.id))
-        : []}
-
-      :server-todos=${db.todos.open()}
+      :endpoints=${endpointsSrc.data ?? []}
+      :zones=${zonesSrc.data ?? []}
+      :incidents=${incidentsSrc.data ?? []}
 
       :swatches=${['#6f42c1', '#0d6efd', '#20c997', '#fd7e14', '#d63384']}
 
@@ -478,6 +473,32 @@
         clearTimeout(_load);
       }}
 >
+
+<!---
+  Orbit's data, one element per endpoint. They render nothing; where they are
+  WRITTEN is where their names resolve, so they sit at the top of the page
+  that reads them.
+
+  `incidentsSrc` is the interesting one: its URL is built out of another
+  source's answer, so it cannot even be asked for until `services` has
+  replied. The render waits for the first, then for the second, and still
+  serves a finished page — which one round of fetching could not do.
+-->
+<std-data :aka="servicesSrc"  :url="/api/services" />
+<std-data :aka="deploysSrc"   :url="/api/deploys" />
+<std-data :aka="activitySrc"  :url="/api/activity" />
+<std-data :aka="todosSrc"     :url="/api/todos" />
+<std-data :aka="trafficSrc"   :url="/api/metrics/traffic" />
+<std-data :aka="faultsSrc"    :url="/api/metrics/faults" />
+<std-data :aka="latenciesSrc" :url="/api/metrics/latencies" />
+<std-data :aka="endpointsSrc" :url="/api/metrics/endpoints" />
+<std-data :aka="zonesSrc"     :url="/api/metrics/zones" />
+<std-data :aka="incidentsSrc"
+          :url=${servicesSrc.data
+            ? '/api/incidents?services='
+              + servicesSrc.data.filter(s => s.state !== 'ok').map(s => s.id).join(',')
+            : ''} />
+
 
   <!--- ================================================== navigation bar -->
   <bs-navbar :sticky

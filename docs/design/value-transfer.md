@@ -361,13 +361,18 @@ outcome beats a result reconstructed from whatever happened to finish.
 
 ## Where it ends up
 
-Orbit, the Bootstrap kit's demo application, now reads its data from a
-database instead of declaring it. The diff was ten `:server-` values and one
-new file; every filter, chart, table and detail panel is the same expression
-over the same array it always was. That is the whole argument in one page:
-the distance between "hardcoded data" and "a real service" is the line that
-fetches it, with no store, no loader, no effect and no request from the
-browser.
+Orbit, the Bootstrap kit's demo application, now reads its data from its own
+API instead of declaring it — ten `std-data` elements, one per endpoint,
+fetched while the page renders. Every filter, chart, table and detail panel
+is the same expression over the same array it always was. That is the whole
+argument in one page: the distance between "hardcoded data" and "a real
+service" is the line that fetches it, with no store, no loader, no effect and
+no request from the browser.
+
+One of the ten cannot be asked for until another has answered — which
+incidents matter depends on which services are unwell — so the page also
+exercises the settle loop's chain following, through a component rather than
+by hand.
 
 ## What the kit found
 

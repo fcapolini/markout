@@ -3,11 +3,11 @@ import os from 'os';
 import path from 'path';
 import { execSync } from 'child_process';
 import { chromium, type Browser } from 'playwright';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Compiler } from '../../src/compiler';
-import { Server } from '../../src/server';
 import { renderPage } from '../../src/server/render';
 import { openOperationsDb } from '../../kits/bootstrap/orbit-db';
+import { createOrbitApp } from '../../kits/bootstrap/server';
 
 /**
  * The Bootstrap kit, compiled and rendered as a page would be.
@@ -30,22 +30,48 @@ const KIT_ROOT = path.resolve(__dirname, '../../kits/bootstrap');
 const PARTS_DIR = path.join(KIT_ROOT, 'bootstrap-kit/parts');
 
 /**
- * Orbit reads its data from an operations database, which its own dev server
- * supplies (kits/bootstrap/server.ts). Compiling it here means being that
- * host: the compiler is told the NAME so it can enforce where `db` may be
- * read, and the render is given the object.
+ * Orbit fetches its data from its own API while rendering, so compiling it
+ * here means standing in for the server that answers.
+ *
+ * `fetch` is a global the runtime reads off `globalThis` when a context is
+ * built, so replacing it is all it takes -- and what stands behind it is the
+ * same database the real routes use, so this checks the page against the
+ * data it is actually served, without a socket.
  */
-const globals = { db: openOperationsDb() };
+const ORIGIN = 'http://orbit.test';
+const db = openOperationsDb();
+
+const ROUTES: { [path: string]: (params: URLSearchParams) => Promise<unknown> } = {
+  '/api/services': () => db.services.all(),
+  '/api/deploys': () => db.deploys.recent(),
+  '/api/activity': () => db.activity.feed(),
+  '/api/todos': () => db.todos.open(),
+  '/api/metrics/traffic': () => db.metrics.traffic(),
+  '/api/metrics/faults': () => db.metrics.faults(),
+  '/api/metrics/latencies': () => db.metrics.latencies(),
+  '/api/metrics/endpoints': () => db.metrics.endpoints(),
+  '/api/metrics/zones': () => db.metrics.zones(),
+  '/api/incidents': q =>
+    db.incidents.forServices((q.get('services') ?? '').split(',').filter(s => s)),
+};
+
+beforeAll(() => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation((async (input: string) => {
+    const url = new URL(`${input}`);
+    const route = ROUTES[url.pathname];
+    return route
+      ? { ok: true, status: 200, statusText: 'OK', json: async () => route(url.searchParams) }
+      : { ok: false, status: 404, statusText: 'Not Found', json: async () => null };
+  }) as unknown as typeof fetch);
+});
+afterAll(() => vi.restoreAllMocks());
 
 async function compile(docroot: string, pathname: string) {
-  const page = await new Compiler({
-    docroot,
-    serverGlobals: Object.keys(globals),
-  }).compile(pathname);
+  const page = await new Compiler({ docroot }).compile(pathname);
   const errors = page.errors.map(e => e.msg);
   const runtime = errors.length
     ? []
-    : (await renderPage(page, { globals })).map(e => `${e.phase}: ${e.message}`);
+    : (await renderPage(page, { origin: ORIGIN })).map(e => `${e.phase}: ${e.message}`);
   return { page, errors, runtime, markup: page.source.doc.toString() };
 }
 
@@ -222,17 +248,16 @@ describe('the demo application: served from a database', () => {
     }
   });
 
-  it('refuses to read the database anywhere the browser would go', async () => {
-    // the guarantee is compile-time, so it holds for this page like any
-    // other: `db` outside a `:server-` value does not build
-    const docroot = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-'));
-    fs.writeFileSync(
-      path.join(docroot, 'bad.html'),
-      '<html><body>${db.services.all()}</body></html>'
-    );
-    const { errors } = await compile(docroot, '/bad.html');
-    expect(errors.join()).toMatch(/supplied to the server/);
-    fs.rmSync(docroot, { recursive: true, force: true });
+  it('asks its API for everything, and only while rendering', async () => {
+    // one request per source and not one more -- in particular the browser
+    // is left with nothing to fetch, which is the whole claim
+    const calls = (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock;
+    const before = calls.calls.length;
+    await compile(KIT_ROOT, '/demo.html');
+    const asked = calls.calls.slice(before).map(c => new URL(`${c[0]}`).pathname);
+    expect(asked).toContain('/api/services');
+    expect(asked).toContain('/api/incidents');
+    expect(new Set(asked).size).toBe(asked.length);
   });
 });
 
@@ -421,7 +446,8 @@ const CHROMIUM = (() => {
 
 describe.skipIf(!CHROMIUM)('the components at work', () => {
   let docroot: string;
-  let server: Server;
+  let server: import('http').Server;
+  let port = 0;
   let browser: Browser;
 
   const STUB = `
@@ -478,6 +504,12 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     fs.cpSync(path.join(KIT_ROOT, 'bootstrap-kit'), path.join(docroot, 'bootstrap-kit'), {
       recursive: true,
     });
+    // demo.html imports the std kit for `std-data`; the symlink in the kit
+    // is followed by cpSync's dereference, so the copy is self-contained
+    fs.cpSync(path.join(KIT_ROOT, 'std-kit'), path.join(docroot, 'std-kit'), {
+      recursive: true,
+      dereference: true,
+    });
     fs.mkdirSync(path.join(docroot, 'vendor'));
     fs.writeFileSync(path.join(docroot, 'vendor/bootstrap.js'), STUB);
     fs.writeFileSync(path.join(docroot, 'vendor/bootstrap.css'), '');
@@ -500,13 +532,17 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     }
     fs.writeFileSync(path.join(docroot, 'demo.html'), offline);
 
-    server = await new Server({ docroot, port: 0, logger: () => {}, globals }).start();
+    // the kit's OWN app, so the browser drives the same API routes the dev
+    // server serves rather than a second copy of them
+    server = createOrbitApp({ docroot }).listen(0);
+    await new Promise<void>(resolve => server.once('listening', () => resolve()));
+    port = (server.address() as import('net').AddressInfo).port;
     browser = await chromium.launch();
   }, 60000);
 
   afterAll(async () => {
     await browser?.close();
-    await server?.stop();
+    await new Promise<void>(resolve => server?.close(() => resolve()));
     fs.rmSync(docroot, { recursive: true, force: true });
   });
 
@@ -516,7 +552,7 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     const failures: string[] = [];
     page.on('pageerror', e => failures.push(`pageerror: ${e.message}`));
     page.on('console', m => m.type() === 'error' && failures.push(m.text()));
-    await page.goto(`http://127.0.0.1:${server.port}${pathname}`);
+    await page.goto(`http://127.0.0.1:${port}${pathname}`);
     await page.waitForFunction('window.__MARKOUT_PROPS !== undefined');
     return {
       page,
@@ -637,17 +673,16 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     }
   });
 
-  it('refuses to read the database anywhere the browser would go', async () => {
-    // the guarantee is compile-time, so it holds for this page like any
-    // other: `db` outside a `:server-` value does not build
-    const docroot = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-'));
-    fs.writeFileSync(
-      path.join(docroot, 'bad.html'),
-      '<html><body>${db.services.all()}</body></html>'
-    );
-    const { errors } = await compile(docroot, '/bad.html');
-    expect(errors.join()).toMatch(/supplied to the server/);
-    fs.rmSync(docroot, { recursive: true, force: true });
+  it('asks its API for everything, and only while rendering', async () => {
+    // one request per source and not one more -- in particular the browser
+    // is left with nothing to fetch, which is the whole claim
+    const calls = (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock;
+    const before = calls.calls.length;
+    await compile(KIT_ROOT, '/demo.html');
+    const asked = calls.calls.slice(before).map(c => new URL(`${c[0]}`).pathname);
+    expect(asked).toContain('/api/services');
+    expect(asked).toContain('/api/incidents');
+    expect(new Set(asked).size).toBe(asked.length);
   });
 });
 
