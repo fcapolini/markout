@@ -1,12 +1,17 @@
 # Editor support, on Volar
 
-Status: **in progress**. Diagnostics work end to end — the compiler's errors
-reach an editor over LSP, against the unsaved buffer. Highlighting and the
-embedded-code mappings are in;
-[navigation](#what-the-first-version-does) and the HTML service are not
-wired yet. Built in [packages/vscode/](../../packages/vscode/); the core
-change it needed ([`readFile`](../../packages/core/src/html/preprocessor.ts))
-has landed.
+Status: **the first version is complete.** All four of what it set out to do
+work end to end over LSP: diagnostics against the unsaved buffer, navigation
+on `<:import src>`, highlighting, and HTML's own features through
+`volar-service-html`. What is deliberately not in it is TypeScript inside
+`${…}`, for the reason below. Built in
+[packages/vscode/](../../packages/vscode/); the core change it needed
+([`readFile`](../../packages/core/src/html/preprocessor.ts)) has landed.
+
+Not yet verified: the extension has never been loaded into a running VS Code
+window. The language server is tested over real LSP, but `activate`, the
+grammar's injection into `text.html.basic` and the language contribution are
+between this and an editor, and only F5 proves them.
 
 ## The problem
 
@@ -79,12 +84,21 @@ Ranked by what a markout author actually feels, not by what is easy:
    server and `build` run, so anything it catches the editor catches, for
    free and forever.
 2. **Navigation.** `<:import src>` and `<:include src>` go to the file, using
-   the compiler's own resolver so `/npm/@markout/bootstrap-kit/all.htm` lands
-   in the installed package.
+   the compiler's own `Resolver` rather than a second copy of its rules —
+   which is the difference between go-to-definition that works and one that
+   works until it matters. Three rules the editor has no business
+   reimplementing: `/lib.htm` is docroot-relative and not file-relative,
+   `/npm/@markout/bootstrap-kit/all.htm` is inside an installed package, and
+   a path leaving the docroot resolves to nothing at all. Only the
+   directives' `src` is followed: a `<script src>` names a URL the browser
+   fetches, whose place on disk depends on how the site is deployed.
 3. **Syntax highlighting** for `${…}` and `:`-attributes, so the language
    stops looking like malformed HTML.
 4. **HTML's own features** — tag completion, attribute completion, folding —
-   through `volar-service-html` over the embedded HTML.
+   through `volar-service-html` over the embedded HTML. This is where the
+   masking earns its place, and it is checked by asking for folding ranges on
+   a page whose `<body :hidden=${a > b}>` would, unmasked, have ended that
+   tag at the `>` and left the rest of the document as text.
 
 ## What it deliberately does not do yet
 

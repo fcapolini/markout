@@ -98,6 +98,11 @@ beforeAll(async () => {
     capabilities: {
       textDocument: {
         diagnostic: { dynamicRegistration: false, relatedDocumentSupport: false },
+        // without this the server is obliged to downgrade every LocationLink
+        // to a plain Location, and the origin range -- what gets underlined
+        // under the cursor -- is dropped. VS Code advertises it; so must a
+        // harness claiming to stand in for one
+        definition: { linkSupport: true },
       },
     },
   });
@@ -120,6 +125,21 @@ async function diagnosticsFor(name: string, text: string) {
   });
   const report = await request('textDocument/diagnostic', { textDocument: { uri } });
   return (report?.items ?? []) as { message: string; range: any; source?: string }[];
+}
+
+/** ask for the definition at a position, the way ctrl-click does */
+async function definitionAt(name: string, text: string, at: string) {
+  const uri = `file://${path.join(docroot, name)}`;
+  notify('textDocument/didOpen', {
+    textDocument: { uri, languageId: 'html', version: 1, text },
+  });
+  const before = text.indexOf(at);
+  const line = text.slice(0, before).split('\n').length - 1;
+  const character = before - (text.lastIndexOf('\n', before - 1) + 1);
+  return (await request('textDocument/definition', {
+    textDocument: { uri },
+    position: { line, character },
+  })) as { targetUri: string }[] | null;
 }
 
 describe('the server, over stdio', () => {
@@ -148,6 +168,48 @@ describe('the server, over stdio', () => {
       ['<html>', '  <body>', '    ${nope}', '  </body>', '</html>'].join('\n')
     );
     expect(found).toStrictEqual([]);
+  });
+
+  it('follows an import to the file it names', async () => {
+    fs.writeFileSync(path.join(docroot, 'lib.htm'), '<lib></lib>');
+    const found = await definitionAt(
+      'nav.html',
+      '<html><head><:import src="/lib.htm" /></head><body>${x}</body></html>',
+      '/lib.htm'
+    );
+    expect(found).toHaveLength(1);
+    expect(found![0].targetUri).toContain('lib.htm');
+  });
+
+  it('offers nothing where there is nothing to follow', async () => {
+    const found = await definitionAt(
+      'plain.html',
+      '<html><body :n=${1}>${n}</body></html>',
+      '${n}'
+    );
+    expect(found === null || found.length === 0).toBe(true);
+  });
+
+  it('answers HTML\'s own questions too, through the embedded code', async () => {
+    // volar-service-html over the masked HTML: proof that the second service
+    // sees valid markup at the author's offsets, not a page cut in half by a
+    // `>` inside an expression
+    const uri = `file://${path.join(docroot, 'folds.html')}`;
+    notify('textDocument/didOpen', {
+      textDocument: {
+        uri,
+        languageId: 'html',
+        version: 1,
+        text: '<html>\n<body :hidden=${a > b}>\n<div>\n<p>x</p>\n</div>\n</body>\n</html>',
+      },
+    });
+    const ranges = (await request('textDocument/foldingRange', {
+      textDocument: { uri },
+    })) as { startLine: number; endLine: number }[] | null;
+    expect(ranges?.length).toBeGreaterThan(0);
+    // the <div> on line 2 folds to line 4, which it only can if the `>` in
+    // the expression above did not end the tag and swallow the rest
+    expect(ranges).toContainEqual(expect.objectContaining({ startLine: 2, endLine: 3 }));
   });
 
   it('reports the buffer it was sent, not the file on disk', async () => {
