@@ -3,45 +3,56 @@
 Bootstrap 5.3 as Markout components — one part per component, following
 [Bootstrap's own cheatsheet](https://getbootstrap.com/docs/5.3/examples/cheatsheet/).
 
+```sh
+npm install @markout/bootstrap-kit
+```
+
 ```html
 <head>
-  <:import src="/bootstrap-kit/all.htm" />
+  <:import src="/npm/@markout/bootstrap-kit/all.htm" />
 </head>
 ```
+
+`/npm/` names the package the fragment came from, and is resolved at compile
+time; everything the kit publishes is then addressed at `/bootstrap-kit`, the
+logical root it declares. See [npm kits](../../docs/design/npm-kits.md) —
+including the other case, a kit vendored into a docroot, which is imported by
+its path instead.
 
 `all.htm` pulls in everything. Each part imports `base.htm` itself and a file
 is only imported once per page, so importing parts by hand never leaves
 Bootstrap out:
 
 ```html
-<:import src="/bootstrap-kit/parts/button.htm" />
-<:import src="/bootstrap-kit/parts/card.htm" />
+<:import src="/npm/@markout/bootstrap-kit/parts/button.htm" />
+<:import src="/npm/@markout/bootstrap-kit/parts/card.htm" />
 ```
 
 Run the showcase — every component below, live — with:
 
 ```sh
-npm run dev:bootstrap-kit
+npm run dev
 ```
 
-That serves two pages: `/index.html`, the showcase, which is every component
-one after another; and `/orbit.html`, an operations dashboard built out of
-them, which is what they look like wired to one page's data.
+That serves [the site](../../sites/site/), which is where the pages built on
+this kit live: `/demos/kitchen-sink.html`, every component one after another;
+and `/demos/orbit.html`, an operations dashboard built out of them, which is
+what they look like wired to one page's data.
 
-The dev server is `kits/bootstrap/server.ts` rather than the CLI, because
-Orbit is a whole application: it has an API of its own, served from a fake
+The site is a plain Express app rather than markout's `Server`, because Orbit
+is a whole application: it has an API of its own, served from a fake
 in-memory database (`orbit-db.ts`), and markout is the middleware that
 renders its pages. Orbit reads that API with `std-data` from the std kit,
 which fetches while the page renders — so the served console is complete and
 the browser asks for nothing.
 
-Orbit is four files, which is the shape an application takes: `orbit.html` for
-its state, layout and logic; `orbit/components.htm` for the tags it defines
-on top of the kit's; `orbit/sources.htm` for where its data comes from; and
-`server.ts` for its API. The first is imported, the second included — a
-definition wants to arrive once per page however often it is named, and an
-instance wants to be spliced exactly where it is written, because that is
-where its name resolves.
+Orbit is four files, which is the shape an application takes:
+`demos/orbit.html` for its state, layout and logic; `demos/orbit/components.htm`
+for the tags it defines on top of the kit's; `demos/orbit/sources.htm` for
+where its data comes from; and `server.ts` for its API. The first is imported,
+the second included — a definition wants to arrive once per page however often
+it is named, and an instance wants to be spliced exactly where it is written,
+because that is where its name resolves.
 
 `orbit/sources.htm` also shows the token pattern working for an application's
 own fragment: its root carries `:apiBase="/api"`, which lands on whatever
@@ -52,7 +63,7 @@ don't.
 
 ## Tests
 
-`test/kits/bootstrap-kit.test.ts`, in two tiers:
+`packages/cli/test/kits/bootstrap-kit.test.ts`, in two tiers:
 
 - **compiled**, which is most of it: every part compiles on its own, the
   showcase compiles and server-renders with nothing reported, and the id

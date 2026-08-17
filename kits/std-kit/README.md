@@ -3,16 +3,20 @@
 The system parts of a page — the things a framework usually builds *into* the
 language — written **with** it instead.
 
+```sh
+npm install @markout/std-kit
+```
+
 ```html
 <head>
-  <:import src="/std-kit/all.htm" />
+  <:import src="/npm/@markout/std-kit/all.htm" />
 </head>
 ```
 
-Run the showcase with:
+Run the showcase — `/demos/std/` on [the site](../../sites/site/) — with:
 
 ```sh
-npm run dev:std-kit
+npm run dev
 ```
 
 Then read the **source** of the served page, which is the point: the data is
