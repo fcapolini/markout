@@ -42,18 +42,49 @@
              means the same thing in both modes. It has to be: the server has
              no page to be relative TO, and a bare path there is not a
              different address, it is not an address at all.
+
+             Left ALONE when there is no origin, which is a page compiled ahead
+             of time -- there is no request behind that render and the deploy
+             host is unknown, so there is nothing to resolve against. It used to
+             resolve anyway and `new URL('/x', undefined)` threw, which took a
+             `:client` datasource down with it: this value is computed either
+             way, so the mode meant to work in a built page was the one that
+             could not. Relative is exactly right there, since the browser
+             re-derives this against a real `location.origin`.
            */
-           :_url=${url ? new URL(url, $origin ?? undefined).href : null}
+           :_url=${url ? ($origin ? new URL(url, $origin).href : url) : null}
 
            /*
              What the server fetched, and the only thing here that crosses.
-             Never rejects: a 404 is a fact about the page's data, not a
-             fault in the render, so it is carried back as a value the page
-             can show rather than reported to a log the visitor can't see.
+             Never rejects for a fetch that FAILED: a 404 is a fact about the
+             page's data, not a fault in the render, so it is carried back as a
+             value the page can show rather than reported to a log the visitor
+             can't see.
+
+             It does reject when there is nothing to fetch WITH -- a relative
+             `_url` and no origin to resolve it against, which is a page
+             compiled ahead of time (see `_url` above). That is a different kind
+             of problem: not what the data turned out to be, but this datasource
+             being written for a delivery this page isn't getting. The author
+             can fix it and only the author can, so it is said where they will
+             see it -- a rejected `:server-` value is what `markout build` fails
+             on, since such a value crosses frozen and the browser cannot
+             retry it.
+
+             An ABSOLUTE url still fetches here, and is meant to: answering it
+             while the page is built and carrying the result in the markup is
+             what static site generation is.
            */
            :server-_served=${
              (client || !_url)
                ? null
+               : !/^[a-z][a-z0-9+.-]*:/i.test(_url)
+               ? Promise.reject(new Error(
+                   `cannot fetch "${_url}" while rendering: it is relative and ` +
+                   `nothing is serving this page, so there is no address to ` +
+                   `resolve it against. Mark this datasource ":client" to fetch ` +
+                   `it in the browser instead, or give ":url" an absolute one`
+                 ))
                : fetch(_url)
                    .then((res) => res.ok
                      ? res.json().then((body) => ({ body }))

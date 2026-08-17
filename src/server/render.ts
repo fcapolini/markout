@@ -124,6 +124,10 @@ function emitState(page: Page, state: PageState, errors: RuntimeError[]) {
       } catch (err) {
         errors.push({
           phase: 'transfer',
+          // only a `:server-` value is ever transferred, so this is always
+          // the unrepairable kind: the client gets no result and no
+          // expression to derive one from
+          serverOnly: true,
           scope: uid,
           key,
           message:

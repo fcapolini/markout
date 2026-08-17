@@ -46,13 +46,18 @@ function stubFetch(body: unknown, init?: { ok?: boolean; status?: number }) {
 
 const ORIGIN = 'http://x.test';
 
-async function compile(pathname: string) {
+/**
+ * `origin: null` renders with no origin at all, which is what a page compiled
+ * ahead of time gets: no request behind it, and no deploy host to guess.
+ */
+async function compile(pathname: string, origin: string | null = ORIGIN) {
   const page = await new Compiler({ docroot: KIT_ROOT }).compile(pathname);
   const errors = page.errors.map(e => e.msg);
-  const runtime = errors.length
+  const raw = errors.length
     ? []
-    : (await renderPage(page, { origin: ORIGIN })).map(e => `${e.phase}: ${e.message}`);
-  return { page, errors, runtime, markup: page.source.doc.toString() };
+    : await renderPage(page, origin === null ? {} : { origin });
+  const runtime = raw.map(e => `${e.phase}: ${e.message}`);
+  return { page, errors, runtime, raw, markup: page.source.doc.toString() };
 }
 
 /** what the server sent alongside the page */
@@ -111,12 +116,16 @@ describe('std-data: the served mode', () => {
     `<html><head><:import src="/std-kit/all.htm" /></head><body>` +
     `<std-data :aka="d" ${attrs} />${body}</body></html>`;
 
-  async function renderInline(attrs: string, body: string) {
+  async function renderInline(
+    attrs: string,
+    body: string,
+    origin: string | null = ORIGIN
+  ) {
     const fs = await import('fs');
     const name = `.t${Math.random().toString(36).slice(2)}.html`;
     fs.writeFileSync(path.join(KIT_ROOT, name), page(attrs, body));
     try {
-      return await compile(`/${name}`);
+      return await compile(`/${name}`, origin);
     } finally {
       fs.unlinkSync(path.join(KIT_ROOT, name));
     }
@@ -160,5 +169,53 @@ describe('std-data: the served mode', () => {
     expect(r.errors).toStrictEqual([]);
     expect(calls).toStrictEqual([]);
     expect(live(r.markup)).toContain('<i>none</i>');
+  });
+
+  // A page compiled ahead of time has no request behind its render, so no
+  // `$origin` -- and a relative `:url` has nothing to be resolved against.
+  describe('with no server behind the render', () => {
+    it('lets a :client datasource through untouched', async () => {
+      // this used to fail, which made the one mode meant for a built page the
+      // one that could not be built: `_url` is computed whether or not the
+      // fetch happens, and resolving `/d.json` against an absent origin threw
+      const calls = stubFetch(PAYLOAD);
+      const r = await renderInline(
+        ':client :url="/d.json"',
+        '<i>${d.data ?? "none"}</i>',
+        null
+      );
+      expect(r.errors).toStrictEqual([]);
+      expect(r.runtime).toStrictEqual([]);
+      expect(calls).toStrictEqual([]);
+      expect(live(r.markup)).toContain('<i>none</i>');
+    });
+
+    it('says why a relative url cannot be fetched, as a server failure', async () => {
+      const calls = stubFetch(PAYLOAD);
+      const r = await renderInline(':url="/d.json"', '<i>${d.data ?? "none"}</i>', null);
+
+      expect(calls).toStrictEqual([]);
+      expect(r.raw).toHaveLength(1);
+      // `serverOnly` is what `markout build` fails on: this value crosses
+      // frozen, so the browser cannot retry what the server could not do
+      expect(r.raw[0].serverOnly).toBe(true);
+      expect(r.raw[0].message).toContain('nothing is serving this page');
+      expect(r.raw[0].message).toContain(':client');
+    });
+
+    it('still fetches an absolute url, which is what makes it generation', async () => {
+      // answering while the page is BUILT and carrying the result in the
+      // markup is static site generation, and worth keeping
+      const calls = stubFetch(PAYLOAD);
+      const r = await renderInline(
+        ':url="http://x.test/d.json"',
+        '<i>${d.data.title}</i>',
+        null
+      );
+      expect(r.errors).toStrictEqual([]);
+      expect(r.runtime).toStrictEqual([]);
+      expect(calls).toStrictEqual(['http://x.test/d.json']);
+      expect(live(r.markup)).toContain('<i>Example data 1</i>');
+    });
   });
 });

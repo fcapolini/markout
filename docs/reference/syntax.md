@@ -313,11 +313,14 @@ Two things to know before using it:
   class instances, not a structure that refers to itself — those are reported
   as errors, and the value is `undefined` in the browser.
 
-And one thing to know about delivery: a `:server-` value needs a server to run
-it, so it has no result in a page compiled ahead of time into static assets.
-The value arrives empty rather than frozen, and so does everything derived from
-it — see [rendering](../concepts/rendering.md#two-ways-to-deliver-a-page). A
-page meant for both modes should not depend on one.
+And one thing to know about delivery: a page compiled ahead of time into static
+assets has no request behind its render, so a `:server-` value that needed one
+cannot produce anything — and because such a value crosses frozen, nothing in
+the browser can make up for it. `markout build` therefore **fails** on one that
+throws, rather than shipping a page permanently missing what it was for. A value
+that reads nothing of the request is fine there, and its answer is baked into
+the markup. See
+[rendering](../concepts/rendering.md#what-ahead-of-time-compilation-cannot-carry).
 
 `:server-` marks declared values only. It is an error on `:attr-`, `:class-`,
 `:style-`, `:prop-` (which re-derive for free once the value they read is

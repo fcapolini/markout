@@ -96,16 +96,21 @@ async function main() {
  * which means a status code and one line per error in the shape editors and
  * log scrapers already understand.
  *
- * A RENDER error does not fail the build, matching what the server does with
- * the same failure: the page is written, and the value that threw is a hole in
- * it rather than a reason to have no page at all.
+ * An ORDINARY render error does not fail the build, matching what the server
+ * does with the same failure: the browser re-derives that value, so what threw
+ * here is a hole that fills itself rather than a reason to have no page.
+ *
+ * A `:server-` value failing does fail it. That one crosses frozen, with a
+ * result and no expression, so nothing re-runs it -- the page would be shipped
+ * permanently without whatever it was for. It is the failure this mode invites,
+ * since there is no request here to supply what such a value usually reads.
  */
 function report(result: BuildResult) {
   result.runtimeErrors.forEach(({ pathname, error }) =>
     console.warn(`${pathname} ${formatRuntimeError(error)}`)
   );
 
-  if (result.errors.length) {
+  if (result.errors.length || result.serverErrors.length) {
     result.errors.forEach(({ pathname, error }) => {
       const loc = error.loc;
       const where = loc
@@ -113,9 +118,13 @@ function report(result: BuildResult) {
         : pathname;
       console.error(`${where}: ${error.msg}`);
     });
-    const pages = new Set(result.errors.map(e => e.pathname));
+    result.serverErrors.forEach(({ pathname, error }) =>
+      console.error(`${pathname} ${formatRuntimeError(error)}`)
+    );
+    const failed = [...result.errors, ...result.serverErrors];
+    const pages = new Set(failed.map(e => e.pathname));
     console.error(
-      `\n${result.errors.length} error(s) in ${pages.size} page(s); ` +
+      `\n${failed.length} error(s) in ${pages.size} page(s); ` +
         `${result.pages.length} page(s) written`
     );
     process.exitCode = 1;

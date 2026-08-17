@@ -161,10 +161,22 @@ never asks for them.
 
 A compile error prints as `file:line:column: message` and **exits non-zero**, so
 CI can gate on it. The pages that did compile are still written; only the ones
-that failed are missing. An expression that throws while rendering is a warning
-rather than a failure, which is what the server does with the same failure: the
-page is written, and the value that failed is a hole in it rather than a reason
-to have no page.
+that failed are missing.
+
+An expression that throws while *rendering* is treated one of two ways,
+depending on whether anything can still repair it. An ordinary value is
+re-derived in the browser, where it may well succeed — `${user.name}` asked
+before its datasource has answered is the everyday case, and the served page is
+fine — so that is a warning and the page is written. A `:server-` value is not:
+it crosses frozen, with a result and no expression, so nothing re-runs it. That
+**fails the build**, and the page is not written, on the same grounds as one
+that would not compile.
+
+That is the failure this mode invites, since a built page has no request behind
+it and so no `$origin`. A datasource with a relative `:url` therefore fails the
+build and says to mark it `:client` — after which the browser fetches it on
+arrival. An *absolute* `:url` still fetches while building and bakes the answer
+into the page, which is static site generation and worth having.
 
 `-p`/`--page` restricts the build to one page, and can be given more than once.
 A leading slash and the `.html` extension are both optional:

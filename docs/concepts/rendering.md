@@ -45,20 +45,35 @@ page looks for the runtime at a different path than a served one.
 
 ### What ahead-of-time compilation cannot carry
 
-A pre-compiled page has no request behind it, so anything that needed one has
-no result to travel with:
+The render still happens — that is what puts the markup in the file — but there
+is no request behind it, so no `$origin` and none of the host's globals. Where
+that shows is a `:server-` value, and the rule is short:
 
-- **`:server-` values** never ran, so they arrive with no value rather than a
-  frozen one. Everything reading them derives from nothing.
-- **A datasource in its default `served` mode** is the case worth spelling out,
-  because it fails quietly: its fetch is a `:server-` value, so there is no
-  data, and it does not fall back to fetching on arrival. Mark it `:client` and
-  the browser fetches when the page comes up — a loading state instead of an
-  empty one.
+> **A `:server-` value that fails fails the build.**
 
-Both are reasons to choose the mode deliberately rather than to discover it,
-which is why they are stated here rather than left to be found in a page that
-renders blank.
+Not a warning, and not a compile-time ban on `:server-` values either. The
+reasoning is what the browser can and cannot repair. An ordinary value that
+throws while rendering is re-derived there, where it may well succeed —
+`${user.name}` asked before its datasource answered is the everyday case, and
+the page is fine — so a build only warns. A `:server-` value crosses **frozen**,
+with a result and no expression, so nothing re-runs it: whatever it failed to
+produce, the page is without for as long as it exists. Such a page is not
+written at all, on the same grounds as one that would not compile.
+
+The reason it is not a compile-time refusal is that plenty of `:server-` values
+work perfectly well here. One that reads nothing of the request runs at build
+time and its answer is baked into the markup — which is what static site
+generation *is*. And whether a given value needs a request is decided while it
+runs, not while it compiles: `std-data` holds the same `:server-` value whether
+it is inert or a fetch, depending on `:client`, so no static check could tell
+those apart. The render can.
+
+For a datasource that means:
+
+| `:url` | `served` (default) | `:client` |
+| --- | --- | --- |
+| relative (`/api/rows`) | **fails the build** — nothing to resolve it against, and it says so | fetched by the browser on arrival |
+| absolute (`https://…`) | fetched while building, answer baked into the page | fetched by the browser on arrival |
 
 ## Dynamic text and DOM markers
 

@@ -44,6 +44,22 @@ export interface RuntimeError {
   /** the value's key within that scope, when there is one */
   key?: string;
   message: string;
+  /**
+   * Whether the value that failed was declared `:server-`.
+   *
+   * The difference is whether anything can still repair it. An ordinary value
+   * that throws while rendering is re-derived in the browser, where it may
+   * well succeed -- `${user.name}` before its datasource has answered is the
+   * common case, and the served page is fine. A `:server-` value arrives
+   * frozen, with a result and no expression, so nothing re-runs it: a failure
+   * here is what the page will hold for as long as it exists.
+   *
+   * Which is why `markout build` fails on this one and warns about the other.
+   * Recorded rather than inferred from `phase`, because both a rejected
+   * promise (`settle`) and an expression that throws outright (`update`) are
+   * this kind, and the phase cannot tell them from an ordinary value's.
+   */
+  serverOnly?: boolean;
 }
 
 export function formatRuntimeError(e: RuntimeError): string {
@@ -368,6 +384,7 @@ export class CoreContext {
       scope: value?.scope.props.id,
       key: value?.key,
       message: err instanceof Error ? err.message : `${err}`,
+      serverOnly: value?.props.serverOnly,
     };
     // a broken expression re-evaluates on every cycle, so report each
     // distinct problem once instead of once per cycle

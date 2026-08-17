@@ -124,11 +124,12 @@ the second half of that claim true rather than planned. It was treated as a
 positioning blocker rather than a feature request, and built ahead of the
 language work queued in [TODO.md](TODO.md), on exactly that basis.
 
-One gap remains, and it is worth knowing before the page is published: a built
-page still accepts a `:server-` value and a default-mode datasource, both of
-which need a request behind them. They fail as render warnings rather than as a
-refusal, so a page can be built that quietly has no data. The compiler has to
-learn which mode it is compiling for before that becomes an error.
+A built page also refuses what it cannot deliver, as of the same day: a
+`:server-` value that fails fails the build, and its page is not written, since
+such a value crosses frozen and the browser cannot make up for it. So the
+claim above is safe to make in public -- "compile ahead of time and deploy
+static assets" cannot quietly produce a page with no data in it. A datasource
+that needed a server says so, and names the one-word fix (`:client`).
 
 ## The kit has to prove reactivity, not boilerplate removal
 
