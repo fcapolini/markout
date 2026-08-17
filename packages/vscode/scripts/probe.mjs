@@ -1,7 +1,13 @@
 /**
  * Ask the BUILT language server what it answers for the fixture, and print it.
  *
- * `npm run probe -w markout-vscode`
+ *     npm run probe -w markout-vscode                    the fixture
+ *     npm run probe -w markout-vscode -- <file> <line>:<col>   one click
+ *
+ * The second form is for "it doesn't work here": it prints what the server
+ * was asked, what it decided the docroot and pathname were, and what it
+ * answered -- which is everything needed to tell a wrong answer from a
+ * question that was never what it looked like.
  *
  * This exists because "it doesn't work in my editor" has two very different
  * causes -- a server that answers wrongly, and an editor talking to a server
@@ -38,6 +44,20 @@ const CASES = [
   ['lib.htm', 'tone', 'tone === '],
 ];
 
+/** `<file> <line>:<col>`, both 1-based, as an editor shows them */
+const [askedFile, askedAt] = process.argv.slice(2);
+const asked = askedFile
+  ? {
+      file: path.resolve(askedFile),
+      line: Number((askedAt ?? '1:1').split(':')[0]) - 1,
+      character: Number((askedAt ?? '1:1').split(':')[1] ?? 1) - 1,
+    }
+  : undefined;
+if (asked && !fs.existsSync(asked.file)) {
+  console.error(`no such file: ${asked.file}`);
+  process.exit(1);
+}
+
 const child = spawn(process.execPath, [server, '--stdio'], { stdio: 'pipe' });
 let buffer = Buffer.alloc(0);
 let nextId = 1;
@@ -73,10 +93,14 @@ const request = (method, params) =>
     send({ id, method, params });
   });
 
+// the workspace folder an editor would have: the file's own, when asking
+// about one, since that is what decides where the docroot is looked for
+const root = asked ? findWorkspace(asked.file) : workspace;
+
 await request('initialize', {
   processId: process.pid,
-  rootUri: `file://${workspace}`,
-  workspaceFolders: [{ uri: `file://${workspace}`, name: 'fixture' }],
+  rootUri: `file://${root}`,
+  workspaceFolders: [{ uri: `file://${root}`, name: path.basename(root) }],
   capabilities: {
     textDocument: {
       definition: { linkSupport: true },
@@ -86,6 +110,19 @@ await request('initialize', {
   },
 });
 send({ method: 'initialized', params: {} });
+
+/** the nearest ancestor that looks like somebody's project root */
+function findWorkspace(file) {
+  let dir = path.dirname(file);
+  for (;;) {
+    if (fs.existsSync(path.join(dir, '.git')) || fs.existsSync(path.join(dir, 'package.json'))) {
+      return dir;
+    }
+    const up = path.dirname(dir);
+    if (up === dir) return path.dirname(file);
+    dir = up;
+  }
+}
 
 const opened = new Map();
 function open(name) {
@@ -114,6 +151,46 @@ function positionOf(doc, needle, within) {
     line: doc.text.slice(0, at).split('\n').length - 1,
     character: at - (doc.text.lastIndexOf('\n', at - 1) + 1),
   };
+}
+
+if (asked) {
+  const text = fs.readFileSync(asked.file, 'utf8');
+  const uri = `file://${asked.file}`;
+  send({
+    method: 'textDocument/didOpen',
+    params: { textDocument: { uri, languageId: 'html', version: 1, text } },
+  });
+  const line = text.split('\n')[asked.line] ?? '';
+  const { guessDocroot, pathnameOf, looksLikeMarkout, isMarkoutProject } = await import(
+    path.join(pkg, 'dist', 'diagnostics.js')
+  );
+  const docroot = guessDocroot(asked.file, root);
+
+  console.log(`file        ${asked.file}`);
+  console.log(`workspace   ${root}`);
+  console.log(`docroot     ${docroot}   (${isMarkoutProject(docroot) ? 'a markout project' : 'not a markout project'})`);
+  console.log(`pathname    ${pathnameOf(asked.file, docroot)}`);
+  console.log(`page syntax ${looksLikeMarkout(text) ? 'recognised' : 'NOT recognised'}`);
+  console.log(`line ${asked.line + 1}      ${line}`);
+  console.log(`            ${' '.repeat(Math.max(0, asked.character))}^ column ${asked.character + 1}` +
+    ` (on ${JSON.stringify(line[asked.character] ?? '')})`);
+
+  const found = await request('textDocument/definition', {
+    textDocument: { uri },
+    position: { line: asked.line, character: asked.character },
+  });
+  const target = found?.[0];
+  console.log(
+    `\ndefinition  ${target ? `${decodeURIComponent(target.targetUri.replace('file://', ''))}:${target.targetRange.start.line + 1}` : 'NOTHING'}`
+  );
+
+  const report = await request('textDocument/diagnostic', { textDocument: { uri } });
+  const items = report?.items ?? [];
+  console.log(`diagnostics ${items.length ? '' : '(clean)'}`);
+  items.forEach(i => console.log(`   line ${i.range.start.line + 1}: ${i.message}`));
+
+  child.kill();
+  process.exit(0);
 }
 
 console.log('go to definition\n');

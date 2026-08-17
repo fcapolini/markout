@@ -217,6 +217,53 @@ describe('the scopes a document always has', () => {
   });
 });
 
+describe('where the cursor is actually put', () => {
+  /**
+   * The bug this exists to prevent, which cost a round of "still doesn't
+   * work": a scope is declared by an ELEMENT, and an element's range is
+   * everything inside it. Returning that as the selection asks the editor to
+   * reveal a region the cursor is already in, and it does nothing -- which
+   * is indistinguishable from a feature that is broken.
+   *
+   * `head` appeared to work throughout, for the only reason that a page's
+   * <head> does not contain the <body> the click was in.
+   */
+  const PAGE = [
+    "<html :title=${'T'}>",
+    '  <head :charset=${1}>',
+    '    <title>x</title>',
+    '  </head>',
+    '  <body :items=${[1]}>',
+    '    <p>${page.title} ${body.items}</p>',
+    '  </body>',
+    '</html>',
+  ].join('\n');
+
+  it('is a point, not the extent of the element', async () => {
+    const text = write('index.html', PAGE);
+    const found = await declarationAt('index.html', text, '${body.items}');
+    // the whole element, for a peek preview
+    expect(found!.range.start.line).toBe(4);
+    expect(found!.range.end.line).toBe(6);
+    // and one point, for the jump
+    expect(found!.selection).toStrictEqual({
+      start: { line: 4, character: 2 },
+      end: { line: 4, character: 2 },
+    });
+  });
+
+  it('lands outside the line that was clicked, for every scope', async () => {
+    const text = write('index.html', PAGE);
+    for (const name of ['${page.title}', '${body.items}']) {
+      const found = await declarationAt('index.html', text, name);
+      // line 6 is where both are read; a selection that spanned the whole
+      // element would still "contain" it and the editor would sit still
+      expect(found!.selection.start.line).toBeLessThan(5);
+      expect(found!.selection.start).toStrictEqual(found!.selection.end);
+    }
+  });
+});
+
 describe('what it declines to answer', () => {
   it('says nothing for a property of a value', async () => {
     // `data.name` -- `data` has a declaration, `name` is a property of
