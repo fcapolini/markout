@@ -12,7 +12,7 @@ describe("Browser execution (happy-dom)", () => {
 
   beforeAll(async () => {
     // guarantee a fresh dist/markout-runtime.js regardless of local state
-    execSync('npm run build:runtime', { cwd: path.resolve(__dirname, '../..') });
+    execSync('npm run build:runtime', { cwd: path.resolve(__dirname, '../../../core') });
 
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "markout-e2e-test-"));
     fs.writeFileSync(

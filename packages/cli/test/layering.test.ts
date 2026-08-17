@@ -3,19 +3,20 @@ import path from 'path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * No import in `src/` points upward through the layering, and no two layers
- * depend on each other.
+ * The CLI's own layering, and the boundary between it and `@markout/core`.
  *
- * The layers below are the packages this repository is being split into --
- * see docs/design/monorepo.md. They are asserted here, while everything is
- * still ONE package and nothing enforces them, because that is the window in
- * which a violation is free to write and invisible: a `require` from the
- * compiler into the middleware works perfectly today and makes the extension
- * impossible tomorrow.
+ * Two things are asserted, and the second is the one that matters. The
+ * layers below are what is left here after core was extracted, and they are
+ * the seam `@markout/express` is extracted along next -- so an import from
+ * the `cli` layer into `http` is fine and one going the other way is the
+ * thing that would make step 4 a refactor instead of a move.
  *
- * The point is the DIRECTION, not the file list. When a file moves, move its
- * entry; when a new one is added, name its layer. Being made to answer "which
- * package is this in?" while writing it is the whole value of the test.
+ * The boundary check is that core is reached BY ITS PACKAGE NAME and never
+ * by a relative path. A workspace makes `../core/src/compiler` resolve
+ * perfectly well from here, so nothing but this test stands between the
+ * curated surface in core's index.ts and a dependency on one of its
+ * internals -- and an internal reached that way is not covered by anything
+ * core promises. See docs/design/monorepo.md.
  */
 
 const ROOT = path.resolve(__dirname, '..');
@@ -23,22 +24,6 @@ const SRC = path.join(ROOT, 'src');
 
 /** lowest first: a layer may import from itself and anything above it here */
 const LAYERS: { name: string; pkg: string; members: string[] }[] = [
-  { name: 'base', pkg: '@markout/core', members: ['kits.ts', 'paths.ts'] },
-  { name: 'html', pkg: '@markout/core', members: ['html/'] },
-  { name: 'runtime', pkg: '@markout/core', members: ['runtime/'] },
-  { name: 'compiler', pkg: '@markout/core', members: ['compiler/'] },
-  {
-    // server-side rendering and the rules about what a kit may serve: needed
-    // with no HTTP anywhere, by `markout build`
-    name: 'render',
-    pkg: '@markout/core',
-    members: [
-      'server/publish.ts',
-      'server/render.ts',
-      'server/runtime-bundle.ts',
-      'server/serialize.ts',
-    ],
-  },
   {
     name: 'http',
     pkg: '@markout/express',
@@ -92,30 +77,26 @@ function layerOf(rel: string): number {
   return layersOf(rel)[0] ?? -1;
 }
 
-/**
- * Every relative import target in a file, as a path relative to src/.
- *
- * Extension-less by design: which of `x.ts` and `x/index.ts` the target is
- * doesn't matter here, because both spellings land in the same layer -- a
- * layer is a directory or a named file, and `x/index.ts` is inside `x/`.
- */
-function importsOf(file: string): string[] {
+/** every import specifier in a file, relative ones resolved against src/ */
+function importsOf(file: string): { spec: string; rel: string | null }[] {
   const text = fs.readFileSync(file, 'utf8');
   const from = /(?:^|\n)\s*(?:import|export)[\s\S]*?from\s+['"]([^'"]+)['"]/g;
   const bare = /(?:^|\n)\s*import\s+['"]([^'"]+)['"]/g;
   const dir = path.dirname(file);
-  return [...text.matchAll(from), ...text.matchAll(bare)]
-    .map(m => m[1])
-    .filter(spec => spec.startsWith('.'))
-    .map(spec => path.relative(SRC, path.resolve(dir, spec)));
+  return [...text.matchAll(from), ...text.matchAll(bare)].map(m => ({
+    spec: m[1],
+    rel: m[1].startsWith('.')
+      ? path.relative(SRC, path.resolve(dir, m[1]))
+      : null,
+  }));
 }
 
-describe('package layering', () => {
+describe('cli layering', () => {
   const files = sourceFiles(SRC).map(f => path.relative(SRC, f));
 
   it('finds the sources', () => {
     // the walk returning nothing would make everything below vacuous
-    expect(files.length).toBeGreaterThan(20);
+    expect(files.length).toBeGreaterThan(5);
   });
 
   it('assigns every file to exactly one layer', () => {
@@ -127,11 +108,20 @@ describe('package layering', () => {
   });
 
   for (const file of files) {
-    it(`${file} imports downward only`, () => {
+    it(`${file} respects the boundary`, () => {
       const here = layerOf(file);
-      const targets = importsOf(path.join(SRC, file))
-        // outside src/ entirely: not a layer's business
-        .filter(target => !target.startsWith('..'));
+      const imports = importsOf(path.join(SRC, file));
+
+      // core is a package, not a directory next door
+      const reachingIn = imports
+        .filter(i => i.rel !== null && i.rel.startsWith('..'))
+        .map(i => i.spec);
+      expect(
+        reachingIn,
+        'import from "@markout/core" instead -- see its index.ts'
+      ).toEqual([]);
+
+      const targets = imports.map(i => i.rel).filter((r): r is string => r !== null);
 
       // an import nothing claims means the member lists went stale, and a
       // stale list is indistinguishable from a clean result. So it fails
@@ -144,10 +134,7 @@ describe('package layering', () => {
         .filter(t => t.layer > here)
         .map(t => `${t.target} (${LAYERS[t.layer].pkg})`);
 
-      expect(
-        up,
-        `${LAYERS[here]?.pkg} cannot depend on these`
-      ).toEqual([]);
+      expect(up, `${LAYERS[here]?.pkg} cannot depend on these`).toEqual([]);
     });
   }
 });

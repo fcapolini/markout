@@ -4,7 +4,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Server } from "../../src/server";
 import { resolvePath } from "../../src/server/middleware";
-import { Resolver } from "../../src/paths";
+import { Resolver } from "@markout/core";
 import { Window } from "happy-dom";
 import fs from "fs";
 import os from "os";

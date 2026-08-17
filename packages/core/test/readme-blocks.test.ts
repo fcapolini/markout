@@ -3,7 +3,7 @@ import os from 'os';
 import path from 'path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Compiler } from '../src/compiler';
-import { renderPage } from '../src/server/render';
+import { renderPage } from '../src/render/render';
 
 /**
  * Compiles every example in README.md, read out of the file itself.

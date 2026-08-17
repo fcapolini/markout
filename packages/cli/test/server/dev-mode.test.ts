@@ -7,7 +7,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Server } from '../../src/server';
 import { CLIENT_CODE_REQ } from '../../src/server/middleware';
-import { DOM_ERRORS_ID } from '../../src/runtime/web/web-context';
+import { DOM_ERRORS_ID } from '@markout/core';
 
 // `user` is null, so `${user.name}` throws every time it's evaluated -- a
 // perfectly ordinary runtime failure that the compiler can't catch, since
@@ -40,7 +40,7 @@ describe('dev mode: runtime error reporting', () => {
   let prodServer: Server;
 
   beforeAll(async () => {
-    execSync('npm run build:runtime', { cwd: path.resolve(__dirname, '../..') });
+    execSync('npm run build:runtime', { cwd: path.resolve(__dirname, '../../../core') });
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'markout-dev-test-'));
     fs.writeFileSync(path.join(tempDir, 'broken.html'), BROKEN);
     fs.writeFileSync(path.join(tempDir, 'onclick.html'), BREAKS_ON_CLICK);

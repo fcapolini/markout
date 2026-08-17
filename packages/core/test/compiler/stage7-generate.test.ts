@@ -12,7 +12,7 @@ import { Value } from '../../src/compiler/ir/Value';
 import { ServerAttribute, ServerDocument, SourceLocation } from '../../src/html/server-dom';
 import { Source, parse } from '../../src/html/parser';
 import { NodeType } from '../../src/html/dom';
-import { renderPage } from '../../src/server/render';
+import { renderPage } from '../../src/render/render';
 
 const LOC: SourceLocation = {
   start: { line: 0, column: 0 },

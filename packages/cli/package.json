@@ -9,21 +9,18 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json && npm run build:runtime",
-    "build:runtime": "node scripts/build-runtime.mjs",
-    "clean": "rm -rf dist",
-    "dev": "tsx src/cli.ts -d ../../demo",
-    "dev:bench": "tsx src/cli.ts -d ./bench",
-    "dev:bootstrap-kit": "tsx ../../kits/bootstrap/server.ts --prod",
-    "dev:std-kit": "tsx src/cli.ts -d ../../kits/std",
+    "build": "tsc -b",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "dev": "tsx --tsconfig tsconfig.dev.json src/cli.ts -d ../../demo",
+    "dev:bench": "tsx --tsconfig tsconfig.dev.json src/cli.ts -d ./bench",
+    "dev:bootstrap-kit": "tsx --tsconfig tsconfig.dev.json ../../kits/bootstrap/server.ts --prod",
+    "dev:std-kit": "tsx --tsconfig tsconfig.dev.json src/cli.ts -d ../../kits/std",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test-coverage": "vitest run --coverage",
-    "typecheck": "tsc --noEmit && npm run typecheck:test && npm run typecheck:dom",
+    "typecheck": "tsc -b && npm run typecheck:test",
     "typecheck:test": "tsc -p tsconfig.test.json",
-    "typecheck:dom": "tsc -p tsconfig.dom.json",
-    "bench:medium": "node scripts/gen-bench-pages.mjs && tsx scripts/bench-medium.ts",
-    "bench:compare": "tsx scripts/bench-compare.ts"
+    "bench:medium": "node scripts/gen-bench-pages.mjs && tsx --tsconfig tsconfig.dev.json scripts/bench-medium.ts",
+    "bench:compare": "tsx --tsconfig tsconfig.dev.json scripts/bench-compare.ts"
   },
   "keywords": [
     "html",
@@ -41,14 +38,9 @@
   "type": "commonjs",
   "devDependencies": {
     "@types/compression": "^1.8.1",
-    "@types/escodegen": "^0.0.10",
-    "@types/estraverse": "^5.1.7",
-    "@types/estree": "^1.0.9",
     "@types/express": "^5.0.6",
     "@types/node": "^26.2.0",
     "@types/supertest": "^7.2.1",
-    "@vitest/coverage-v8": "^4.1.10",
-    "esbuild": "^0.28.2",
     "happy-dom": "^20.11.2",
     "playwright": "^1.62.1",
     "supertest": "^7.2.2",
@@ -57,12 +49,9 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "acorn": "^8.18.0",
+    "@markout/core": "^0.4.0",
     "commander": "^15.0.0",
     "compression": "^1.8.1",
-    "entities": "^7.0.1",
-    "escodegen": "^2.1.0",
-    "estraverse": "^5.3.0",
     "express": "^5.2.1"
   }
 }

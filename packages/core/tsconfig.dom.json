@@ -9,7 +9,9 @@
   "compilerOptions": {
     "lib": ["ES2022", "DOM"],
     "noEmit": true,
+    "composite": false,
     "declaration": false,
+    "declarationMap": false,
     "sourceMap": false,
     "rootDir": "."
   },

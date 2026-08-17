@@ -1,10 +1,11 @@
 # Five deliverables, one repository
 
-Status: **in progress**. Steps 1 and 2 below are done: the repository is an
-npm workspace whose one package, [packages/cli/](../../packages/cli/), is still
-everything. Nothing has been split yet. This file records the decisions and
-the order, so the migration can be paused between steps without the reasoning
-being lost with it.
+Status: **in progress**. Steps 1 to 3 below are done: the repository is an npm
+workspace, and [`@markout/core`](../../packages/core/) is out —
+[packages/cli/](../../packages/cli/) now depends on it by name and holds only
+the middleware and the CLI. This file records the decisions and the order, so
+the migration can be paused between steps without the reasoning being lost
+with it.
 
 ## The problem
 
@@ -64,19 +65,22 @@ read off every cross-directory import in `packages/cli/src/`:
 
 | Layer | Files | Lands in |
 | --- | --- | --- |
-| base | [kits.ts](../../packages/cli/src/kits.ts), [paths.ts](../../packages/cli/src/paths.ts) | `@markout/core` |
-| html | [src/html/](../../packages/cli/src/html/) | `@markout/core` |
-| runtime | [src/runtime/](../../packages/cli/src/runtime/) | `@markout/core` |
-| compiler | [src/compiler/](../../packages/cli/src/compiler/) | `@markout/core` |
-| render | `publish.ts`, `render.ts`, `serialize.ts`, `runtime-bundle.ts` | `@markout/core` |
+| base | [kits.ts](../../packages/core/src/kits.ts), [paths.ts](../../packages/core/src/paths.ts) | `@markout/core` |
+| html | [src/html/](../../packages/core/src/html/) | `@markout/core` |
+| publish | [publish.ts](../../packages/core/src/publish.ts) | `@markout/core` |
+| runtime | [src/runtime/](../../packages/core/src/runtime/) | `@markout/core` |
+| compiler | [src/compiler/](../../packages/core/src/compiler/) | `@markout/core` |
+| render | `render.ts`, `serialize.ts`, `runtime-bundle.ts` | `@markout/core` |
 | http | `middleware.ts`, `livereload.ts`, `watcher.ts`, `logger.ts` | `@markout/express` |
 | cli | `cli.ts`, `server/index.ts`, `build.ts`, `exit-hook.ts` | `markout` |
 
 Nothing in the tree points upward through that table, and there are no
-cycles — verified before the plan was written, and now asserted by
-[test/layering.test.ts](../../packages/cli/test/layering.test.ts) so it stays that way while
-the code is still one package. The split is a sequence of moves, not a
-refactor.
+cycles — verified before the plan was written, and asserted ever since: first
+by one layering test while everything was still one package, now by
+[core's](../../packages/core/test/layering.test.ts) and
+[the CLI's](../../packages/cli/test/layering.test.ts), which between them cover
+the layers inside each package and the seam between them. The split is a
+sequence of moves, not a refactor.
 
 Each boundary exists because some consumer must not see what is above it:
 
@@ -101,7 +105,7 @@ no server present. Putting them in `@markout/express` would make
 cannot run Node in the request path — depend on an HTTP framework.
 
 **`runtime-bundle.ts` goes wherever the esbuild step goes**, which is core.
-[runtime-bundle.ts:7](../../packages/cli/src/server/runtime-bundle.ts#L7) finds the browser
+[runtime-bundle.ts:7](../../packages/core/src/render/runtime-bundle.ts#L7) finds the browser
 bundle at `__dirname/../../dist/markout-runtime.js`; keep the two together and
 that line survives the move untouched.
 
@@ -156,7 +160,32 @@ follows the files.
      Optional dependencies do not survive the reshuffle. `rm -rf node_modules`
      and install again; nothing is wrong with the tree.
 3. **Extract `@markout/core`.** The largest step, and the one that unblocks
-   the extension.
+   the extension. **Done**, and four decisions inside it are the ones to
+   reuse in step 4:
+   - **The barrel is curated, one name at a time.**
+     [core's index.ts](../../packages/core/src/index.ts) lists what another
+     package may depend on, and nothing else. `export *` over every module
+     would be the same thing as no boundary — and would silently drop one of
+     the two names `html/dom` and `html/server-dom` deliberately share.
+   - **Source in development, `dist` for anything published.** A package's
+     `main` is its built output, so a test run or a dev server that resolved
+     it that way would be checking the last build rather than the working
+     tree. Two mechanisms, one per consumer: vitest gets a `resolve.alias`,
+     and tsx gets [tsconfig.dev.json](../../packages/cli/tsconfig.dev.json),
+     which is the *only* place `paths` appears — mapping a package name onto
+     another project's source is exactly what a composite build must not do.
+   - **`tsc -b` made the build order a non-issue.** `npm run build
+     --workspaces` visits `cli` before `core` alphabetically, which would be
+     the wrong order for any other runner; `tsc -b` follows the reference and
+     builds core first regardless. The root script needed no change.
+   - **A second layering test now guards the seam rather than the layers.**
+     [the CLI's](../../packages/cli/test/layering.test.ts) asserts that core is
+     reached by its package name and never by a relative path — a workspace
+     makes `../core/src/compiler` resolve perfectly well, and nothing else
+     stands between the curated surface and a dependency on an internal.
+   - `publish.ts` turned out to sit *above* html rather than beside `paths`,
+     which the layering test caught the moment core had its own copy. The
+     table above says base; the code says otherwise, and the code was right.
 4. **Extract `@markout/express`.** Small, once core is out.
 5. **The kits become packages.** No TypeScript: a `package.json`, a `files`
    list, and the `markout.root` each already declares. The showcase and Orbit

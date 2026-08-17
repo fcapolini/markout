@@ -8,7 +8,7 @@ import { stage7generate } from '../../../src/compiler/stages/stage7-generate';
 import { parse } from '../../../src/html/parser';
 import type { RuntimeError } from '../../../src/runtime/core/core-context';
 import { WebContext } from '../../../src/runtime/web/web-context';
-import { renderPage } from '../../../src/server/render';
+import { renderPage } from '../../../src/render/render';
 
 /**
  * The two lifecycle pairs, and the difference between them.

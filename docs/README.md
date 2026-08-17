@@ -70,4 +70,4 @@ It stays intentionally small:
 - The compiler discovers dependencies once; the runtime executes them.
 
 The README in the repository root shows the main language examples, and the
-core runtime contract is documented in [src/runtime/RUNTIME.md](../packages/cli/src/runtime/RUNTIME.md).
+core runtime contract is documented in [src/runtime/RUNTIME.md](../packages/core/src/runtime/RUNTIME.md).

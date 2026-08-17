@@ -2,3 +2,4 @@ node_modules/
 dist/
 coverage/
 packages/cli/bench/medium/bench-*.html
+*.tsbuildinfo

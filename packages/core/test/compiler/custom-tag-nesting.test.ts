@@ -6,7 +6,7 @@ import { stage3qualify } from '../../src/compiler/stages/stage3-qualify';
 import { stage4resolve } from '../../src/compiler/stages/stage4-resolve';
 import { stage7generate } from '../../src/compiler/stages/stage7-generate';
 import { parse } from '../../src/html/parser';
-import { renderPage } from '../../src/server/render';
+import { renderPage } from '../../src/render/render';
 
 async function render(html: string) {
   const page = new Page(parse(html, 'test.html'));

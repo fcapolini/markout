@@ -11,7 +11,9 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
+    "composite": false,
     "declaration": false,
+    "declarationMap": false,
     "sourceMap": false,
     // the workspace root, not this package: the kit suites import the kits'
     // own TypeScript (`kits/bootstrap/server.ts`), which lives outside the
@@ -27,7 +29,5 @@
     "module": "ESNext",
     "moduleResolution": "bundler"
   },
-  "include": ["src/**/*", "test/**/*"],
-  // needs lib.dom, so it has a config of its own (see tsconfig.dom.json)
-  "exclude": ["test/html/dom-conformance.ts"]
+  "include": ["src/**/*", "test/**/*"]
 }

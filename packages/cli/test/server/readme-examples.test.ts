@@ -15,7 +15,7 @@ describe("README example: Integrated reactivity", () => {
 
   beforeAll(async () => {
     // guarantee a fresh dist/markout-runtime.js regardless of local state
-    execSync('npm run build:runtime', { cwd: path.resolve(__dirname, '../..') });
+    execSync('npm run build:runtime', { cwd: path.resolve(__dirname, '../../../core') });
 
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "markout-readme-ex1-"));
     fs.writeFileSync(
@@ -103,7 +103,7 @@ describe("README example: Replication", () => {
   let server: Server;
 
   beforeAll(async () => {
-    execSync('npm run build:runtime', { cwd: path.resolve(__dirname, '../..') });
+    execSync('npm run build:runtime', { cwd: path.resolve(__dirname, '../../../core') });
 
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "markout-readme-ex3-"));
     fs.writeFileSync(
@@ -175,7 +175,7 @@ describe("README example: Source level modularity", () => {
   let server: Server;
 
   beforeAll(async () => {
-    execSync('npm run build:runtime', { cwd: path.resolve(__dirname, '../..') });
+    execSync('npm run build:runtime', { cwd: path.resolve(__dirname, '../../../core') });
 
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "markout-readme-ex2-"));
     fs.writeFileSync(

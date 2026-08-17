@@ -1,0 +1,56 @@
+{
+  "name": "@markout/core",
+  "version": "0.4.0",
+  "description": "Markout's compiler and isomorphic runtime: lexically scoped values on the DOM tree, compile-time dependency extraction, and server-side rendering. No HTTP.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./markout-runtime.js": "./dist/markout-runtime.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b && npm run build:runtime",
+    "build:runtime": "node scripts/build-runtime.mjs",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b && npm run typecheck:test && npm run typecheck:dom",
+    "typecheck:test": "tsc -p tsconfig.test.json",
+    "typecheck:dom": "tsc -p tsconfig.dom.json"
+  },
+  "keywords": [
+    "html",
+    "reactive",
+    "ssr",
+    "isomorphic",
+    "hydration",
+    "templating",
+    "compiler"
+  ],
+  "author": "Fabrizio Capolini",
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/escodegen": "^0.0.10",
+    "@types/estraverse": "^5.1.7",
+    "@types/estree": "^1.0.9",
+    "@types/node": "^26.2.0",
+    "esbuild": "^0.28.2",
+    "happy-dom": "^20.11.2",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "acorn": "^8.18.0",
+    "entities": "^7.0.1",
+    "escodegen": "^2.1.0",
+    "estraverse": "^5.3.0"
+  }
+}

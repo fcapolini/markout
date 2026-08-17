@@ -3,7 +3,7 @@ import {
   escapeScriptText,
   serialize,
   UnserializableError,
-} from '../../src/server/serialize';
+} from '../../src/render/serialize';
 
 // A `:server-` result crosses to the client as a JS literal rather than as
 // JSON, so what these assert is mostly that the things JSON would flatten
