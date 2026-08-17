@@ -58,8 +58,8 @@ now have to add presentation logic to them by hand.
 The risk of leading with one CSS framework is being typecast as "a Bootstrap
 thing". That used to be answered by pointing at `shoelace-kit` and
 `webawesome-kit`, which overstates two twenty-line demo stubs. The real second
-kit is [`kits/std/`](kits/std/) — the system parts of a page, not a design
-system — and it is better evidence anyway, because it shows the mechanism is
+kit is [`@markout/std-kit`](kits/std-kit/) — the system parts of a page, not a
+design system — and it is better evidence anyway, because it shows the mechanism is
 not "wrap a CSS framework", it is "define tags". Bootstrap is *the first kit*,
 not the point, and the page has to keep saying so.
 
@@ -134,22 +134,30 @@ claim above is safe to make in public -- "compile ahead of time and deploy
 static assets" cannot quietly produce a page with no data in it. A datasource
 that needed a server says so, and names the one-word fix (`:client`).
 
-## Which Bootstrap kit the argument rests on
+## There is one Bootstrap kit, and it is a package
 
-There are two, and only one of them is the product.
-
-[`kits/bootstrap/bootstrap-kit/`](kits/bootstrap/bootstrap-kit/) is the kit:
-every component on [Bootstrap's 5.3
+[`kits/bootstrap-kit/`](kits/bootstrap-kit/) is the kit: every component on
+[Bootstrap's 5.3
 cheatsheet](https://getbootstrap.com/docs/5.3/examples/cheatsheet/), one file
 per component, landed 2026-08-15. It ships two pages of its own — a showcase
 that puts every component on screen at once, and
 [Orbit](kits/bootstrap/orbit.html), an operations console built out of them
 against an API of its own.
 
-[`demo/bootstrap-kit/`](demo/bootstrap-kit/) is five hand-written definitions
-that predate it, and exists only to serve the `demo/bootstrap` before/after
-page. Everything the homepage and README currently link to is that one. It
-should be read as a demo asset, never as evidence of what the kit contains.
+For a while there were two, and the second one did real damage to the pitch:
+`demo/bootstrap-kit/` was five hand-written definitions predating the kit,
+and it was what the homepage and the README linked to — so the most traffic
+was aimed at the weakest artifact. It was deleted on 2026-08-17 and the
+before/after page rebuilt on the real kit, which is also the first page in
+the repository to install the kit rather than keep a copy of it:
+
+```html
+<:import src="/npm/@markout/bootstrap-kit/all.htm" />
+```
+
+That spelling is worth the churn on its own. A reader who wants what the demo
+has now types `npm install @markout/bootstrap-kit`, and the page they are
+looking at is the proof it works.
 
 ## The kit has to prove reactivity, not boilerplate removal
 
@@ -280,14 +288,13 @@ reach for it.
 The two questions this section used to hold have both moved, and left smaller
 ones behind.
 
-**The homepage no longer overstates the kit — it points at the wrong one.**
-Modal, dropdown, tabs, accordion and the form components all exist, and then
-some. What is stale is the *link*: the homepage and the README both send
-readers to `demo/bootstrap-kit/`, the five-definition stub. That aims the most
-traffic at the weakest artifact. Fixing the links is a line in each place; the
-open decision behind it is whether `demo/bootstrap`'s before/after should be
-rebuilt on the real kit, or deliberately kept minimal so the "after" side stays
-readable in one screen.
+**The homepage no longer overstates the kit, and no longer points at the
+wrong one.** Modal, dropdown, tabs, accordion and the form components all
+exist, and then some; the five-definition stub the README and the homepage
+used to link to is gone, and the before/after page is built on the real kit.
+What is left of this question is only the homepage's own copy, which still
+describes a kit it was written against months ago and wants a read-through
+against [the kit's README](kits/bootstrap-kit/README.md).
 
 **The install line has a spelling that works now.** npm kits landed 2026-08-17:
 a kit is an installed package, imported once by provenance and served at the
@@ -299,12 +306,13 @@ logical root it declares —
 
 — so the line to publish is `npm install @markout/bootstrap-kit`, per project,
 not the `-g` the page currently shows, which installed a set of importable
-fragments globally. What remains is that nothing under `kits/` is packaged as
-an npm package yet, so the copy is ahead of the registry rather than ahead of
-the code.
+fragments globally. Both kits became real npm packages on 2026-08-17, so what
+remains is only that neither has been pushed to the registry: the copy is
+ahead of npm rather than ahead of the code.
 
 **And one new one: two kits mean the page has to say what a kit is.** The
 Bootstrap kit wraps a design system; the std kit does not wrap anything. Both
-are "a directory of `<:define>`s you import", which is the honest and useful
-answer, but the homepage currently only shows the first shape and a reader
-would reasonably conclude kits are for CSS frameworks.
+are "a directory of `<:define>`s you import, installed like anything else",
+which is the honest and useful answer, but the homepage currently only shows
+the first shape and a reader would reasonably conclude kits are for CSS
+frameworks.

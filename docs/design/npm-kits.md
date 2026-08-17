@@ -19,7 +19,7 @@ folders.
 
 A kit is a directory of `.htm` fragments and, usually, resources —
 stylesheets, images, fonts. Today it reaches a page by being *inside the
-docroot*: [kits/bootstrap/bootstrap-kit/](../../kits/bootstrap/bootstrap-kit/) sits
+docroot*: [kits/bootstrap/bootstrap-kit/](../../kits/bootstrap-kit/) sits
 next to the pages that import it, and `kits/bootstrap/std-kit` is a symlink
 to the std kit next door. That works for kits shipped in this repository and
 for nothing else.
@@ -411,7 +411,7 @@ changed rather than working around a rule.
 the feature, it is a bug the repository already has. `fs.watch` with
 `recursive: true` does not follow symlinks (measured, not assumed: a write
 through a symlinked directory produces no event, a direct write does), so
-editing `kits/std/std-kit` today does not invalidate the compiled pages
+editing `kits/std-kit` today does not invalidate the compiled pages
 under `kits/bootstrap` that imported it. An npm kit under `npm link` is the
 same gap by the same mechanism.
 

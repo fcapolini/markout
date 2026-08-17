@@ -1,7 +1,7 @@
 # Server-only values — `:server-`
 
 Status: **built**, all three steps. `std-data` lives in
-[std-kit](../../kits/std/std-kit/README.md) and has no runtime special case
+[std-kit](../../kits/std-kit/README.md) and has no runtime special case
 of its own, which was the claim this whole line of work set out to test.
 
 User-facing documentation lives in

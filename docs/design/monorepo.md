@@ -250,10 +250,7 @@ compounding it helps nobody — but write real `exports` maps in step 2, so a
 later dual build is additive rather than a second migration. The extension is
 the consumer that will eventually push back.
 
-**What survives into the site.** [demo/](../../demo/) currently holds the
-`setlist`, `shoelace` and `webawesome` stubs beside the real material, and
-there are two homepages — [homepage.html](../../homepage.html) and
-`demo/homepage/index.html`. Step 6 cannot be done without deciding which of
-those are demos and which are leftovers. See
-[POSITIONING.md](../../POSITIONING.md) on which artifacts the pitch actually
-rests on.
+**What survives into the site.** [demo/](../../demo/) held the `setlist`,
+`shoelace` and `webawesome` stubs beside the real material, and two homepages.
+Step 6 settles it. See [POSITIONING.md](../../POSITIONING.md) on which
+artifacts the pitch actually rests on.

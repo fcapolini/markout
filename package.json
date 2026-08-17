@@ -3,7 +3,8 @@
   "private": true,
   "description": "Workspace root. The published packages live in packages/, and nothing here is published.",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "kits/*"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
@@ -28,4 +29,3 @@
     "vitest": "^4.1.10"
   }
 }
-
