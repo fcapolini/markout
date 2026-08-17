@@ -1,0 +1,26 @@
+<html lang="en" :padding=${12}>
+<head>
+  <!--- ctrl-click "/lib.htm" -- it is docroot-relative, not relative to
+        this file, which is why an editor cannot follow it by guessing -->
+  <:import src="/lib.htm" />
+  <title>Markout extension fixture</title>
+  <style>
+    .card { border: 1px solid #ccc; padding: ${padding}px; }
+    .warm { background: #fff6e5; }
+  </style>
+</head>
+
+<body :items=${['reactivity', 'modularity', 'isomorphism']}
+      :count=${items.length}>
+
+  <h1>${count} things</h1>
+
+  <x-card :title=${'Everything is fine here'} :tone=${'warm'}>
+    <ul>
+      <li :for-each=${items} :for-as="item">${item}</li>
+    </ul>
+  </x-card>
+
+  <p>Try it: type <code>${</code> and a name that does not exist.</p>
+</body>
+</html>

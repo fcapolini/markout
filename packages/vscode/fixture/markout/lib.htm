@@ -1,0 +1,14 @@
+<lib>
+  <!--- A fragment, imported by the pages next door. Ctrl-click the `src`
+        in either page to land here: that is the compiler's own resolver
+        answering, not a filesystem guess. -->
+
+  <:define tag="x-card:div"
+           class="card"
+           :title=${'Untitled'}
+           :tone=${'plain'}
+           :class-warm=${tone === 'warm'}>
+    <h2>${title}</h2>
+    <:slot />
+  </:define>
+</lib>

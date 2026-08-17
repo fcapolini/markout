@@ -11,7 +11,10 @@ on `<:import src>`, highlighting, and HTML's own features through
 Not yet verified: the extension has never been loaded into a running VS Code
 window. The language server is tested over real LSP, but `activate`, the
 grammar's injection into `text.html.basic` and the language contribution are
-between this and an editor, and only F5 proves them.
+between this and an editor, and only F5 proves them. Press it — the launch
+configuration is at [.vscode/launch.json](../../.vscode/launch.json) and it
+opens [the fixture](../../packages/vscode/fixture/README.md), which is a
+project with no package.json in it at all.
 
 ## The problem
 

@@ -1,0 +1,39 @@
+{
+  // Run the Markout extension in a second VS Code window.
+  //
+  // "Extension: Markout" builds the workspace first, then opens
+  // packages/vscode/fixture as the development host's folder -- a project
+  // with no package.json anywhere, so it also exercises the `markout/`
+  // docroot convention. See docs/design/editor-support.md.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Extension: Markout",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode",
+        "--disable-extensions",
+        "${workspaceFolder}/packages/vscode/fixture"
+      ],
+      "outFiles": ["${workspaceFolder}/packages/vscode/dist/**/*.js"],
+      "preLaunchTask": "npm: build"
+    },
+    {
+      // The language server runs in its own process, so a breakpoint in it
+      // needs this: launch the extension above, then attach here.
+      "name": "Attach to the Markout language server",
+      "type": "node",
+      "request": "attach",
+      "port": 6039,
+      "restart": true,
+      "outFiles": ["${workspaceFolder}/packages/vscode/dist/**/*.js"]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Extension + server",
+      "configurations": ["Extension: Markout", "Attach to the Markout language server"]
+    }
+  ]
+}
