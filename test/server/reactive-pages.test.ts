@@ -47,7 +47,7 @@ describe("Reactive page compilation", () => {
     expect(res.status).toBe(200);
     expect(res.text).toContain('data-markout="s1"');
     expect(res.text).toContain('window.__MARKOUT_PROPS =');
-    expect(res.text).toContain('<script src="/.markout.js" async></script>');
+    expect(res.text).toContain('<script src="/markout-runtime.js" async></script>');
   });
 
   it('should compile :count/:on-click/${count} into real, runnable props', async () => {

@@ -119,10 +119,16 @@ So the honest claim is not "no build step". It is *no build step if Node serves
 your pages, and no server if you would rather build them* — which covers both
 halves of the audience and concedes nothing untrue to either.
 
-Until `markout compile` exists, the addressable audience is the Node-serving
-slice, which is a fraction of the beachhead this document describes. That makes
-it a positioning blocker rather than a feature request, and it ranks accordingly
-against everything else queued in [TODO.md](TODO.md).
+`markout build <docroot> <outdir>` exists as of 2026-08-17, which is what makes
+the second half of that claim true rather than planned. It was treated as a
+positioning blocker rather than a feature request, and built ahead of the
+language work queued in [TODO.md](TODO.md), on exactly that basis.
+
+One gap remains, and it is worth knowing before the page is published: a built
+page still accepts a `:server-` value and a default-mode datasource, both of
+which need a request behind them. They fail as render warnings rather than as a
+refusal, so a page can be built that quietly has no data. The compiler has to
+learn which mode it is compiling for before that becomes an error.
 
 ## The kit has to prove reactivity, not boilerplate removal
 

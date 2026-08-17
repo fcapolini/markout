@@ -39,8 +39,9 @@ would have supplied. This is the mode for a project whose pages are served by
 Rails, Django, Laravel, PHP or a CDN — the backend stays as it is, and Markout
 is a build step rather than something in the request path.
 
-> The `compile` CLI command is not implemented yet. Until it lands, delivery
-> means serving from Node.
+`markout build <docroot> <outdir>` is what produces this — see the CLI section
+of the repository README for what it writes, what it refuses, and why a built
+page looks for the runtime at a different path than a served one.
 
 ### What ahead-of-time compilation cannot carry
 

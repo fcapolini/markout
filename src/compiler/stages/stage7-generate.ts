@@ -14,9 +14,26 @@ const RUNTIME_KEY_PREFIX_MAP: [string, string][] = [
   [TEXT_VALUE_PREFIX, 'text$'],
 ];
 
-// TODO: no bundler exists yet to produce this file; placeholder until one does.
-// dot-prefixed so it reads as a reserved path, distinct from real site content
-export const DEFAULT_RUNTIME_SRC = '/.markout.js';
+/**
+ * Where every page, served or built, looks for the browser runtime.
+ *
+ * It was `/.markout.js` once, on the reasoning that a dot reads as a reserved
+ * path rather than as site content -- which is true while the middleware
+ * ANSWERS the path, since then it is never a file at all. It stops being true
+ * the moment a page is built ahead of time: the path becomes a real file on
+ * somebody else's host, and a dot is what hosts use to decide a file is not
+ * for publishing. GitHub Pages runs Jekyll, which drops dotfiles unless a
+ * `.nojekyll` sits beside them, and denying dot-paths is common server
+ * hardening -- so the runtime would 404 on every page of exactly the hosts
+ * ahead-of-time delivery exists for, with the markup looking perfectly fine.
+ *
+ * One name for both modes, and it matches the bundle's own filename on disk
+ * (`dist/markout-runtime.js`). Distinctive enough to be worth its length: the
+ * middleware answers this path before the filesystem is consulted, so a
+ * page of real content here would be shadowed -- which `markout()` warns
+ * about at startup, and `build` refuses outright.
+ */
+export const DEFAULT_RUNTIME_SRC = '/markout-runtime.js';
 
 /**
  * Stage 7: Generate a `CoreScopeProps`-shaped `ObjectExpression` AST for the

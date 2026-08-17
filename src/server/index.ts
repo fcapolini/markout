@@ -1,5 +1,6 @@
 import compression from "compression";
 import express, { Application } from "express";
+import path from "path";
 import http from "http";
 import exitHook from './exit-hook';
 import { defaultLogger, MarkoutLogger } from "./logger";
@@ -47,6 +48,20 @@ export class Server {
     config.docroot ||= process.cwd();
 
     app.use(markout({ ...config, logger: this.logger }));
+
+    // `/.well-known/` needs a mount of its own: the middleware declines that
+    // path rather than refusing it (RFC 8615 -- it exists in order to be
+    // public), but `express.static` will not serve a dot-prefixed path on its
+    // own, so declining it would still have ended in a 404.
+    //
+    // Mounted narrowly rather than by allowing dotfiles on the docroot at
+    // large. The middleware refuses every OTHER `/.` path, so the two together
+    // are already safe -- but "safe because of what runs before it" is a
+    // property nobody can see at the line that would publish `.env`.
+    app.use(
+      '/.well-known',
+      express.static(path.join(config.docroot, '.well-known'), { dotfiles: 'allow' })
+    );
 
     app.use(express.static(config.docroot));
     this.server = app.listen(config.port);
