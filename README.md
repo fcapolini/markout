@@ -93,10 +93,9 @@ datasource has to be marked `:client` so the browser fetches it on arrival.
 [Rendering](docs/concepts/rendering.md#two-ways-to-deliver-a-page) has the
 details.
 
-> The `compile` command is not implemented yet; today delivery means serving
-> from Node. It is the next thing planned, because it is what lets the
-> server-rendered majority of Bootstrap projects adopt Markout without moving
-> off the stack they already run.
+`markout build` below is what produces the second kind. It is what lets the
+server-rendered majority of projects adopt Markout without moving off the stack
+they already run.
 
 ## CLI
 
@@ -132,6 +131,67 @@ done twice.
 ```sh
 npx markout ./demo --compress
 ```
+
+### Building static files
+
+`markout build` compiles a docroot ahead of time into a directory you can put on
+any host. The source is the first argument and the output the second, and both
+are required:
+
+```sh
+npx markout build ./demo ./dist
+```
+
+It compiles every `.html` under the docroot, writes the browser runtime beside
+them, and copies everything else across — except `.htm` fragments, which are
+source that reaches the output inlined into the pages that imported them, and
+dot-prefixed files, which the server refuses to serve either.
+
+Three dot-prefixed names are copied, because a deployable needs them:
+`.well-known/` (RFC 8615 — ACME challenges, `security.txt`), `.nojekyll` and
+`.htaccess`. Everything else beginning with a dot stays behind, which is the
+way round that matters: what a host needs to serve is a short standardised
+list, while what must never be published — `.env`, `.git/`, `.DS_Store` —
+grows with every tool you install.
+
+`/.well-known/` is also served when running from Node, rather than 404'd with
+the other dot-paths, so a certificate can be issued for a docroot markout is
+serving. `.nojekyll` and `.htaccess` are not: a host reads those, a browser
+never asks for them.
+
+A compile error prints as `file:line:column: message` and **exits non-zero**, so
+CI can gate on it. The pages that did compile are still written; only the ones
+that failed are missing. An expression that throws while rendering is a warning
+rather than a failure, which is what the server does with the same failure: the
+page is written, and the value that failed is a hole in it rather than a reason
+to have no page.
+
+`-p`/`--page` restricts the build to one page, and can be given more than once.
+A leading slash and the `.html` extension are both optional:
+
+```sh
+npx markout build ./demo ./dist -p index -p /about.html
+```
+
+A restricted build still writes the runtime — a page without it is not a page —
+but does not copy assets, since re-copying the whole tree is the part nobody
+wanted repeated.
+
+Three things it refuses, each because the alternative is a silent failure
+someone finds later: an output directory inside the docroot (the next build
+would compile its own output), a docroot inside the output directory (it would
+write over its own sources), and a docroot file named like the runtime — that
+one used to be copied over the runtime after it was written, leaving every page
+in the output broken and the build reporting success.
+
+Every page, served or built, loads the runtime from `/markout-runtime.js`. It is
+deliberately not dot-prefixed: a served page has that path *answered* by the
+middleware, so it is never a file, but a built page makes it a real file on
+somebody else's host — and a dot is what hosts use to decide a file is not for
+publishing. GitHub Pages runs Jekyll, which drops dotfiles unless a `.nojekyll`
+sits beside them, and denying dot-paths is common server hardening. The cost of
+the plain name is that a docroot file at that path is shadowed when serving,
+which `markout()` warns about at startup.
 
 ## Integrated reactivity example
 

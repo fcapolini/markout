@@ -28,6 +28,15 @@ describe("Middleware", () => {
     // Create a file with compilation errors
     fs.writeFileSync(path.join(tempDir, "error.html"), "<html><body>{{ unclosed");
 
+    // what a certificate authority asks for, and what `security.txt` lives in
+    const wellKnown = path.join(tempDir, ".well-known", "acme-challenge");
+    fs.mkdirSync(wellKnown, { recursive: true });
+    fs.writeFileSync(path.join(wellKnown, "TOKEN"), "proof-of-control");
+    fs.writeFileSync(
+      path.join(tempDir, ".well-known", "security.txt"),
+      "Contact: mailto:security@example.test\n"
+    );
+
     server = new Server({ docroot: tempDir });
     await server.start();
     app = server.app!;
@@ -79,6 +88,24 @@ describe("Middleware", () => {
     expect(res.status).toBe(404);
   });
 
+  // The one dot-path that exists in order to be public (RFC 8615), so the
+  // hidden-file refusal above lets it through to the static layer -- which is
+  // also what makes a certificate issuable for a docroot served by markout
+  // directly, and what `build` copies for the same reason.
+  it("should pass /.well-known/ through to the static layer", async () => {
+    const res = await request(app).get("/.well-known/acme-challenge/TOKEN");
+    expect(res.status).toBe(200);
+    // no extension, so no content type supertest parses as text
+    expect((res.text ?? Buffer.from(res.body).toString())).toBe("proof-of-control");
+  });
+
+  // no extension, as an ACME token has none: it must not be resolved as a page
+  it("should not treat a /.well-known/ path as a page request", async () => {
+    const res = await request(app).get("/.well-known/security.txt");
+    expect(res.status).toBe(200);
+    expect(res.text).toContain("Contact:");
+  });
+
   // Test non-HTML file handling
   it("should pass through non-HTML files to next middleware", async () => {
     const res = await request(app).get("/test.js");
@@ -91,8 +118,8 @@ describe("Middleware", () => {
   });
 
   // Test client code request
-  it("should return client code for /.markout.js", async () => {
-    const res = await request(app).get("/.markout.js");
+  it("should return client code for /markout-runtime.js", async () => {
+    const res = await request(app).get("/markout-runtime.js");
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toContain('text/javascript');
   });

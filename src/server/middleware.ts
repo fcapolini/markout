@@ -8,22 +8,12 @@ import { DEFAULT_RUNTIME_SRC } from "../compiler/stages/stage7-generate";
 import { formatRuntimeError, RuntimeError } from "../runtime/core/core-context";
 import { defaultLogger, MarkoutLogger } from "./logger";
 import { renderPage } from "./render";
+import { loadClientCode } from "./runtime-bundle";
 
 export const CLIENT_CODE_REQ = DEFAULT_RUNTIME_SRC;
 
-// __dirname is src/server (dev, via tsx) or dist/server (built); either way
-// this is exactly two levels below the project root, where esbuild puts the
-// bundle (see scripts/build-runtime.mjs)
-const RUNTIME_BUNDLE_PATH = path.join(__dirname, '../../dist/markout-runtime.js');
-
-function loadClientCode(): string {
-  try {
-    return fs.readFileSync(RUNTIME_BUNDLE_PATH, 'utf8');
-  } catch {
-    console.warn(`[markout] runtime bundle not found at "${RUNTIME_BUNDLE_PATH}" -- run "npm run build:runtime"`);
-    return '';
-  }
-}
+/** see handleNonPageRequests, and build.ts's SERVABLE_DOTFILES */
+const WELL_KNOWN_PREFIX = '/.well-known/';
 
 export interface MarkoutProps {
   docroot: string;
@@ -129,6 +119,18 @@ export function markout(props: MarkoutProps) {
   const clientCode = loadClientCode();
   const cache = pageCache(docroot, logger, pathname => compiler.compile(pathname));
 
+  // This path is answered here, before the filesystem is consulted, so a real
+  // file of the same name is unreachable -- and silently so, which is the
+  // whole cost of the runtime no longer being dot-prefixed. Said once at
+  // startup rather than per request, and only when there is something to say.
+  if (fs.existsSync(path.join(docroot, CLIENT_CODE_REQ))) {
+    logger(
+      'warn',
+      `[markout] "${CLIENT_CODE_REQ}" in the docroot is shadowed by the runtime ` +
+        `served at that path, and will never be reached`
+    );
+  }
+
   return async function (req: Request, res: Response, next: NextFunction) {
     const i = req.path.lastIndexOf('.');
     const extname = i < 0 ? '.html' : req.path.substring(i).toLowerCase();
@@ -224,6 +226,20 @@ function handleNonPageRequests(
   if (req.path === CLIENT_CODE_REQ) {
     res.header('Content-Type', 'text/javascript;charset=UTF-8');
     res.send(clientCode);
+    return true;
+  }
+  // The one dot-path that exists in order to be public (RFC 8615), so it is
+  // handed to the static layer instead of refused. Passed on HERE rather than
+  // by loosening the check below it: an ACME challenge token has no extension,
+  // so a request that merely got past the refusal would be resolved as a PAGE
+  // and 404 all the same.
+  //
+  // What this buys, beyond agreeing with what `build` copies: a certificate can
+  // be issued for a docroot served by markout directly, which the blanket
+  // refusal made impossible -- the 404 happened before `express.static` ever
+  // saw the request.
+  if (req.path.startsWith(WELL_KNOWN_PREFIX)) {
+    next();
     return true;
   }
   if (req.path.startsWith('/.') || extname === '.htm') {
