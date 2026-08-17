@@ -28,6 +28,9 @@ export class Value {
    * client is handed its result instead of re-deriving it.
    */
   serverOnly = false;
+  /** declared `::name`: computed while the page is built and substituted
+   *  into every reader, so nothing of it reaches the runtime */
+  comptime = false;
 
   constructor(name: string, node: ServerAttribute | ServerText, scope: Scope, id?: string) {
     this.name = name;

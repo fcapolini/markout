@@ -418,10 +418,10 @@ describe('a page that self-hosts Bootstrap', () => {
     });
     fs.writeFileSync(
       path.join(docroot, 'selfhosted.html'),
-      `<html><head :k_bsCssUrl="/vendor/bootstrap.css"
-                   :k_bsJsUrl="/vendor/bootstrap.js"
-                   :k_bsCssIntegrity=\${null}
-                   :k_bsJsIntegrity=\${null}>` +
+      `<html><head ::bsCssUrl="/vendor/bootstrap.css"
+                   ::bsJsUrl="/vendor/bootstrap.js"
+                   ::bsCssIntegrity=\${null}
+                   ::bsJsIntegrity=\${null}>` +
         `<:import src="/bootstrap-kit/all.htm" /><title>t</title></head>` +
         `<body><bs-button>Go</bs-button></body></html>`
     );
@@ -499,10 +499,10 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
   `;
 
   const PAGE = `<html>
-    <head :k_bsCssUrl="/vendor/bootstrap.css"
-          :k_bsJsUrl="/vendor/bootstrap.js"
-          :k_bsCssIntegrity=\${null}
-          :k_bsJsIntegrity=\${null}>
+    <head ::bsCssUrl="/vendor/bootstrap.css"
+          ::bsJsUrl="/vendor/bootstrap.js"
+          ::bsCssIntegrity=\${null}
+          ::bsJsIntegrity=\${null}>
       <:import src="/bootstrap-kit/all.htm" />
       <title>at work</title>
     </head>
@@ -551,10 +551,10 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     const demo = fs.readFileSync(path.join(KIT_ROOT, 'orbit.html'), 'utf8');
     const offline = demo.replace(
       '<head>',
-      '<head :k_bsCssUrl="/vendor/bootstrap.css"\n' +
-        '      :k_bsJsUrl="/vendor/bootstrap.js"\n' +
-        '      :k_bsCssIntegrity=${null}\n' +
-        '      :k_bsJsIntegrity=${null}>'
+      '<head ::bsCssUrl="/vendor/bootstrap.css"\n' +
+        '      ::bsJsUrl="/vendor/bootstrap.js"\n' +
+        '      ::bsCssIntegrity=${null}\n' +
+        '      ::bsJsIntegrity=${null}>'
     );
     if (offline === demo) {
       // a silent no-op here would put the CDN back in the test run

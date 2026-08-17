@@ -8,28 +8,41 @@ import type { Scope } from '../ir/Scope';
 import type { Value, ValueDepRef } from '../ir/Value';
 import { chainDep } from './stage4-resolve';
 
-/** the name prefix that marks a value compile-time */
-export const COMPTIME_PREFIX = 'k_';
+/** the attribute marker that declares a value compile-time: `::name` */
+export const COMPTIME_MARKER = '::';
 
 /**
- * Stage 5: Evaluate `k_` values and substitute them into their readers.
+ * Stage 5: Evaluate `::` values and substitute them into their readers.
  *
  * A design token is a constant, and today it costs what a changing value
  * costs: a scope entry, a dependency closure, and a cell that will never
- * fire. `:k_accent=${'#6f42c1'}` says the value is fixed when the page is
+ * fire. `::accent=${'#6f42c1'}` says the value is fixed when the page is
  * built, and this stage takes it at its word -- computing it, writing the
  * result into every expression that reads it, and removing it from the
  * scope so nothing about it reaches the runtime at all.
  *
- * The name carries the mark, rather than a `:const-` family, because a
- * family prefix marks only the DECLARATION: a `:const-color` would still be
- * read as `${color}`, indistinguishable from a reactive value at every
- * point where the difference costs something. `${k_color}` says it wherever
- * it is used.
+ * The mark is on the DECLARATION and the value keeps its own name, so
+ * `${accent}` reads the same whichever it is. That was once the other way
+ * round -- the name carried it, as `k_accent` -- on the grounds that a
+ * reader has to be able to tell a constant from something live. What
+ * settled it was that the difference costs something in exactly one place,
+ * assigning to one, and no prefix was stopping that: `k_n = 5` compiled,
+ * substituted to `2 = 5`, and took the page down at `new Function`. The
+ * compiler has to refuse it either way (see rejectWrites), and once it
+ * does, a name that says WHEN it was computed buys little and costs the
+ * thing every use site pays: change your mind about a constant and every
+ * reader has to be renamed. `accent` in the Orbit demo made exactly that
+ * journey, from a fixed token to a value the settings panel writes.
+ *
+ * Doubling the attribute prefix rather than a `:const-` family, because
+ * markout's families name things in ANOTHER namespace -- `:class-` a CSS
+ * class, `:on-` a DOM event -- where the dash-case part is that other
+ * thing's real name. A constant is a markout value, so a family form would
+ * have to invent a rule for what `:const-accent` is called when read.
  *
  * What keeps this tractable is one rule:
  *
- *     a `k_` value may read only literals and other `k_` values
+ *     a `::` value may read only literals and other `::` values
  *
  * That is a closure check rather than partial evaluation. Anything reaching
  * an ordinary value, `$id`, the DOM or a handler is refused -- and refused
@@ -58,11 +71,11 @@ export function stage5comptime(page: Page) {
 }
 
 /**
- * Refuses `k_x = 1`, and `k_x++`.
+ * Refuses `::x = 1`, and `x++` on one.
  *
  * A constant is gone by the time the page runs, so an assignment to one has
  * nothing to assign to -- and substitution rewrites the target along with
- * every other read, which turned `k_n = 5` into `2 = 5` and handed stage7 a
+ * every other read, which turned `n = 5` into `2 = 5` and handed stage7 a
  * function body that is not JavaScript. `new Function` then threw while the
  * page was being built, taking the whole page with it, and nothing had said
  * a word: the expression compiled, the constant computed, and the failure
@@ -86,7 +99,7 @@ function rejectWrites(page: Page, constants: Map<Value, Value>) {
         target &&
           addError(
             page,
-            `"${dep!.key}" is a ${COMPTIME_PREFIX} value, so it is computed once ` +
+            `"${dep!.key}" is a "${COMPTIME_MARKER}" value, so it is computed once ` +
               `while the page is built and is not there to be assigned to`,
             value
           );
@@ -95,12 +108,12 @@ function rejectWrites(page: Page, constants: Map<Value, Value>) {
   }
 }
 
-/** every `k_` value in the page, by the id stage4 records dependencies against */
+/** every `::` value in the page, by the id stage4 records dependencies against */
 function collect(page: Page): Map<Value, Value> {
   const found = new Map<Value, Value>();
   const walk = (scope: Scope) => {
-    for (const [name, value] of scope.values) {
-      name.startsWith(COMPTIME_PREFIX) && found.set(value, value);
+    for (const [, value] of scope.values) {
+      value.comptime && found.set(value, value);
     }
     scope.children.forEach(walk);
   };
@@ -147,7 +160,7 @@ function evaluate(page: Page, constants: Map<Value, Value>): Map<Value, unknown>
     }
     if (!progressed) {
       for (const value of blocked) {
-        addError(page, `"${value.name}" is part of a cycle of ${COMPTIME_PREFIX} values`, value);
+        addError(page, `"${value.name}" is part of a cycle of "${COMPTIME_MARKER}" values`, value);
         done.set(value, undefined);
       }
       break;
@@ -175,8 +188,8 @@ function readsOf(page: Page, value: Value, constants: Map<Value, Value>): Value[
         ok = false;
         addError(
           page,
-          `"${value.name}" is a ${COMPTIME_PREFIX} value, so it may only read ` +
-            `literals and other ${COMPTIME_PREFIX} values -- but it reads ` +
+          `"${value.name}" is a "${COMPTIME_MARKER}" value, so it may only read ` +
+            `literals and other "${COMPTIME_MARKER}" values -- but it reads ` +
             `"${[...(dep.via ?? []), dep.key].join('.')}"`,
           value
         );
@@ -188,13 +201,12 @@ function readsOf(page: Page, value: Value, constants: Map<Value, Value>): Value[
   return ok ? reads : undefined;
 }
 
-/** the `k_` Value a resolved dependency points at, if it points at one */
+/** the compile-time Value a resolved dependency points at, if it points at one */
 function targetOf(
   from: Value,
   dep: ValueDepRef,
   constants: Map<Value, Value>
 ): Value | undefined {
-  if (!dep.key.startsWith(COMPTIME_PREFIX)) return undefined;
   let scope: Scope | undefined = from.scope;
   for (const step of dep.via ?? []) {
     scope = step === '$parent' ? scope?.parent : scope?.children.find(c => c.name === step);
@@ -209,7 +221,7 @@ function targetOf(
   return undefined;
 }
 
-/** evaluates one constant, its own `k_` reads already substituted */
+/** evaluates one constant, its own constant reads already substituted */
 function run(page: Page, value: Value, done: Map<Value, unknown>): unknown {
   const ast = inlined(page, value, done, value.value as unknown as Node);
   let result: unknown;
@@ -222,7 +234,7 @@ function run(page: Page, value: Value, done: Map<Value, unknown>): unknown {
   if (result !== null && !['string', 'number', 'boolean', 'undefined'].includes(typeof result)) {
     addError(
       page,
-      `"${value.name}" is a ${COMPTIME_PREFIX} value, so it has to be a string, ` +
+      `"${value.name}" is a "${COMPTIME_MARKER}" value, so it has to be a string, ` +
         `number, boolean, null or undefined -- this one is ${typeof result}. ` +
         `Substituting it would give every reader a separate copy`,
       value
@@ -232,7 +244,7 @@ function run(page: Page, value: Value, done: Map<Value, unknown>): unknown {
   return result;
 }
 
-/** a copy of `ast` with every `k_` chain replaced by what it computed to */
+/** a copy of `ast` with every constant chain replaced by what it computed to */
 function inlined(
   page: Page,
   value: Value,
@@ -273,12 +285,15 @@ function substitute(page: Page, constants: Map<Value, Value>, done: Map<Value, u
     if (constants.has(value)) continue;
     const ast = value.value;
     if (!ast || typeof ast === 'string') continue;
-    if (!value.deps.some(dep => dep.key.startsWith(COMPTIME_PREFIX))) continue;
+    // resolved rather than pattern-matched: which values are constants is
+    // something this stage knows, and asking the name was only ever a way
+    // of re-deriving it from a spelling
+    if (!value.deps.some(dep => targetOf(value, dep, constants))) continue;
     writeBack(value, inlined(page, value, done, ast as unknown as Node));
     // a constant is gone by the time the runtime exists, so nothing can
     // depend on it -- and stage7 would emit a thunk reaching for a value
     // that is not there
-    value.deps = value.deps.filter(dep => !dep.key.startsWith(COMPTIME_PREFIX));
+    value.deps = value.deps.filter(dep => !targetOf(value, dep, constants));
   }
 }
 
