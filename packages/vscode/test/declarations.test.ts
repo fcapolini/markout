@@ -183,6 +183,40 @@ describe('a loop, where three different questions sit on one line', () => {
   });
 });
 
+describe('the scopes a document always has', () => {
+  const PAGE = [
+    "<html :title=${'T'}>",
+    '  <head :meta=${1}>',
+    '    <title>${page.title}</title>',
+    '  </head>',
+    '  <body :n=${2}>',
+    '    <p>${head.meta} ${body.n}</p>',
+    '  </body>',
+    '</html>',
+  ].join('\n');
+
+  it('goes to <html>, <head> and <body> when the page writes them', async () => {
+    const text = write('index.html', PAGE);
+    expect(lineOf(await declarationAt('index.html', text, '${page.title}'))).toBe(1);
+    expect(lineOf(await declarationAt('index.html', text, '${head.meta}'))).toBe(2);
+    expect(lineOf(await declarationAt('index.html', text, '${body.n}'))).toBe(5);
+  });
+
+  it('answers even where the parser supplied the element', async () => {
+    // a fragment has no <head> or <body> of its own -- they are synthesized,
+    // with offsets into this file and no filename. Requiring a filename
+    // meant `head` resolved to nothing in every fragment, which is where a
+    // `<:define>` reading `head.x` actually lives
+    const text = write(
+      'lib.htm',
+      ["<lib :light=${true}>", '  <:define tag="x-t:button"', '           :on-click=${() => head.light = !head.light}>t</:define>', '</lib>'].join('\n')
+    );
+    const found = await declarationAt('lib.htm', text, 'head.light');
+    expect(lineOf(found)).toBe(1);
+    expect(found!.pathname).toBe('/lib.htm');
+  });
+});
+
 describe('what it declines to answer', () => {
   it('says nothing for a property of a value', async () => {
     // `data.name` -- `data` has a declaration, `name` is a property of
