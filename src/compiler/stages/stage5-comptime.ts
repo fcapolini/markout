@@ -88,21 +88,31 @@ function rejectWrites(page: Page, constants: Map<Value, Value>) {
   for (const value of page.values.values()) {
     const ast = value.value;
     if (!ast || typeof ast === 'string') continue;
+    // the TARGET, walked as a subtree rather than compared as a node:
+    // `[a] = xs` and `({ v: a } = o)` write to `a` without `a` ever being
+    // the left of anything, and `for (a of xs)` writes once per item
+    const flag = (target: Node) =>
+      estraverse.traverse(target, {
+        enter(node) {
+          const dep = chainDep(node, value, page);
+          if (!dep) return;
+          this.skip();
+          targetOf(value, dep, constants) &&
+            addError(
+              page,
+              `"${dep.key}" is a "${COMPTIME_MARKER}" value, so it is computed once ` +
+                `while the page is built and is not there to be assigned to`,
+              value
+            );
+        },
+      });
     estraverse.traverse(ast as unknown as Node, {
-      enter(node, parent) {
-        const written =
-          (parent?.type === 'AssignmentExpression' && parent.left === node) ||
-          (parent?.type === 'UpdateExpression' && parent.argument === node);
-        if (!written) return;
-        const dep = chainDep(node, value, page);
-        const target = dep && targetOf(value, dep, constants);
-        target &&
-          addError(
-            page,
-            `"${dep!.key}" is a "${COMPTIME_MARKER}" value, so it is computed once ` +
-              `while the page is built and is not there to be assigned to`,
-            value
-          );
+      enter(node) {
+        if (node.type === 'AssignmentExpression') flag(node.left as Node);
+        else if (node.type === 'UpdateExpression') flag(node.argument as Node);
+        else if (node.type === 'ForOfStatement' || node.type === 'ForInStatement') {
+          flag(node.left as Node);
+        }
       },
     });
   }

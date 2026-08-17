@@ -101,6 +101,11 @@ function qualifyExpression(key: string, expression: Node) {
       if (isQualified(node, parent)) {
         return;
       }
+      // `({ n } = o)` becomes `({ n: this.n } = o)`: once the target is an
+      // expression rather than the bare name, the shorthand cannot say it
+      if (parent?.type === 'Property' && parent.shorthand && parent.value === node) {
+        parent.shorthand = false;
+      }
       if (key === node.name && !inFunctionBody(stack)) {
         return {
           type: 'MemberExpression',
@@ -152,7 +157,13 @@ function isInDeclaration(id: Node, stack: Node[]) {
     // patterns; only the latter's key/value are bindings, not references
     const grandparent = stack.length >= 3 ? stack[stack.length - 3] : undefined;
     if (grandparent?.type === 'ObjectPattern') {
-      return true;
+      // `{ v: n }` -- `v` names the property being read out of the object
+      // and is never a reference; `n` is the target. In the shorthand
+      // `{ n }` they are the SAME node, and it is the target
+      if (!parent.computed && parent.key === id && parent.value !== id) {
+        return true;
+      }
+      return binds(stack, stack.length - 3);
     }
     return !parent.computed && parent.key === id;
   }
@@ -167,12 +178,49 @@ function isInDeclaration(id: Node, stack: Node[]) {
     return parent.params.some(param => param === (id as Pattern));
   }
   if (parent.type === 'AssignmentPattern') {
-    return parent.left === id;
+    return parent.left === id && binds(stack, stack.length - 2);
   }
   if (parent.type === 'ArrayPattern' || parent.type === 'RestElement') {
-    return true;
+    return binds(stack, stack.length - 2);
   }
   return false;
+}
+
+/**
+ * Whether the pattern at `i` introduces names, or writes to existing ones.
+ *
+ * The same shapes serve both: `const [a] = xs` and `({ a } = o)` are spelled
+ * alike and mean opposite things -- one declares `a`, the other assigns to
+ * whatever `a` already is. Treating every pattern member as a binding left
+ * the second kind unqualified, so `[a] = [5]` compiled to `[a] = [5]` and
+ * wrote an undeclared global while the value it was aimed at never moved,
+ * with nothing reported at any stage.
+ *
+ * Answered by walking out through the enclosing patterns to the first thing
+ * that is not one, and asking what IT is doing with them.
+ */
+function binds(stack: Node[], i: number): boolean {
+  let child: Node = stack[i];
+  for (let k = i - 1; k >= 0; k--) {
+    const n = stack[k];
+    if (
+      n.type === 'ArrayPattern' ||
+      n.type === 'ObjectPattern' ||
+      n.type === 'Property' ||
+      n.type === 'AssignmentPattern' ||
+      n.type === 'RestElement'
+    ) {
+      child = n;
+      continue;
+    }
+    // `[a] = xs` and `for ([a] of xs)`: the pattern is a target, and its
+    // members are references to values that already exist
+    if (n.type === 'AssignmentExpression') return n.left !== child;
+    if (n.type === 'ForOfStatement' || n.type === 'ForInStatement') return n.left !== child;
+    // a declarator, a parameter list, a catch clause: a binding
+    return true;
+  }
+  return true;
 }
 
 function isLocalAccess(id: Node, stack: Node[]) {

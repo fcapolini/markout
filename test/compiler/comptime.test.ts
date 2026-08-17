@@ -115,6 +115,24 @@ describe('stage5-comptime', () => {
     expect(r.errors).toStrictEqual([]);
   });
 
+  it('refuses every shape of write, not just `a = 1`', async () => {
+    // `[a] = xs`, `({ v: a } = o)` and `for (a of xs)` all write to `a`
+    // without `a` ever being the left of anything, so the target is walked
+    // as a subtree rather than compared as a node
+    for (const write of [
+      '[a] = [1]',
+      '({v: a} = {v: 1})',
+      '({a} = {a: 1})',
+      '[...a] = [1]',
+      'for (a of [1]) {}',
+    ]) {
+      const r = await build(
+        `<html ::a=\${2}><body><button :on-click=\${() => { ${write}; }}>x</button></body></html>`
+      );
+      expect(r.errors.join(), write).toMatch(/not there to be assigned to/);
+    }
+  });
+
   it('refuses a cycle', async () => {
     const r = await build('<html ::a=${b} ::b=${a}><body>${a}</body></html>');
     expect(r.errors.join()).toMatch(/cycle of "::" values/);
