@@ -1,0 +1,10 @@
+<html lang="en">
+<head>
+  <!--- a file that is not there. It gets its own page because a failed
+        include stops the compile: the page is never assembled, so nothing
+        after this is reached and no other mistake in it would be found -->
+  <:include src="/nowhere.htm" />
+  <title>A file that is not there</title>
+</head>
+<body>Nothing else in this page is looked at.</body>
+</html>

@@ -1,0 +1,17 @@
+<html lang="en">
+<head>
+  <:import src="/lib.htm" />
+  <title>Two mistakes, both reported before the file is saved</title>
+</head>
+
+<body :total=${10}>
+
+  <!--- a value that was never declared anywhere -->
+  <p>${subtotal}</p>
+
+  <!--- a typo in a name that IS declared just above. Fix it to `total`
+        and watch the squiggle go without pressing save -->
+  <p>${totl}</p>
+
+</body>
+</html>
