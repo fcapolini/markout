@@ -278,6 +278,42 @@ describe('stage4-resolve: unknown reference validation', () => {
     ]);
   });
 
+  // A definition's body is resolved on its own AND once per usage site --
+  // the per-usage walks are needed, since a value written at a call site
+  // resolves there -- but a reference the body makes to the page's own
+  // vocabulary resolves up the DEFINITION's chain every time, so it misses
+  // identically every time. One typo used to be reported once per usage,
+  // plus once for the definition: eleven copies for a component used ten
+  // times, every one of them naming the same line.
+  it('reports a definition body\'s unknown reference once, however many usages', () => {
+    const p = compile(
+      '<html><head><:define tag="my-card:div" :n=${0}>${fmt.compact(n)}</:define></head>' +
+        '<body><my-card :n=${1} /><my-card :n=${2} /><my-card :n=${3} /></body></html>'
+    );
+    expect(p.errors.map(e => e.msg)).toStrictEqual(['Unknown reference: "fmt"']);
+  });
+
+  it('reports a definition body\'s unknown reference with no usages at all', () => {
+    // the requirement belongs to the definition, so it is checked whether or
+    // not the page goes on to use the tag
+    const p = compile(
+      '<html><head><:define tag="my-card:div" :n=${0}>${fmt.compact(n)}</:define></head>' +
+        '<body></body></html>'
+    );
+    expect(p.errors.map(e => e.msg)).toStrictEqual(['Unknown reference: "fmt"']);
+  });
+
+  it('keeps two identical messages apart when they are two mistakes', () => {
+    // deduplication is by position, not by text: the same name missing in
+    // two places is two things to fix
+    const p = compile('<html><body><p>${nope}</p><p>${nope}</p></body></html>');
+    expect(p.errors.map(e => e.msg)).toStrictEqual([
+      'Unknown reference: "nope"',
+      'Unknown reference: "nope"',
+    ]);
+    expect(p.errors[0].loc!.start.column).not.toBe(p.errors[1].loc!.start.column);
+  });
+
   it('does not error for a same-scope reference', () => {
     const p = compile('<html><body><div :count=${0}><p>${count}</p></div></body></html>');
     expect(p.errors).toStrictEqual([]);

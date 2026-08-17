@@ -1,3 +1,4 @@
+import type * as acorn from 'acorn';
 import { PageError, Source } from '../../html/parser';
 import type { ServerContainerNode, ServerElement, ServerNode } from '../../html/server-dom';
 import type { Node } from 'estree';
@@ -247,6 +248,27 @@ export class Page {
     this.values = new Map();
   }
 
+  /**
+   * Record a compile error, unless the same one is already recorded.
+   *
+   * Same message at the same source position is the same mistake: nothing
+   * distinguishes the copies for a reader, so the extras are noise.
+   *
+   * They arise from a `<:define>` body, which is resolved once on its own and
+   * again for each usage site -- the per-usage walks are not redundant (a
+   * value written at a call site resolves there, so its dependencies differ
+   * per instance), but a reference the body makes to the page's own
+   * vocabulary resolves up the DEFINITION's chain every time, and so misses
+   * identically every time. A component used ten times reported one typo
+   * eleven times.
+   */
+  addError(msg: string, loc?: acorn.SourceLocation | null) {
+    if (this.errors.some(e => e.msg === msg && sameLoc(e.loc, loc))) {
+      return;
+    }
+    this.errors.push(new PageError('error', msg, loc));
+  }
+
   createValueId() {
     return `v${this.nextValueId++}`;
   }
@@ -254,4 +276,26 @@ export class Page {
   createScopeId() {
     return `s${this.nextScopeId++}`;
   }
+}
+
+/**
+ * Whether two errors point at the same place.
+ *
+ * Position rather than object identity: the copies come from separate walks
+ * over separate clones of one `<:define>` body, so they are never the same
+ * `loc`. Two errors with no location at all are the same place too -- there
+ * is nothing to tell them apart by, which is exactly when a duplicate is
+ * least useful to read.
+ */
+function sameLoc(a?: acorn.SourceLocation | null, b?: acorn.SourceLocation | null) {
+  if (!a || !b) {
+    return !a && !b;
+  }
+  return (
+    (a.source ?? null) === (b.source ?? null) &&
+    a.start.line === b.start.line &&
+    a.start.column === b.start.column &&
+    a.end.line === b.end.line &&
+    a.end.column === b.end.column
+  );
 }
