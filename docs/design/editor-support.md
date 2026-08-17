@@ -86,8 +86,12 @@ Ranked by what a markout author actually feels, not by what is easy:
    Not a re-implementation of a subset of the rules: the same `Compiler` the
    server and `build` run, so anything it catches the editor catches, for
    free and forever.
-2. **Navigation, two kinds.** A name in an expression goes to the value that
-   declares it — `${title}` inside a `<:define>` to its `:title=${…}` — which
+2. **Navigation, three kinds.** A custom tag goes to the `<:define>` that
+   gives it meaning, which is usually in another file and is the thing a
+   reader of a page most often wants — the compiler keeps that map because it
+   needs it to compile at all, so the editor only has to ask.
+
+   A name in an expression goes to the value that declares it — `${title}` inside a `<:define>` to its `:title=${…}` — which
    is the one an editor cannot approximate. A name belongs to the nearest
    enclosing scope; a usage site resolves from somewhere other than where it
    sits; slotted markup resolves from where it was *written*. Those are the

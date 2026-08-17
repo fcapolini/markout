@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { chainAt, findDeclaration, identifierAt } from '../src/declarations';
+import { chainAt, findDeclaration, identifierAt, tagNameAt } from '../src/declarations';
 
 /**
  * Go-to-definition on a name in an expression.
@@ -217,6 +217,52 @@ describe('the scopes a document always has', () => {
   });
 });
 
+describe('a custom tag', () => {
+  const LIB = [
+    '<lib>',
+    '  <:define tag="x-card:div"',
+    "           :title=${'Untitled'}>",
+    '    <h2>${title}</h2>',
+    '  </:define>',
+    '</lib>',
+  ].join('\n');
+
+  it('goes to the <:define> that gives it meaning, in another file', async () => {
+    // the one a reader of a page wants most: a tag they have never seen,
+    // defined somewhere they would otherwise have to go looking for
+    write('lib.htm', LIB);
+    const text = write(
+      'index.html',
+      '<html>\n<head><:import src="/lib.htm" /></head>\n<body><x-card>hi</x-card></body>\n</html>'
+    );
+    const found = await declarationAt('index.html', text, '<x-card>');
+    expect(found!.pathname).toBe('/lib.htm');
+    expect(found!.selection.start.line).toBe(1);
+  });
+
+  it('goes there from the closing tag too', async () => {
+    write('lib.htm', LIB);
+    const text = write(
+      'index.html',
+      '<html>\n<head><:import src="/lib.htm" /></head>\n<body><x-card>hi</x-card></body>\n</html>'
+    );
+    const found = await declarationAt('index.html', text, '</x-card>');
+    expect(found!.pathname).toBe('/lib.htm');
+  });
+
+  it('says nothing about an ordinary tag', async () => {
+    const text = write('index.html', '<html :n=${1}>\n  <ul><li>${n}</li></ul>\n</html>');
+    expect(await declarationAt('index.html', text, '<ul>')).toBeUndefined();
+  });
+
+  it('says nothing inside the <:define> that declares it', async () => {
+    // `x-card` in `tag="x-card:div"` is the declaration; offering to
+    // navigate from a thing to itself is noise
+    const text = write('lib.htm', LIB);
+    expect(await declarationAt('lib.htm', text, 'x-card:div')).toBeUndefined();
+  });
+});
+
 describe('where the cursor is actually put', () => {
   /**
    * The bug this exists to prevent, which cost a round of "still doesn't
@@ -301,6 +347,20 @@ describe('the identifier under the cursor', () => {
   it('is not a number', () => {
     expect(identifierAt('${42}', 3)).toBeUndefined();
     expect(identifierAt('${ }', 3)).toBeUndefined();
+  });
+});
+
+describe('the tag name under the cursor', () => {
+  it('is found on an opening and a closing tag', () => {
+    expect(tagNameAt('<x-card />', 3)).toBe('x-card');
+    expect(tagNameAt('</x-card>', 4)).toBe('x-card');
+    expect(tagNameAt('<x-card>hi</x-card>', 2)).toBe('x-card');
+  });
+
+  it('is not found where a name merely looks like one', () => {
+    // inside an attribute value, or in prose: neither is a tag
+    expect(tagNameAt('<:define tag="x-card:div">', 16)).toBeUndefined();
+    expect(tagNameAt('use the x-card tag', 10)).toBeUndefined();
   });
 });
 

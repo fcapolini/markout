@@ -42,6 +42,8 @@ const CASES = [
   ['index.html', 'padding (in <style>)', '${padding}px'],
   ['lib.htm', 'title', '${title}</h2>'],
   ['lib.htm', 'tone', 'tone === '],
+  ['index.html', '<x-card> (a custom tag)', '<x-card'],
+  ['index.html', '</x-card> (its closing tag)', '</x-card'],
 ];
 
 /** `<file> <line>:<col>`, both 1-based, as an editor shows them */
@@ -147,6 +149,7 @@ function positionOf(doc, needle, within) {
   // to the first LETTER: `$` is an identifier character, so scanning for one
   // stops on the `$` of `${` and lands the cursor on the brace
   while (at < doc.text.length && !/[A-Za-z_]/.test(doc.text[at])) at++;
+  at++; // inside the name rather than on its first character
   return {
     line: doc.text.slice(0, at).split('\n').length - 1,
     character: at - (doc.text.lastIndexOf('\n', at - 1) + 1),
