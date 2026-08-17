@@ -1,0 +1,1528 @@
+
+<!doctype html>
+<html lang="en" data-markout="s1">
+
+<head data-markout="s2">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Markout — application logic, directly in your Bootstrap page</title>
+  <meta name="description" content="Markout makes HTML modular, reactive and isomorphic. Start with an ordinary Bootstrap page and add application logic where it belongs: in the markup.">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Set the color mode before first paint, to avoid a flash. -->
+  <script>
+    (() => {
+      const stored = localStorage.getItem('markout-theme');
+      const theme = stored
+        || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-bs-theme', theme);
+    })();
+  </script>
+
+  <style>
+    /*
+      Code samples stay dark in both color modes: the whole card carries
+      `data-bs-theme="dark"`, so its header, footer and border take the dark
+      palette too and the frame doesn't flip with the page. These tokens then
+      resolve to Bootstrap's own dark values, and the highlight colors below
+      only ever have to work against the one background. A `.card-body` paints
+      nothing by itself, hence setting the background here rather than relying
+      on the inherited attribute alone.
+
+      `--bs-dark-bg-subtle` (#1a1d20 in the dark palette) sits a step below
+      `--bs-body-bg`, so the code reads as an inset panel even where the card
+      or the section behind it is already dark.
+    */
+    .code-surface {
+      background-color: var(--bs-dark-bg-subtle);
+      color: var(--bs-body-color);
+    }
+
+    /*
+      In light mode a code card is a dark island on a bright page, and the eye
+      is adapted to the surround rather than to the card — so its chrome needs
+      to sit brighter than it does in dark mode, where the whole page is
+      already dark and matching ink reads as intended.
+
+      Redefining the tokens rather than `color` alone keeps Bootstrap's text
+      utilities working: `.text-body-secondary` resolves `--bs-secondary-color`
+      through an `!important` declaration that a plain `color` can't outrank.
+    */
+    html:not([data-bs-theme="dark"]) .card[data-bs-theme="dark"] > .card-header,
+    html:not([data-bs-theme="dark"]) .card[data-bs-theme="dark"] > .card-footer {
+      --bs-secondary-color: rgba(255, 255, 255, .75);
+      color: #fff;
+    }
+
+    /*
+      The padding lives on the scrolling element rather than on the card body
+      around it, so the horizontal scrollbar spans the full width of the dark
+      surface instead of appearing inset within the padding.
+
+      A scrollbar is laid out at the bottom of the padding box, below the
+      padding rather than over it, so a full 1rem would push the bar clear of
+      the code and hang it off the bottom. The bottom padding is shortened by
+      the bar's own height instead: the gap under the last line stays 1rem in
+      total, with the bar sitting inside it.
+    */
+    pre {
+      overflow-x: auto;
+      padding: 1rem 1rem .5rem;
+      -moz-tab-size: 2;
+      tab-size: 2;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, .22) transparent;
+    }
+
+    /* Older WebKit, which predates `scrollbar-width`/`scrollbar-color`. */
+    pre::-webkit-scrollbar {
+      height: .5rem;
+    }
+
+    pre::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    pre::-webkit-scrollbar-thumb {
+      background-color: rgba(255, 255, 255, .22);
+      border-radius: 1rem;
+    }
+
+    pre::-webkit-scrollbar-thumb:hover {
+      background-color: rgba(255, 255, 255, .35);
+    }
+
+    pre code {
+      font-size: .875rem;
+      line-height: 1.6;
+    }
+
+    /*
+      Saturated rather than pastel, to hold their own against the page's
+      display headings. All of them clear 4.5:1 on the surface above;
+      comments are the one deliberate exception in spirit, kept dim so they
+      recede behind the code they annotate.
+    */
+    .tok-tag { color: #2ee6b0; }
+    .tok-att { color: #56a8ff; }
+    .tok-str { color: #ffb43d; }
+    .tok-com { color: #7a8899; font-style: italic; }
+
+    /* Markout's own additions to HTML: the only parts you have to learn. */
+    .tok-mo { color: #ff4d9d; font-weight: 600; }
+    .tok-exp { color: #c07cff; }
+
+    /*
+      These were `--bs-tertiary-bg`, which is the same value the alternating
+      sections use: inside one, the chip was literally the same color as the
+      page behind it in dark mode, and 250-on-255 against the body in light.
+
+      Any neutral fill has the same problem to a lesser degree, since it has to
+      sit between two surfaces that are themselves near-neutral. The primary
+      subtle/emphasis/border triplet steps out of that range entirely, so the
+      chip reads as a chip on every surface on the page, and the colored label
+      says "code" before the shape does.
+    */
+    .rule-code {
+      color: var(--bs-primary-text-emphasis);
+      background-color: var(--bs-secondary-bg);
+      border: 1px solid var(--bs-border-color);
+      border-radius: var(--bs-border-radius-sm);
+      padding: .05rem .35rem;
+      font-size: .875em;
+      font-weight: 500;
+    }
+
+    /*
+      Bootstrap's dark-mode `btn-outline-secondary` keeps the light-mode gray
+      for its label, which lands around 3:1 on the dark body. Re-point it at
+      the theme's own secondary/emphasis tokens instead.
+    */
+    [data-bs-theme="dark"] .btn-outline-secondary {
+      --bs-btn-color: var(--bs-secondary-color);
+      --bs-btn-border-color: var(--bs-border-color);
+      --bs-btn-hover-color: var(--bs-emphasis-color);
+      --bs-btn-hover-bg: var(--bs-secondary-bg);
+      --bs-btn-hover-border-color: var(--bs-secondary-color);
+    }
+
+    /*
+      The closing band is a dark slab in light mode. In dark mode that slab
+      would land on exactly the same value as the section above it, so it
+      switches to the tertiary surface — the alternate the other sections
+      already use — and the boundary stays visible.
+
+      Keyed off the page theme on the root element, because the band itself
+      carries `data-bs-theme="dark"` for the benefit of its own contents.
+    */
+    .cta-band {
+      background-color: var(--bs-dark);
+      /* Light mode: white ink, for full contrast against the dark slab. */
+      color: #fff;
+    }
+
+    .cta-band .lead {
+      color: rgba(255, 255, 255, .5);
+    }
+
+    /*
+      Dark mode: the band is just another tertiary section, so its text drops
+      to the same ink every other heading and lead on the page uses — white
+      would read brighter here than any other heading.
+    */
+    html[data-bs-theme="dark"] .cta-band {
+      background-color: var(--bs-tertiary-bg);
+      color: var(--bs-body-color);
+    }
+
+    html[data-bs-theme="dark"] .cta-band .lead {
+      color: var(--bs-secondary-color);
+    }
+
+    /*
+      Callouts and the comparison table are outlined rather than separated by
+      a rule, so their border only has to suggest an edge — `--bs-border-color`
+      reads as a hard line at that job. Redefining the tokens the utilities
+      already resolve avoids having to out-`!important` them.
+    */
+    .card.bg-body-tertiary,
+    .table-responsive.border {
+      --bs-border-color: rgba(var(--bs-emphasis-color-rgb), .1);
+      --bs-card-border-color: rgba(var(--bs-emphasis-color-rgb), .1);
+    }
+
+    /*
+      Headings sit a step above body text in dark mode. Large glyphs at the
+      same ink read dimmer than paragraph text does — more of each stroke is
+      interior, so less of it is the edge the eye uses to judge weight.
+    */
+    html[data-bs-theme="dark"] h1,
+    html[data-bs-theme="dark"] h2,
+    html[data-bs-theme="dark"] h3,
+    html[data-bs-theme="dark"] h4,
+    html[data-bs-theme="dark"] h5,
+    html[data-bs-theme="dark"] h6 {
+      color: var(--bs-light);
+    }
+
+    .step-number {
+      font-variant-numeric: tabular-nums;
+      /* Emphasis tokens stay legible against both the light and dark body. */
+      color: var(--bs-primary-text-emphasis);
+      opacity: .75;
+    }
+  </style>
+</head>
+
+<body data-markout="s3">
+
+  <!-- Navigation -->
+
+  <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom sticky-top">
+    <div class="container">
+      <a class="navbar-brand fw-semibold" href="#top">Markout</a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarMain">
+        <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
+          <li class="nav-item">
+            <a class="nav-link" href="#boilerplate">Before / after</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#kit">Bootstrap Kit</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#reactive">Reactivity</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#design-system">Design systems</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#language">The language</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#compared">Compared</a>
+          </li>
+
+          <li class="nav-item ms-lg-2">
+            <button class="btn btn-sm btn-outline-secondary" type="button" id="themeToggle" aria-label="Toggle color mode">
+              <span aria-hidden="true" id="themeToggleIcon">◐</span>
+            </button>
+          </li>
+
+          <li class="nav-item ms-lg-2">
+            <a class="btn btn-primary" href="https://github.com/fcapolini/markout">
+              GitHub
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+
+  <header class="py-5" id="top">
+    <div class="container py-lg-5">
+      <div class="row align-items-center g-5">
+
+        <div class="col-lg-7">
+          <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle mb-3">
+            Bootstrap + Markout
+          </span>
+
+          <h1 class="display-4 fw-bold lh-1 mb-4">
+            Add application logic directly to your Bootstrap page.
+          </h1>
+
+          <p class="lead text-body-secondary mb-4">
+            Markout makes HTML modular, reactive and isomorphic. Your Bootstrap
+            markup can stay exactly what it is — it just gains the ability to hold
+            behavior.
+          </p>
+
+          <p class="fs-5 mb-4">
+            No component framework above your markup.<br>
+            A reactive HTML engine underneath it.
+          </p>
+
+          <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-primary btn-lg" href="#boilerplate">
+              See it on a real page
+            </a>
+
+            <a class="btn btn-outline-secondary btn-lg" href="#kit">
+              Explore the Bootstrap Kit
+            </a>
+          </div>
+        </div>
+
+        <div class="col-lg-5">
+          <div class="card shadow-sm overflow-hidden" data-bs-theme="dark">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span class="font-monospace small">index.html</span>
+              <span class="badge text-bg-secondary">HTML</span>
+            </div>
+
+            <div class="card-body p-0 code-surface">
+<pre class="mb-0"><code data-lang="html">&lt;button class="btn btn-primary"
+        :count=${0}
+        :on-click=${() =&gt; count++}&gt;
+  Clicked ${count} time${count !== 1 ? 's' : ''}
+&lt;/button&gt;</code></pre>
+            </div>
+
+            <div class="card-footer text-body-secondary small">
+              A Bootstrap button that declares its own value and updates it.
+              Nothing else on the page has to change.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Before / after: the boilerplate case -->
+
+  <section class="py-5 bg-body-tertiary" id="boilerplate">
+    <div class="container py-lg-4">
+
+      <div class="row justify-content-center text-center mb-5">
+        <div class="col-lg-8">
+          <h2 class="display-6 fw-bold mb-3">
+            The same page, minus the mechanical parts
+          </h2>
+
+          <p class="lead text-body-secondary">
+            These two files render the same Bootstrap page and are
+            byte-identical from <code class="rule-code">&lt;main&gt;</code> down.
+            All the difference is at the top.
+          </p>
+        </div>
+      </div>
+
+      <div class="row justify-content-center">
+        <div class="col-lg-10">
+
+          <ul class="nav nav-pills justify-content-center gap-2 mb-4" id="boilerplateTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="plain-tab" data-bs-toggle="pill" data-bs-target="#plain" type="button" role="tab" aria-controls="plain" aria-selected="true">
+                Plain Bootstrap
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="kitted-tab" data-bs-toggle="pill" data-bs-target="#kitted" type="button" role="tab" aria-controls="kitted" aria-selected="false">
+                With the Bootstrap Kit
+              </button>
+            </li>
+          </ul>
+
+          <div class="tab-content">
+
+            <div class="tab-pane fade show active" id="plain" role="tabpanel" aria-labelledby="plain-tab" tabindex="0">
+
+              <div class="card shadow-sm overflow-hidden" data-bs-theme="dark">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <span class="font-monospace small">index-plain.html</span>
+                  <span class="badge text-bg-secondary">28 lines</span>
+                </div>
+
+                <div class="card-body p-0 code-surface">
+<pre class="mb-0"><code data-lang="html">&lt;head&gt;
+  &lt;meta charset="utf-8"&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;
+  &lt;link href="…/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94…" crossorigin="anonymous"&gt;
+  &lt;script src="…/bootstrap.bundle.min.js"
+          integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP…" crossorigin="anonymous" async&gt;&lt;/script&gt;
+  &lt;title&gt;Northstar Studio&lt;/title&gt;
+&lt;/head&gt;
+
+&lt;body&gt;
+  &lt;nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top"&gt;
+    &lt;div class="container py-2"&gt;
+      &lt;a class="navbar-brand fw-bold text-primary" href="#top"&gt;Northstar Studio&lt;/a&gt;
+      &lt;button class="navbar-toggler" type="button"
+              data-bs-toggle="collapse" data-bs-target="#main-navigation"
+              aria-controls="main-navigation" aria-expanded="false"
+              aria-label="Toggle navigation"&gt;
+        &lt;span class="navbar-toggler-icon"&gt;&lt;/span&gt;
+      &lt;/button&gt;
+      &lt;div class="collapse navbar-collapse" id="main-navigation"&gt;
+        &lt;ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center"&gt;
+          &lt;li class="nav-item"&gt;&lt;a class="nav-link" href="#services"&gt;Services&lt;/a&gt;&lt;/li&gt;
+          &lt;li class="nav-item"&gt;&lt;a class="nav-link" href="#work"&gt;Our work&lt;/a&gt;&lt;/li&gt;
+          &lt;li class="nav-item"&gt;&lt;a class="nav-link" href="#insights"&gt;Insights&lt;/a&gt;&lt;/li&gt;
+          &lt;li class="nav-item ms-lg-3"&gt;&lt;a class="btn btn-primary" href="#contact"&gt;Start a project&lt;/a&gt;&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/nav&gt;</code></pre>
+                </div>
+
+                <div class="card-footer text-body-secondary small">
+                  Two CDN URLs with their integrity hashes, a
+                  <code class="rule-code">data-bs-target</code> matched by hand
+                  to the collapse <code class="rule-code">id</code>, four ARIA
+                  attributes, and one <code class="rule-code">&lt;li&gt;</code>
+                  per link — repeated on every page of the site.
+                </div>
+              </div>
+            </div>
+
+            <div class="tab-pane fade" id="kitted" role="tabpanel" aria-labelledby="kitted-tab" tabindex="0">
+
+              <div class="card shadow-sm overflow-hidden" data-bs-theme="dark">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <span class="font-monospace small">index.html</span>
+                  <span class="badge text-bg-primary">12 lines</span>
+                </div>
+
+                <div class="card-body p-0 code-surface">
+<pre class="mb-0"><code data-lang="html">&lt;head&gt;
+  &lt;:import src="/bootstrap-kit/all.htm" /&gt;
+  &lt;title&gt;Northstar Studio&lt;/title&gt;
+&lt;/head&gt;
+
+&lt;body&gt;
+  &lt;bs-navbar :options=${[
+    { name: 'Services', link: '#services' },
+    { name: 'Our work', link: '#work' },
+    { name: 'Insights', link: '#insights' },
+    { name: 'Start a project', link: '#contact', button: true, primary: true },
+  ]}&gt;
+    Northstar Studio
+  &lt;/bs-navbar&gt;</code></pre>
+                </div>
+
+                <div class="card-footer text-body-secondary small">
+                  The markup that was only ever mechanical becomes data. The
+                  pinned version, the hashes, the toggler wiring and the
+                  accessibility attributes are written once and can't drift
+                  from page to page.
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <p class="text-center text-body-secondary mt-4 mb-0">
+            Everything below the navbar is untouched. You lift out what is
+            boilerplate and leave your content alone — no rewriting the page
+            into a template language.
+          </p>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Bootstrap Kit -->
+
+  <section class="py-5" id="kit">
+    <div class="container py-lg-4">
+
+      <div class="row align-items-center g-5">
+
+        <div class="col-lg-6">
+          <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle mb-3">
+            Bootstrap Kit
+          </span>
+
+          <h2 class="display-6 fw-bold mb-3">
+            Components that are just HTML fragments
+          </h2>
+
+          <p class="lead text-body-secondary">
+            The kit is a folder of <code class="rule-code">.htm</code> files.
+            Each one takes a piece of Bootstrap markup and gives it a name.
+          </p>
+
+          <p>
+            The whole of Bootstrap's component set, with the wiring and the
+            accessibility attributes written once instead of on every page
+            that needs them.
+          </p>
+
+          <p>
+            Import the whole kit, or only the parts you need. Because they are
+            ordinary fragments, you can open them, read them, change them, and
+            build your own alongside — there is no component API to learn
+            beyond the markup itself.
+          </p>
+
+          <div class="card bg-body-tertiary mt-4">
+            <div class="card-body p-4">
+              <p class="mb-0">
+                Every component is a <code class="rule-code">bs-</code> tag
+                carrying Bootstrap's own concepts. Reach for one the way you'd
+                reach for the markup it replaces — and when it does more than
+                the plain version, the fragment that says so is a click away.
+              </p>
+            </div>
+          </div>
+
+          <div class="d-flex flex-wrap gap-2 mt-4">
+            <a class="btn btn-primary" href="https://github.com/fcapolini/markout/tree/main/demo/bootstrap-kit">
+              Read the kit source
+            </a>
+            <a class="btn btn-outline-secondary" href="https://github.com/fcapolini/markout/tree/main/demo/bootstrap">
+              See the demo page
+            </a>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+
+          <p class="text-body-secondary small mb-3">
+            Every Bootstrap component, as a tag:
+          </p>
+
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <code class="rule-code">&lt;bs-accordion&gt;</code>
+            <code class="rule-code">&lt;bs-alert&gt;</code>
+            <code class="rule-code">&lt;bs-badge&gt;</code>
+            <code class="rule-code">&lt;bs-breadcrumb&gt;</code>
+            <code class="rule-code">&lt;bs-button&gt;</code>
+            <code class="rule-code">&lt;bs-button-group&gt;</code>
+            <code class="rule-code">&lt;bs-card&gt;</code>
+            <code class="rule-code">&lt;bs-carousel&gt;</code>
+            <code class="rule-code">&lt;bs-close&gt;</code>
+            <code class="rule-code">&lt;bs-collapse&gt;</code>
+            <code class="rule-code">&lt;bs-dropdown&gt;</code>
+            <code class="rule-code">&lt;bs-list-group&gt;</code>
+            <code class="rule-code">&lt;bs-modal&gt;</code>
+            <code class="rule-code">&lt;bs-navbar&gt;</code>
+            <code class="rule-code">&lt;bs-offcanvas&gt;</code>
+            <code class="rule-code">&lt;bs-pagination&gt;</code>
+            <code class="rule-code">&lt;bs-placeholder&gt;</code>
+            <code class="rule-code">&lt;bs-popover&gt;</code>
+            <code class="rule-code">&lt;bs-progress&gt;</code>
+            <code class="rule-code">&lt;bs-scrollspy&gt;</code>
+            <code class="rule-code">&lt;bs-spinner&gt;</code>
+            <code class="rule-code">&lt;bs-toast&gt;</code>
+            <code class="rule-code">&lt;bs-tooltip&gt;</code>
+          </div>
+
+          <p class="text-body-secondary small">
+            Plus the form controls — <code class="rule-code">&lt;bs-input&gt;</code>
+            is taken apart further down the page, and
+            <code class="rule-code">&lt;bs-navbar&gt;</code> is the one doing the
+            work in the before/after above.
+          </p>
+
+          <div class="card h-100 border-primary-subtle bg-body-tertiary">
+            <div class="card-body">
+              <span class="fw-semibold">…and the next one you write</span>
+              <p class="text-body-secondary small mb-0 mt-2">
+                Adding a component means writing a fragment and giving it a
+                name — not registering a class or learning an extension API.
+              </p>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- What a kit component actually looks like -->
+
+      <div class="row justify-content-center mt-5 pt-lg-3">
+        <div class="col-lg-10">
+
+          <div class="card shadow-sm overflow-hidden" data-bs-theme="dark">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span class="font-monospace small">bootstrap-kit/parts/button.htm</span>
+              <span class="badge text-bg-secondary">the whole component</span>
+            </div>
+
+            <div class="card-body p-0 code-surface">
+<pre class="mb-0"><code data-lang="html">&lt;:define tag="bs-button:a"
+
+         // parameters
+         :href=${null}
+         :variant=${null}
+         :outline=${null}
+         :size=${'md'}
+
+         // private
+         class="btn btn-${size}${variant ? ` btn-${variant}` : ''}"
+         :attr-href=${href}
+&gt;
+  &lt;:slot /&gt;
+&lt;/:define&gt;</code></pre>
+            </div>
+
+            <div class="card-footer text-body-secondary small">
+              <code class="rule-code">bs-button:a</code> means "a tag named
+              <code class="rule-code">bs-button</code>, rendered as an
+              <code class="rule-code">&lt;a&gt;</code>".
+              <code class="rule-code">:attr-href</code> controls whether the
+              attribute is there at all, rather than what its value is — two
+              intents, two spellings.
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Bootstrap, but reactive -->
+
+  <section class="py-5 bg-body-tertiary" id="reactive">
+    <div class="container py-lg-4">
+
+      <div class="row justify-content-center text-center mb-5">
+        <div class="col-lg-8">
+          <h2 class="display-6 fw-bold mb-3">
+            Then the page needs to <em>do</em> something
+          </h2>
+
+          <p class="lead text-body-secondary">
+            Bootstrap ships the <em>styles</em> for validation states and
+            leaves you to toggle them yourself. That gap is usually filled by
+            hand, with jQuery, or by adding Alpine.
+          </p>
+
+          <p class="fs-5">
+            Here it's filled once, inside a component — which is
+            then just another tag.
+          </p>
+        </div>
+      </div>
+
+      <div class="row g-4 align-items-start">
+
+        <div class="col-lg-6">
+          <div class="card shadow-sm overflow-hidden h-100" data-bs-theme="dark">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span class="font-monospace small">bootstrap-kit/parts/input.htm</span>
+              <span class="badge text-bg-primary">the component</span>
+            </div>
+
+            <div class="card-body p-0 code-surface">
+<pre class="mb-0"><code data-lang="html">&lt;:define tag="bs-input:div"
+         class="mb-3"
+
+         // parameters
+         :label=${''}
+         :type=${'text'}
+         :placeholder=${''}
+         :check=${() =&gt; true}
+         :message=${'Please check this value.'}
+
+         // private
+         :_value=${''}
+         :_invalid=${_value !== '' &amp;&amp; !check(_value)}
+&gt;
+  &lt;label class="form-label"&gt;${label}&lt;/label&gt;
+
+  &lt;input class="form-control"
+         type=${type}
+         placeholder=${placeholder}
+         :class-is-invalid=${_invalid}
+         :on-input=${ev =&gt; _value = ev.target.value}&gt;
+
+  &lt;div class="invalid-feedback"&gt;${message}&lt;/div&gt;
+&lt;/:define&gt;</code></pre>
+            </div>
+
+            <div class="card-footer text-body-secondary small">
+              The validity rule arrives as a parameter, so the component holds
+              the wiring and the caller holds the policy.
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card shadow-sm overflow-hidden h-100" data-bs-theme="dark">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span class="font-monospace small">index.html</span>
+              <span class="badge text-bg-secondary">using it</span>
+            </div>
+
+            <div class="card-body p-0 code-surface">
+<pre class="mb-0"><code data-lang="html">&lt;form&gt;
+  &lt;bs-input :label="Email address"
+            :type="email"
+            :placeholder="you@example.com"
+            :check=${v =&gt; v.includes('@')}
+            :message="That doesn't look like an email address." /&gt;
+
+  &lt;bs-input :label="Password"
+            :type="password"
+            :check=${v =&gt; v.length &gt;= 8}
+            :message="Use at least 8 characters." /&gt;
+
+  &lt;button class="btn btn-primary"&gt;Create account&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+            </div>
+
+            <div class="card-footer text-body-secondary small">
+              Each <code class="rule-code">&lt;bs-input&gt;</code> keeps its own
+              value and its own validity. Nothing is registered, and nothing is
+              shared between them.
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="row justify-content-center mt-4">
+        <div class="col-lg-10">
+
+          <div class="row g-4">
+            <div class="col-md-4">
+              <h3 class="h5">Still Bootstrap's own classes</h3>
+              <p class="text-body-secondary mb-0">
+                <code class="rule-code">form-control</code>,
+                <code class="rule-code">is-invalid</code> and
+                <code class="rule-code">invalid-feedback</code> are Bootstrap's,
+                unchanged. All that's added is what decides when they apply.
+              </p>
+            </div>
+
+            <div class="col-md-4">
+              <h3 class="h5">Validity is derived, not set</h3>
+              <p class="text-body-secondary mb-0">
+                <code class="rule-code">:_invalid</code> is an expression over
+                <code class="rule-code">:_value</code>, so there is no code path
+                that can forget to clear the error again.
+              </p>
+            </div>
+
+            <div class="col-md-4">
+              <h3 class="h5">A function is just a value</h3>
+              <p class="text-body-secondary mb-0">
+                <code class="rule-code">:check</code> holds a function like any
+                other value, and resolves in the scope it was written in — the
+                caller's, not the component's.
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- App-specific kits -->
+
+  <section class="py-5" id="design-system">
+    <div class="container py-lg-4">
+
+      <div class="row justify-content-center text-center mb-5">
+        <div class="col-lg-8">
+          <h2 class="display-6 fw-bold mb-3">
+            Zero-cost design systems
+          </h2>
+
+          <p class="lead text-body-secondary">
+            A kit is a fragment importing other fragments. You can easily write
+            your own which pulls in the Bootstrap kit, sets what your team decided,
+            and adds whatever is specific to your app.
+          </p>
+        </div>
+      </div>
+
+      <div class="row g-4 align-items-start">
+
+        <div class="col-lg-7">
+          <div class="card shadow-sm overflow-hidden h-100" data-bs-theme="dark">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span class="font-monospace small">app-kit.htm</span>
+              <span class="badge text-bg-primary">your kit</span>
+            </div>
+
+            <div class="card-body p-0 code-surface">
+<pre class="mb-0"><code data-lang="html">&lt;lib :k_bsBtnRadius="2rem"
+     :k_appAccent="#6f42c1"&gt;
+
+  &lt;:import src="/bootstrap-kit/all.htm" /&gt;
+
+  &lt;style&gt;
+    .btn-primary {
+      background-color: ${k_appAccent};
+      border-color: ${k_appAccent};
+    }
+  &lt;/style&gt;
+
+  &lt;:define tag="app-email:div"&gt;
+    &lt;bs-input :label="Email address"
+              :type="email"
+              :placeholder="you@example.com"
+              :check=${v =&gt; v.includes('@')}
+              :message="That doesn't look like an email address." /&gt;
+  &lt;/:define&gt;
+
+&lt;/lib&gt;</code></pre>
+            </div>
+
+            <div class="card-footer text-body-secondary small">
+              Three things at once: a value the Bootstrap kit already reads,
+              a stylesheet of your own, and a component that pins a decision
+              your app makes everywhere.
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-5">
+          <div class="card shadow-sm overflow-hidden mb-4" data-bs-theme="dark">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span class="font-monospace small">index.html</span>
+              <span class="badge text-bg-secondary">every page</span>
+            </div>
+
+            <div class="card-body p-0 code-surface">
+<pre class="mb-0"><code data-lang="html">&lt;head&gt;
+  &lt;:import src="/app-kit.htm" /&gt;
+&lt;/head&gt;
+
+&lt;body&gt;
+  &lt;app-email /&gt;
+  &lt;bs-button :variant="primary"&gt;Save&lt;/bs-button&gt;
+&lt;/body&gt;</code></pre>
+            </div>
+          </div>
+
+          <h3 class="h5">Values reach the CSS</h3>
+          <p class="text-body-secondary">
+            <code class="rule-code">${…}</code> works in a stylesheet exactly
+            as it does in markup, so a value like
+            <code class="rule-code">k_appAccent</code> is a design token without
+            anything being a design token — no build step, no preprocessor,
+            no custom property indirection unless you want one.
+          </p>
+
+          <h3 class="h5">Defaults, then overrides</h3>
+          <p class="text-body-secondary">
+            <code class="rule-code">k_bsBtnRadius</code> belongs to the Bootstrap
+            kit, which declares its own default. Naming it again here replaces
+            it for every page that imports your kit — and you never forked the
+            component that reads it.
+          </p>
+
+          <h3 class="h5">
+            <code class="rule-code">k_</code> means constant
+          </h3>
+          <p class="text-body-secondary mb-0">
+            A token that never changes shouldn't cost anything to watch. The
+            prefix marks a value as fixed at compile time, so it reads as one
+            at every use site rather than only where it was declared.
+          </p>
+        </div>
+
+      </div>
+
+      <div class="row justify-content-center mt-4">
+        <div class="col-lg-10">
+          <div class="card bg-body-tertiary">
+            <div class="card-body p-4 text-center">
+              <p class="mb-0">
+                Shared tokens, shared components, one place to change them —
+                and nothing to install, compile, or keep in sync. The whole
+                system is a file your team can read in a minute.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- The language -->
+
+  <section class="py-5" id="language">
+    <div class="container py-lg-4">
+
+      <div class="row justify-content-center text-center mb-5">
+        <div class="col-lg-8">
+          <h2 class="display-6 fw-bold mb-3">
+            The whole language is a handful of rules
+          </h2>
+
+          <p class="lead text-body-secondary">
+            Markout doesn't replace HTML with a component framework. It shows
+            what HTML could look like if it were natively modular and reactive.
+          </p>
+        </div>
+      </div>
+
+      <div class="row g-4">
+
+        <div class="col-md-6">
+          <div class="d-flex gap-3">
+            <span class="fs-4 fw-bold step-number">01</span>
+            <div>
+              <h3 class="h5">HTML is the syntax</h3>
+              <p class="text-body-secondary mb-0">
+                Anything without a <code class="rule-code">${…}</code> or a
+                <code class="rule-code">:</code> is plain markup, and stays
+                plain markup.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="d-flex gap-3">
+            <span class="fs-4 fw-bold step-number">02</span>
+            <div>
+              <h3 class="h5">One expression syntax</h3>
+              <p class="text-body-secondary mb-0">
+                <code class="rule-code">${…}</code> is plain JavaScript, in
+                text, attributes and CSS alike. Whatever holds one is reactive.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="d-flex gap-3">
+            <span class="fs-4 fw-bold step-number">03</span>
+            <div>
+              <h3 class="h5">One prefix for everything else</h3>
+              <p class="text-body-secondary mb-0">
+                <code class="rule-code">:</code> names what HTML has no name
+                for, always as <code class="rule-code">:family-name</code> —
+                <code class="rule-code">:class-</code>,
+                <code class="rule-code">:attr-</code>,
+                <code class="rule-code">:on-</code>,
+                <code class="rule-code">:for-</code>.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="d-flex gap-3">
+            <span class="fs-4 fw-bold step-number">04</span>
+            <div>
+              <h3 class="h5">Scopes nest lexically</h3>
+              <p class="text-body-secondary mb-0">
+                A value is visible to every descendant, with no separate
+                wiring. An expression resolves where it was written — which is
+                what lets a component move without changing meaning.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="row justify-content-center mt-5">
+        <div class="col-lg-9">
+          <div class="card bg-body-tertiary">
+            <div class="card-body p-4 text-center">
+              <p class="mb-3">
+                No rule above has a convenient exception. A shortcut that saves
+                a few characters at the call site but makes every future reader
+                remember a special case isn't a simplification — it's deferred
+                complexity.
+              </p>
+              <a class="btn btn-outline-primary" href="https://github.com/fcapolini/markout/blob/main/docs/reference/syntax.md">
+                The full syntax, on one page
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Isomorphic -->
+
+  <section class="py-5 bg-body-tertiary" id="isomorphic">
+    <div class="container py-lg-4">
+
+      <div class="row align-items-center g-5">
+
+        <div class="col-lg-6">
+          <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle mb-3">
+            Isomorphic by design
+          </span>
+
+          <h2 class="display-6 fw-bold mb-3">
+            The same page runs on the server and in the browser
+          </h2>
+
+          <p class="lead text-body-secondary">
+            The same scope and value model runs in both places, so
+            server-side rendering comes for free.
+          </p>
+
+          <p>
+            No separate server template. No separate client application. No
+            framework-specific hydration model to understand — it is the same
+            page, evaluated twice.
+          </p>
+
+          <p class="mb-0">
+            A page that never becomes interactive ships no runtime at all.
+          </p>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card shadow-sm">
+            <div class="card-body p-4">
+
+              <div class="border rounded p-3 text-center fw-semibold mb-3">
+                index.html
+                <div class="text-body-secondary small fw-normal mt-1">
+                  one file, one scope tree
+                </div>
+              </div>
+
+              <div class="text-center text-body-secondary mb-3" aria-hidden="true">↓</div>
+
+              <div class="row g-3 text-center">
+                <div class="col-6">
+                  <div class="border rounded p-3 h-100">
+                    <div class="fw-semibold">Server</div>
+                    <div class="text-body-secondary small mt-1">
+                      renders HTML
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-6">
+                  <div class="border rounded p-3 h-100">
+                    <div class="fw-semibold">Browser</div>
+                    <div class="text-body-secondary small mt-1">
+                      makes it reactive
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Two decisions -->
+
+  <section class="py-5">
+    <div class="container py-lg-4">
+
+      <div class="row justify-content-center text-center">
+        <div class="col-lg-9">
+
+          <h2 class="display-6 fw-bold mb-3">
+            Your CSS framework and your app framework are separate choices
+          </h2>
+
+          <p class="lead text-body-secondary mb-4">
+            Ant Design means React. Vuetify means Vue. PrimeNG means Angular.
+            Pick a component library and you have picked a framework too — and
+            from then on neither decision can be revisited without the other.
+          </p>
+
+          <p class="fs-5">
+            Those are separable concerns. A CSS framework is a markup
+            convention; a web component library is a set of custom elements.
+            Neither needs a framework at all — they need a way to pass values
+            in, set non-string properties, and listen for events.
+          </p>
+
+        </div>
+      </div>
+
+      <div class="row justify-content-center mt-4">
+        <div class="col-lg-9">
+          <div class="card bg-body-tertiary">
+            <div class="card-body p-4 text-center">
+              <p class="mb-0">
+                Markout around Bootstrap, Tailwind or Shoelace keeps both
+                choices open: change how the page is put together without
+                touching the components, or change the components without
+                touching the logic.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Compared to what you'd otherwise reach for -->
+
+  <section class="py-5 bg-body-tertiary" id="compared">
+    <div class="container py-lg-4">
+
+      <div class="row justify-content-center text-center mb-5">
+        <div class="col-lg-8">
+          <h2 class="display-6 fw-bold mb-3">
+            If you're already reaching for Alpine or htmx
+          </h2>
+
+          <p class="lead text-body-secondary">
+            These are the tools a Bootstrap page usually picks up when it needs
+            behavior, so here is the honest comparison.
+          </p>
+        </div>
+      </div>
+
+      <div class="row justify-content-center">
+        <div class="col-lg-10">
+
+          <div class="table-responsive border rounded">
+            <table class="table table-borderless align-middle mb-0">
+              <thead>
+                <tr class="border-bottom">
+                  <th class="fw-normal text-body-secondary small" scope="col"></th>
+                  <th scope="col">Alpine.js</th>
+                  <th scope="col">htmx</th>
+                  <th scope="col">Markout</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr>
+                  <th class="fw-normal text-body-secondary" scope="row">
+                    Behavior written in HTML attributes
+                  </th>
+                  <td>Yes</td>
+                  <td>Yes</td>
+                  <td>Yes</td>
+                </tr>
+
+                <tr>
+                  <th class="fw-normal text-body-secondary" scope="row">
+                    Runs with no build step
+                  </th>
+                  <td>Yes</td>
+                  <td>Yes</td>
+                  <td>Yes</td>
+                </tr>
+
+                <tr>
+                  <th class="fw-normal text-body-secondary" scope="row">
+                    Same source renders on the server
+                  </th>
+                  <td class="text-body-secondary">No, client only</td>
+                  <td class="text-body-secondary">The server owns the HTML</td>
+                  <td class="fw-semibold">Yes</td>
+                </tr>
+
+                <tr>
+                  <th class="fw-normal text-body-secondary" scope="row">
+                    Reusable components in markup
+                  </th>
+                  <td class="text-body-secondary">
+                    <code class="rule-code">x-data</code> +
+                    <code class="rule-code">&lt;template&gt;</code>
+                  </td>
+                  <td class="text-body-secondary">Server-side partials</td>
+                  <td class="fw-semibold">
+                    <code class="rule-code">&lt;:define&gt;</code> +
+                    <code class="rule-code">&lt;:slot&gt;</code>
+                  </td>
+                </tr>
+
+                <tr>
+                  <th class="fw-normal text-body-secondary" scope="row">
+                    Parametric CSS
+                  </th>
+                  <td class="text-body-secondary">
+                    Inline styles, or CSS variables set inline
+                  </td>
+                  <td class="text-body-secondary">Whatever the server renders</td>
+                  <td class="fw-semibold">
+                    <code class="rule-code">${…}</code> inside
+                    <code class="rule-code">&lt;style&gt;</code>
+                  </td>
+                </tr>
+
+                <tr>
+                  <th class="fw-normal text-body-secondary" scope="row">
+                    Interaction without a server round-trip
+                  </th>
+                  <td>Yes</td>
+                  <td class="text-body-secondary">No, by design</td>
+                  <td>Yes</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="alert alert-secondary mt-4 mb-0">
+            <strong class="d-block mb-1">And the honest costs.</strong>
+            Alpine is mature, and its ecosystem, community and documentation
+            are far larger than Markout's. htmx is solving a different problem
+            — server-driven UI — and composes fine with either. Markout's claim
+            is narrower: one source that is modular, reactive, and renders in
+            both places.
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- CTA -->
+
+  <!--
+    This band is dark in both color modes, so it carries the dark palette
+    explicitly: the code cards inside then keep dark chrome in light mode too,
+    instead of turning into white cards on a black background.
+  -->
+  <section class="py-5 cta-band" id="start" data-bs-theme="dark">
+    <div class="container py-lg-5">
+
+      <div class="row justify-content-center text-center">
+        <div class="col-lg-8">
+
+          <h2 class="display-6 fw-bold mb-3">
+            Start with the Bootstrap Kit
+          </h2>
+
+          <p class="lead mb-5">
+            Look inside a component. Change it. Extend it. Write your own.
+            It's HTML — there is nothing else to open.
+          </p>
+
+          <div class="row g-3 text-start mb-5">
+
+            <div class="col-12">
+              <div class="card shadow-sm overflow-hidden" data-bs-theme="dark">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <span class="small">Install</span>
+                  <span class="badge text-bg-secondary">shell</span>
+                </div>
+
+                <div class="card-body p-0 code-surface">
+<pre class="mb-0"><code data-lang="sh">npm install -g @markout/bootstrap-kit</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="card shadow-sm overflow-hidden h-100" data-bs-theme="dark">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <span class="small">Serve a directory</span>
+                  <span class="badge text-bg-secondary">shell</span>
+                </div>
+
+                <div class="card-body p-0 code-surface">
+<pre class="mb-0"><code data-lang="sh">markout ./my-site</code></pre>
+                </div>
+
+                <div class="card-footer text-body-secondary small">
+                  Any folder of HTML files, compiled on request. No build step,
+                  no bundler, no watcher to leave running.
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="card shadow-sm overflow-hidden h-100" data-bs-theme="dark">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <span class="small">Work on it</span>
+                  <span class="badge text-bg-secondary">shell</span>
+                </div>
+
+                <div class="card-body p-0 code-surface">
+<pre class="mb-0"><code data-lang="sh">markout ./my-site --dev</code></pre>
+                </div>
+
+                <div class="card-footer text-body-secondary small">
+                  Dev mode auto-reloads the browser and puts expression errors
+                  in the page itself, instead of only logging them server-side.
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="d-flex justify-content-center flex-wrap gap-2">
+            <a class="btn btn-primary btn-lg" href="https://github.com/fcapolini/markout">
+              View on GitHub
+            </a>
+
+            <a class="btn btn-outline-light btn-lg" href="https://github.com/fcapolini/markout/blob/main/docs/reference/syntax.md">
+              Read the syntax reference
+            </a>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Footer -->
+
+  <footer class="py-4">
+    <div class="container">
+
+      <div class="row align-items-center">
+
+        <div class="col-md-6">
+          <span class="fw-semibold">Markout</span>
+          <span class="text-body-secondary ms-2">
+            Modular HTML · Reactive HTML · Isomorphic HTML
+          </span>
+        </div>
+
+        <div class="col-md-6 text-md-end mt-3 mt-md-0">
+          <a class="link-secondary text-decoration-none small" href="https://github.com/fcapolini/markout">
+            github.com/fcapolini/markout
+          </a>
+        </div>
+
+      </div>
+
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!--
+    Markout-aware highlighting, applied at load time so that the samples above
+    stay plain, copyable text in the source of this page rather than a thicket
+    of hand-written <span>s.
+  -->
+  <script>
+    (() => {
+      const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
+      const esc = (s) => s.replace(/[&<>]/g, (c) => ESC[c]);
+      const span = (cls, text) => `<span class="${cls}">${esc(text)}</span>`;
+
+      /*
+        Index just past the `}` closing the `${` that starts at `i`. Quoted
+        runs are skipped whole, so braces inside strings — and inside nested
+        template literals like `btn-${variant}` — never unbalance the depth.
+      */
+      const endOfExpr = (s, i) => {
+        let depth = 0;
+        for (let j = i + 1; j < s.length; j++) {
+          const c = s[j];
+          if (c === '"' || c === "'" || c === '`') {
+            while (++j < s.length && s[j] !== c) {
+              if (s[j] === '\\') j++;
+            }
+            continue;
+          }
+          if (c === '{') depth++;
+          else if (c === '}' && --depth === 0) return j + 1;
+        }
+        return s.length;
+      };
+
+      const html = (src) => {
+        let out = '';
+        let i = 0;
+
+        const expr = () => {
+          const j = endOfExpr(src, i);
+          out += span('tok-exp', src.slice(i, j));
+          i = j;
+        };
+
+        while (i < src.length) {
+          const c = src[i];
+
+          if (c === '$' && src[i + 1] === '{') {
+            expr();
+            continue;
+          }
+
+          if (src.startsWith('<!--', i)) {
+            const j = src.indexOf('-->', i);
+            const end = j < 0 ? src.length : j + 3;
+            out += span('tok-com', src.slice(i, end));
+            i = end;
+            continue;
+          }
+
+          const open = /^<\/?[:a-zA-Z][-:\w]*/.exec(src.slice(i));
+          if (!open) {
+            out += esc(c);
+            i++;
+            continue;
+          }
+
+          // A tag: its name, then attributes, up to the closing `>` or `/>`.
+          const name = open[0];
+          const nameClass = name.includes(':') ? 'tok-mo' : 'tok-tag';
+          out += span(nameClass, name);
+          i += name.length;
+
+          while (i < src.length && src[i] !== '>') {
+            const d = src[i];
+
+            if (d === '/' && src[i + 1] === '>') break;
+
+            // Markout allows `//` comments between attributes.
+            if (d === '/' && src[i + 1] === '/') {
+              const j = src.indexOf('\n', i);
+              const end = j < 0 ? src.length : j;
+              out += span('tok-com', src.slice(i, end));
+              i = end;
+              continue;
+            }
+
+            if (d === '$' && src[i + 1] === '{') {
+              expr();
+              continue;
+            }
+
+            if (d === '"' || d === "'") {
+              // A quoted value, keeping any `${...}` inside it highlighted.
+              let piece = d;
+              let j = i + 1;
+              out += '<span class="tok-str">';
+              while (j < src.length && src[j] !== d) {
+                if (src[j] === '$' && src[j + 1] === '{') {
+                  out += esc(piece);
+                  piece = '';
+                  const k = endOfExpr(src, j);
+                  out += span('tok-exp', src.slice(j, k));
+                  j = k;
+                  continue;
+                }
+                piece += src[j++];
+              }
+              if (src[j] === d) piece += d;
+              out += esc(piece) + '</span>';
+              i = j + 1;
+              continue;
+            }
+
+            const attr = /^:[-:\w]+|^[-\w]+/.exec(src.slice(i));
+            if (attr) {
+              out += span(attr[0][0] === ':' ? 'tok-mo' : 'tok-att', attr[0]);
+              i += attr[0].length;
+              continue;
+            }
+
+            out += esc(d);
+            i++;
+          }
+
+          const close = src.startsWith('/>', i) ? '/>' : src[i] === '>' ? '>' : '';
+          if (close) {
+            out += span(nameClass, close);
+            i += close.length;
+          }
+        }
+
+        return out;
+      };
+
+      const sh = (src) => src
+        .split('\n')
+        .map((line) => (line.trimStart().startsWith('#')
+          ? span('tok-com', line)
+          : esc(line)))
+        .join('\n');
+
+      document.querySelectorAll('code[data-lang]').forEach((el) => {
+        el.innerHTML = (el.dataset.lang === 'sh' ? sh : html)(el.textContent);
+      });
+    })();
+  </script>
+
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const button = document.getElementById('themeToggle');
+      const icon = document.getElementById('themeToggleIcon');
+
+      const paint = () => {
+        icon.textContent =
+          root.getAttribute('data-bs-theme') === 'dark' ? '☀' : '☾';
+      };
+
+      button.addEventListener('click', () => {
+        const next =
+          root.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-bs-theme', next);
+        localStorage.setItem('markout-theme', next);
+        paint();
+      });
+
+      paint();
+    })();
+  </script>
+
+<script>window.__MARKOUT_PROPS = {
+    id: 's1',
+    name: 'page',
+    values: {},
+    children: [
+        {
+            id: 's2',
+            name: 'head',
+            values: {},
+            children: []
+        },
+        {
+            id: 's3',
+            name: 'body',
+            values: {},
+            children: []
+        }
+    ]
+};window.__MARKOUT_DEV = true;</script><script src="/.markout.js" async></script></body>
+
+</html>

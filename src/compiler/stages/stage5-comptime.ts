@@ -45,6 +45,7 @@ export function stage5comptime(page: Page) {
   if (!constants.size) {
     return page;
   }
+  rejectWrites(page, constants);
   const values = evaluate(page, constants);
   substitute(page, constants, values);
   // only once every reader has been rewritten: a constant removed earlier
@@ -54,6 +55,44 @@ export function stage5comptime(page: Page) {
     page.values.delete(value.id);
   }
   return page;
+}
+
+/**
+ * Refuses `k_x = 1`, and `k_x++`.
+ *
+ * A constant is gone by the time the page runs, so an assignment to one has
+ * nothing to assign to -- and substitution rewrites the target along with
+ * every other read, which turned `k_n = 5` into `2 = 5` and handed stage7 a
+ * function body that is not JavaScript. `new Function` then threw while the
+ * page was being built, taking the whole page with it, and nothing had said
+ * a word: the expression compiled, the constant computed, and the failure
+ * arrived somewhere that names neither.
+ *
+ * Worth its own pass rather than a guard inside substitute(), because the
+ * answer is "this cannot be written" whether or not anything reads it.
+ */
+function rejectWrites(page: Page, constants: Map<Value, Value>) {
+  for (const value of page.values.values()) {
+    const ast = value.value;
+    if (!ast || typeof ast === 'string') continue;
+    estraverse.traverse(ast as unknown as Node, {
+      enter(node, parent) {
+        const written =
+          (parent?.type === 'AssignmentExpression' && parent.left === node) ||
+          (parent?.type === 'UpdateExpression' && parent.argument === node);
+        if (!written) return;
+        const dep = chainDep(node, value, page);
+        const target = dep && targetOf(value, dep, constants);
+        target &&
+          addError(
+            page,
+            `"${dep!.key}" is a ${COMPTIME_PREFIX} value, so it is computed once ` +
+              `while the page is built and is not there to be assigned to`,
+            value
+          );
+      },
+    });
+  }
 }
 
 /** every `k_` value in the page, by the id stage4 records dependencies against */
