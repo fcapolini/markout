@@ -176,7 +176,8 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
             {
               targetUri: URI.file(file).toString(),
               targetRange: declaration.range,
-              targetSelectionRange: declaration.range,
+              // the point, not the extent: see Declaration.selection
+              targetSelectionRange: declaration.selection,
             },
           ];
         },

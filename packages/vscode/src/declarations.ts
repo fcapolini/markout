@@ -20,8 +20,19 @@ import { openReader, resolveReference, type Range } from './diagnostics';
 export interface Declaration {
   /** the docroot pathname of the file the declaration is in */
   pathname: string;
-  /** where in that file, in LSP's coordinates */
+  /** the whole of it: an attribute, or an element from its `<` to its `>` */
   range: Range;
+  /**
+   * The point to put the cursor on, which is NOT the same thing.
+   *
+   * A scope is declared by an element, and an element's range is everything
+   * inside it -- `<body>` spans most of the page. An editor reveals the
+   * SELECTION range, so returning the whole element means asking it to
+   * reveal a region the cursor is already inside, and it does the only
+   * sensible thing with that: nothing at all. Which reads exactly like a
+   * feature that does not work.
+   */
+  selection: Range;
 }
 
 export interface DeclarationProps {
@@ -76,12 +87,14 @@ export async function findDeclaration(
   // every fragment and plenty of pages. They were synthesized while parsing
   // this file, so this file is where their offsets point -- and answering
   // "line 1" beats answering nothing for a name that plainly resolves.
+  const start = { line: loc.start.line - 1, character: loc.start.column };
   return {
     pathname: loc.source ?? pathname,
     range: {
-      start: { line: loc.start.line - 1, character: loc.start.column },
+      start,
       end: { line: loc.end.line - 1, character: loc.end.column },
     },
+    selection: { start, end: start },
   };
 }
 

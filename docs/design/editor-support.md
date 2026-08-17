@@ -245,6 +245,16 @@ and unused. The fix is not to compete: `getDocumentContext` is the supported
 hook for telling that service how to resolve a reference, so it is given the
 compiler's resolver and its links become right, `/npm/…` included.
 
+**A definition has two ranges, and they are not the same range.** LSP's
+`targetRange` is the whole of the thing, for a peek preview; its
+`targetSelectionRange` is the point the cursor is put on. Setting both to the
+extent works for a value, whose declaration is one attribute, and fails
+silently for a scope, whose declaration is an ELEMENT — asking an editor to
+reveal a region the cursor is already inside gets the only sensible answer,
+which is nothing at all. `head` appeared to work throughout, for the sole
+reason that a page's `<head>` does not contain the `<body>` the click was in.
+That is what "`head` works, `body` and `page` do not" turned out to mean.
+
 **Pull diagnostics are off unless the client asks for them.** A client that
 advertises no `textDocument.diagnostic` capability gets silence from
 `textDocument/diagnostic`, which reads exactly like a broken server. Volar
