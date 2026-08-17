@@ -211,6 +211,16 @@ gets the source back — and because every embedded code is asked, exactly one
 of them has to answer, or the same compiler error arrives once per embedded
 document.
 
+**A document link beats go-to-definition, and the HTML service makes its
+own.** `volar-service-html` offers a link for every `src`, `<:import src>`
+included, and resolves an absolute one against the *workspace folder*. In any
+project whose docroot is a subdirectory that names a file which does not
+exist, so ctrl-click answered "Unable to open" — on a link the extension
+itself had offered — while the definition provider sat there being correct
+and unused. The fix is not to compete: `getDocumentContext` is the supported
+hook for telling that service how to resolve a reference, so it is given the
+compiler's resolver and its links become right, `/npm/…` included.
+
 **Pull diagnostics are off unless the client asks for them.** A client that
 advertises no `textDocument.diagnostic` capability gets silence from
 `textDocument/diagnostic`, which reads exactly like a broken server. Volar

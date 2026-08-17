@@ -32,6 +32,55 @@ export interface MarkoutServiceProps {
   open: (filePath: string) => string | undefined;
 }
 
+/**
+ * How the HTML service resolves a path it finds in the page.
+ *
+ * It has to be told, or it gets absolute paths wrong in a way that is worse
+ * than useless: `/lib.htm` is resolved against the WORKSPACE FOLDER by
+ * default, which in any project whose docroot is a subdirectory names a file
+ * that does not exist -- and the editor reports "Unable to open" on a link it
+ * offered. That is the ctrl-click path, which VS Code prefers over
+ * go-to-definition, so a correct definition provider does not save it.
+ *
+ * A markout page's absolute paths mean what the SERVER will mean by them, so
+ * the docroot is what they resolve against, through the compiler's own
+ * resolver -- which also gets `/npm/…` into the installed package for free.
+ * Anything else (a URL, a fragment, a relative path) is handed back to the
+ * service's own default.
+ *
+ * The `base` it is given is the EMBEDDED document's uri, not the file's --
+ * the same thing that catches every other service here -- so it has to be
+ * decoded before it names anything on disk.
+ */
+export function createDocumentContext(props: {
+  workspaceFolder?: string;
+  docroot?: string;
+  /** turns an embedded document's uri back into the file's */
+  decode: (uri: URI) => URI | undefined;
+  /** the service's own resolver, for everything that is not ours */
+  fallback: (ref: string, base: URI) => string | undefined;
+}) {
+  return {
+    resolveReference(ref: string, base: string): string | undefined {
+      const baseUri = props.decode(URI.parse(base)) ?? URI.parse(base);
+      if (baseUri.scheme !== 'file' || !ref.startsWith('/')) {
+        return props.fallback(ref, baseUri);
+      }
+      const filePath = baseUri.fsPath;
+      const docroot = props.docroot ?? guessDocroot(filePath, props.workspaceFolder);
+      const target = resolveReference({
+        docroot,
+        fromPathname: pathnameOf(filePath, docroot),
+        spec: ref,
+      });
+      // undefined rather than the fallback's answer: a path the compiler
+      // refuses is one the page cannot reach, and offering a link to
+      // something plausible would hide that
+      return target ? URI.file(target).toString() : undefined;
+    },
+  };
+}
+
 export function createMarkoutService(props: MarkoutServiceProps): LanguageServicePlugin {
   return {
     name: 'markout',
