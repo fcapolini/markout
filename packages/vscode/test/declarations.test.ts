@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { findDeclaration, identifierAt } from '../src/declarations';
+import { chainAt, findDeclaration, identifierAt } from '../src/declarations';
 
 /**
  * Go-to-definition on a name in an expression.
@@ -33,9 +33,14 @@ function write(rel: string, text: string) {
  * the identifier -- which is where a click lands, and not where `indexOf`
  * points when the needle starts with `${`.
  */
-async function declarationAt(rel: string, text: string, needle: string) {
-  const found = text.indexOf(needle);
+async function declarationAt(rel: string, text: string, needle: string, within?: string) {
+  let found = text.indexOf(needle);
   expect(found, `"${needle}" is not in the fixture`).toBeGreaterThan(-1);
+  // a needle can hold more than one name; `within` picks which of them the
+  // cursor is on
+  if (within) {
+    found = text.indexOf(within, found);
+  }
   // to the first LETTER, not the first identifier character: `$` is one of
   // those, so scanning for it stops on the `$` of `${` and puts the cursor
   // on the brace
@@ -137,6 +142,47 @@ describe('the same name in two scopes', () => {
   });
 });
 
+describe('a loop, where three different questions sit on one line', () => {
+  const LOOP = [
+    '<html>',
+    '  <body :items=${[1, 2, 3]}>',
+    '    <ul>',
+    '      <li :for-each=${body.items} :for-as="item">${item}</li>',
+    '    </ul>',
+    '  </body>',
+    '</html>',
+  ].join('\n');
+
+  it('goes from a scope name to the element that carries it', async () => {
+    // `body` is not a value at all -- it is a named scope, and its
+    // declaration site is the element. Nothing in `values` would answer this
+    const text = write('index.html', LOOP);
+    const found = await declarationAt('index.html', text, '${body.items}');
+    expect(lineOf(found)).toBe(2);
+    expect(found!.range.start.character).toBe(2);
+  });
+
+  it('goes from a name INSIDE that scope to its declaration', async () => {
+    // `body.items` is a navigation followed by a lookup in there, not a
+    // property access -- so `items` cannot be found by looking outward from
+    // where the cursor is, which is why a text search gets this wrong
+    const text = write('index.html', LOOP);
+    const found = await declarationAt('index.html', text, 'body.items', 'items');
+    expect(lineOf(found)).toBe(2);
+    expect(text.split('\n')[1].slice(found!.range.start.character)).toMatch(/^:items=/);
+  });
+
+  it('goes from a loop alias to the :for-as that names it', async () => {
+    // and to the ATTRIBUTE, not the element: the element's start is
+    // imprecise and is usually the line the cursor is already on, so the
+    // jump looks like nothing happening
+    const text = write('index.html', LOOP);
+    const found = await declarationAt('index.html', text, '${item}</li>');
+    expect(lineOf(found)).toBe(4);
+    expect(text.split('\n')[3].slice(found!.range.start.character)).toMatch(/^:for-as="item"/);
+  });
+});
+
 describe('what it declines to answer', () => {
   it('says nothing for a property of a value', async () => {
     // `data.name` -- `data` has a declaration, `name` is a property of
@@ -146,6 +192,11 @@ describe('what it declines to answer', () => {
       '<html :data=${({ name: 1 })}>\n  <p>${data.name}</p>\n</html>'
     );
     expect(await declarationAt('index.html', text, 'name}')).toBeUndefined();
+  });
+
+  it('says nothing for a chain that is not made of names', async () => {
+    const text = write('index.html', '<html :rows=${[[1]]}>\n  <p>${rows[0].length}</p>\n</html>');
+    expect(await declarationAt('index.html', text, 'length')).toBeUndefined();
   });
 
   it('says nothing for a name that is not declared', async () => {
@@ -166,9 +217,27 @@ describe('the identifier under the cursor', () => {
     expect(identifierAt('${title}', 7)).toBe('title');
   });
 
-  it('is not a property, and not a number', () => {
-    expect(identifierAt('${data.name}', 9)).toBeUndefined();
-    expect(identifierAt('${data.name}', 3)).toBe('data');
+  it('is not a number', () => {
     expect(identifierAt('${42}', 3)).toBeUndefined();
+    expect(identifierAt('${ }', 3)).toBeUndefined();
+  });
+});
+
+describe('the chain under the cursor', () => {
+  // where the "is this a property or a scope?" question is ANSWERED is the
+  // compiler; what is decided here is only what was asked
+  it('is just the name when there is no chain', () => {
+    expect(chainAt('${title}', 4)).toStrictEqual(['title']);
+  });
+
+  it('carries the segments before it, and none after', () => {
+    expect(chainAt('${body.items}', 4)).toStrictEqual(['body']);
+    expect(chainAt('${body.items}', 9)).toStrictEqual(['body', 'items']);
+    expect(chainAt('${a.b.c}', 6)).toStrictEqual(['a', 'b', 'c']);
+  });
+
+  it('refuses a chain that is not made of names', () => {
+    // `rows[0].length` -- a partial answer would point somewhere arbitrary
+    expect(chainAt('${rows[0].length}', 12)).toBeUndefined();
   });
 });

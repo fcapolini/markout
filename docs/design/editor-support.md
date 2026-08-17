@@ -97,6 +97,19 @@ Ranked by what a markout author actually feels, not by what is easy:
    was known at all — one implementation, two callers, and no chance of the
    editor and the compiler disagreeing about what a name means.
 
+   One line of markup shows why nothing shallower would do:
+
+   ```html
+   <li :for-each=${body.items} :for-as="item">${item}</li>
+   ```
+
+   Three names, three different questions. `body` is not a value at all but a
+   named **scope**, whose declaration site is the element carrying the name.
+   `items` is a value *inside that scope*, reachable only by navigating there
+   first — it is not a property access, and looking outward from the cursor
+   finds nothing. `item` is a loop alias, declared by the `:for-as` beside
+   it. A text search answers none of the three.
+
    And `<:import src>` and `<:include src>` go to the file, using
    the compiler's own `Resolver` rather than a second copy of its rules —
    which is the difference between go-to-definition that works and one that

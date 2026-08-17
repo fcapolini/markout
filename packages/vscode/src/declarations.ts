@@ -38,8 +38,8 @@ export interface DeclarationProps {
 export async function findDeclaration(
   props: DeclarationProps
 ): Promise<Declaration | undefined> {
-  const key = identifierAt(props.text, props.offset);
-  if (!key) {
+  const path = chainAt(props.text, props.offset);
+  if (!path) {
     return undefined;
   }
 
@@ -63,9 +63,12 @@ export async function findDeclaration(
     return undefined;
   }
 
-  const declaration = declarationFor(from, key);
-  const loc = declaration?.node.loc;
-  if (!declaration || !loc?.source) {
+  const found = declarationFor(from, path);
+  // a value is declared by its attribute or its text; a named scope by the
+  // element that carries the name -- `body.items` should send someone to
+  // `<body>` when they ask about `body`
+  const loc = found?.value ? found.value.node.loc : found?.scope?.e?.loc;
+  if (!loc?.source) {
     return undefined;
   }
   return {
@@ -116,23 +119,51 @@ function expressionAt(
   return best;
 }
 
+const IDENT_PART = /[A-Za-z0-9_$]/;
+
 /**
- * The identifier the offset is on, if it is a name rather than a property.
+ * The dotted chain up to and including the identifier the offset is on.
  *
- * `foo` in `foo.bar` is a name to look up; `bar` is a property of whatever
- * `foo` holds at runtime, which has no declaration site in the page and no
- * business pretending to.
+ * The chain matters because `body.items` is not a property access: `body` is
+ * a named scope and `items` is a value *inside it*, so the second segment
+ * cannot be looked up without the first. Asking about `body` gives
+ * `['body']` and asking about `items` gives `['body', 'items']` -- the same
+ * text, two questions, and the answer to the second depends on the first.
+ *
+ * What comes back is only ever the prefix: nothing after the cursor is part
+ * of the question.
  */
-export function identifierAt(text: string, offset: number): string | undefined {
-  const isPart = (c: string) => /[A-Za-z0-9_$]/.test(c);
-  let start = offset;
-  while (start > 0 && isPart(text[start - 1])) start--;
-  let end = offset;
-  while (end < text.length && isPart(text[end])) end++;
-  if (start === end || /[0-9]/.test(text[start])) {
+export function chainAt(text: string, offset: number): string[] | undefined {
+  const key = identifierAt(text, offset);
+  if (!key) {
     return undefined;
   }
-  if (text[start - 1] === '.') {
+  let start = offset;
+  while (start > 0 && IDENT_PART.test(text[start - 1])) start--;
+
+  const path = [key];
+  while (text[start - 1] === '.') {
+    let from = start - 1;
+    while (from > 0 && IDENT_PART.test(text[from - 1])) from--;
+    const segment = text.slice(from, start - 1);
+    if (!segment || /^[0-9]/.test(segment)) {
+      // `a[0].b`, `f().b`: not a chain of names, so not a question this can
+      // answer -- and a partial answer would point somewhere arbitrary
+      return undefined;
+    }
+    path.unshift(segment);
+    start = from;
+  }
+  return path;
+}
+
+/** the identifier the offset is on, if it is one */
+export function identifierAt(text: string, offset: number): string | undefined {
+  let start = offset;
+  while (start > 0 && IDENT_PART.test(text[start - 1])) start--;
+  let end = offset;
+  while (end < text.length && IDENT_PART.test(text[end])) end++;
+  if (start === end || /[0-9]/.test(text[start])) {
     return undefined;
   }
   return text.slice(start, end);
