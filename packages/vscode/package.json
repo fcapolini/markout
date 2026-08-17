@@ -55,7 +55,7 @@
         "markout.docroot": {
           "type": "string",
           "default": "",
-          "markdownDescription": "The directory pages are resolved against, so that `/lib.htm` means the same thing here as it does when served. Empty means guess: the nearest folder with a `package.json`, and the workspace folder otherwise."
+          "markdownDescription": "The directory pages are resolved against, so that `/lib.htm` means the same thing here as it does when served. Empty means guess: the nearest ancestor named `markout`, then the nearest one with a `package.json`, then the workspace folder."
         },
         "markout.enable": {
           "type": "string",
@@ -65,12 +65,12 @@
             "never"
           ],
           "enumDescriptions": [
-            "Diagnose pages only in a project that depends on markout.",
+            "Look for evidence: a page using markout's own syntax, or a project that depends on markout.",
             "Diagnose every HTML file, whatever the project.",
             "Never diagnose."
           ],
           "default": "auto",
-          "markdownDescription": "When to compile HTML files and report what the compiler says. `auto` keeps the extension silent in projects that are not markout's -- a `.html` file holding JSP EL or Thymeleaf `${...}` is not a markout page, and saying so on every line would be worse than saying nothing."
+          "markdownDescription": "When to compile HTML files and report what the compiler says. `auto` looks for evidence: a page that uses markout's own syntax (a `<:\u2026>` directive, or an attribute like `:count=${\u2026}`), or a project that depends on markout. It stays silent otherwise, because a `.html` file holding `${\u2026}` is JSP EL or Thymeleaf at least as often as it is a markout page."
         }
       }
     }
