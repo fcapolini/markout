@@ -4,6 +4,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Server } from "../../src/server";
 import { resolvePath } from "../../src/server/middleware";
+import { Resolver } from "../../src/paths";
 import { Window } from "happy-dom";
 import fs from "fs";
 import os from "os";
@@ -185,7 +186,7 @@ describe("Middleware path containment", () => {
   // resolvePath is exported so this class of bug can be tested directly.
   it("should not resolve a path escaping to a sibling directory sharing the docroot's prefix", async () => {
     const fakeReq = { path: "/../site-secret/passwd" } as any;
-    const result = await resolvePath(fakeReq, -1, docroot);
+    const result = await resolvePath(fakeReq, -1, new Resolver(docroot));
     expect(result).toBeUndefined();
   });
 });

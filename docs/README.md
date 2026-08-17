@@ -38,6 +38,17 @@ calls that out explicitly.
   browser runtime fit together.
 - [Syntax reference](reference/syntax.md) - the whole language on one page.
 
+## Design notes
+
+Reasoning and decisions behind features, kept separate from the user-facing
+pages above — what was chosen, what was rejected, and why.
+
+- [Server-only values](design/value-transfer.md) - `:server-`, and what
+  hydration cannot re-derive.
+- [Kits from npm packages](design/npm-kits.md) - `/npm/` imports, a kit's
+  logical root, and the rule that an installed kit behaves as though it were
+  symlinked into the docroot.
+
 ## Mental model
 
 Markout is the presentation layer: the DOM is the view, the application's
