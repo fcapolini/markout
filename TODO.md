@@ -106,7 +106,7 @@
 
 - [ ] an "additional classes" attribute for cumulative CSS classes in components: we decided not to include that behavior in `class` attribute as Vue does for our "no-magic" policy, but an explicit construct for achieving the same result is needed
 
-- [ ] component kits from npm packages, using e.g. `<:import npm="@markout/bootstrap-kit" />` (preprocessor already supports additional root folders I think)
+- [x] component kits from npm packages: `<:import src="/npm/@markout/bootstrap-kit/all.htm" />`, with the kit declaring a logical root in its `package.json` and everything it publishes addressed under it. See [docs/design/npm-kits.md](docs/design/npm-kits.md). (The original note here guessed the preprocessor already supported additional root folders; it did not — it had exactly one docroot, and the resolver that now holds the mount table was extracted for this.)
 
 - [ ] perhaps: component extension — `<:define tag="bs-fancy-input:bs-input">`, i.e. basing a definition on another component instead of a plain HTML tag. Motivation: a kit could offer a plain component and an enriched one without the two drifting, since the enriched one would be built from the plain one rather than copying its markup.
   - Currently accepted with no error and then broken. `expandDefine` builds the body as a literal `<bs-input>` element inside the definition's `<template>`; `expandCustomTagUsages` later walks into template content and expands it, consuming the extension's own `<:slot />` as content bound for the base's slot. With caller content you get `<x> was given content but its <:define> has no <:slot> to put it in` even when it has one; without caller content it renders NOTHING, silently. Worth at least rejecting a custom tag as a base until this is designed.

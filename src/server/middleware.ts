@@ -3,12 +3,16 @@ import { NextFunction, Request, Response } from "express";
 import fs from "fs";
 import path from "path";
 import { Compiler } from "../compiler";
+import { discoverKits, Kit } from "../kits";
+import { NPM_PREFIX, Resolver } from "../paths";
+import { allowedPageKits, publishablePath } from "./publish";
 import type { Page } from "../compiler/ir/Page";
 import { DEFAULT_RUNTIME_SRC } from "../compiler/stages/stage7-generate";
 import { formatRuntimeError, RuntimeError } from "../runtime/core/core-context";
 import { defaultLogger, MarkoutLogger } from "./logger";
 import { renderPage } from "./render";
 import { loadClientCode } from "./runtime-bundle";
+import { TreeWatcher, watchTree } from "./watcher";
 
 export const CLIENT_CODE_REQ = DEFAULT_RUNTIME_SRC;
 
@@ -40,6 +44,17 @@ export interface MarkoutProps {
    * a page reads out of one is as public as the page is.
    */
   globals?: { [name: string]: unknown };
+  /**
+   * Installed kits. Absent means discover them from the docroot; an explicit
+   * list (`[]` included) is for a caller that has already scanned, or a test
+   * that wants neither.
+   *
+   * Discovered from what is INSTALLED and never from what a page imported,
+   * because a request for `/bootstrap-kit/res/logo.png` has to resolve before
+   * any page has been compiled. `build` follows the same rule, so the two
+   * cannot disagree about whether a kit's resource exists. See docs/design/npm-kits.md.
+   */
+  kits?: Kit[];
 }
 
 /**
@@ -66,15 +81,22 @@ export interface MarkoutProps {
 function pageCache(
   docroot: string,
   logger: MarkoutLogger,
-  compile: (pathname: string) => Promise<Page>
+  compile: (pathname: string) => Promise<Page>,
+  /** anything else that goes stale when the docroot changes */
+  alsoInvalidate: () => void = () => {}
 ) {
   const entries = new Map<string, { page: Page; last: Promise<unknown> }>();
-  let watcher: fs.FSWatcher | undefined;
+  let watcher: TreeWatcher | undefined;
   try {
-    watcher = fs.watch(docroot, { recursive: true }, () => entries.clear());
-    // never a reason to hold the process open: this exists to make an
-    // already-running server faster, not to keep one alive
-    watcher.unref();
+    // symlinked directories get watchers of their own; a recursive watch
+    // does not descend through one, and a kit reached by link is exactly
+    // what this docroot is likely to hold. See ./watcher
+    watcher = watchTree(docroot, () => {
+      entries.clear();
+      alsoInvalidate();
+    });
+    watcher.count > 1 &&
+      logger('info', `[markout] watching ${watcher.count} directories (symlinks followed)`);
   } catch (err) {
     logger('info', `[markout] no file watcher (${err}) -- compiling every request`);
   }
@@ -111,13 +133,35 @@ export function markout(props: MarkoutProps) {
   const dev = props.dev ?? false;
   const logger = props.logger ?? defaultLogger;
   const globals = props.globals;
+  const discovered = props.kits ? { kits: props.kits, errors: [] } : discoverKits(docroot);
+  // Logged rather than thrown: a refused kit is a pair of things claiming one
+  // URL, which leaves every page that did not want that kit perfectly
+  // serviceable. Said once, at startup, where somebody is watching.
+  discovered.errors.forEach(msg => logger('error', `[markout] ${msg}`));
+  discovered.kits.forEach(kit =>
+    logger('info', `[markout] kit ${kit.name} at ${kit.root}`)
+  );
+  const resolver = new Resolver(docroot, discovered.kits);
   const compiler = new Compiler({
     docroot,
     dev,
+    kits: discovered.kits,
     serverGlobals: globals ? Object.keys(globals) : undefined,
   });
   const clientCode = loadClientCode();
-  const cache = pageCache(docroot, logger, pathname => compiler.compile(pathname));
+
+  // Which kits the docroot has allowed to contribute pages -- scanned across
+  // the whole docroot so the answer does not depend on what has been visited,
+  // and memoized because that scan reads every page. Recomputed when the
+  // watcher fires, alongside the compiled pages it invalidates.
+  let allowed: Promise<Set<string>> | undefined;
+  const allowedKits = () => (allowed ??= allowedPageKits(docroot, resolver));
+  const cache = pageCache(
+    docroot,
+    logger,
+    pathname => compiler.compile(pathname),
+    () => (allowed = undefined)
+  );
 
   // This path is answered here, before the filesystem is consulted, so a real
   // file of the same name is unreachable -- and silently so, which is the
@@ -139,13 +183,31 @@ export function markout(props: MarkoutProps) {
       return;
     }
 
-    if (i < 0 && !req.path.endsWith('/') && (await isDirectory(req.path, docroot))) {
+    // Anything that is not a page: served from a kit if one claims it, and
+    // otherwise passed on to whatever static layer the application mounted.
+    // The kit case has to be answered HERE rather than by an
+    // `express.static` per kit, because the middleware owns the mount table
+    // and is used on its own as often as through this package's `Server`.
+    if (extname !== '.html') {
+      return serveKitAsset(req, res, next, resolver);
+    }
+
+    if (i < 0 && !req.path.endsWith('/') && (await isDirectory(req.path, resolver))) {
       res.redirect(301, `${req.path}/`);
       return;
     }
 
-    const pathname = await resolvePath(req, i, docroot);
+    const pathname = await resolvePath(req, i, resolver);
     if (!pathname) {
+      res.sendStatus(404);
+      return;
+    }
+
+    // A kit's pages belong to the site only where a page asked for them. The
+    // check is here rather than in the resolver because it is about what this
+    // SITE publishes, not about where a pathname may land.
+    const kit = resolver.rootFor(pathname).kit;
+    if (kit && !(await allowedKits()).has(resolver.rootFor(pathname).prefix)) {
       res.sendStatus(404);
       return;
     }
@@ -204,12 +266,17 @@ function originOf(req: Request): string | undefined {
   return host ? `${req.protocol}://${host}` : undefined;
 }
 
-async function isDirectory(requestPath: string, docroot: string): Promise<boolean> {
-  const relativePath = requestPath.startsWith('/')
-    ? requestPath.slice(1)
-    : requestPath;
+async function isDirectory(requestPath: string, resolver: Resolver): Promise<boolean> {
+  // through the resolver like every other path question, so that this one
+  // does not become the place where containment was forgotten -- it used to
+  // resolve against the docroot without checking, and only Express having
+  // already normalized `..` out of `req.path` kept that from mattering
+  const resolved = resolver.resolve(requestPath);
+  if (!resolved.ok) {
+    return false;
+  }
   try {
-    return (await fs.promises.stat(path.resolve(docroot, relativePath))).isDirectory();
+    return (await fs.promises.stat(resolved.filePath)).isDirectory();
   } catch {
     return false;
   }
@@ -242,15 +309,39 @@ function handleNonPageRequests(
     next();
     return true;
   }
+  // `/npm/...` is how a kit's files are addressed at COMPILE time and
+  // nowhere else. Serving it would give the same bytes a second URL with
+  // nothing to choose between them, and one that none of the publishing
+  // rules governs -- so it is refused rather than merely unused.
+  if (req.path === NPM_PREFIX.slice(0, -1) || req.path.startsWith(NPM_PREFIX)) {
+    res.sendStatus(404);
+    return true;
+  }
   if (req.path.startsWith('/.') || extname === '.htm') {
     res.sendStatus(404);
     return true;
   }
-  if (extname !== '.html') {
-    next();
-    return true;
-  }
   return false;
+}
+
+/**
+ * A file from a mounted kit, or nothing at all.
+ *
+ * `next()` rather than a 404 when no kit claims the path, so the application's
+ * own static layer -- `express.static(docroot)`, usually mounted right after
+ * this -- still gets its turn, exactly as it did before kits existed.
+ */
+async function serveKitAsset(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+  resolver: Resolver
+) {
+  const at = resolver.resolve(req.path);
+  if (!at.ok || !at.root.kit || !publishablePath(at.pathname)) {
+    return next();
+  }
+  res.sendFile(at.filePath, { dotfiles: 'ignore' }, err => err && next());
 }
 
 // exported for direct unit testing: Express normalizes `..` out of req.path
@@ -259,21 +350,16 @@ function handleNonPageRequests(
 export async function resolvePath(
   req: Request,
   i: number,
-  docroot: string
+  resolver: Resolver
 ) {
   let pathname = i < 0 ? req.path : req.path.substring(0, i).toLowerCase();
-  const root = path.resolve(docroot);
-  // Remove leading slash to ensure relative path resolution
-  const relativePath = pathname.startsWith('/')
-    ? pathname.slice(1)
-    : pathname;
-  const fullPath = path.resolve(root, relativePath);
-  // Ensure the resolved path is contained in docroot: a plain startsWith(root)
-  // would also match a sibling directory sharing the same prefix, e.g. `root`
-  // = "/a/site" and a candidate of "/a/site-other/secret"
-  if (fullPath !== root && !fullPath.startsWith(root + path.sep)) {
+  // containment lives in the resolver, which is also what knows about roots
+  // other than the docroot -- see ../paths
+  const resolved = resolver.resolve(pathname);
+  if (!resolved.ok) {
     return;
   }
+  const fullPath = resolved.filePath;
   if (i < 0) {
     try {
       let stat = null;

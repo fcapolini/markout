@@ -27,6 +27,36 @@ fs.readdirSync(docroot).forEach(dir => {
   }
 });
 
+describe('files read', () => {
+  const includes = path.join(docroot, 'includes');
+
+  it('records the page and everything it pulled in, transitively', async () => {
+    // the whole closure and in read order, not just what the page named
+    // itself: test002b.htm brings the last two in
+    const source = await new Preprocessor(includes).load('/test002imports-in.html');
+    expect(source.errors).toEqual([]);
+    expect(source.files).toEqual([
+      '/test002imports-in.html',
+      '/test002/test002b.htm',
+      '/test002/test002b/test002c.htm',
+      '/test002d.htm',
+    ]);
+  });
+
+  it('records a file pulled in twice only once', async () => {
+    // the fixture imports the same fragment twice, which is also what
+    // `<:import>`'s once-only rule keys off -- the list IS that rule's state
+    const source = await new Preprocessor(includes).load('/test002imports-in.html');
+    expect(source.files.filter(f => f.endsWith('test002b.htm'))).toHaveLength(1);
+  });
+
+  it('records what it managed to read before a failure', async () => {
+    const source = await new Preprocessor(includes).load('/test003-in.html');
+    expect(source.errors.map(e => e.msg)).toContain('Forbidden pathname "../dummy.htm"');
+    expect(source.files).toContain('/test003-in.html');
+  });
+});
+
 describe('path containment', () => {
   it('should reject an <:include> escaping to a sibling directory sharing the docroot prefix', async () => {
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'markout-preprocessor-sec-'));

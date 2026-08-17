@@ -1,3 +1,5 @@
+import type { Kit } from '../kits';
+import { normalizeSeparators, Resolver } from '../paths';
 import { DIRECTIVE_TAG_PREFIX, NodeType } from './dom';
 import { parse, Source } from './parser';
 import * as dom from './server-dom';
@@ -12,14 +14,6 @@ export const GROUP_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'GROUP';
 
 export const MAX_NESTING = 100;
 
-/**
- * Normalizes path separators to forward slashes for cross-platform compatibility
- * This ensures consistent path representation in source locations across Windows/Unix
- */
-function normalizePathSeparators(filepath: string): string {
-  return filepath.replace(/\\/g, '/');
-}
-
 /*
   Adds support for:
   - <:include>
@@ -28,16 +22,32 @@ function normalizePathSeparators(filepath: string): string {
 */
 export class Preprocessor {
   docroot: string;
+  /** where a pathname is allowed to land, and what it maps to; see ../paths */
+  protected resolver: Resolver;
 
-  constructor(docroot: string) {
-    this.docroot = path.resolve(docroot);
+  constructor(docroot: string, kits?: Kit[]) {
+    this.resolver = new Resolver(docroot, kits);
+    this.docroot = this.resolver.docroot.dir;
   }
 
   async load(fname: string): Promise<Source> {
-    const normalizedFname = normalizePathSeparators(fname);
-    const dummy = new Source('', normalizedFname);
-    const source = await this.loadSource(normalizedFname, '.', dummy, 0);
-    return source ?? dummy;
+    const normalizedFname = normalizeSeparators(fname);
+    // Every file read is recorded on THIS one, the page itself included: it
+    // has to exist before anything can be parsed, so it is the only Source
+    // that can be handed down to the loads that follow.
+    const main = new Source('', normalizedFname);
+    const source = await this.loadSource(normalizedFname, '.', main, 0);
+    if (!source) {
+      return main;
+    }
+    // ...and then carried across, which is the part that was missing. The
+    // list was complete all along on an object only a FAILED load ever
+    // returned, so every page that compiled reported having read nothing.
+    // Nothing read it, which is how that went unnoticed -- except
+    // `<:import>`'s once-only rule, which consults it during preprocessing
+    // and was never affected.
+    source.files.push(...main.files);
+    return source;
   }
 
   protected async loadSource(
@@ -116,21 +126,21 @@ export class Preprocessor {
     once = false,
     from?: dom.ServerElement
   ): Promise<{ text: string; relPath: string } | undefined> {
-    if (fname.startsWith('/')) {
-      currDir = '';
-    }
-    const pname = path.normalize(path.join(this.docroot, currDir, fname));
-    // a plain startsWith(docroot) would also match a sibling directory
-    // sharing the same prefix, e.g. docroot "/a/site" and a candidate of
-    // "/a/site-other/secret"
-    if (pname !== this.docroot && !pname.startsWith(this.docroot + path.sep)) {
-      const s = normalizePathSeparators(path.relative(this.docroot, pname));
-      main.addError('error', `Forbidden pathname "${s}"`, from?.loc);
+    const resolved = this.resolver.resolve(fname, currDir);
+    if (!resolved.ok) {
+      // a path that left its root reads differently from a package that is
+      // not there: the first is about what the author wrote, the second
+      // about what is installed
+      main.addError(
+        'error',
+        resolved.kind === 'forbidden'
+          ? `Forbidden pathname "${resolved.escaped}"`
+          : resolved.message,
+        from?.loc
+      );
       return;
     }
-    const relPath = normalizePathSeparators(
-      pname.substring(this.docroot.length)
-    );
+    const { filePath: pname, pathname: relPath } = resolved;
     if (main.files.indexOf(relPath) < 0) {
       main.files.push(relPath);
     } else if (once) {

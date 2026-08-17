@@ -106,6 +106,17 @@ async function main() {
  * since there is no request here to supply what such a value usually reads.
  */
 function report(result: BuildResult) {
+  // First, and on their own: a refused kit is decided before any page is
+  // read, so there is nothing else to report and nothing was written. Every
+  // one of these names two things that cannot both have the same URL, so the
+  // fix is a rename rather than anything about the pages.
+  if (result.kitErrors.length) {
+    result.kitErrors.forEach(msg => console.error(`markout: ${msg}`));
+    console.error(`\n${result.kitErrors.length} kit(s) refused; nothing written`);
+    process.exitCode = 1;
+    return;
+  }
+
   result.runtimeErrors.forEach(({ pathname, error }) =>
     console.warn(`${pathname} ${formatRuntimeError(error)}`)
   );

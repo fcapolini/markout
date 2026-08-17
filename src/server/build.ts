@@ -1,35 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import { Compiler } from '../compiler';
+import { discoverKits, Kit } from '../kits';
+import { contains, Resolver } from '../paths';
 import { DEFAULT_RUNTIME_SRC } from '../compiler/stages/stage7-generate';
 import type { PageError } from '../html/parser';
 import type { RuntimeError } from '../runtime/core/core-context';
+import { allowedPageKits, walkTree } from './publish';
 import { renderPage } from './render';
 import { loadClientCode, RUNTIME_BUNDLE_PATH } from './runtime-bundle';
-
-/**
- * The dot-prefixed names a build copies, out of the many it skips.
- *
- * An ALLOW-list rather than a rule reversed, because the two kinds of dotfile
- * are different in kind rather than in degree. What belongs in a deployable is
- * a closed, standardised set: `.well-known` is specified (RFC 8615) for exactly
- * this -- ACME challenges, `security.txt`, `assetlinks.json` -- and the other
- * two are a host's marker and a host's config. What must never be published is
- * open-ended and gets a new member with every tool anyone installs: `.env`,
- * `.git`, `.DS_Store`, `.gitignore`, `.vscode`.
- *
- * Default-deny with three exceptions gets both right, and keeps the worst
- * outcome available -- a `.env` copied into a public bucket -- impossible. A
- * deny-list over the other set would be guesswork, which is the same reason
- * this build does not try to guess which extensions are "source".
- *
- * Matched by name at any depth, since `.htaccess` is meaningful per directory.
- */
-const SERVABLE_DOTFILES = new Set([
-  '.well-known', // RFC 8615: the standard place for things that must be public
-  '.nojekyll', // GitHub Pages: publish this directory as-is
-  '.htaccess', // Apache per-directory config for the deployed tree
-]);
 
 export interface BuildProps {
   /** where the sources are */
@@ -47,6 +26,12 @@ export interface BuildProps {
   pages?: string[];
   /** `src` the built pages use for the runtime; defaults to DEFAULT_RUNTIME_SRC */
   runtimeSrc?: string;
+  /**
+   * Installed kits. Absent means discover them from the docroot, which is
+   * what the CLI wants; passing an explicit list (`[]` included) is for a
+   * caller that has already scanned, or a test that wants neither.
+   */
+  kits?: Kit[];
 }
 
 export interface BuildResult {
@@ -79,6 +64,14 @@ export interface BuildResult {
    * deliverable than one that would not compile.
    */
   serverErrors: { pathname: string; error: RuntimeError }[];
+  /**
+   * Kits refused before anything was compiled -- a root claimed twice, a
+   * root the docroot already occupies, a malformed declaration. FAILS the
+   * build, and nothing is written: every page that imported such a kit would
+   * be missing it, and every page that did not would still be built against
+   * a URL space with a hole in it.
+   */
+  kitErrors: string[];
 }
 
 /**
@@ -131,8 +124,13 @@ export async function build(props: BuildProps): Promise<BuildResult> {
     );
   }
 
+  // Discovered from what is INSTALLED rather than from what some page
+  // imported, which is the same rule the middleware follows -- so the two
+  // cannot disagree about whether a kit's resource exists. See docs/design/npm-kits.md.
+  const discovered = props.kits ? { kits: props.kits, errors: [] } : discoverKits(docroot);
   const runtimeSrc = props.runtimeSrc ?? DEFAULT_RUNTIME_SRC;
-  const compiler = new Compiler({ docroot, runtimeSrc });
+  const compiler = new Compiler({ docroot, runtimeSrc, kits: discovered.kits });
+  const resolver = new Resolver(docroot, discovered.kits);
   const result: BuildResult = {
     pages: [],
     assets: [],
@@ -140,12 +138,16 @@ export async function build(props: BuildProps): Promise<BuildResult> {
     errors: [],
     runtimeErrors: [],
     serverErrors: [],
+    kitErrors: discovered.errors,
   };
+  if (discovered.errors.length) {
+    return result;
+  }
 
   const restricted = !!props.pages?.length;
   const found = restricted
     ? { pages: props.pages!.map(pagePathname), assets: [] }
-    : await walk(docroot);
+    : await collect(docroot, discovered.kits, resolver);
 
   // The runtime is written and then the assets are copied over it, so a
   // docroot with a file of this name silently replaced the runtime and the
@@ -190,7 +192,14 @@ export async function build(props: BuildProps): Promise<BuildResult> {
 
   await write(outdir, runtimeSrc, clientCode);
   for (const pathname of found.assets) {
-    await copy(docroot, outdir, pathname);
+    // through the resolver, so an asset under a kit's root is copied out of
+    // the package while one under the docroot is copied out of the docroot,
+    // by the same line
+    const at = resolver.resolve(pathname);
+    if (!at.ok) {
+      continue;
+    }
+    await copy(at.filePath, path.join(outdir, pathname));
     result.assets.push(pathname);
   }
 
@@ -212,72 +221,37 @@ export function pagePathname(name: string): string {
 }
 
 /**
- * Every page and every asset under the docroot.
+ * Every page and every asset the build is responsible for, as LOGICAL
+ * pathnames -- the docroot's own, plus each kit's under the root it declares.
  *
- * `.html` is a page and `.htm` is a fragment, which is the distinction the
- * server already draws by refusing to serve the second -- so a fragment is
- * not copied either. Its content reaches the output inlined into the pages
- * that imported it, and shipping the source alongside would publish a file
- * the served mode answers 404 for.
+ * A kit contributes its resources unconditionally, on the same terms as a
+ * directory of the same name in the docroot. Its PAGES are contributed only
+ * where a docroot page said `allow-pages` on the import -- the one place
+ * this design departs from "as though the kit were symlinked in", and it
+ * departs because a kit's broken page would otherwise fail a build belonging
+ * to somebody who cannot edit it. See ./publish.
  *
- * Dot-prefixed names are skipped for the same reason the middleware refuses
- * them -- except the few whose whole purpose is to be served, see
- * SERVABLE_DOTFILES -- and `node_modules` because a docroot of `.` in a project
- * root should not produce a build measured in gigabytes.
- *
- * Symlinks are FOLLOWED, which is not a detail: `kits/bootstrap/std-kit` is a
- * link to the std kit next door, and a directory entry that is a link is
- * neither a file nor a directory to `readdir` -- so treating the dirent's word
- * as final copied a directory as though it were a file. Resolved paths are
- * remembered because following links is how a walk finds its way into a cycle.
+ * Worth knowing rather than discovering: a kit shipping sources still puts
+ * them in the output, exactly as a docroot holding them does. `build` reports
+ * the extensions it copied rather than a count for that reason, and what a
+ * kit ships is decided by npm's own `files`/`.npmignore` rather than by
+ * anything here.
  */
-async function walk(docroot: string): Promise<{ pages: string[]; assets: string[] }> {
-  const pages: string[] = [];
-  const assets: string[] = [];
-  const seen = new Set<string>();
-  const visit = async (dir: string) => {
-    const real = await fs.promises.realpath(dir);
-    if (seen.has(real)) {
-      return;
+async function collect(
+  docroot: string,
+  kits: Kit[],
+  resolver: Resolver
+): Promise<{ pages: string[]; assets: string[] }> {
+  const found = await walkTree(docroot);
+  const allowed = await allowedPageKits(docroot, resolver);
+  for (const kit of kits) {
+    const at = await walkTree(kit.dir).catch(() => ({ pages: [], assets: [] }));
+    found.assets.push(...at.assets.map(a => kit.root + a));
+    if (allowed.has(kit.root)) {
+      found.pages.push(...at.pages.map(p => kit.root + p));
     }
-    seen.add(real);
-    const entries = await fs.promises.readdir(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const hidden = entry.name.startsWith('.') && !SERVABLE_DOTFILES.has(entry.name);
-      if (hidden || entry.name === 'node_modules') {
-        continue;
-      }
-      const full = path.join(dir, entry.name);
-      // stat rather than the dirent for a link, so that what it POINTS AT
-      // decides -- and a broken one is skipped rather than fatal, since a
-      // dangling link in a docroot is not this command's business
-      const stats = entry.isSymbolicLink()
-        ? await fs.promises.stat(full).catch(() => null)
-        : entry;
-      if (!stats) {
-        continue;
-      }
-      if (stats.isDirectory()) {
-        await visit(full);
-        continue;
-      }
-      const pathname = '/' + path.relative(docroot, full).split(path.sep).join('/');
-      const ext = path.posix.extname(pathname).toLowerCase();
-      if (ext === '.html') {
-        pages.push(pathname);
-      } else if (ext !== '.htm') {
-        assets.push(pathname);
-      }
-    }
-  };
-  await visit(docroot);
-  return { pages: pages.sort(), assets: assets.sort() };
-}
-
-/** whether `inner` is `outer` or sits below it */
-function contains(outer: string, inner: string): boolean {
-  const rel = path.relative(outer, inner);
-  return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+  }
+  return { pages: found.pages.sort(), assets: found.assets.sort() };
 }
 
 async function write(outdir: string, pathname: string, text: string) {
@@ -286,8 +260,7 @@ async function write(outdir: string, pathname: string, text: string) {
   await fs.promises.writeFile(target, text, 'utf8');
 }
 
-async function copy(docroot: string, outdir: string, pathname: string) {
-  const target = path.join(outdir, pathname);
+async function copy(from: string, target: string) {
   await fs.promises.mkdir(path.dirname(target), { recursive: true });
-  await fs.promises.copyFile(path.join(docroot, pathname), target);
+  await fs.promises.copyFile(from, target);
 }

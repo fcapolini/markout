@@ -1,4 +1,5 @@
 import { Preprocessor } from "../html/preprocessor";
+import type { Kit } from "../kits";
 import { Page } from "./ir/Page";
 import { stage1load } from "./stages/stage1-load";
 import { stage2validate } from "./stages/stage2-validate";
@@ -11,6 +12,15 @@ import { GLOBAL_NAMES } from "./stages/stage4-resolve";
 
 export interface CompilerProps {
   docroot: string;
+  /**
+   * Installed kits, each mounted at the logical root it declares. Absent
+   * means none, which is what every caller wanted before kits existed.
+   *
+   * Passed IN rather than discovered here, so that the server and the build
+   * scan once at startup and compile every page against the same table --
+   * see docs/design/npm-kits.md on why both derive it from what is installed.
+   */
+  kits?: Kit[];
   /** `src` for the bootstrap `<script>` that loads the runtime; see stage7-generate.ts */
   runtimeSrc?: string;
   /** emit the dev flag, so the browser runtime surfaces errors in the page */
@@ -29,7 +39,7 @@ export class Compiler {
   serverGlobals: ReadonlySet<string>;
 
   constructor(options: CompilerProps) {
-    this.preprocessor = new Preprocessor(options.docroot);
+    this.preprocessor = new Preprocessor(options.docroot, options.kits);
     this.runtimeSrc = options.runtimeSrc ?? DEFAULT_RUNTIME_SRC;
     this.dev = options.dev ?? false;
     this.serverGlobals = new Set(options.serverGlobals ?? []);
