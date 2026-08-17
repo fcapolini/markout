@@ -1,31 +1,32 @@
 /**
- * The Bootstrap kit's dev server, and Orbit's back end.
+ * The site: the homepage, the demos, and Orbit's back end.
  *
- * Not markout's own `Server` class but a plain Express app, because Orbit is
- * a whole application: it has an API of its own, and markout is the
- * middleware that renders its pages. The order below is the arrangement --
- * the application's routes first, then markout, then static files.
+ * Not markout's own `Server` class but a plain Express app, because one of
+ * the demos is a whole application. Orbit has an API of its own, and markout
+ * is the middleware that renders its pages -- so this file is also the
+ * worked example of the arrangement `@markout/express` is for: the
+ * application's own routes FIRST, then markout, then static files. That
+ * order is a requirement rather than a preference; a path with no extension
+ * is a page request, and markout answers it.
  *
- *     npm run dev:bootstrap-kit
+ *     npm run dev
  *
- * Serves `/index.html` (the component showcase) and `/orbit.html` (app demo).
- *
- * Exported as a factory as well as run directly, so the kit's tests drive
- * the same routes the browser gets rather than a second copy of them.
+ * Exported as a factory as well as run directly, so the tests drive the same
+ * routes a browser gets rather than a second copy of them.
  */
 import compression from "compression";
 import express, { type Express } from 'express';
 import { markout } from '@markout/express';
 import { openOperationsDb, type OperationsDb } from './orbit-db';
 
-export interface OrbitAppProps {
+export interface SiteProps {
   docroot: string;
   db?: OperationsDb;
   /** surface runtime expression errors in the page */
   dev?: boolean;
 }
 
-export function createOrbitApp(props: OrbitAppProps): Express {
+export function createSite(props: SiteProps): Express {
   const db = props.db ?? openOperationsDb();
   const app = express();
   app.use(compression());
@@ -72,9 +73,11 @@ if (require.main === module) {
   // reach for. Left as the only option, the easy number to get is the
   // wrong one by a factor nobody would guess.
   const dev = !process.argv.includes('--prod');
-  createOrbitApp({ docroot: __dirname, dev }).listen(port, () => {
-    console.log(`bootstrap kit  http://127.0.0.1:${port}/index.html`);
-    console.log(`orbit          http://127.0.0.1:${port}/orbit.html`);
+  createSite({ docroot: __dirname, dev }).listen(port, () => {
+    console.log(`homepage       http://127.0.0.1:${port}/`);
+    console.log(`demos          http://127.0.0.1:${port}/demos/`);
+    console.log(`kitchen sink   http://127.0.0.1:${port}/demos/kitchen-sink.html`);
+    console.log(`orbit          http://127.0.0.1:${port}/demos/orbit.html`);
     console.log(
       dev
         ? 'mode           dev -- readable expressions, NOT representative of what a\n' +

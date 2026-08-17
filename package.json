@@ -4,7 +4,8 @@
   "description": "Workspace root. The published packages live in packages/, and nothing here is published.",
   "workspaces": [
     "packages/*",
-    "kits/*"
+    "kits/*",
+    "sites/*"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
@@ -13,12 +14,11 @@
     "test:watch": "vitest",
     "test-coverage": "vitest run --coverage",
     "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
-    "dev": "npm run dev -w markout --",
+    "dev": "npm run dev -w @markout/site",
     "dev:bench": "npm run dev:bench -w markout --",
-    "dev:bootstrap-kit": "npm run dev:bootstrap-kit -w markout --",
-    "dev:std-kit": "npm run dev:std-kit -w markout --",
     "bench:medium": "npm run bench:medium -w markout --",
-    "bench:compare": "npm run bench:compare -w markout --"
+    "bench:compare": "npm run bench:compare -w markout --",
+    "start": "npm run start -w @markout/site"
   },
   "author": "Fabrizio Capolini",
   "license": "MIT",

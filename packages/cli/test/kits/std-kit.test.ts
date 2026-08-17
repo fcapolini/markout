@@ -18,7 +18,7 @@ import type { PageState } from '@markout/core';
  * has to do -- which is also how a page under test would supply its own.
  */
 
-const KIT_ROOT = path.resolve(__dirname, '../../../../kits/std');
+const KIT_ROOT = path.resolve(__dirname, '../../../../sites/site');
 
 const PAYLOAD = {
   title: 'Example data 1',
@@ -82,7 +82,7 @@ afterEach(() => vi.restoreAllMocks());
 
 describe('std-kit: the showcase', () => {
   it('compiles and renders with nothing reported', async () => {
-    const { errors, runtime } = await compile('/index.html');
+    const { errors, runtime } = await compile('/demos/std/index.html');
     expect(errors).toStrictEqual([]);
     expect(runtime).toStrictEqual([]);
   });
@@ -90,7 +90,7 @@ describe('std-kit: the showcase', () => {
   it('serves the fetched rows IN the markup', async () => {
     // the whole claim: a reader of the served HTML sees the data, so there is
     // nothing for the browser to fetch and nothing to flash
-    const { markup } = await compile('/index.html');
+    const { markup } = await compile('/demos/std/index.html');
     const html = live(markup);
     expect(html).toContain('Ada Lovelace');
     expect(html).toContain('Grace Hopper');
@@ -99,14 +99,14 @@ describe('std-kit: the showcase', () => {
 
   it('fetches once, resolving the page-relative url against $origin', async () => {
     const calls = stubFetch(PAYLOAD);
-    await compile('/index.html');
+    await compile('/demos/std/index.html');
     // exactly one: the `:client` datasource on the same page must not have
     // fetched here, and the served one must not have fetched twice
-    expect(calls).toStrictEqual(['http://x.test/index-data1.json']);
+    expect(calls).toStrictEqual(['http://x.test/demos/std/index-data1.json']);
   });
 
   it('sends the payload as state, so hydration does not lose it', async () => {
-    const { markup } = await compile('/index.html');
+    const { markup } = await compile('/demos/std/index.html');
     const served = Object.values(state(markup)).find(v => '_served' in v);
     expect(served?._served).toStrictEqual({ body: PAYLOAD });
   });

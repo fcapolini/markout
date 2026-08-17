@@ -1,12 +1,15 @@
 # Five deliverables, one repository
 
-Status: **in progress**. Steps 1 to 4 below are done: the code is split into
+Status: **done except the extension.** Six workspaces:
 [`@markout/core`](../../packages/core/),
 [`@markout/express`](../../packages/express/) and
-[`markout`](../../packages/cli/), each depending on the ones under it by name.
-What is left is the kits, the site and the extension. This file records the
-decisions and the order, so the migration can be paused between steps without
-the reasoning being lost with it.
+[`markout`](../../packages/cli/) for the code;
+[`@markout/bootstrap-kit`](../../kits/bootstrap-kit/) and
+[`@markout/std-kit`](../../kits/std-kit/) for the kits; and
+[`@markout/site`](../../sites/site/), private, for the homepage and the demos.
+The VS Code extension is the one deliverable still to build, and the reason
+the split was worth doing. This file records the decisions and the order, so
+the work can be picked up without the reasoning being lost with it.
 
 ## The problem
 
@@ -218,13 +221,34 @@ follows the files.
      `markout()` is mounted. Orbit already did this; nothing said so, and
      nothing would have caught it changing. The test now asserts both
      directions.
-5. **The kits become packages.** No TypeScript: a `package.json`, a `files`
-   list, and the `markout.root` each already declares. The showcase and Orbit
-   move *out* of the kit and into the site, so the site consumes the kit
-   through `/npm/@markout/bootstrap-kit/all.htm` exactly as a stranger would.
-   That turns the npm-kit resolution path into something the repository's own
-   pages exercise, rather than something the tests assert about.
-6. **The site, then the extension.** New work rather than moves.
+5. **The kits become packages.** No TypeScript: a `package.json` and the
+   `markout.root` each declares. **Done**, and it forced a decision rather
+   than merely allowing one. There were two bootstrap kits — the real one and
+   the five-definition `demo/bootstrap-kit` the README and homepage linked
+   to — and a kit declaring `/bootstrap-kit` cannot coexist with a docroot
+   directory of that name: [kits.ts](../../packages/core/src/kits.ts) refuses
+   the pair rather than picking a winner. So the stub had to go, and the
+   before/after page was rebuilt on the real kit. The design deleted the
+   worse artifact for us.
+
+   Two things the kit tests had to learn, both the design being honest:
+   the Compiler takes what is *installed* rather than discovering it, so a
+   caller passes `discoverKits(...)`; and `/npm/` resolves against the
+   filesystem from the docroot upwards, so a test building a docroot in a
+   temp directory either installs the kit into it or vendors it and imports
+   it by path. Both are cases the design has; now both have a test.
+6. **The site.** **Done.** [sites/site/](../../sites/site/) is one docroot with
+   the homepage at `/` and everything else under `/demos/`, served by a plain
+   Express app — which makes it the worked example of what
+   `@markout/express` is for, including the ordering rule step 4 turned up:
+   its own API routes come before `markout()`.
+
+   Every demo was kept and moved, none deleted. The index lists them, which
+   is the test that matters: a demo not worth a card on that page is a demo
+   worth deleting, and now there is somewhere for that judgement to be made.
+
+   The remaining deliverable is **the VS Code extension**, on Volar, against
+   `@markout/core`.
 
 ## Two traps, both npm's
 
@@ -250,7 +274,10 @@ compounding it helps nobody — but write real `exports` maps in step 2, so a
 later dual build is additive rather than a second migration. The extension is
 the consumer that will eventually push back.
 
-**What survives into the site.** [demo/](../../demo/) held the `setlist`,
-`shoelace` and `webawesome` stubs beside the real material, and two homepages.
-Step 6 settles it. See [POSITIONING.md](../../POSITIONING.md) on which
-artifacts the pitch actually rests on.
+**What survives into the site.** `demo/` held the `setlist`, `shoelace` and
+`webawesome` stubs beside the real material, and two homepages. Settled in
+step 6: one homepage, and every demo kept but moved under
+[sites/site/demos/](../../sites/site/demos/), where a page that is not worth
+linking from the index is a page worth deleting. See
+[POSITIONING.md](../../POSITIONING.md) on which artifacts the pitch actually
+rests on.

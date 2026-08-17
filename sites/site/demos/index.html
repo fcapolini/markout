@@ -1,0 +1,122 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+  <:import src="/npm/@markout/bootstrap-kit/all.htm" />
+
+  <title>Markout demos</title>
+  <meta name="description"
+        content="Live Markout pages: a component kit, an application built out of it, and the language's own examples.">
+</head>
+
+<!---
+  The index of everything under /demos.
+
+  Written the way the pages it lists are: the demos are an array on <body>,
+  and the cards below are one `:for-each` over it. Adding a demo is adding
+  an entry — which is the same claim the Bootstrap kit makes about a navbar,
+  made here about this page.
+-->
+<body :demos=${[
+        {
+          name: 'Kitchen Sink',
+          href: '/demos/kitchen-sink.html',
+          blurb: 'Every component in @markout/bootstrap-kit, on one page, in use.',
+          tag: 'bootstrap-kit',
+        },
+        {
+          name: 'Orbit',
+          href: '/demos/orbit.html',
+          blurb: 'An operations console built out of the kit, with an API of its own. ' +
+                 'Its data is fetched while the page renders, so the browser asks for nothing.',
+          tag: 'application',
+        },
+        {
+          name: 'Before and after',
+          href: '/demos/bootstrap/index.html',
+          blurb: 'The same marketing page written twice: once by hand, once with the kit. ' +
+                 'All the difference is in the first 35 lines.',
+          tag: 'bootstrap-kit',
+          also: { name: 'the hand-written twin', href: '/demos/bootstrap/index-plain.html' },
+        },
+        {
+          name: 'Data sources',
+          href: '/demos/std/index.html',
+          blurb: '@markout/std-kit: a page that reads its data on the server and ships it ' +
+                 'rendered. Read the source of what is served — that is the point.',
+          tag: 'std-kit',
+        },
+        {
+          name: 'The README, running',
+          href: '/demos/readme/index.html',
+          blurb: 'Every example from the README as a page you can open.',
+          tag: 'language',
+        },
+        {
+          name: 'Setlist',
+          href: '/demos/setlist/index.html',
+          blurb: 'A small application with a kit of its own — components that are not a ' +
+                 'CSS framework wrapper.',
+          tag: 'application',
+        },
+        {
+          name: 'Shoelace',
+          href: '/demos/shoelace/index.html',
+          blurb: 'Web components instead of CSS classes: `:prop-` and `:on-` against a ' +
+                 'custom-element library.',
+          tag: 'web components',
+        },
+        {
+          name: 'Web Awesome',
+          href: '/demos/webawesome/index.html',
+          blurb: 'The same idea again, against a different component library.',
+          tag: 'web components',
+        },
+      ]}>
+
+  <bs-navbar :brand="/"
+             :items=${[
+               { name: 'Home', link: '/' },
+               { name: 'Demos', link: '/demos/', active: true },
+             ]}>
+    Markout
+    <:slot name="end"><bs-theme-toggle /></:slot>
+  </bs-navbar>
+
+  <main class="container py-5">
+    <div class="row mb-5">
+      <div class="col-lg-8">
+        <h1 class="display-5 fw-bold mb-3">Demos</h1>
+        <p class="lead text-body-secondary mb-0">
+          Every page here is served by Markout and rendered before it reaches
+          the browser. View source on any of them: the markup you see is the
+          markup that arrived.
+        </p>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-md-6 col-xl-4" :for-each=${demos} :for-as="demo">
+        <bs-card :extra="h-100">
+          <span class="badge text-bg-secondary mb-3">${demo.tag}</span>
+          <h2 class="h4 mb-2"><a class="stretched-link link-body-emphasis text-decoration-none"
+                                 href=${demo.href}>${demo.name}</a></h2>
+          <p class="text-body-secondary mb-0">${demo.blurb}</p>
+          <p class="mt-3 mb-0" :for-data=${demo.also}>
+            <a class="small position-relative" href=${data.href}>${data.name}</a>
+          </p>
+        </bs-card>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-top py-4">
+    <div class="container small text-body-secondary">
+      <a href="/">Markout</a> — an HTML extension that adds modularity,
+      reactivity and isomorphism to plain HTML.
+    </div>
+  </footer>
+</body>
+
+</html>

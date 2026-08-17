@@ -141,7 +141,7 @@ that needed a server says so, and names the one-word fix (`:client`).
 cheatsheet](https://getbootstrap.com/docs/5.3/examples/cheatsheet/), one file
 per component, landed 2026-08-15. It ships two pages of its own — a showcase
 that puts every component on screen at once, and
-[Orbit](kits/bootstrap/orbit.html), an operations console built out of them
+[Orbit](sites/site/demos/orbit.html), an operations console built out of them
 against an API of its own.
 
 For a while there were two, and the second one did real damage to the pitch:
