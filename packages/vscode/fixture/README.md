@@ -29,6 +29,24 @@ JavaScript template literal in a `<script>`. Nothing is reported and nothing
 should be: plain HTML is a subset of markout, and the extension has no
 opinion about a file that is not using it.
 
+**`markout/scopes.html`** — four names on one line, each a different
+question. `body` is a named *scope* and goes to the `<body>` tag; `items` is
+a value *inside* it, reached by navigating there first; `item` is the loop
+alias and goes to the `:for-as` beside it. `page` and `head` are there too.
+
+## When the editor disagrees with all of that
+
+Run the same questions past the built server, with no VS Code in between:
+
+```sh
+npm run probe -w markout-vscode
+```
+
+It prints what `dist/server.js` actually answers. If those answers are right
+and the editor's are not, the editor is holding a language server from before
+the last build — **stop the debug session and start it again** rather than
+reloading the window, since only a fresh launch runs the build task.
+
 ## What to check while you are in there
 
 - HTML still behaves like HTML: Emmet, tag completion, auto-closing tags.

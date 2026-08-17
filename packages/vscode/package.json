@@ -17,7 +17,8 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "test": "vitest run",
     "typecheck": "tsc -b && npm run typecheck:test",
-    "typecheck:test": "tsc -p tsconfig.test.json"
+    "typecheck:test": "tsc -p tsconfig.test.json",
+    "probe": "node scripts/probe.mjs"
   },
   "author": "Fabrizio Capolini",
   "license": "MIT",
