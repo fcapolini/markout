@@ -118,20 +118,33 @@ async function readFromDisk(filePath: string): Promise<string | undefined> {
 }
 
 /**
- * The docroot a file belongs to: the nearest ancestor holding a
- * `package.json`, and the workspace folder otherwise.
+ * The docroot a file belongs to: the nearest ancestor that says it is one.
  *
- * A guess, and it has to be: a docroot is a serving decision that a
- * directory of HTML does not record. It is the right guess for every layout
- * in this repository and for the shape the docs describe, and a page that
- * disagrees can say so -- which is what the `markout.docroot` setting is
- * for, and why this returns a guess rather than pretending to know.
+ * This matters more than it looks. A docroot is what an absolute path is
+ * resolved against, so guessing it wrong does not merely lose a feature --
+ * `<:import src="/lib.htm" />` stops resolving and the extension reports a
+ * missing file that is sitting right there. A false error is worse than
+ * silence, so the guess has to be one an author can PREDICT and correct.
+ *
+ * Nearest ancestor wins, and two things count as saying so:
+ *
+ * - **a directory named `markout`**. For the delivery mode with no install
+ *   at all -- write the pages, `npx markout ./markout`, done -- there is no
+ *   package.json to find, and the folder name is the only thing an author
+ *   can say it with. Distinctive on purpose: `public`, `www` and `static`
+ *   belong to every static-site tool there is, and claiming one would mean
+ *   guessing at a Rails app's docroot.
+ * - **a package.json**, which is where a project that installs anything
+ *   keeps its identity anyway.
+ *
+ * And `markout.docroot` overrides both, because neither is evidence, only a
+ * good guess.
  */
 export function guessDocroot(filePath: string, workspaceFolder?: string): string {
   let dir = path.dirname(filePath);
   const stop = workspaceFolder ? path.resolve(workspaceFolder) : path.parse(dir).root;
   for (;;) {
-    if (existsSync(path.join(dir, 'package.json'))) {
+    if (path.basename(dir) === DOCROOT_DIR_NAME || existsSync(path.join(dir, 'package.json'))) {
       return dir;
     }
     if (dir === stop || dir === path.dirname(dir)) {
@@ -141,6 +154,9 @@ export function guessDocroot(filePath: string, workspaceFolder?: string): string
   }
 }
 
+/** the one directory name that means "pages are served from here" */
+export const DOCROOT_DIR_NAME = 'markout';
+
 function existsSync(p: string): boolean {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -149,6 +165,39 @@ function existsSync(p: string): boolean {
     return false;
   }
 }
+
+/**
+ * Whether a page's own text is unmistakably markout.
+ *
+ * The other half of the gate, and the half that matters most, because
+ * markout's whole delivery story is that you need install nothing: write the
+ * pages, run `npx markout ./site`, done. Such a project has no package.json
+ * to depend on markout, so a project-only gate would be silent for exactly
+ * the audience the language is pitched at.
+ *
+ * Two markers, and what is NOT one is the point:
+ *
+ * - a `<:…>` directive tag -- `<:import>`, `<:define>`, `<:include>`,
+ *   `<:slot>`. No other templating language spells a tag that way.
+ * - a colon attribute whose value is an expression: `:count=${…}`. The
+ *   colon alone would not do -- Alpine writes `:class="open ? 'a' : 'b'"`
+ *   and Vue writes `:prop="x"`, both quoted, and Thymeleaf's `th:text` and
+ *   an `xmlns:th` do not start with one. It is the `=${` that no one else
+ *   writes.
+ *
+ * `${…}` on its own is deliberately NOT a marker, though it is markout's one
+ * interpolation syntax. It is also JSP EL, Thymeleaf and Underscore, all of
+ * which live in `.html` files, and a page holding nothing else is a page
+ * this extension cannot tell apart from theirs.
+ */
+export function looksLikeMarkout(text: string): boolean {
+  return DIRECTIVE_TAG.test(text) || EXPRESSION_ATTRIBUTE.test(text);
+}
+
+/** `<:import`, `</:define`, and the rest */
+const DIRECTIVE_TAG = /<\/?:[a-zA-Z]/;
+/** `:count=${`, `::bsRadius=${` -- the `=${` is what makes it ours */
+const EXPRESSION_ATTRIBUTE = /[\s"']::?[A-Za-z_$][\w:$-]*=\$\{/;
 
 /**
  * Whether a docroot belongs to a project that uses markout.

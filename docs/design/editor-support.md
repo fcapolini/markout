@@ -137,11 +137,43 @@ a file containing it is indistinguishable from a markout page. It is also
 exactly what JSP EL, Thymeleaf and Underscore templates put in `.html` files,
 and reporting per file would put an error on every line of such a project.
 
-So the extension asks whether the **project** uses markout: the nearest
-`package.json` depending on `markout` or `@markout/*`. Zero configuration,
-reuses the walk the docroot guess already does, and silent everywhere it was
-not invited. `markout.enable: always` is the escape hatch for a vendored copy
-or a page opened on its own.
+So the extension looks for **evidence**, and either kind will do:
+
+- **the page's own syntax** — a `<:…>` directive tag, or an attribute whose
+  value is an expression (`:count=${…}`). Neither belongs to anyone else:
+  Alpine writes `:class="open ? 'a' : 'b'"` and Vue `:prop="x"`, both quoted;
+  Thymeleaf's `th:text` and an `xmlns:th` do not begin with a colon. It is
+  the `=${` that is ours. Measured against every page and fragment in this
+  repository, and against Alpine, Vue, Thymeleaf, JSP EL and Underscore.
+- **the project** — the nearest `package.json` depending on `markout` or
+  `@markout/*`.
+
+The first is the one that matters, and a project-only gate was the first
+version's mistake. Markout's delivery story is that you install *nothing*:
+write the pages, `npx markout ./markout`, done. Such a project has no
+`package.json` at all, so a gate that required one would be silent for
+exactly the audience the language is pitched at.
+
+`${…}` on its own is deliberately **not** evidence, though it is markout's
+one interpolation syntax — because it is also JSP EL's and Underscore's, and
+a page holding nothing else cannot be told apart from theirs.
+
+`markout.enable: always` remains the escape hatch.
+
+### The docroot matters more than it looks
+
+Guessing it wrong does not lose a feature, it **invents an error**:
+`<:import src="/lib.htm" />` stops resolving, and the extension reports a
+missing file that is sitting right there. A false error is worse than
+silence, so the guess has to be one an author can predict and correct.
+
+Nearest ancestor wins, and two things count as claiming it: **a directory
+named `markout`**, and **a `package.json`**. The first exists for the
+no-install mode, where the folder name is the only thing an author can say it
+with — and it is that name rather than `public`, `www` or `static` on
+purpose, since those belong to every static-site tool there is and claiming
+one would mean guessing at a Rails app's docroot. `markout.docroot` overrides
+both.
 
 ## What the wiring turned out to be
 

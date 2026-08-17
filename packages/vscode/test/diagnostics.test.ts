@@ -112,6 +112,32 @@ describe('the buffer, not the file', () => {
 });
 
 describe('where a page is served from', () => {
+  it('takes a directory named markout/ as the docroot', async () => {
+    // the delivery mode with no install at all: a folder of pages and
+    // `npx markout ./markout`. There is no package.json to be found, and
+    // getting this wrong does not lose a feature -- it INVENTS an error,
+    // because `/lib.htm` stops resolving to the file sitting next door
+    write('markout/lib.htm', '<lib><:define tag="x-a:div">ok</:define></lib>');
+    const page = write(
+      'markout/index.html',
+      '<html><head><:import src="/lib.htm" /></head><body><x-a /></body></html>'
+    );
+    const guessed = guessDocroot(page, docroot);
+    expect(guessed).toBe(path.join(docroot, 'markout'));
+    expect(pathnameOf(page, guessed)).toBe('/index.html');
+    // and the proof that it matters: compiled against this docroot the page
+    // is clean, and against the workspace folder it is not
+    expect(await diagnose({ docroot: guessed, pathname: '/index.html' })).toStrictEqual([]);
+    const wrong = await diagnose({ docroot, pathname: '/markout/index.html' });
+    expect(wrong.map(d => d.message)).toStrictEqual(['File not found "/lib.htm"']);
+  });
+
+  it('prefers the nearest of the two', () => {
+    write('package.json', '{}');
+    const page = write('markout/deep/x.html', '<html></html>');
+    expect(guessDocroot(page, docroot)).toBe(path.join(docroot, 'markout'));
+  });
+
   it('takes the nearest package.json as the docroot', () => {
     write('site/package.json', '{}');
     const page = write('site/demos/x.html', '<html></html>');

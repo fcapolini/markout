@@ -3,7 +3,7 @@ import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Compiler } from '@markout/core';
-import { isMarkoutProject } from '../src/diagnostics';
+import { isMarkoutProject, looksLikeMarkout } from '../src/diagnostics';
 
 /**
  * Whether this extension should say anything about a given HTML file.
@@ -113,10 +113,83 @@ describe('so the question is asked about the project', () => {
   });
 });
 
+describe('a page that speaks for itself', () => {
+  /**
+   * The case a project gate alone would have failed: markout's delivery
+   * story is that you install nothing -- write the pages, `npx markout
+   * ./site`, done. There is no package.json to depend on markout, so the
+   * page has to be the evidence.
+   */
+  it('recognises a directive tag', () => {
+    expect(looksLikeMarkout('<html><head><:import src="/lib.htm" /></head></html>')).toBe(true);
+    expect(looksLikeMarkout('<lib><:define tag="x-a:div">a</:define></lib>')).toBe(true);
+  });
+
+  it('recognises an attribute whose value is an expression', () => {
+    expect(looksLikeMarkout('<html :count=${0}><body>${count}</body></html>')).toBe(true);
+    expect(looksLikeMarkout('<head ::bsRadius=${"1rem"}></head>')).toBe(true);
+  });
+
+  it('is not fooled by the neighbours, which is the whole difficulty', () => {
+    // Alpine and Vue both write colon attributes; theirs are quoted strings,
+    // and it is the `=${` that no one else writes
+    expect(looksLikeMarkout(`<div x-data="{o:false}"><b :class="o ? 'a' : 'b'">x</b></div>`)).toBe(
+      false
+    );
+    expect(looksLikeMarkout('<my-c :prop="x" v-if="y">{{ msg }}</my-c>')).toBe(false);
+    // Thymeleaf's attributes do not START with a colon, and its expressions
+    // are quoted
+    expect(
+      looksLikeMarkout('<html xmlns:th="http://x"><p th:text="${user.name}">x</p></html>')
+    ).toBe(false);
+  });
+
+  it('does NOT treat ${…} on its own as evidence', () => {
+    // markout's one interpolation syntax, and also JSP EL's and
+    // Underscore's. A page holding nothing else cannot be told from theirs,
+    // and guessing wrong here is an error on every line of someone's project
+    expect(looksLikeMarkout('<html><body>Hello ${user.name}</body></html>')).toBe(false);
+  });
+
+  it('says nothing about plain HTML, which has nothing to report anyway', () => {
+    expect(looksLikeMarkout('<html><body><h1>Hi</h1><p>Costs $5</p></body></html>')).toBe(false);
+  });
+});
+
 describe('this repository', () => {
   it('is recognised by its own gate', () => {
     // the site is where the pages are, and it is the case that has to work
     const site = path.resolve(__dirname, '../../../sites/site');
     expect(isMarkoutProject(site)).toBe(true);
+  });
+
+  it('recognises its own pages by their text alone', () => {
+    // every real page and fragment, against the syntax gate rather than the
+    // project one -- because this is what a package.json-less project gets
+    const roots = ['sites/site', 'kits'].map(r => path.resolve(__dirname, '../../..', r));
+    const pages: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.html?$/.test(entry.name)) pages.push(full);
+      }
+    };
+    roots.forEach(walk);
+    expect(pages.length).toBeGreaterThan(30);
+
+    const missed = pages
+      .filter(f => !looksLikeMarkout(fs.readFileSync(f, 'utf8')))
+      .map(f => path.basename(f));
+    // the only ones that should miss are the pages that hold no markout at
+    // all: the hand-written twin the bootstrap demo is compared against, an
+    // index of links, and the `<lib>` wrappers that carry only meta tags
+    expect(missed.sort()).toStrictEqual([
+      'base.htm',
+      'base.htm',
+      'base.htm',
+      'index-plain.html',
+      'index.html',
+    ]);
   });
 });

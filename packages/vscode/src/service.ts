@@ -1,7 +1,13 @@
 import type { LanguageServicePlugin } from '@volar/language-service';
 import * as path from 'path';
 import { URI } from 'vscode-uri';
-import { diagnose, guessDocroot, isMarkoutProject, pathnameOf } from './diagnostics';
+import {
+  diagnose,
+  guessDocroot,
+  isMarkoutProject,
+  looksLikeMarkout,
+  pathnameOf,
+} from './diagnostics';
 import { isPage } from './plugin';
 
 /**
@@ -52,9 +58,13 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
             return [];
           }
           const docroot = props.docroot ?? guessDocroot(filePath, props.workspaceFolder);
-          // this extension has no file suffix of its own to hide behind, so
-          // the question is about the project rather than the file
-          if (enable === 'auto' && !isMarkoutProject(docroot)) {
+          // This extension has no file suffix of its own to hide behind, so
+          // it has to be shown evidence. Either will do, and the first is the
+          // one that matters: a project that installs nothing and runs
+          // `npx markout ./site` -- which is markout's whole delivery story --
+          // has no package.json to be recognised by, and its pages have to
+          // speak for themselves.
+          if (enable === 'auto' && !looksLikeMarkout(document.getText()) && !isMarkoutProject(docroot)) {
             return [];
           }
           const pathname = pathnameOf(filePath, docroot);
