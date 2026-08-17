@@ -1,0 +1,17 @@
+// The config `tsx` is given when running this package from source, and the
+// only place `paths` appears.
+//
+// It exists so that `npm run dev` picks up a change in @markout/core without
+// a build in between. It is deliberately NOT tsconfig.json: mapping a package
+// name onto another project's SOURCE is exactly what a composite build must
+// not do -- there, the reference and the built .d.ts are what resolve it, and
+// tsc would reject a source file from outside this package's rootDir.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@markout/core": ["../core/src/index.ts"]
+    }
+  }
+}

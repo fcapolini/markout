@@ -3,7 +3,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { Compiler } from '../../src/compiler/index';
-import { renderPage } from '../../src/server/render';
+import { renderPage } from '../../src/render/render';
 
 /**
  * An include is a splice, and a splice has to be invisible.

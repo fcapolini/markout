@@ -4,8 +4,8 @@ import path from 'path';
 import { execSync } from 'child_process';
 import { chromium, type Browser } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { Compiler } from '../../src/compiler';
-import { renderPage } from '../../src/server/render';
+import { Compiler } from '@markout/core';
+import { renderPage } from '@markout/core';
 import { openOperationsDb } from '../../../../kits/bootstrap/orbit-db';
 import { createOrbitApp } from '../../../../kits/bootstrap/server';
 
@@ -526,7 +526,7 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
   beforeAll(async () => {
     // the browser runs the BUILT runtime, not src -- a stale bundle is a
     // test that silently checks the previous commit
-    execSync('npm run build:runtime', { cwd: path.resolve(__dirname, '../..') });
+    execSync('npm run build:runtime', { cwd: path.resolve(__dirname, '../../../core') });
 
     docroot = fs.mkdtempSync(path.join(os.tmpdir(), 'markout-kit-live-'));
     fs.cpSync(path.join(KIT_ROOT, 'bootstrap-kit'), path.join(docroot, 'bootstrap-kit'), {

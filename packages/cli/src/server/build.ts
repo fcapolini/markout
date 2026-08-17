@@ -1,14 +1,20 @@
 import fs from 'fs';
 import path from 'path';
-import { Compiler } from '../compiler';
-import { discoverKits, Kit } from '../kits';
-import { contains, Resolver } from '../paths';
-import { DEFAULT_RUNTIME_SRC } from '../compiler/stages/stage7-generate';
-import type { PageError } from '../html/parser';
-import type { RuntimeError } from '../runtime/core/core-context';
-import { allowedPageKits, walkTree } from './publish';
-import { renderPage } from './render';
-import { loadClientCode, RUNTIME_BUNDLE_PATH } from './runtime-bundle';
+import {
+  allowedPageKits,
+  Compiler,
+  contains,
+  DEFAULT_RUNTIME_SRC,
+  discoverKits,
+  loadClientCode,
+  renderPage,
+  Resolver,
+  RUNTIME_BUNDLE_PATH,
+  walkTree,
+  type Kit,
+  type PageError,
+  type RuntimeError,
+} from '@markout/core';
 
 export interface BuildProps {
   /** where the sources are */

@@ -3,7 +3,7 @@ import os from 'os';
 import path from 'path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Compiler } from '../../src/compiler';
-import { renderPage } from '../../src/server/render';
+import { renderPage } from '../../src/render/render';
 
 /**
  * Objects the host hands the server, reachable from a `:server-` value.

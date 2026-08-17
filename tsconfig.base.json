@@ -1,0 +1,25 @@
+// The compiler options every package shares, so they cannot drift apart.
+// A package's own tsconfig.json adds only what is genuinely its own: where
+// its sources are, where its output goes, and which projects it references.
+//
+// `composite` and `declarationMap` are here rather than per package because
+// they are what makes the workspace work: composite lets `tsc -b` build the
+// packages in dependency order, and declarationMap is what sends an editor's
+// go-to-definition into another package's SOURCE instead of its .d.ts.
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "node16",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "types": ["node", "vitest/globals"]
+  }
+}

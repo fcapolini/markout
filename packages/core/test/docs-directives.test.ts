@@ -6,7 +6,7 @@ import { Window } from 'happy-dom';
 import { Compiler } from '../src/compiler';
 import type { RuntimeError } from '../src/runtime/core/core-context';
 import { WebContext } from '../src/runtime/web/web-context';
-import { renderPage } from '../src/server/render';
+import { renderPage } from '../src/render/render';
 
 /**
  * Every directive the syntax reference lists does something observable.

@@ -1,10 +1,10 @@
 import fs from 'fs';
 import path from 'path';
-import { NodeType } from '../html/dom';
-import { parse } from '../html/parser';
-import { IMPORT_DIRECTIVE_TAG, INCLUDE_SRC_ATTR } from '../html/preprocessor';
-import type * as dom from '../html/server-dom';
-import type { Resolver } from '../paths';
+import { NodeType } from './html/dom';
+import { parse } from './html/parser';
+import { IMPORT_DIRECTIVE_TAG, INCLUDE_SRC_ATTR } from './html/preprocessor';
+import type * as dom from './html/server-dom';
+import type { Resolver } from './paths';
 
 /**
  * What may be published out of a directory, and what a walk of one finds.

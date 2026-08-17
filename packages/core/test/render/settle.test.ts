@@ -6,7 +6,7 @@ import { stage2validate } from '../../src/compiler/stages/stage2-validate';
 import { stage3qualify } from '../../src/compiler/stages/stage3-qualify';
 import { stage4resolve } from '../../src/compiler/stages/stage4-resolve';
 import { stage7generate } from '../../src/compiler/stages/stage7-generate';
-import { renderPage } from '../../src/server/render';
+import { renderPage } from '../../src/render/render';
 import { STATE_GLOBAL } from '../../src/runtime/core/core-context';
 import type { PageState } from '../../src/runtime/core/core-context';
 

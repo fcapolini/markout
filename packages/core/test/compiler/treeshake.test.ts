@@ -56,7 +56,7 @@ async function build(body: string, extra: Extra = {}) {
 
 /** renders and reports, for the cases that must not leave a dangling binding */
 async function renderErrors(page: Awaited<ReturnType<typeof build>>['page']) {
-  const { renderPage } = await import('../../src/server/render');
+  const { renderPage } = await import('../../src/render/render');
   return (await renderPage(page)).map(e => `${e.phase}: ${e.message}`);
 }
 

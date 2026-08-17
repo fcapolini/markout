@@ -4,7 +4,7 @@ import path from 'path';
 import { readFileSync } from 'fs';
 import { Server } from './server';
 import { build, type BuildResult } from './server/build';
-import { formatRuntimeError } from './runtime/core/core-context';
+import { formatRuntimeError } from '@markout/core';
 
 async function main() {
   const { Command } = await import('commander');

@@ -1,9 +1,9 @@
 # Kits from npm packages
 
 Status: **built**. Discovery and the mount table are in
-[src/kits.ts](../../packages/cli/src/kits.ts), resolution in [src/paths.ts](../../packages/cli/src/paths.ts), the
+[src/kits.ts](../../packages/core/src/kits.ts), resolution in [src/paths.ts](../../packages/core/src/paths.ts), the
 publishing rules shared by both consumers in
-[src/server/publish.ts](../../packages/cli/src/server/publish.ts). A page imports a kit through
+[src/server/publish.ts](../../packages/core/src/publish.ts). A page imports a kit through
 `/npm/`, the middleware serves the kit's resources at its logical root, and
 `build` materializes them there.
 
@@ -28,7 +28,7 @@ Publishing a kit as `@markout/bootstrap-kit` puts it under `node_modules`,
 outside the docroot, which two things currently forbid on purpose:
 
 - the preprocessor confines every load to the docroot
-  ([src/html/preprocessor.ts](../../packages/cli/src/html/preprocessor.ts));
+  ([src/html/preprocessor.ts](../../packages/core/src/html/preprocessor.ts));
 - `build` skips `node_modules` when walking for assets
   ([src/server/build.ts](../../packages/cli/src/server/build.ts)), so a docroot of `.` in a
   project root does not produce a deliverable measured in gigabytes.
@@ -153,7 +153,7 @@ today, minus the three things the docroot already excludes:
 - **`node_modules` at any depth** — the rule `walk` already applies, for the
   reason it already gives: a deliverable should not be measured in gigabytes.
 - **dot-prefixed names**, minus `SERVABLE_DOTFILES`
-  ([src/server/publish.ts](../../packages/cli/src/server/publish.ts)) — same walk, same
+  ([src/server/publish.ts](../../packages/core/src/publish.ts)) — same walk, same
   allow-list.
 
 Same walk, same refusals, a different root. That is what makes "as if
@@ -300,7 +300,7 @@ mode every other decision here is trying to avoid. The server has no choice:
 a request for a resource must resolve before any page is compiled, so its
 table comes from scanning installed packages at startup. If the build
 instead materialized only the kits some page imported — which
-`Source.files` ([src/html/parser.ts](../../packages/cli/src/html/parser.ts)) makes easy and
+`Source.files` ([src/html/parser.ts](../../packages/core/src/html/parser.ts)) makes easy and
 precise, since it holds the whole transitive closure of what a page read —
 then a page referencing a kit's resource *without* importing it would work
 in dev and 404 in the deliverable.
@@ -454,7 +454,7 @@ the symlink gap covers kit authoring as it is actually done today.
 
 **A `$npm` runtime global.** `$origin` earns its `$` by meaning the same
 thing on the server and in the browser
-([src/runtime/core/core-global.ts](../../packages/cli/src/runtime/core/core-global.ts)), and a
+([src/runtime/core/core-global.ts](../../packages/core/src/runtime/core/core-global.ts)), and a
 filesystem resolver does not exist in a browser at all. Mechanically it was
 worse than wrong: globals are read from `${…}` expressions, so a bare
 `$npm/…` in an attribute is a literal string the compiler does not look
