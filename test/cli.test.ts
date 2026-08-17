@@ -357,6 +357,53 @@ describe('CLI build', () => {
     }
   });
 
+  it('fails on a `:server-` value that failed, and does not write the page', async () => {
+    const { docroot, outdir, cleanup } = await dirs();
+    try {
+      // nothing re-runs a `:server-` value in the browser -- it crosses frozen,
+      // with a result and no expression -- so a page shipped without whatever
+      // this was for would be without it permanently
+      await writeFile(
+        path.join(docroot, 'needs-server.html'),
+        '<html :server-data=${Promise.reject(new Error("no request here"))}>' +
+          '<body>${data ?? "-"}</body></html>'
+      );
+      await writeFile(path.join(docroot, 'fine.html'), '<html><body>fine</body></html>');
+
+      const result = await run([docroot, outdir]);
+
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain('/needs-server.html');
+      expect(result.stderr).toContain('no request here');
+      await expect(readFile(path.join(outdir, 'needs-server.html'), 'utf8')).rejects.toThrow();
+      // the pages that are deliverable still are
+      await expect(readFile(path.join(outdir, 'fine.html'), 'utf8')).resolves.toContain('fine');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('only warns when an ordinary value throws, and writes the page', async () => {
+    const { docroot, outdir, cleanup } = await dirs();
+    try {
+      // the browser re-derives this one, where `later` may well have arrived:
+      // it is the shape `${user.name}` takes before a datasource has answered,
+      // and the served page is fine, so a build should not differ
+      await writeFile(
+        path.join(docroot, 'early.html'),
+        '<html :later=${null}><body>${later.name}</body></html>'
+      );
+
+      const result = await run([docroot, outdir]);
+
+      expect(result.code).toBe(0);
+      expect(result.stderr).toContain('/early.html');
+      await expect(readFile(path.join(outdir, 'early.html'), 'utf8')).resolves.toBeTruthy();
+    } finally {
+      await cleanup();
+    }
+  });
+
   it('refuses an output directory inside the docroot', async () => {
     const { docroot, outdir, cleanup } = await dirs();
     try {

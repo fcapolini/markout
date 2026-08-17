@@ -62,11 +62,23 @@ export interface BuildResult {
    */
   errors: { pathname: string; error: PageError }[];
   /**
-   * Expressions that threw while rendering. The page was still written, on
-   * the same grounds the server keeps serving one: a value that failed is a
-   * hole in a page, not a reason to have no page.
+   * Ordinary expressions that threw while rendering. The page was still
+   * written, on the same grounds the server keeps serving one: the browser
+   * re-derives these, so a value that was asked too early here is a hole that
+   * fills itself rather than a reason to have no page.
    */
   runtimeErrors: { pathname: string; error: RuntimeError }[];
+  /**
+   * `:server-` values that failed, which is a different matter and FAILS the
+   * build: such a value crosses to the browser frozen, with a result and no
+   * expression, so nothing re-runs it. Whatever it failed to produce, the page
+   * is without for as long as it exists.
+   *
+   * The page is not written either. Everything else here is refused before
+   * anything is output, and a page that cannot have its data is no more
+   * deliverable than one that would not compile.
+   */
+  serverErrors: { pathname: string; error: RuntimeError }[];
 }
 
 /**
@@ -76,10 +88,19 @@ export interface BuildResult {
  * build time instead -- so the output carries its markup rather than waiting
  * for the browser to produce it. See docs/concepts/rendering.md.
  *
- * What it cannot carry is what a request would have supplied: there is no
- * `$origin` here, so a `:server-` value that wanted one fails as a render
- * error rather than as a refusal. Reporting that properly needs the compiler
- * to know which mode it is compiling for, which is its own change.
+ * What it cannot carry is what a request would have supplied, and a
+ * `:server-` value is where that shows: there is no request here, so no
+ * `$origin` and none of the host's globals. Such a value failing FAILS the
+ * build (see BuildResult.serverErrors) rather than being reported and shipped,
+ * because it crosses to the browser frozen and nothing re-runs it.
+ *
+ * Deliberately not a compile-time refusal of `:server-` values as such. Two
+ * reasons: one that reads nothing of the request works perfectly well here and
+ * is worth having -- fetching an absolute URL at build time and baking the
+ * answer into the page is what static site generation IS -- and whether a
+ * given value needs a request is decided at runtime anyway. `std-data` is the
+ * example: the same `:server-` value is inert or a fetch depending on
+ * `:client`, so no static check can tell those apart, while the render can.
  */
 export async function build(props: BuildProps): Promise<BuildResult> {
   const docroot = path.resolve(props.docroot);
@@ -118,6 +139,7 @@ export async function build(props: BuildProps): Promise<BuildResult> {
     runtime: runtimeSrc,
     errors: [],
     runtimeErrors: [],
+    serverErrors: [],
   };
 
   const restricted = !!props.pages?.length;
@@ -154,7 +176,14 @@ export async function build(props: BuildProps): Promise<BuildResult> {
       continue;
     }
     const errors = await renderPage(page);
-    errors.forEach(error => result.runtimeErrors.push({ pathname, error }));
+    const fatal = errors.filter(e => e.serverOnly);
+    fatal.forEach(error => result.serverErrors.push({ pathname, error }));
+    errors
+      .filter(e => !e.serverOnly)
+      .forEach(error => result.runtimeErrors.push({ pathname, error }));
+    if (fatal.length) {
+      continue;
+    }
     await write(outdir, pathname, '<!doctype html>\n' + page.source.doc.toString());
     result.pages.push(pathname);
   }
