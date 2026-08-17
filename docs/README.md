@@ -6,6 +6,11 @@ logic in web pages, easy reuse through parametric markup blocks, minimal
 ceremony, and easy understanding. It is isomorphic: the same runtime model
 powers both server rendering and browser hydration, so SSR comes for free.
 
+That model is also what lets one page be delivered two ways — rendered per
+request by Node, or compiled ahead of time into static assets for a host that
+runs something else. [Rendering](concepts/rendering.md#two-ways-to-deliver-a-page)
+covers both, and what the second one cannot carry.
+
 It is also deliberately not an application framework. Markout covers
 presentation logic — turning values into markup — and leaves the components
 themselves to CSS frameworks and web component libraries, which are

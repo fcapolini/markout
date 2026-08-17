@@ -78,17 +78,51 @@ The honest differences:
 | | Alpine.js | htmx | Markout |
 | --- | --- | --- | --- |
 | Behavior written in HTML attributes | yes | yes | yes |
-| Runs with no build step | yes | yes | yes |
+| What it needs to run | a `<script>` tag | a `<script>` tag | Node serving the page, or a build step |
+| Mistakes caught before the page loads | no, silent at runtime | n/a | yes, with a file and a line |
+| Content present in the served HTML | no, `x-cloak` hides the gap | yes, the server wrote it | yes, in both delivery modes |
 | Same source renders on the server | no, client only | server owns the HTML | yes |
 | Reusable components in markup | `x-data` + `<template>` | server-side partials | `<:define>` + `<:slot>` |
 | Parametric CSS | inline styles, or CSS variables set inline | whatever the server renders | `${…}` inside `<style>` |
 | Interaction without a server round-trip | yes | no, by design | yes |
 
 And the honest costs: Alpine's ecosystem, community and documentation are far
-larger, and it is a mature project. htmx is solving a different problem —
-server-driven UI — and composes fine with either. Where the React/Vue/Angular
-comparison still belongs is in explaining *why the reader is on Bootstrap in
-the first place*, not in explaining what to use for logic.
+larger, and it is a mature project. Alpine also asks for strictly less to get
+started — one `<script>` tag, on any host, behind any backend — where Markout
+asks for Node in the request path or a build step (see below). htmx is solving a
+different problem — server-driven UI — and composes fine with either. Where the
+React/Vue/Angular comparison still belongs is in explaining *why the reader is
+on Bootstrap in the first place*, not in explaining what to use for logic.
+
+## Delivery decides how big the beachhead actually is
+
+This is the one place where the audience above and the product could come apart,
+so it is worth stating plainly rather than discovering it in a launch thread.
+
+The section on isomorphism says Bootstrap skews toward server-rendered Rails /
+Django / Laravel / PHP shops. That is right, and it is exactly the audience that
+**cannot put a Node process in front of their app**. For them, "add an attribute
+to a page you already have" is not what serving Markout from Node asks; that is
+a stack change, which is the framework-sized commitment the extension framing
+exists to avoid.
+
+Two delivery modes are what keep the pitch true for both halves:
+
+- **Node hosts get isomorphism.** The render runs per request, `:server-` values
+  and served datasources work, SSR comes for free.
+- **Everyone else compiles ahead of time** and deploys static assets, keeping
+  their backend untouched. Logic still runs in the browser, and — unlike Alpine
+  — the markup is already in the file, so there is no `x-cloak` gap. What such a
+  page gives up is only what a request would have supplied.
+
+So the honest claim is not "no build step". It is *no build step if Node serves
+your pages, and no server if you would rather build them* — which covers both
+halves of the audience and concedes nothing untrue to either.
+
+Until `markout compile` exists, the addressable audience is the Node-serving
+slice, which is a fraction of the beachhead this document describes. That makes
+it a positioning blocker rather than a feature request, and it ranks accordingly
+against everything else queued in [TODO.md](TODO.md).
 
 ## The kit has to prove reactivity, not boilerplate removal
 

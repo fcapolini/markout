@@ -68,6 +68,36 @@ simplification, it's deferred, compounding complexity: better to always
 type a couple more characters than to hide behavior that depends on
 context.
 
+## Two ways to deliver a page
+
+A compiled page is one artifact, and it runs in two places, so there are two
+ways to put it in front of a visitor. Which one you pick decides how much of the
+page arrives already rendered — not how it is written.
+
+**Served by Node**, with the CLI below or the Express middleware. The render
+runs per request, so the page can read what a request has: `:server-` values
+run on the server, and a datasource fetches before the page is serialized. The
+visitor gets finished HTML that then comes alive. This is the isomorphic mode,
+and it is the one that makes SSR come for free.
+
+**Compiled ahead of time** into static assets, for everyone else — a project
+served by Rails, Django, Laravel, PHP, or a bucket behind a CDN. Markout
+becomes a build step rather than something in your request path: the backend
+stays exactly as it is, and what it serves is plain HTML and JavaScript.
+
+The second mode is not "client-side rendering" in the usual sense. The same
+render pass runs at build time, so the markup is in the file — a page's static
+content does not flash in after JavaScript loads. What it cannot carry is only
+what a request would have supplied: a `:server-` value has no result, and a
+datasource has to be marked `:client` so the browser fetches it on arrival.
+[Rendering](docs/concepts/rendering.md#two-ways-to-deliver-a-page) has the
+details.
+
+> The `compile` command is not implemented yet; today delivery means serving
+> from Node. It is the next thing planned, because it is what lets the
+> server-rendered majority of Bootstrap projects adopt Markout without moving
+> off the stack they already run.
+
 ## CLI
 
 Build the project, then serve a directory containing Markout HTML files:
