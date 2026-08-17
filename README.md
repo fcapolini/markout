@@ -113,11 +113,13 @@ default:
 npx markout ./demo --port 8080
 ```
 
-`-d`/`--dev` turns on dev mode, which surfaces runtime expression errors instead
-of only logging them server-side. A page whose expressions failed during server
-rendering is replaced by one listing the errors (no content, no runtime — it
-would only fail the same way in the browser); failures that happen after the
-page loads appear in a panel at the bottom of it:
+`-d`/`--dev` turns on dev mode, which does two things. It surfaces runtime
+expression errors instead of only logging them server-side: a page whose
+expressions failed during server rendering is replaced by one listing the
+errors (no content, no runtime — it would only fail the same way in the
+browser), while failures that happen after the page loads appear in a panel at
+the bottom of it. And it reloads open pages when anything under the docroot
+changes, error pages included, so fixing the file is enough to see the fix:
 
 ```sh
 npx markout ./demo --dev

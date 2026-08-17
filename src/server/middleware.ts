@@ -12,6 +12,7 @@ import { formatRuntimeError, RuntimeError } from "../runtime/core/core-context";
 import { defaultLogger, MarkoutLogger } from "./logger";
 import { renderPage } from "./render";
 import { loadClientCode } from "./runtime-bundle";
+import { createReloader, RELOAD_REQ, Reloader, withReloadScript } from "./livereload";
 import { TreeWatcher, watchTree } from "./watcher";
 
 export const CLIENT_CODE_REQ = DEFAULT_RUNTIME_SRC;
@@ -25,6 +26,11 @@ export interface MarkoutProps {
    * Surface runtime expression errors in the served page (and tell the
    * browser runtime to do the same after hydration). Off by default: outside
    * dev mode these are logged server-side and never reach the markup.
+   *
+   * Also turns on live reload -- pages hold a stream open and reload when the
+   * compiled-page cache is invalidated, which is to say when the watcher sees
+   * a change. Error pages carry it too, since that is where somebody is about
+   * to fix the file. See ./livereload; none of it can reach a `build`.
    */
   dev?: boolean;
   logger?: MarkoutLogger;
@@ -149,6 +155,9 @@ export function markout(props: MarkoutProps) {
     serverGlobals: globals ? Object.keys(globals) : undefined,
   });
   const clientCode = loadClientCode();
+  // Dev only: nothing about this reaches a build, which has no server to
+  // stream from. See ./livereload.
+  const reloader = dev ? createReloader() : undefined;
 
   // Which kits the docroot has allowed to contribute pages -- scanned across
   // the whole docroot so the answer does not depend on what has been visited,
@@ -160,7 +169,12 @@ export function markout(props: MarkoutProps) {
     docroot,
     logger,
     pathname => compiler.compile(pathname),
-    () => (allowed = undefined)
+    () => {
+      allowed = undefined;
+      // the browser reloads exactly when the server stops believing what it
+      // last served, rather than on a second opinion about what changed
+      reloader?.notify();
+    }
   );
 
   // This path is answered here, before the filesystem is consulted, so a real
@@ -174,10 +188,22 @@ export function markout(props: MarkoutProps) {
         `served at that path, and will never be reached`
     );
   }
+  if (reloader && fs.existsSync(path.join(docroot, RELOAD_REQ))) {
+    logger(
+      'warn',
+      `[markout] "${RELOAD_REQ}" in the docroot is shadowed by the dev-mode ` +
+        `reload stream, and will never be reached`
+    );
+  }
+  reloader && logger('info', '[markout] dev mode: pages reload when the docroot changes');
 
   return async function (req: Request, res: Response, next: NextFunction) {
     const i = req.path.lastIndexOf('.');
     const extname = i < 0 ? '.html' : req.path.substring(i).toLowerCase();
+
+    if (reloader?.handle(req, res)) {
+      return;
+    }
 
     if (handleNonPageRequests(req, res, i, extname, clientCode, next)) {
       return;
@@ -236,7 +262,10 @@ export function markout(props: MarkoutProps) {
         res.sendStatus(404);
         return;
       }
-      return serveErrorPage(served.errors, res);
+      // reloading matters MOST here: an error page is where someone is about
+      // to fix the file, and without it that fix leaves the browser showing
+      // the error until somebody presses refresh
+      return serveErrorPage(served.errors, res, reloader);
     }
 
     // always logged, whatever the mode
@@ -244,11 +273,12 @@ export function markout(props: MarkoutProps) {
       logger('error', `[markout] ${pathname} ${formatRuntimeError(e)}`)
     );
     if (dev && served.runtimeErrors.length) {
-      return serveRuntimeErrorPage(served.runtimeErrors, res);
+      return serveRuntimeErrorPage(served.runtimeErrors, res, reloader);
     }
 
     res.header('Content-Type', 'text/html;charset=UTF-8');
-    res.send('<!doctype html>\n' + served.html);
+    const html = '<!doctype html>\n' + served.html;
+    res.send(reloader ? withReloadScript(html, reloader.script()) : html);
   }
 }
 
@@ -390,7 +420,7 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;');
 }
 
-function serveErrorPage(errors: PageError[], res: Response) {
+function serveErrorPage(errors: PageError[], res: Response, reloader?: Reloader) {
   const p = new Array<string>();
   p.push(`<!doctype html><html><head>
     <title>Page Error</title>
@@ -405,8 +435,8 @@ function serveErrorPage(errors: PageError[], res: Response) {
   });
   p.push('</ul></body></html>');
   res.header('Content-Type', 'text/html;charset=UTF-8');
-  // res.sendStatus(500);
-  res.status(500).send(p.join(''));
+  const html = p.join('');
+  res.status(500).send(reloader ? withReloadScript(html, reloader.script()) : html);
 }
 
 /**
@@ -417,7 +447,11 @@ function serveErrorPage(errors: PageError[], res: Response) {
  * work. A page built solely from the errors says the one useful thing, and
  * carries no runtime to muddy it.
  */
-function serveRuntimeErrorPage(errors: RuntimeError[], res: Response) {
+function serveRuntimeErrorPage(
+  errors: RuntimeError[],
+  res: Response,
+  reloader?: Reloader
+) {
   const p = new Array<string>();
   p.push(`<!doctype html><html><head>
     <title>Page Error</title>
@@ -426,5 +460,6 @@ function serveRuntimeErrorPage(errors: RuntimeError[], res: Response) {
   errors.forEach(e => p.push(`<li>${escapeHtml(formatRuntimeError(e))}</li>`));
   p.push('</ul></body></html>');
   res.header('Content-Type', 'text/html;charset=UTF-8');
-  res.status(500).send(p.join(''));
+  const html = p.join('');
+  res.status(500).send(reloader ? withReloadScript(html, reloader.script()) : html);
 }
