@@ -70,7 +70,7 @@ NOTE: "on its own" is literal — whitespace is text like any other, so
 | --- | --- |
 | `:name=${expr}` | Declares a reactive value on the current scope. |
 | `:server-name=${expr}` | Declares value `name`, but the expression runs on the **server only** — the client is handed its result. Server-only. |
-| `:k_name=${expr}` | A **compile-time constant**: computed while the page is built and written into every expression that reads it. Nothing of it reaches the runtime. |
+| `::name=${expr}` | A **compile-time constant**: computed while the page is built and written into every expression that reads it. Nothing of it reaches the runtime. |
 | `:aka="name"` | Names the current scope so descendants can reference it. A literal, not an expression. |
 | `:attr-name=${expr}` | Toggles whether attribute `name` is PRESENT, as boolean and custom-element attributes need. Bare `:attr-name` implies `true`. `.` and `:` are allowed, for `data-x.y` and `xlink:href`. |
 | `:prop-name=${expr}` | Assigns the element's JS property `name`, for what an attribute can't carry. Browser-only: skipped when server rendering. |
@@ -188,42 +188,42 @@ anywhere inside any `${...}`, for the same reason.
 
 ### Compile-time constants
 
-A design token never changes, and `k_` says so:
+A design token never changes, and `::` says so:
 
 ```html
-<html :k_accent="#6f42c1" :k_gutter=${16}>
-  <head><style>:root { --accent: ${k_accent}; --gutter: ${k_gutter}px }</style></head>
+<html ::accent="#6f42c1" ::gutter=${16}>
+  <head><style>:root { --accent: ${accent}; --gutter: ${gutter}px }</style></head>
 ```
 
 The value is computed while the page is built and written into every
 expression that reads it, so **nothing of it reaches the runtime** — no
 scope entry, no dependency edge, no cell that can never fire. It matters
 most in a stylesheet, where one interpolation otherwise makes the [whole
-sheet a binding](#a-stylesheet-is-one-binding); with `k_` there is no
+sheet a binding](#a-stylesheet-is-one-binding); with `::` there is no
 binding at all.
 
 The mark is on the name rather than a `:const-` family, because a family
 prefix marks only the declaration: a `:const-color` would still be read as
 `${color}`, indistinguishable from a reactive value everywhere the
-difference costs something. `${k_accent}` says it at every use.
+difference costs something. `${accent}` says it at every use.
 
-**One rule keeps it honest: a `k_` value may read only literals and other
-`k_` values.** Reading an ordinary value, `$id`, the DOM or a handler is a
+**One rule keeps it honest: a `::` value may read only literals and other
+`::` values.** Reading an ordinary value, `$id`, the DOM or a handler is a
 compile error — never a quiet fall back to being reactive, which would hand
 the page exactly the cost the marker was meant to avoid. The result also has
 to be a primitive; substituting an object would give every reader a separate
 copy.
 
-And the limit worth knowing before reaching for it: **a `k_` value cannot
+And the limit worth knowing before reaching for it: **a `::` value cannot
 participate in runtime theming.** A light/dark switch changes values while
-the page runs, and these are gone by then. `k_` is for what is fixed when
+the page runs, and these are gone by then. `::` is for what is fixed when
 the page is built.
 
-A kit's tokens are `k_` for exactly this reason, and a page overrides them
+A kit's tokens are `::` for exactly this reason, and a page overrides them
 where it imports the kit — see [root attributes](#root-attributes-reach-the-call-site):
 
 ```html
-<head :k_bsRadius="1rem">
+<head ::bsRadius="1rem">
   <:import src="/bootstrap-kit/all.htm" />
 ```
 

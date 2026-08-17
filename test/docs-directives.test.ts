@@ -189,9 +189,9 @@ const CASES: Record<string, Case> = {
       expect(p.body()).toContain('<i>42</i>');
     },
   },
-  ':k_name=${expr}': {
+  '::name=${expr}': {
     works: async () => {
-      const p = await run('<html :k_accent="#6f42c1"><body><i>${k_accent}</i></body></html>');
+      const p = await run('<html ::accent="#6f42c1"><body><i>${accent}</i></body></html>');
       expect(p.body()).toContain('#6f42c1');
     },
   },

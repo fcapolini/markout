@@ -56,7 +56,7 @@ import {
   PROP_VALUE_PREFIX,
   SERVER_VALUE_ATTR_PREFIX,
 } from '../ir/Page';
-import { COMPTIME_PREFIX } from './stage5-comptime';
+import { COMPTIME_MARKER } from './stage5-comptime';
 import { NodeType } from '../../html/dom';
 import { ATOMIC_TEXT_TAGS } from '../../html/parser';
 import { DOM_ID_ATTR, DOM_TEXT_MARKER1, DOM_TEXT_MARKER2, DOM_USE_MARKER } from '../../runtime/web/web-context';
@@ -1275,6 +1275,19 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
       continue;
     }
     let name = attr.name.slice(SPECIAL_ATTR_PREFIX.length);
+    // `::name` is the compile-time marker, and a modifier for the same
+    // reason `:server-` is: what it marks is an ordinary value, declared
+    // and read under its own name. Doubling the prefix rather than adding
+    // a `:const-` family, because a family names something in ANOTHER
+    // namespace -- `:class-` a CSS class, `:on-` a DOM event -- and the
+    // dash-case part is that other thing's real name. A constant is a
+    // markout value, so a family form would have to invent a rule for what
+    // `:const-accent` is called when it is read
+    let comptime = false;
+    if (name.startsWith(SPECIAL_ATTR_PREFIX)) {
+      comptime = true;
+      name = name.slice(SPECIAL_ATTR_PREFIX.length);
+    }
     // `:server-` is a modifier, not a family of its own: strip it up front so
     // the rest of the name parses exactly as it would without it, and what it
     // marks stays an ordinary value
@@ -1282,6 +1295,17 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     if (name.startsWith(SERVER_VALUE_ATTR_PREFIX)) {
       serverOnly = true;
       name = name.slice(SERVER_VALUE_ATTR_PREFIX.length);
+    }
+    // the fixed attribute names below don't declare values at all, so there
+    // is nothing for "computed while the page is built" to mean on one
+    if (comptime && SERVER_REJECTED_ATTRS.has(name)) {
+      addError(
+        page,
+        `"${SPECIAL_ATTR_PREFIX}${SPECIAL_ATTR_PREFIX}${name}" is not a value: ` +
+          `"${COMPTIME_MARKER}" marks a declared value as compile-time`,
+        attr.loc
+      );
+      continue;
     }
     // the fixed attribute names below don't declare values at all, so there
     // is nothing for "runs on the server only" to mean on one
@@ -1430,15 +1454,26 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
       );
       continue;
     }
-    // a `k_` value is substituted into its readers by stage5 and never
-    // reaches the runtime as a cell, so there is nothing left for the
+    // a compile-time value is substituted into its readers by stage5 and
+    // never reaches the runtime as a cell, so there is nothing left for the
     // server to send
-    if (serverOnly && suffix.startsWith(COMPTIME_PREFIX)) {
+    if (serverOnly && comptime) {
       addError(
         page,
-        `"${SPECIAL_ATTR_PREFIX}${SERVER_VALUE_ATTR_PREFIX}${suffix}" is both ` +
-          `compile-time and server-only: a "${COMPTIME_PREFIX}" value is ` +
-          `substituted into its readers, so nothing of it exists to send`,
+        `"${suffix}" is both compile-time and server-only: a ` +
+          `"${COMPTIME_MARKER}" value is substituted into its readers, so ` +
+          `nothing of it exists to send`,
+        loc
+      );
+      continue;
+    }
+    // and the derived families all read a value; marking the reader would
+    // say nothing about when the value it reads is computed
+    if (comptime && compiledPrefix) {
+      addError(
+        page,
+        `"${COMPTIME_MARKER}" cannot be combined with ` +
+          `"${SPECIAL_ATTR_PREFIX}${prefix}": mark the value it reads instead`,
         loc
       );
       continue;
@@ -1447,6 +1482,7 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     prefix === HANDLE_VALUE_ATTR_PREFIX && desugarHandler(attr, suffix);
     const value = new Value(name, attr, scope, page.createValueId());
     value.serverOnly = serverOnly;
+    value.comptime = comptime;
     scope.values.set(name, value);
   }
   // both families are now scope values: leaving them behind would serialize

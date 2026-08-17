@@ -47,7 +47,7 @@ where its name resolves.
 own fragment: its root carries `:apiBase="/api"`, which lands on whatever
 contains the `<:include>` unless that element declares it, so a page points
 Orbit at another host without the fragment changing. That is the same
-mechanism as `k_bsCssUrl` below — not something kits get and applications
+mechanism as `bsCssUrl` below — not something kits get and applications
 don't.
 
 ## Tests
@@ -163,20 +163,20 @@ The CDN URLs and their hashes are tokens like any other, so a page points the
 kit at its own copy without forking `base.htm`:
 
 ```html
-<head :k_bsCssUrl="/vendor/bootstrap.min.css"
-      :k_bsJsUrl="/vendor/bootstrap.bundle.min.js"
-      :k_bsCssIntegrity=${null}
-      :k_bsJsIntegrity=${null}>
+<head ::bsCssUrl="/vendor/bootstrap.min.css"
+      ::bsJsUrl="/vendor/bootstrap.bundle.min.js"
+      ::bsCssIntegrity=${null}
+      ::bsJsIntegrity=${null}>
   <:import src="/bootstrap-kit/all.htm" />
 </head>
 ```
 
 | Token | Default |
 | --- | --- |
-| `k_bsCssUrl` | jsDelivr, Bootstrap 5.3.8 |
-| `k_bsJsUrl` | jsDelivr, Bootstrap 5.3.8 |
-| `k_bsCssIntegrity` | the matching SRI hash |
-| `k_bsJsIntegrity` | the matching SRI hash |
+| `bsCssUrl` | jsDelivr, Bootstrap 5.3.8 |
+| `bsJsUrl` | jsDelivr, Bootstrap 5.3.8 |
+| `bsCssIntegrity` | the matching SRI hash |
+| `bsJsIntegrity` | the matching SRI hash |
 
 Drop the hashes when self-hosting: `crossorigin` follows the hash, and
 neither means anything on a same-origin file.
@@ -190,7 +190,7 @@ Four reasons this is worth having rather than a convenience:
   staying up or staying honest.
 - **Your own Bootstrap build.** The tokens below only reach what Bootstrap
   exposes as CSS variables; a design system usually compiles Bootstrap from
-  Sass with its own variables. Pointing `k_bsCssUrl` at that build is how
+  Sass with its own variables. Pointing `bsCssUrl` at that build is how
   the kit gets out of the way of it.
 
 ## Theming
@@ -199,19 +199,19 @@ Four reasons this is worth having rather than a convenience:
 variables, so restyling everything is setting one value at the import site:
 
 ```html
-<head :k_bsRadius="1rem" :k_bsLinkDecoration="none">
+<head ::bsRadius="1rem" ::bsLinkDecoration="none">
   <:import src="/bootstrap-kit/all.htm" />
 </head>
 ```
 
 | Token | Default |
 | --- | --- |
-| `k_bsRadius` | `0.375rem` |
-| `k_bsRadiusSm` | `0.25rem` |
-| `k_bsRadiusLg` | `0.5rem` |
-| `k_bsRadiusPill` | `50rem` |
-| `k_bsFontSans` | Bootstrap's system stack |
-| `k_bsLinkDecoration` | `underline` |
+| `bsRadius` | `0.375rem` |
+| `bsRadiusSm` | `0.25rem` |
+| `bsRadiusLg` | `0.5rem` |
+| `bsRadiusPill` | `50rem` |
+| `bsFontSans` | Bootstrap's system stack |
+| `bsLinkDecoration` | `underline` |
 
 Colour modes are `theme.htm`: an inline pre-paint script so the page never
 flashes the wrong mode, and `<bs-theme-toggle />` to switch it.
