@@ -3,7 +3,7 @@ import path from 'path';
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Server } from "../../src/server";
-import { resolvePath } from "../../src/server/middleware";
+import { resolvePath } from "@markout/express";
 import { Resolver } from "@markout/core";
 import { Window } from "happy-dom";
 import fs from "fs";

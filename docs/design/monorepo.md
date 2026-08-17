@@ -1,11 +1,12 @@
 # Five deliverables, one repository
 
-Status: **in progress**. Steps 1 to 3 below are done: the repository is an npm
-workspace, and [`@markout/core`](../../packages/core/) is out —
-[packages/cli/](../../packages/cli/) now depends on it by name and holds only
-the middleware and the CLI. This file records the decisions and the order, so
-the migration can be paused between steps without the reasoning being lost
-with it.
+Status: **in progress**. Steps 1 to 4 below are done: the code is split into
+[`@markout/core`](../../packages/core/),
+[`@markout/express`](../../packages/express/) and
+[`markout`](../../packages/cli/), each depending on the ones under it by name.
+What is left is the kits, the site and the extension. This file records the
+decisions and the order, so the migration can be paused between steps without
+the reasoning being lost with it.
 
 ## The problem
 
@@ -19,10 +20,10 @@ The repository has to produce five things:
 | the homepage, with a demos section | a site |
 | the VS Code extension, on Volar | the marketplace |
 
-It currently produces one: a single `package.json` whose only entry point is
-`bin`. There is no `main` and no `exports`, so
-[middleware.ts](../../packages/cli/src/server/middleware.ts) — the thing an Express
-developer would install — is not importable by anyone at all today.
+It used to produce one: a single `package.json` whose only entry point was
+`bin`, with no `main` and no `exports` — so
+[middleware.ts](../../packages/express/src/middleware.ts), the thing an Express
+developer would install, was not importable by anyone at all.
 
 **The forcing case is the extension.** A Volar language server needs the
 parser and the compiler, and must not carry Express, compression or
@@ -77,19 +78,33 @@ read off every cross-directory import in `packages/cli/src/`:
 Nothing in the tree points upward through that table, and there are no
 cycles — verified before the plan was written, and asserted ever since: first
 by one layering test while everything was still one package, now by
-[core's](../../packages/core/test/layering.test.ts) and
+[core's](../../packages/core/test/layering.test.ts),
+[the middleware's](../../packages/express/test/layering.test.ts) and
 [the CLI's](../../packages/cli/test/layering.test.ts), which between them cover
-the layers inside each package and the seam between them. The split is a
-sequence of moves, not a refactor.
+the layers inside each package and the seams between them. The split was a
+sequence of moves, not a refactor — as predicted, and the reason the
+prediction held is that the table was read off the imports rather than
+imposed on them.
 
 Each boundary exists because some consumer must not see what is above it:
 
 - **`@markout/core`** — compile and render, no HTTP. Dependencies: acorn,
   escodegen, estraverse, entities. This is what the extension imports.
-- **`@markout/express`** — the middleware and the dev-server machinery it
-  drives. Depends on core, express, compression.
+- **`@markout/express`** — the middleware and the machinery it drives: the
+  logger, the watcher, the reloader. Depends on core, with express as a
+  *peer* dependency, since an application that mounts middleware already has
+  one and two copies of express in a tree is its own kind of bug.
 - **`markout`** — the bin, the `Server` class, `build`. Depends on both, plus
-  commander.
+  commander and compression.
+
+  **`Server` stays in the CLI rather than moving to the middleware package**,
+  which is the one placement call step 4 had to make. Listening on a port,
+  handling a signal and deciding when to exit belong to whatever owns the
+  process, and for an application that is the application. A library that
+  installs a `SIGINT` handler on a host that never asked for one is the
+  thing to avoid, and `Server` uses
+  [exit-hook.ts](../../packages/cli/src/server/exit-hook.ts) to do exactly
+  that.
 - **`@markout/bootstrap-kit`**, **`@markout/std-kit`** — no TypeScript at
   all: `.htm` files and the mandatory `markout.root` from
   [npm-kits.md](npm-kits.md).
@@ -186,7 +201,23 @@ follows the files.
    - `publish.ts` turned out to sit *above* html rather than beside `paths`,
      which the layering test caught the moment core had its own copy. The
      table above says base; the code says otherwise, and the code was right.
-4. **Extract `@markout/express`.** Small, once core is out.
+4. **Extract `@markout/express`.** Small, once core is out. **Done** — four
+   files, and the machinery from step 3 applied unchanged. Two things it
+   added rather than repeated:
+   - **The package now has a test of the thing it is for.** Every existing
+     test of this middleware reaches it through the CLI's `Server`, which is
+     convenient and also the one arrangement an application will never have.
+     [standalone.test.ts](../../packages/express/test/standalone.test.ts)
+     mounts `markout()` on a bare Express app instead, which is the case that
+     would break silently — a dependency that only resolves because the CLI
+     installs it, a piece of setup only `Server` performs.
+   - **It immediately documented a constraint nothing had written down.** A
+     path with no extension is a page request, so the middleware answers it
+     — with a 404 when no page resolves — rather than passing it on. An
+     application's own API routes therefore have to be registered *before*
+     `markout()` is mounted. Orbit already did this; nothing said so, and
+     nothing would have caught it changing. The test now asserts both
+     directions.
 5. **The kits become packages.** No TypeScript: a `package.json`, a `files`
    list, and the `markout.root` each already declares. The showcase and Orbit
    move *out* of the kit and into the site, so the site consumes the kit

@@ -4,6 +4,6 @@
     "rootDir": "src",
     "outDir": "dist"
   },
-  "references": [{ "path": "../core" }, { "path": "../express" }],
+  "references": [{ "path": "../core" }],
   "include": ["src/**/*"]
 }

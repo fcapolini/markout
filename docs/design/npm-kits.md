@@ -419,7 +419,7 @@ So the equivalence holds here too, unhappily. Worth fixing on its own
 merits, and worth fixing before kits are developed against a live server
 rather than after — it is the kind of thing that is debugged for an hour
 before the watcher is suspected, which is the reason
-[src/server/middleware.ts](../../packages/cli/src/server/middleware.ts) declines to cache at
+[src/server/middleware.ts](../../packages/express/src/middleware.ts) declines to cache at
 all when it cannot establish a watcher.
 
 ### Installed kits are not watched, and should not be
