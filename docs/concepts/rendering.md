@@ -24,7 +24,9 @@ lets a page be delivered two ways. The difference is not what the page is, it
 is *when the render happens* — and therefore whether the page may read
 anything only a server has.
 
-**Served by Node** — `markout <docroot>`, or the Express middleware. The render
+**Served by Node** — `markout <docroot>` (or bare `markout`, which serves
+`./markout`; see the README on that convention), or the Express middleware.
+The render
 runs per request, so a value may reach the request's environment: `:server-`
 values run there, `$origin` comes from the request, and a datasource fetches
 before the page is serialized. The browser receives finished markup and

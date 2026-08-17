@@ -87,12 +87,12 @@ afterEach(async () => {
 });
 
 describe('CLI', () => {
-  it('shows help when no arguments are supplied', async () => {
+  it('shows help when no arguments are supplied and there is no ./markout', async () => {
     const result = await execFileAsync(process.execPath, [tsx, entry], {
       cwd: root,
     });
 
-    expect(result.stdout).toContain('Usage: markout [options] [command] <pathname>');
+    expect(result.stdout).toContain('Usage: markout [options] [command] [pathname]');
     expect(result.stdout).toContain('Options:');
     expect(result.stdout).not.toContain("error: missing required argument 'pathname'");
   });
@@ -103,11 +103,12 @@ describe('CLI', () => {
         cwd: root,
       });
 
-      expect(result.stdout).toContain('Usage: markout [options] [command] <pathname>');
-      expect(result.stdout).toContain('path to directory containing HTML files');
+      expect(result.stdout).toContain('Usage: markout [options] [command] [pathname]');
+      // commander wraps, so the default is matched across a line break
+      expect(result.stdout).toMatch(/defaults to\s+\.\/markout/);
       // `build` is a command; serving is what the bare docroot does, and the
       // command list is where a `serve` would show up if that ever changed
-      expect(result.stdout).toContain('build [options] <pathname> <outdir>');
+      expect(result.stdout).toContain('build [options] [pathname] [outdir]');
       expect(result.stdout).not.toContain('serve [options]');
     }
   });
@@ -134,6 +135,73 @@ describe('CLI', () => {
       expect(await response.text()).toContain('CLI works');
     } finally {
       await rm(docroot, { recursive: true, force: true });
+    }
+  });
+
+  it('serves ./markout when nothing is named', async () => {
+    // the convention, and the whole no-install delivery mode: a folder of
+    // pages and `markout`. The editor support reads the same name to find a
+    // docroot when there is no package.json -- see docs/design/editor-support.md
+    const cwd = await mkdtemp(path.join(root, '.cli-default-'));
+    const port = await availablePort();
+    await mkdir(path.join(cwd, 'markout'));
+    await writeFile(
+      path.join(cwd, 'markout', 'index.html'),
+      '<html><body>from the default docroot</body></html>'
+    );
+
+    try {
+      child = spawn(process.execPath, [tsx, entry, '--port', `${port}`], {
+        cwd,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      const output = await waitForOutput(child, `127.0.0.1:${port}/`);
+      const response = await fetch(`http://127.0.0.1:${port}/index.html`);
+
+      expect(output).toContain(path.join(cwd, 'markout'));
+      expect(await response.text()).toContain('from the default docroot');
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('shows help rather than guessing when ./markout is not there', async () => {
+    // a directory that is not a markout project must not have one invented
+    // for it: `.` would serve node_modules and .git, and an error would be
+    // unhelpful to somebody who typed the bare name to find out what it is
+    const cwd = await mkdtemp(path.join(root, '.cli-nodefault-'));
+    try {
+      const result = await execFileAsync(process.execPath, [tsx, entry], { cwd });
+      expect(result.stdout).toContain('Usage: markout');
+      expect(result.stdout).toMatch(/defaults to\s+\.\/markout/);
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('builds ./markout into a sibling ./dist with no arguments at all', async () => {
+    // the other half of the convention. Beside the docroot rather than
+    // inside it, because a build refuses an outdir under the docroot -- the
+    // next run would compile its own output -- so a sibling is the only
+    // default that cannot be refused
+    const cwd = await mkdtemp(path.join(root, '.cli-buildnone-'));
+    await mkdir(path.join(cwd, 'markout'));
+    await writeFile(
+      path.join(cwd, 'markout', 'index.html'),
+      '<html :who=${\'world\'}><body>hi ${who}</body></html>'
+    );
+
+    try {
+      const result = await execFileAsync(process.execPath, [tsx, entry, 'build'], { cwd });
+      expect(result.stdout).toContain('1 page(s)');
+      // and it does not claim a restriction nobody asked for
+      expect(result.stdout).not.toContain('restricted to named pages');
+      const built = await readFile(path.join(cwd, 'dist', 'index.html'), 'utf8');
+      expect(built).toContain('hi ');
+      expect(built).toContain('world');
+      expect(existsSync(path.join(cwd, 'dist', 'markout-runtime.js'))).toBe(true);
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
     }
   });
 
