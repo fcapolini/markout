@@ -121,6 +121,8 @@ describe('README code quoted from the demo', () => {
     // the section quotes one tag; anything longer means the match ran on
     expect(quoted![0].length).toBeLessThan(400);
     expect(demo).toContain(quoted![0]);
-    expect(demo).toContain('<:import src="/bootstrap-kit/all.htm" />');
+    expect(demo).toContain(
+      '<:import src="/npm/@markout/bootstrap-kit/all.htm" />'
+    );
   });
 });

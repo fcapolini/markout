@@ -1,6 +1,6 @@
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Compiler } from '@markout/core';
+import { Compiler, discoverKits } from '@markout/core';
 import { renderPage } from '@markout/core';
 import { STATE_GLOBAL } from '@markout/core';
 import type { PageState } from '@markout/core';
@@ -51,7 +51,8 @@ const ORIGIN = 'http://x.test';
  * ahead of time gets: no request behind it, and no deploy host to guess.
  */
 async function compile(pathname: string, origin: string | null = ORIGIN) {
-  const page = await new Compiler({ docroot: KIT_ROOT }).compile(pathname);
+  const { kits } = discoverKits(KIT_ROOT);
+  const page = await new Compiler({ docroot: KIT_ROOT, kits }).compile(pathname);
   const errors = page.errors.map(e => e.msg);
   const raw = errors.length
     ? []

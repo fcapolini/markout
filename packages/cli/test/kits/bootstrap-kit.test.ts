@@ -4,7 +4,7 @@ import path from 'path';
 import { execSync } from 'child_process';
 import { chromium, type Browser } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { Compiler } from '@markout/core';
+import { Compiler, discoverKits } from '@markout/core';
 import { renderPage } from '@markout/core';
 import { openOperationsDb } from '../../../../kits/bootstrap/orbit-db';
 import { createOrbitApp } from '../../../../kits/bootstrap/server';
@@ -26,8 +26,12 @@ import { createOrbitApp } from '../../../../kits/bootstrap/server';
  * produces, not what a CDN serves.
  */
 
+/** the pages that use the kit; the kit itself is an installed package */
 const KIT_ROOT = path.resolve(__dirname, '../../../../kits/bootstrap');
-const PARTS_DIR = path.join(KIT_ROOT, 'bootstrap-kit/parts');
+/** the kit packages themselves, for the tests that vendor one into a docroot */
+const KIT_DIR = path.resolve(__dirname, '../../../../kits/bootstrap-kit');
+const STD_KIT_DIR = path.resolve(__dirname, '../../../../kits/std-kit');
+const PARTS_DIR = path.join(KIT_DIR, 'parts');
 
 /**
  * Orbit fetches its data from its own API while rendering, so compiling it
@@ -66,8 +70,21 @@ beforeAll(() => {
 });
 afterAll(() => vi.restoreAllMocks());
 
+/**
+ * The kits these pages use, discovered once.
+ *
+ * Discovered from KIT_ROOT rather than from each docroot because one test
+ * below builds its docroot in a temp directory, where walking up finds no
+ * `node_modules` at all. A kit records an absolute directory, so where it
+ * was found and where the pages live are independent -- which is also what
+ * lets an application install a kit anywhere above its docroot.
+ */
+const KITS = discoverKits(KIT_ROOT).kits;
+
 async function compile(docroot: string, pathname: string) {
-  const page = await new Compiler({ docroot }).compile(pathname);
+  // the Compiler takes what is INSTALLED rather than discovering it itself,
+  // so a caller passing kits here is doing exactly the middleware's job
+  const page = await new Compiler({ docroot, kits: KITS }).compile(pathname);
   const errors = page.errors.map(e => e.msg);
   const runtime = errors.length
     ? []
@@ -94,7 +111,7 @@ describe('every part stands on its own', () => {
 
   beforeAll(() => {
     docroot = fs.mkdtempSync(path.join(os.tmpdir(), 'markout-kit-'));
-    fs.cpSync(path.join(KIT_ROOT, 'bootstrap-kit'), path.join(docroot, 'bootstrap-kit'), {
+    fs.cpSync(KIT_DIR, path.join(docroot, 'bootstrap-kit'), {
       recursive: true,
     });
   });
@@ -256,7 +273,11 @@ describe('the demo application: served from a database', () => {
     // privilege, which is the point worth having a test for
     const docroot = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-base-'));
     fs.cpSync(path.join(KIT_ROOT, 'orbit'), path.join(docroot, 'orbit'), { recursive: true });
-    fs.cpSync(path.join(KIT_ROOT, 'std-kit'), path.join(docroot, 'std-kit'), {
+    // vendored rather than installed: `/npm/` is resolved against the
+    // filesystem from the DOCROOT upwards, and nothing above a temp
+    // directory has a node_modules. A kit copied into the docroot is
+    // imported by its path, which is the other half of the same design
+    fs.cpSync(STD_KIT_DIR, path.join(docroot, 'std-kit'), {
       recursive: true,
       dereference: true,
     });
@@ -413,7 +434,7 @@ describe('a page that self-hosts Bootstrap', () => {
 
   beforeAll(() => {
     docroot = fs.mkdtempSync(path.join(os.tmpdir(), 'markout-kit-'));
-    fs.cpSync(path.join(KIT_ROOT, 'bootstrap-kit'), path.join(docroot, 'bootstrap-kit'), {
+    fs.cpSync(KIT_DIR, path.join(docroot, 'bootstrap-kit'), {
       recursive: true,
     });
     fs.writeFileSync(
@@ -529,12 +550,16 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     execSync('npm run build:runtime', { cwd: path.resolve(__dirname, '../../../core') });
 
     docroot = fs.mkdtempSync(path.join(os.tmpdir(), 'markout-kit-live-'));
-    fs.cpSync(path.join(KIT_ROOT, 'bootstrap-kit'), path.join(docroot, 'bootstrap-kit'), {
-      recursive: true,
-    });
-    // orbit.html imports the std kit for `std-data`; the symlink in the kit
-    // is followed by cpSync's dereference, so the copy is self-contained
-    fs.cpSync(path.join(KIT_ROOT, 'std-kit'), path.join(docroot, 'std-kit'), {
+    // INSTALLED into the temp docroot rather than copied beside its pages:
+    // orbit.html imports both kits through `/npm/`, which is resolved from
+    // the docroot upwards against the filesystem, and nothing above a temp
+    // directory has a node_modules. Copying them here is what makes the
+    // copy self-contained -- and it is also what a real install looks like,
+    // so the page under test is the served one, unedited
+    const modules = path.join(docroot, 'node_modules/@markout');
+    fs.mkdirSync(modules, { recursive: true });
+    fs.cpSync(KIT_DIR, path.join(modules, 'bootstrap-kit'), { recursive: true });
+    fs.cpSync(STD_KIT_DIR, path.join(modules, 'std-kit'), {
       recursive: true,
       dereference: true,
     });
@@ -711,7 +736,11 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     // privilege, which is the point worth having a test for
     const docroot = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-base-'));
     fs.cpSync(path.join(KIT_ROOT, 'orbit'), path.join(docroot, 'orbit'), { recursive: true });
-    fs.cpSync(path.join(KIT_ROOT, 'std-kit'), path.join(docroot, 'std-kit'), {
+    // vendored rather than installed: `/npm/` is resolved against the
+    // filesystem from the DOCROOT upwards, and nothing above a temp
+    // directory has a node_modules. A kit copied into the docroot is
+    // imported by its path, which is the other half of the same design
+    fs.cpSync(STD_KIT_DIR, path.join(docroot, 'std-kit'), {
       recursive: true,
       dereference: true,
     });

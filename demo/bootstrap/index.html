@@ -1,17 +1,17 @@
 <html lang="en">
 
 <head>
-  <:import src="/bootstrap-kit/all.htm" />
+  <:import src="/npm/@markout/bootstrap-kit/all.htm" />
   <title>Northstar Studio | Product Design for Growing Teams</title>
   <:import src="lib.htm" />
 </head>
 
 <body>
-  <bs-navbar :options=${[
+  <bs-navbar :items=${[
     { name: 'Services', link: '#services' },
     { name: 'Our work', link: '#work' },
     { name: 'Insights', link: '#insights' },
-    { name: 'Start a project', link: '#contact', button: true, primary: true},
+    { name: 'Start a project', link: '#contact', button: true },
   ]}>
     Northstar Studio
   </bs-navbar>
@@ -30,7 +30,7 @@
             </div>
           </div>
           <div class="col-lg-5">
-            <bs-card>
+            <bs-card :extra="border-0 shadow-sm">
               <p class="small text-uppercase text-muted fw-semibold mb-4">This quarter</p>
               <h2 class="h3 mb-3">A better path from idea to impact.</h2>
               <p class="text-muted mb-4">Small senior teams, short feedback loops, and outcomes your customers can feel.</p>
