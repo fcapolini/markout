@@ -3,10 +3,13 @@ import {
   createServer,
   createSimpleProject,
 } from '@volar/language-server/node';
-import { create as createHtmlService } from 'volar-service-html';
+import {
+  create as createHtmlService,
+  resolveReference as resolveHtmlReference,
+} from 'volar-service-html';
 import { URI } from 'vscode-uri';
 import { createMarkoutLanguagePlugin } from './plugin';
-import { createMarkoutService } from './service';
+import { createDocumentContext, createMarkoutService } from './service';
 
 /**
  * The language server, which is deliberately the least interesting file here.
@@ -25,6 +28,9 @@ const connection = createConnection();
 const server = createServer(connection);
 
 connection.onInitialize(params => {
+  const settings = params.initializationOptions as
+    | { enable?: 'auto' | 'always' | 'never'; docroot?: string }
+    | undefined;
   const folders = (params.workspaceFolders ?? [])
     .map(f => URI.parse(f.uri))
     .filter(uri => uri.scheme === 'file')
@@ -39,13 +45,24 @@ connection.onInitialize(params => {
       // is reimplemented here: the expressions are masked to characters that
       // cannot end a tag, so what this service sees is ordinary HTML at
       // exactly the offsets the author's is at
-      createHtmlService(),
+      createHtmlService({
+        // WITHOUT this, `/lib.htm` in an <:import> resolves against the
+        // workspace folder and the editor offers a link it cannot open
+        getDocumentContext: context =>
+          createDocumentContext({
+            workspaceFolder: folders[0],
+            docroot: settings?.docroot,
+            decode: uri => context.decodeEmbeddedDocumentUri(uri)?.[0],
+            fallback: (ref, base) =>
+              resolveHtmlReference(ref, base, context.env.workspaceFolders),
+          }),
+      }),
       createMarkoutService({
         workspaceFolder: folders[0],
+        docroot: settings?.docroot,
         // `always` is how a project that uses markout without depending on
         // it -- a vendored copy, a page opened on its own -- says so
-        enable: (params.initializationOptions as { enable?: 'auto' | 'always' | 'never' })
-          ?.enable,
+        enable: settings?.enable,
         // the buffers the editor is holding, which is what the compiler is
         // given instead of the disk -- the reason `readFile` is a parameter
         open: filePath => server.documents.get(URI.file(filePath))?.getText(),

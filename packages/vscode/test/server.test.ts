@@ -69,6 +69,11 @@ beforeAll(async () => {
     path.join(docroot, 'package.json'),
     JSON.stringify({ name: 'fixture', dependencies: { markout: '^0.4.0' } })
   );
+  // a docroot BELOW the workspace folder, which is the arrangement that
+  // catches a link resolved against the wrong root
+  fs.mkdirSync(path.join(docroot, 'markout'));
+  fs.writeFileSync(path.join(docroot, 'markout/lib.htm'), '<lib></lib>');
+
   // and a project next door that has never heard of it
   fs.mkdirSync(path.join(docroot, 'other'));
   fs.writeFileSync(
@@ -103,6 +108,7 @@ beforeAll(async () => {
         // under the cursor -- is dropped. VS Code advertises it; so must a
         // harness claiming to stand in for one
         definition: { linkSupport: true },
+        documentLink: { dynamicRegistration: false },
       },
     },
   });
@@ -142,6 +148,16 @@ async function definitionAt(name: string, text: string, at: string) {
   })) as { targetUri: string }[] | null;
 }
 
+/** the links the editor would offer, which is what ctrl-click follows */
+async function documentLinksFor(name: string, text: string) {
+  const uri = `file://${path.join(docroot, name)}`;
+  notify('textDocument/didOpen', {
+    textDocument: { uri, languageId: 'html', version: 1, text },
+  });
+  return ((await request('textDocument/documentLink', { textDocument: { uri } })) ??
+    []) as { target?: string; range: any }[];
+}
+
 describe('the server, over stdio', () => {
   it('says nothing about a page that is fine', async () => {
     const found = await diagnosticsFor('ok.html', '<html :n=${21}><body>${n * 2}</body></html>');
@@ -179,6 +195,22 @@ describe('the server, over stdio', () => {
     );
     expect(found).toHaveLength(1);
     expect(found![0].targetUri).toContain('lib.htm');
+  });
+
+  it('offers a link that OPENS, where an editor would resolve one that does not', async () => {
+    // the reported bug: VS Code prefers a document link over go-to-definition
+    // on ctrl-click, and the HTML service resolves `/lib.htm` against the
+    // workspace folder. Here the docroot is a directory below it, so that
+    // default names a file which does not exist -- "Unable to open 'lib.htm'"
+    const links = await documentLinksFor(
+      'markout/page.html',
+      '<html><head><:import src="/lib.htm" /></head><body>${x}</body></html>'
+    );
+    const targets = links.map(l => l.target);
+    expect(targets).toHaveLength(1);
+    expect(targets[0]).toContain('/markout/lib.htm');
+    // and the file it names is really there, which is the whole complaint
+    expect(fs.existsSync(decodeURIComponent(targets[0]!.replace('file://', '')))).toBe(true);
   });
 
   it('offers nothing where there is nothing to follow', async () => {
