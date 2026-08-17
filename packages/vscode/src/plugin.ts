@@ -40,7 +40,18 @@ import { findExpressions } from './expressions';
  * what that work will stand on, and because it is testable today.
  */
 
-export const MARKOUT_LANGUAGE_ID = 'markout';
+/**
+ * The language id a markout page is opened as: `html`, and deliberately not
+ * one of our own.
+ *
+ * A `contributes.languages` entry claiming `.html` would REPLACE the HTML
+ * language rather than extend it, and VS Code gives a file exactly one
+ * language -- so every HTML file on the machine would lose Emmet, the built-in
+ * IntelliSense, and every extension registered against `html`. Markout is an
+ * extension to HTML; its editor support has to be one too. See
+ * docs/design/editor-support.md.
+ */
+export const PAGE_LANGUAGE_ID = 'html';
 
 /** the character an expression is masked with in the embedded HTML */
 const MASK = '_';
@@ -48,11 +59,11 @@ const MASK = '_';
 export function createMarkoutLanguagePlugin(): LanguagePlugin<URI> {
   return {
     getLanguageId(uri) {
-      return isPage(uri.path) ? MARKOUT_LANGUAGE_ID : undefined;
+      return isPage(uri.path) ? PAGE_LANGUAGE_ID : undefined;
     },
 
     createVirtualCode(_uri, languageId, snapshot) {
-      if (languageId !== MARKOUT_LANGUAGE_ID) {
+      if (languageId !== PAGE_LANGUAGE_ID) {
         return undefined;
       }
       return createRootCode(snapshot);
@@ -69,7 +80,7 @@ function createRootCode(snapshot: IScriptSnapshot): VirtualCode {
   const text = snapshot.getText(0, snapshot.getLength());
   return {
     id: 'root',
-    languageId: MARKOUT_LANGUAGE_ID,
+    languageId: 'markout',
     snapshot,
     // the source stands for itself: everything the extension's own services
     // answer (diagnostics, go-to-file) is in the page's own coordinates

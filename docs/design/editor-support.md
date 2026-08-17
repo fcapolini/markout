@@ -106,6 +106,43 @@ Code plumbing, and speaks LSP, so it can serve Neovim or anything else later.
 Nothing in the first version is allowed to assume VS Code except the
 extension entry point itself.
 
+## It must not take HTML over
+
+Markout claims no file suffix of its own — a page is a `.html` file like any
+other, which is the positioning working as intended and the single hardest
+constraint on this extension.
+
+**It contributes no language.** A `contributes.languages` entry claiming
+`.html` would not *extend* VS Code's HTML support, it would replace it: a
+file gets exactly one language id, so every HTML file on the machine would
+open as "Markout" and lose Emmet, the built-in IntelliSense, and every
+extension registered against `html`. The grammar is an **injection** into
+`text.html.basic` instead, which adds `${…}` and `:`-attribute highlighting
+on top of the real HTML grammar rather than in place of it.
+
+**Diagnostics are gated on the project, not the file.** Plain HTML is quiet
+under the compiler, because markout is a superset — script contents are not
+interpolated, and `{{…}}`, `{%…%}` and `<?php … ?>` mean nothing to it.
+Measured, and the exception is exact:
+
+| plain `.html` content | compiler |
+| --- | --- |
+| ordinary markup, `$5`, `50%` | clean |
+| `<script>` with `` `hi ${name}` `` | clean |
+| Handlebars, Jinja, PHP | clean |
+| `${user}` in text or in `<style>` | reports it |
+
+That last row is not a bug — `${…}` is markout's one interpolation syntax, so
+a file containing it is indistinguishable from a markout page. It is also
+exactly what JSP EL, Thymeleaf and Underscore templates put in `.html` files,
+and reporting per file would put an error on every line of such a project.
+
+So the extension asks whether the **project** uses markout: the nearest
+`package.json` depending on `markout` or `@markout/*`. Zero configuration,
+reuses the walk the docroot guess already does, and silent everywhere it was
+not invited. `markout.enable: always` is the escape hatch for a vendored copy
+or a page opened on its own.
+
 ## What the wiring turned out to be
 
 Two things about Volar that the documentation states and that are still

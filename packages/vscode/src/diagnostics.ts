@@ -150,6 +150,50 @@ function existsSync(p: string): boolean {
   }
 }
 
+/**
+ * Whether a docroot belongs to a project that uses markout.
+ *
+ * The gate that keeps this extension from being a nuisance. Markout is an
+ * extension to HTML, so it claims no file suffix of its own and every page it
+ * compiles is a `.html` file like any other -- which means the question
+ * "should I report on this file" cannot be answered by looking at the file.
+ *
+ * Almost all plain HTML compiles clean as markout, since markout is a
+ * superset: script contents are not interpolated, and `{{…}}`, `{%…%}` and
+ * `<?php … ?>` mean nothing to it. The exception is `${…}` outside a script,
+ * which is exactly what JSP EL, Thymeleaf and Underscore templates put in
+ * `.html` files -- so in one of those projects, reporting per file would
+ * produce an error on every line of every page.
+ *
+ * A project that depends on markout is asking for markout. One that does not
+ * gets silence, and the `markout.enable` setting for when the guess is wrong.
+ */
+export function isMarkoutProject(docroot: string): boolean {
+  const manifest = path.join(docroot, 'package.json');
+  let text: string;
+  try {
+    text = require('fs').readFileSync(manifest, 'utf8');
+  } catch {
+    return false;
+  }
+  try {
+    const json = JSON.parse(text);
+    const named = [
+      ...Object.keys(json.dependencies ?? {}),
+      ...Object.keys(json.devDependencies ?? {}),
+      ...Object.keys(json.peerDependencies ?? {}),
+      json.name,
+    ];
+    return named.some(
+      name => name === 'markout' || (typeof name === 'string' && name.startsWith('@markout/'))
+    );
+  } catch {
+    // a package.json that does not parse is not evidence either way, and
+    // guessing yes would put errors on a project that never asked
+    return false;
+  }
+}
+
 /** the pathname a docroot would serve a file at */
 export function pathnameOf(filePath: string, docroot: string): string {
   const rel = path.relative(path.resolve(docroot), path.resolve(filePath));
