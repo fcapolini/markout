@@ -51,6 +51,9 @@ pages above — what was chosen, what was rejected, and why.
 - [Five deliverables, one repository](design/monorepo.md) - the split into npm
   workspaces, which package each layer lands in, and the order the move
   happens in.
+- [Editor support, on Volar](design/editor-support.md) - moving the compiler's
+  diagnostics into the editor, and why a markout page needs virtual code
+  rather than a language server of its own.
 
 ## Mental model
 

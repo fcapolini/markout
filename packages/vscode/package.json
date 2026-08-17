@@ -1,0 +1,80 @@
+{
+  "name": "markout-vscode",
+  "private": true,
+  "version": "0.4.0",
+  "description": "Markout language support for VS Code: the compiler's diagnostics, in the editor",
+  "displayName": "Markout",
+  "publisher": "fcapolini",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./dist/client.js",
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "test": "vitest run",
+    "typecheck": "tsc -b && npm run typecheck:test",
+    "typecheck:test": "tsc -p tsconfig.test.json"
+  },
+  "author": "Fabrizio Capolini",
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "@markout/core": "^0.4.0",
+    "@volar/language-core": "^2.4.28",
+    "@volar/language-server": "^2.4.28",
+    "volar-service-html": "0.0.71",
+    "vscode-languageclient": "^9.0.1"
+  },
+  "activationEvents": [
+    "onLanguage:markout"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "markout",
+        "aliases": [
+          "Markout",
+          "markout"
+        ],
+        "extensions": [
+          ".html",
+          ".htm"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "scopeName": "text.html.markout",
+        "path": "./syntaxes/markout.tmLanguage.json",
+        "injectTo": [
+          "text.html.basic",
+          "text.html.derivative"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.expression.markout": "javascript"
+        }
+      }
+    ],
+    "configuration": {
+      "title": "Markout",
+      "properties": {
+        "markout.docroot": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The directory pages are resolved against, so that `/lib.htm` means the same thing here as it does when served. Empty means guess: the nearest folder with a `package.json`, and the workspace folder otherwise."
+        }
+      }
+    }
+  }
+}
