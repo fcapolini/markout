@@ -11,6 +11,8 @@ and `markout build` compiles it into a sibling `dist/`.
 ## What to try
 
 **`markout/index.html`** — a page with nothing wrong with it. Ctrl-click
+`<x-card>` and you land on the `<:define>` in the fragment next door, which
+is the tag's meaning and nowhere near the page you were reading. Ctrl-click
 `"/lib.htm"` in the `<:import>`: it opens the fragment. That path is
 *docroot*-relative rather than relative to this file, which is why an editor
 cannot follow it by guessing — the answer comes from the compiler's own

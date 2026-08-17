@@ -49,8 +49,9 @@ export interface DeclarationProps {
 export async function findDeclaration(
   props: DeclarationProps
 ): Promise<Declaration | undefined> {
-  const path = chainAt(props.text, props.offset);
-  if (!path) {
+  const tag = tagNameAt(props.text, props.offset);
+  const path = tag ? undefined : chainAt(props.text, props.offset);
+  if (!tag && !path) {
     return undefined;
   }
 
@@ -64,6 +65,13 @@ export async function findDeclaration(
     return undefined;
   }
 
+  // a custom tag: the <:define> that gives it meaning, which is usually in
+  // another file entirely and is the one thing a reader of a page most often
+  // wants. The compiler keeps the map because it needs it to compile at all
+  if (tag) {
+    return locate(page.customTags.get(tag)?.e?.loc, pathname);
+  }
+
   // A fragment compiles on its own, which is what makes this work inside one:
   // a definition may not read its call site, so everything a name in there can
   // refer to is declared in the same file. What a fragment cannot resolve is a
@@ -74,28 +82,58 @@ export async function findDeclaration(
     return undefined;
   }
 
-  const found = declarationFor(from, path);
+  const found = declarationFor(from, path!);
   // a value is declared by its attribute or its text; a named scope by the
   // element that carries the name -- `body.items` should send someone to
   // `<body>` when they ask about `body`
-  const loc = found?.value ? found.value.node.loc : found?.scope?.e?.loc;
+  return locate(found?.value ? found.value.node.loc : found?.scope?.e?.loc, pathname);
+}
+
+/**
+ * A source location, as a declaration an editor can act on.
+ *
+ * A SYNTHESIZED element has offsets but no file: `<head>` and `<body>` are
+ * supplied by the parser for a document that did not write them, which is
+ * every fragment and plenty of pages. They were synthesized while parsing the
+ * file being asked about, so that is where their offsets point.
+ */
+function locate(
+  loc: Value['node']['loc'] | undefined,
+  pathname: string
+): Declaration | undefined {
   if (!loc) {
     return undefined;
   }
-  // A SYNTHESIZED element has offsets but no file: `<head>` and `<body>` are
-  // supplied by the parser for a document that did not write them, which is
-  // every fragment and plenty of pages. They were synthesized while parsing
-  // this file, so this file is where their offsets point -- and answering
-  // "line 1" beats answering nothing for a name that plainly resolves.
   const start = { line: loc.start.line - 1, character: loc.start.column };
   return {
     pathname: loc.source ?? pathname,
-    range: {
-      start,
-      end: { line: loc.end.line - 1, character: loc.end.column },
-    },
+    range: { start, end: { line: loc.end.line - 1, character: loc.end.column } },
     selection: { start, end: start },
   };
+}
+
+/**
+ * The tag name the offset is on, when the cursor is on a tag rather than in
+ * an expression.
+ *
+ * It has to be preceded by `<` or `</`, which is what keeps `x-card` inside
+ * `<:define tag="x-card:div">` from matching -- that is the declaration, and
+ * offering to navigate from a thing to itself is noise.
+ */
+export function tagNameAt(text: string, offset: number): string | undefined {
+  const isPart = (c: string) => /[A-Za-z0-9_-]/.test(c);
+  let start = offset;
+  while (start > 0 && isPart(text[start - 1])) start--;
+  let end = offset;
+  while (end < text.length && isPart(text[end])) end++;
+  if (start === end) {
+    return undefined;
+  }
+  let before = start - 1;
+  if (text[before] === '/') {
+    before--;
+  }
+  return text[before] === '<' ? text.slice(start, end) : undefined;
 }
 
 /** the absolute path of a declaration's file */
