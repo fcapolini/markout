@@ -1,0 +1,35 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "scopeName": "text.html.markout",
+  "name": "Markout",
+  "injectionSelector": "L:text.html -comment -string",
+  "patterns": [
+    { "include": "#interpolation" },
+    { "include": "#directive-tag" },
+    { "include": "#colon-attribute" }
+  ],
+  "repository": {
+    "interpolation": {
+      "comment": "${ ... } -- the only interpolation syntax there is, in text, in CSS and in attribute values alike",
+      "begin": "(\\$\\{)",
+      "end": "(\\})",
+      "beginCaptures": { "1": { "name": "punctuation.section.embedded.begin.markout" } },
+      "endCaptures": { "1": { "name": "punctuation.section.embedded.end.markout" } },
+      "name": "meta.embedded.expression.markout",
+      "patterns": [{ "include": "source.js" }]
+    },
+    "directive-tag": {
+      "comment": "<:import>, <:include>, <:define>, <:slot>, <:group>, <:logic>",
+      "match": "(</?)(:[a-zA-Z][\\w-]*)",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.markout" },
+        "2": { "name": "entity.name.tag.directive.markout" }
+      }
+    },
+    "colon-attribute": {
+      "comment": "the attributes HTML has no name for: values, class and style toggles, events, lifecycle, replication",
+      "match": "(?<=[\\s\"'])(::?[a-zA-Z_$][\\w:$-]*)",
+      "captures": { "1": { "name": "entity.other.attribute-name.markout" } }
+    }
+  }
+}

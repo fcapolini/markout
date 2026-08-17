@@ -1,4 +1,4 @@
-import { Preprocessor } from "../html/preprocessor";
+import { Preprocessor, type ReadFile } from "../html/preprocessor";
 import type { Kit } from "../kits";
 import { Page } from "./ir/Page";
 import { stage1load } from "./stages/stage1-load";
@@ -21,6 +21,12 @@ export interface CompilerProps {
    * see docs/design/npm-kits.md on why both derive it from what is installed.
    */
   kits?: Kit[];
+  /**
+   * How a file's text is read, given a path the resolver already approved.
+   * Defaults to the disk. An editor passes its own, so a page is compiled as
+   * it is being typed rather than as it was last saved -- see ReadFile.
+   */
+  readFile?: ReadFile;
   /** `src` for the bootstrap `<script>` that loads the runtime; see stage7-generate.ts */
   runtimeSrc?: string;
   /** emit the dev flag, so the browser runtime surfaces errors in the page */
@@ -39,7 +45,7 @@ export class Compiler {
   serverGlobals: ReadonlySet<string>;
 
   constructor(options: CompilerProps) {
-    this.preprocessor = new Preprocessor(options.docroot, options.kits);
+    this.preprocessor = new Preprocessor(options.docroot, options.kits, options.readFile);
     this.runtimeSrc = options.runtimeSrc ?? DEFAULT_RUNTIME_SRC;
     this.dev = options.dev ?? false;
     this.serverGlobals = new Set(options.serverGlobals ?? []);

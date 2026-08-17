@@ -1,0 +1,154 @@
+# Editor support, on Volar
+
+Status: **in progress**. Diagnostics work end to end — the compiler's errors
+reach an editor over LSP, against the unsaved buffer. Highlighting and the
+embedded-code mappings are in;
+[navigation](#what-the-first-version-does) and the HTML service are not
+wired yet. Built in [packages/vscode/](../../packages/vscode/); the core
+change it needed ([`readFile`](../../packages/core/src/html/preprocessor.ts))
+has landed.
+
+## The problem
+
+Markout's strongest claim against Alpine is in
+[POSITIONING.md](../../POSITIONING.md): *mistakes are caught before the page
+loads, with a file and a line*. That is true — and today it is only true of a
+terminal. In an editor, a markout page is HTML with unfamiliar bits in it:
+
+- `${count * 2}` is text. No highlighting, no completion, no error when
+  `count` does not exist.
+- `:count=${0}` is an unknown attribute. So is `:on-click`, `:did-attach`,
+  `:for-each`.
+- `<:import src="lib.htm" />` is an unknown tag with a string in it, rather
+  than a link to a file.
+- A misspelled value name compiles clean until you serve the page, at which
+  point the compiler tells you exactly what is wrong — in the other window.
+
+So the feedback the language is proud of arrives late, in the wrong place,
+and only when the file has been saved. The extension's job is to move it into
+the editor, against the buffer being typed.
+
+## Why Volar rather than a plain language server
+
+A markout page is not one language. It is HTML, with JavaScript expressions
+in attributes and in text, and CSS that has JavaScript in it too. A
+hand-written server would have to answer "what does `.filter(` complete to"
+by reimplementing TypeScript, and "is `grid-templat` a property" by
+reimplementing the CSS service.
+
+Volar exists for exactly this shape. Its model is **virtual code**: a
+language plugin turns one source file into embedded documents with mappings
+back to it, and the existing services — TypeScript, HTML, CSS — run against
+those, with every position translated through the map. What the plugin owns
+is the mapping; the language features come from services that already exist.
+
+That is the whole reason to take the dependency, and it is also why the
+plugin is the interesting part of this package and the server is boilerplate.
+
+## What the compiler already gives, and the one thing it did not
+
+Most of what a language server needs was already there, because a compiler
+that reports well to a terminal reports well to anything:
+
+| Need | Where it comes from |
+| --- | --- |
+| Errors with a position | `PageError.loc`, an `acorn.SourceLocation` — start and end, so a diagnostic is a range and not a caret |
+| Which file an error is in | `loc.source`, so an error inside an imported fragment lands in that fragment |
+| What a page depends on | `Source.files`, already used by the dev server's watcher to know what to recompile |
+| Where a path resolves | `Resolver`, including kits, so go-to-definition on `<:import src>` is a call the compiler already makes |
+
+The missing piece was that the compiler read the **disk**. An editor's whole
+job is the buffer that is not on disk yet, so diagnostics would have lagged
+by a save — which for a language whose pitch is "before the page loads" is
+the wrong kind of late.
+
+So `readFile` is now a parameter, defaulting to the disk
+([preprocessor.ts](../../packages/core/src/html/preprocessor.ts)). The
+docroot and the kit table already parameterize *where* a pathname may land;
+this parameterizes how the file it landed on is read. Resolution does not
+move: a reader is handed a path the resolver already approved, so it cannot
+widen what a page may reach — which is asserted rather than asserted-to, in
+[read-file.test.ts](../../packages/core/test/read-file.test.ts).
+
+## What the first version does
+
+Ranked by what a markout author actually feels, not by what is easy:
+
+1. **Diagnostics from the real compiler**, on the buffer, as it is typed.
+   Not a re-implementation of a subset of the rules: the same `Compiler` the
+   server and `build` run, so anything it catches the editor catches, for
+   free and forever.
+2. **Navigation.** `<:import src>` and `<:include src>` go to the file, using
+   the compiler's own resolver so `/npm/@markout/bootstrap-kit/all.htm` lands
+   in the installed package.
+3. **Syntax highlighting** for `${…}` and `:`-attributes, so the language
+   stops looking like malformed HTML.
+4. **HTML's own features** — tag completion, attribute completion, folding —
+   through `volar-service-html` over the embedded HTML.
+
+## What it deliberately does not do yet
+
+**TypeScript inside `${…}`.** This is the big one, and it is a project rather
+than a feature. An expression does not resolve against the file's lexical
+scope but against *the scope chain the compiler computes* — `${count}` in a
+`<div :count=${0}>` means one thing, and the same text one element up means
+an error. Giving TypeScript real types would mean generating a `.ts` file
+that models the whole scope chain, which is the same shape of work as Vue's
+`.vue` → TS transformation, and it wants the mapping infrastructure to be
+solid first.
+
+The order matters: **the mapping is what makes it possible, so the mapping is
+what version one builds.** Highlighting and diagnostics need a fraction of it
+and prove it works on real pages.
+
+**A second editor.** The language server is a separate module from the VS
+Code plumbing, and speaks LSP, so it can serve Neovim or anything else later.
+Nothing in the first version is allowed to assume VS Code except the
+extension entry point itself.
+
+## What the wiring turned out to be
+
+Two things about Volar that the documentation states and that are still
+easier to learn from a failing test:
+
+**A service is asked about virtual documents, not about files.** The URI a
+service receives is `volar-embedded-content://<code id>/<the encoded source
+uri>`, so a check for `scheme === 'file'` rejects everything and the
+extension silently reports nothing at all. `context.decodeEmbeddedDocumentUri`
+gets the source back — and because every embedded code is asked, exactly one
+of them has to answer, or the same compiler error arrives once per embedded
+document.
+
+**Pull diagnostics are off unless the client asks for them.** A client that
+advertises no `textDocument.diagnostic` capability gets silence from
+`textDocument/diagnostic`, which reads exactly like a broken server. Volar
+also publishes diagnostics the old way, so a real editor sees them either
+way; a test harness pretending to be an editor has to say what it supports.
+
+Both were found by [server.test.ts](../../packages/vscode/test/server.test.ts),
+which starts the built server over stdio and asks it a question. That test
+exists precisely because the failures it catches — a plugin never registered,
+a capability never announced, a `main` pointing at nothing — leave every unit
+test green and the extension doing nothing.
+
+## Shape
+
+```
+packages/vscode/
+  src/
+    plugin.ts     the Volar language plugin: a page -> its virtual code
+    server.ts     the language server (LSP, node)
+    client.ts     the VS Code extension entry point
+  syntaxes/       the TextMate grammar
+  package.json    contributions: languages, grammars, configuration
+```
+
+Depends on `@markout/core` and nothing else of ours — which is the constraint
+the whole [monorepo split](monorepo.md) existed to satisfy, and the one thing
+here worth asserting rather than intending. It is:
+[dependencies.test.ts](../../packages/vscode/test/dependencies.test.ts) walks
+the declared closure and fails if express, compression, commander or the CLI
+appear in it, with a companion assertion against the CLI so a walk that finds
+nothing cannot pass for a clean result.
+
+The split did its job.

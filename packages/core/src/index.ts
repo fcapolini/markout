@@ -19,6 +19,7 @@ export { Compiler } from './compiler';
 export type { Page } from './compiler/ir/Page';
 export { DEFAULT_RUNTIME_SRC } from './compiler/stages/stage7-generate';
 export { PageError } from './html/parser';
+export type { ReadFile } from './html/preprocessor';
 
 // where files may be loaded from and served at
 export { discoverKits, type Kit } from './kits';

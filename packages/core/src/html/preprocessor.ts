@@ -14,6 +14,30 @@ export const GROUP_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'GROUP';
 
 export const MAX_NESTING = 100;
 
+/**
+ * How a file's text is obtained, given its absolute path.
+ *
+ * Defaults to reading the disk, which is what a server and a build both
+ * want. It is a parameter because an editor does not: a language server
+ * holds the buffer the author is typing into, which is not what is on disk
+ * and is exactly the version they want told about their mistakes. Returning
+ * `undefined` means "not there", and reads as a missing file would.
+ *
+ * The docroot and the kit table already parameterize WHERE a pathname is
+ * allowed to land; this parameterizes how the file it landed on is read.
+ * Nothing about resolution moves: a reader is handed a path the resolver
+ * already approved, so it cannot widen what a page may reach.
+ */
+export type ReadFile = (filePath: string) => Promise<string | undefined>;
+
+const readFromDisk: ReadFile = async filePath => {
+  try {
+    return await fs.promises.readFile(filePath, { encoding: 'utf8' });
+  } catch {
+    return undefined;
+  }
+};
+
 /*
   Adds support for:
   - <:include>
@@ -24,10 +48,13 @@ export class Preprocessor {
   docroot: string;
   /** where a pathname is allowed to land, and what it maps to; see ../paths */
   protected resolver: Resolver;
+  /** see ReadFile: the disk unless a caller has something better */
+  protected readFile: ReadFile;
 
-  constructor(docroot: string, kits?: Kit[]) {
+  constructor(docroot: string, kits?: Kit[], readFile?: ReadFile) {
     this.resolver = new Resolver(docroot, kits);
     this.docroot = this.resolver.docroot.dir;
+    this.readFile = readFile ?? readFromDisk;
   }
 
   async load(fname: string): Promise<Source> {
@@ -146,10 +173,8 @@ export class Preprocessor {
     } else if (once) {
       return;
     }
-    let text = '';
-    try {
-      text = await fs.promises.readFile(pname, { encoding: 'utf8' });
-    } catch (error) {
+    const text = await this.readFile(pname);
+    if (text === undefined) {
       main.addError('error', `File not found "${relPath}"`, from?.loc);
       return;
     }

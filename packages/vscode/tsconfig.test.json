@@ -1,0 +1,17 @@
+// Type-checks this package's test suite alongside its src. See the twin in
+// packages/cli for why a check-only config is needed at all.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "rootDir": ".",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node", "vitest/globals"]
+  },
+  "include": ["src/**/*", "test/**/*"]
+}
