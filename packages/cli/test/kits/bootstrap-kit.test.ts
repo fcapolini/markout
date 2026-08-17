@@ -6,8 +6,8 @@ import { chromium, type Browser } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Compiler } from '../../src/compiler';
 import { renderPage } from '../../src/server/render';
-import { openOperationsDb } from '../../kits/bootstrap/orbit-db';
-import { createOrbitApp } from '../../kits/bootstrap/server';
+import { openOperationsDb } from '../../../../kits/bootstrap/orbit-db';
+import { createOrbitApp } from '../../../../kits/bootstrap/server';
 
 /**
  * The Bootstrap kit, compiled and rendered as a page would be.
@@ -26,7 +26,7 @@ import { createOrbitApp } from '../../kits/bootstrap/server';
  * produces, not what a CDN serves.
  */
 
-const KIT_ROOT = path.resolve(__dirname, '../../kits/bootstrap');
+const KIT_ROOT = path.resolve(__dirname, '../../../../kits/bootstrap');
 const PARTS_DIR = path.join(KIT_ROOT, 'bootstrap-kit/parts');
 
 /**

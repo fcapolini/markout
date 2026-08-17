@@ -1,4 +1,4 @@
 node_modules/
 dist/
 coverage/
-bench/medium/bench-*.html
+packages/cli/bench/medium/bench-*.html

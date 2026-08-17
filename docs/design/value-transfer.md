@@ -125,7 +125,7 @@ would serve one user's session to the next visitor.
 
 ### Keying
 
-[`CoreScope.uid`](../../src/runtime/core/core-scope.ts#L102) is `props.id`
+[`CoreScope.uid`](../../packages/cli/src/runtime/core/core-scope.ts#L102) is `props.id`
 plus the replica path, unique across `:for-each` replicas by construction. So
 the blob is `{ [uid]: { [key]: value } }` and a server-only value inside a repeated
 row keys correctly with nothing new invented. Confirmed by test rather than
@@ -140,7 +140,7 @@ Found while testing the above, and not anticipated: collecting naively
 produced *three* entries for a two-item `:for-each` — one per replica, plus
 one for the host.
 
-A `:for-each` host is a stencil ([`isStencil()`](../../src/runtime/core/core-scope.ts#L516)):
+A `:for-each` host is a stencil ([`isStencil()`](../../packages/cli/src/runtime/core/core-scope.ts#L516)):
 its element is only ever cloned, so its values are prototypes for the
 replicas rather than bindings of its own and are never evaluated. Collecting
 there sends `undefined` standing in for "never ran". The same applies to a
@@ -192,7 +192,7 @@ the hundreds of kilobytes.
 Functions, symbols, DOM nodes, class instances. The compiler cannot catch
 these — `:server-x=${something()}` has no static type — so it is a runtime
 failure at serialize time, reported through
-[`CoreContext.onError`](../../src/runtime/core/core-context.ts#L108) like
+[`CoreContext.onError`](../../packages/cli/src/runtime/core/core-context.ts#L108) like
 everything else, most likely under a new `'transfer'` phase in
 `RuntimeErrorPhase`.
 
@@ -201,7 +201,7 @@ expression there to fall back to, since stage7 does not send it. That is the
 right outcome rather than a lost fallback: a server-only expression re-run in
 the browser reaches for something only the server has, so it could only
 throw. In dev the runtime-error page is served as
-[middleware.ts:81](../../src/server/middleware.ts#L81) already does for
+[middleware.ts:81](../../packages/cli/src/server/middleware.ts#L81) already does for
 expression failures; in production the page serves and the value is empty.
 
 ### It is public
@@ -216,7 +216,7 @@ frameworks that serialize a whole store.
 
 ### Escaping
 
-[`escapeScriptClose`](../../src/compiler/stages/stage7-generate.ts#L81)
+[`escapeScriptClose`](../../packages/cli/src/compiler/stages/stage7-generate.ts#L81)
 currently handles `</script` in compiler-generated code, where the only source
 of a stray `</script` is a string the page author wrote themselves. The state
 blob carries third-party bytes, so that path becomes security-relevant:
@@ -230,7 +230,7 @@ The override applies at **value construction**, not by patching generated
 source. `CoreScope` computes `this.uid` before it builds its values, so the
 lookup is `state[uid]?.[key]`; a hit constructs the value with `val` and no
 `exp` and no `deps` — the same inert shape
-[core-global.ts:116](../../src/runtime/core/core-global.ts#L116) already uses,
+[core-global.ts:116](../../packages/cli/src/runtime/core/core-global.ts#L116) already uses,
 for the same reason. Dropping `deps` matters: otherwise sources keep enqueuing
 a value whose `get()` returns immediately, which is edges and propagation for
 nothing.
@@ -256,10 +256,10 @@ honest.
 - `CoreContext.collectKept()` — walk the scope tree, return `{ [uid]: { [key]: value } }`.
   Called server-side once the render has settled.
 - `CoreContext.applyState(blob)` — consulted at value construction per above.
-- [browser.ts](../../src/runtime/web/browser.ts#L17) reads the second global
+- [browser.ts](../../packages/cli/src/runtime/web/browser.ts#L17) reads the second global
   next to `PROPS_GLOBAL` and hands it to the context.
 - The server writes the state script after `renderPage` resolves and before
-  `doc.toString()` at [middleware.ts:86](../../src/server/middleware.ts#L86).
+  `doc.toString()` at [middleware.ts:86](../../packages/cli/src/server/middleware.ts#L86).
   It must be inserted **between** the props and runtime scripts stage7
   appends, not after them.
 

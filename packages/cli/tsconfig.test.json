@@ -13,7 +13,12 @@
     "noEmit": true,
     "declaration": false,
     "sourceMap": false,
-    "rootDir": ".",
+    // the workspace root, not this package: the kit suites import the kits'
+    // own TypeScript (`kits/bootstrap/server.ts`), which lives outside the
+    // package and is checked here because nothing else checks it yet. It
+    // moves into the kit's own workspace in step 5 -- see
+    // docs/design/monorepo.md -- and this widening goes with it
+    "rootDir": "../..",
     // the suite is loaded by vitest (esbuild), not by node's CommonJS
     // loader, so bundler resolution is what actually happens to it.
     // Node16 here would reject every ESM-only devDependency the tests

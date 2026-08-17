@@ -28,7 +28,7 @@ import { renderPage } from '../src/server/render';
 // the checklist, read from the docs
 // ---------------------------------------------------------------------------
 
-const SYNTAX_MD = path.resolve(__dirname, '../docs/reference/syntax.md');
+const SYNTAX_MD = path.resolve(__dirname, '../../../docs/reference/syntax.md');
 
 /** `##` sections whose tables list directives; `###` subsections are prose */
 const TABLE_SECTIONS = new Set([

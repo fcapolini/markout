@@ -1,18 +1,20 @@
+// Type-checks the workspace root's own `test/` directory, and nothing else.
+//
+// Each package type-checks itself (`npm run typecheck --workspaces`); this
+// config exists because the repository-wide suites at the root are inside no
+// package and would otherwise be checked by nobody. It emits nothing.
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "Node16",
-    "moduleResolution": "node16",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "lib": ["ES2022"],
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "declaration": true,
-    "sourceMap": true,
-    "rootDir": "src",
-    "outDir": "dist",
+    "noEmit": true,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src/**/*", "test/index.test.ts"]
+  "include": ["test/**/*"]
 }

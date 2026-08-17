@@ -1,5 +1,6 @@
 import { execFile, spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
+import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import net, { type AddressInfo } from 'node:net';
 import path from 'node:path';
@@ -7,8 +8,26 @@ import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const root = path.resolve(__dirname, '..');
-const entry = path.join(root, 'src/index.ts');
-const tsx = path.join(root, 'node_modules/tsx/dist/cli.mjs');
+const entry = path.join(root, 'src/cli.ts');
+
+/**
+ * tsx's own entry point, found the way node would.
+ *
+ * Not `<root>/node_modules/...`: in a workspace, npm hoists dependencies to
+ * the workspace root, so this package's `node_modules` may not have tsx in it
+ * at all -- and may, on a version conflict, be exactly where it does live.
+ * Walking up covers both without asserting which one happened.
+ */
+function resolveTsx(): string {
+  const rel = 'node_modules/tsx/dist/cli.mjs';
+  for (let dir = root; ; dir = path.dirname(dir)) {
+    const candidate = path.join(dir, rel);
+    if (existsSync(candidate)) return candidate;
+    if (dir === path.dirname(dir)) throw new Error(`cannot find ${rel}`);
+  }
+}
+
+const tsx = resolveTsx();
 const execFileAsync = promisify(execFile);
 
 let child: ChildProcess | undefined;
