@@ -54,16 +54,32 @@ export async function renderPage(
   // async is what the server has that the browser doesn't: a `:server-` value
   // may produce a promise, and this is where the page waits for it. Nothing
   // is serialized until it has, or has given up
-  if (await ctx.settle(props?.settle)) {
-    // Everything reading one of those values was evaluated once BEFORE it had
-    // a result -- against the promise itself. `${rows.length}` was undefined
-    // there and `${rows.filter(...)}` threw outright, and neither says
-    // anything about the page: they are a value asked too early. Reporting
-    // them buries the real ones, and in dev replaces the page with them.
-    //
-    // So the whole first reading is discarded and taken again now that the
-    // results are in. Only the `settle` failures survive the cut, being the
-    // one kind nothing later can turn into an answer.
+  // Settling already brought the page up to date. `settle()` hands each
+  // result to `CoreValue.set()`, which propagates -- so everything reading
+  // one has re-evaluated and every binding it feeds has been written, which
+  // is the same thing that happens in a browser when data arrives. There is
+  // no second render for the MARKUP's sake.
+  //
+  // There is one for the ERRORS' sake, and only when the first pass
+  // reported something. Everything reading a server value was evaluated
+  // once before it had a result: `${rows.length}` was undefined there and
+  // `${rows.filter(...)}` threw outright, and neither says anything about
+  // the page -- they are a value asked too early. Those cannot simply be
+  // dropped, because an expression that still fails would go unreported:
+  // `set()` does not propagate when a value settles to what it already held
+  // (a source that resolves to `undefined`), so the dependent never
+  // re-evaluates and never speaks again. So the whole reading is taken
+  // afresh, with only the `settle` failures carried over -- the one kind
+  // nothing later can turn into an answer.
+  //
+  // A page whose expressions are guarded -- `${src.data ?? []}`, which is
+  // what a datasource asks for -- reports nothing on that first pass and
+  // skips this entirely: 61ms to 55ms on Orbit, about a tenth of its
+  // render. Not more, because this was never a second render's worth of
+  // work: refresh() re-evaluates values, it does not rebuild the scope
+  // tree or relink the graph, and most of what it recomputes lands on the
+  // value it already held and writes nothing.
+  if (await ctx.settle(props?.settle) && errors.some(e => e.phase !== 'settle')) {
     const definite = errors.filter(e => e.phase === 'settle');
     errors.length = 0;
     errors.push(...definite);
