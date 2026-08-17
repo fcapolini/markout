@@ -3,9 +3,8 @@ import express, { Application } from "express";
 import path from "path";
 import http from "http";
 import exitHook from './exit-hook';
-import { defaultLogger, MarkoutLogger } from "./logger";
+import { defaultLogger, markout, type MarkoutLogger } from "@markout/express";
 import process from "process";
-import { markout } from "./middleware";
 import { AddressInfo } from "net";
 
 export interface ServerProps {

@@ -11,7 +11,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@markout/core": ["../core/src/index.ts"]
+      "@markout/core": ["../core/src/index.ts"],
+      "@markout/express": ["../express/src/index.ts"]
     }
   }
 }

@@ -1,0 +1,50 @@
+{
+  "name": "@markout/express",
+  "version": "0.4.0",
+  "description": "Markout as Express middleware: render markout pages from an application that already has a server",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b && npm run typecheck:test",
+    "typecheck:test": "tsc -p tsconfig.test.json"
+  },
+  "keywords": [
+    "express",
+    "middleware",
+    "markout",
+    "ssr",
+    "html"
+  ],
+  "author": "Fabrizio Capolini",
+  "license": "MIT",
+  "type": "commonjs",
+  "peerDependencies": {
+    "express": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.2.0",
+    "@types/supertest": "^7.2.1",
+    "express": "^5.2.1",
+    "supertest": "^7.2.2",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "@markout/core": "^0.4.0"
+  }
+}

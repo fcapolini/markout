@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { TreeWatcher, watchTree } from '../../src/server/watcher';
+import { TreeWatcher, watchTree } from '../src/watcher';
 
 /**
  * The regression here is the second test: a recursive `fs.watch` does not

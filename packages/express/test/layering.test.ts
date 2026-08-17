@@ -3,19 +3,19 @@ import path from 'path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * The CLI's boundary with the packages under it.
+ * The middleware's own layering, and the boundary between it and
+ * `@markout/core`.
  *
- * There is one layer left here, so unlike core's and the middleware's twins
- * this file is almost entirely the boundary check: `@markout/core` and
- * `@markout/express` are reached BY THEIR PACKAGE NAMES and never by a
- * relative path. A workspace makes `../express/src/middleware` resolve
+ * The layers are small and the direction still matters: the pieces the
+ * middleware drives -- the logger it reports through, the watcher it asks
+ * about changes, the reloader it injects -- must not know about the
+ * middleware itself, or the package has a cycle in four files.
+ *
+ * The boundary check is that core is reached BY ITS PACKAGE NAME and never
+ * by a relative path. A workspace makes `../core/src/compiler` resolve
  * perfectly well from here, so nothing but this test stands between the
- * curated surface each package exports and a dependency on one of its
- * internals -- and an internal reached that way is covered by nothing either
- * package promises. See docs/design/monorepo.md.
- *
- * The layer list stays because the CLI will grow again, and because it is
- * what makes an unnamed new file fail rather than pass unnoticed.
+ * curated surface in core's index.ts and a dependency on one of its
+ * internals. See docs/design/monorepo.md.
  */
 
 const ROOT = path.resolve(__dirname, '..');
@@ -24,14 +24,20 @@ const SRC = path.join(ROOT, 'src');
 /** lowest first: a layer may import from itself and anything above it here */
 const LAYERS: { name: string; pkg: string; members: string[] }[] = [
   {
-    name: 'cli',
-    pkg: 'markout',
-    members: [
-      'cli.ts',
-      'server/build.ts',
-      'server/exit-hook.ts',
-      'server/index.ts',
-    ],
+    name: 'parts',
+    pkg: '@markout/express',
+    members: ['livereload.ts', 'logger.ts', 'watcher.ts'],
+  },
+  {
+    name: 'middleware',
+    pkg: '@markout/express',
+    members: ['middleware.ts'],
+  },
+  // the package boundary itself: the only file allowed to see everything
+  {
+    name: 'index',
+    pkg: '@markout/express',
+    members: ['index.ts'],
   },
 ];
 
@@ -80,7 +86,7 @@ function importsOf(file: string): { spec: string; rel: string | null }[] {
   }));
 }
 
-describe('cli layering', () => {
+describe('express layering', () => {
   const files = sourceFiles(SRC).map(f => path.relative(SRC, f));
 
   it('finds the sources', () => {
@@ -107,7 +113,7 @@ describe('cli layering', () => {
         .map(i => i.spec);
       expect(
         reachingIn,
-        'import from the package instead -- see its index.ts'
+        'import from "@markout/core" instead -- see its index.ts'
       ).toEqual([]);
 
       const targets = imports.map(i => i.rel).filter((r): r is string => r !== null);

@@ -6,7 +6,7 @@ import path from 'path';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Server } from '../../src/server';
-import { CLIENT_CODE_REQ } from '../../src/server/middleware';
+import { CLIENT_CODE_REQ } from '@markout/express';
 import { DOM_ERRORS_ID } from '@markout/core';
 
 // `user` is null, so `${user.name}` throws every time it's evaluated -- a

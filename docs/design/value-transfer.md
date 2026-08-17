@@ -201,7 +201,7 @@ expression there to fall back to, since stage7 does not send it. That is the
 right outcome rather than a lost fallback: a server-only expression re-run in
 the browser reaches for something only the server has, so it could only
 throw. In dev the runtime-error page is served as
-[middleware.ts:81](../../packages/cli/src/server/middleware.ts#L81) already does for
+[middleware.ts:81](../../packages/express/src/middleware.ts#L81) already does for
 expression failures; in production the page serves and the value is empty.
 
 ### It is public
@@ -259,7 +259,7 @@ honest.
 - [browser.ts](../../packages/core/src/runtime/web/browser.ts#L17) reads the second global
   next to `PROPS_GLOBAL` and hands it to the context.
 - The server writes the state script after `renderPage` resolves and before
-  `doc.toString()` at [middleware.ts:86](../../packages/cli/src/server/middleware.ts#L86).
+  `doc.toString()` at [middleware.ts:86](../../packages/express/src/middleware.ts#L86).
   It must be inserted **between** the props and runtime scripts stage7
   appends, not after them.
 
