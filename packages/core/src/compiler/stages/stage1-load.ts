@@ -1496,8 +1496,19 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     // any bare identifier into `this.<name>` with no scope-aware special
     // casing, so the per-item binding only resolves correctly if it's keyed
     // under the exact name authors reference (`data`, or :for-as's choice)
-    const alias = (scope.values.get(FOR_AS_VALUE)?.value as string) || FOR_DATA_DEFAULT_NAME;
-    const dataAttr = new ServerAttribute(e.ownerDocument, null, alias, null, e.loc);
+    const asValue = scope.values.get(FOR_AS_VALUE);
+    const alias = (asValue?.value as string) || FOR_DATA_DEFAULT_NAME;
+    // the `:for-as` that named it, when there is one, rather than the whole
+    // element: this location is what an editor sends someone to when they
+    // ask where the alias comes from, and the element's start is both
+    // imprecise and usually the line they are already on
+    const dataAttr = new ServerAttribute(
+      e.ownerDocument,
+      null,
+      alias,
+      null,
+      asValue?.node.loc ?? e.loc
+    );
     scope.values.set(alias, new Value(alias, dataAttr, scope, page.createValueId()));
   }
 }

@@ -240,11 +240,7 @@ function resolvesToKnownValue(scope: Scope, key: string, navigated = false): boo
  * would be a second implementation of the language's scoping rules, drifting
  * from this one the first time either changed. See declarationFor.
  */
-function lookup(
-  scope: Scope,
-  key: string,
-  navigated = false
-): { value?: Value; scope?: Scope } | undefined {
+function lookup(scope: Scope, key: string, navigated = false): Declaration | undefined {
   let s: Scope | undefined = scope;
   while (s) {
     const value = s.values.get(key);
@@ -256,20 +252,43 @@ function lookup(
   return undefined;
 }
 
+/** what a reference resolves to: a value, or a scope that has a name */
+export type Declaration = { value: Value; scope?: undefined } | { scope: Scope; value?: undefined };
+
 /**
- * The value that `key`, written inside `from`'s expression, refers to.
+ * What `path`, written inside `from`'s expression, refers to.
  *
- * The two halves an editor cannot get right on its own: where the lookup
- * STARTS -- which is not simply the value's own scope, because a usage site,
- * a replicated usage and slotted markup each resolve from somewhere else --
- * and where it goes from there. Both are the compiler's, and this is the
- * compiler answering.
+ * The three halves an editor cannot get right on its own. Where the lookup
+ * STARTS, which is not simply the value's own scope -- a usage site, a
+ * replicated usage and slotted markup each resolve from somewhere else.
+ * Where it goes from there, walking outward by the same rule the compiler
+ * uses. And what a dotted path means: `body.items` is not a property access
+ * but a navigation into a named scope followed by a lookup *in there*, which
+ * is why the second segment cannot be found by searching for a name.
  *
- * `undefined` when the name is a named scope rather than a value, or is not
- * declared at all: neither has a declaration site to open.
+ * `path` is the chain up to and including the name asked about, so asking
+ * about `body` in `body.items` passes `['body']` and gets the scope.
+ *
+ * `undefined` when nothing declares it, and when a segment turns out to be
+ * an ordinary value rather than a scope -- `data.name` navigates nowhere,
+ * because `name` is a property of whatever `data` holds at runtime and has
+ * no declaration site in the page at all.
  */
-export function declarationFor(from: Value, key: string): Value | undefined {
-  return lookup(resolvesFrom(from), key)?.value;
+export function declarationFor(from: Value, path: string[]): Declaration | undefined {
+  if (!path.length) {
+    return undefined;
+  }
+  let scope = resolvesFrom(from);
+  let navigated = false;
+  for (const segment of path.slice(0, -1)) {
+    const step = navigate(scope, segment, navigated);
+    if (!step.isNavigation || !step.scope) {
+      return undefined;
+    }
+    scope = step.scope;
+    navigated = true;
+  }
+  return lookup(scope, path[path.length - 1], navigated);
 }
 
 function addError(page: Page, msg: string, loc: Value['node']['loc']) {
