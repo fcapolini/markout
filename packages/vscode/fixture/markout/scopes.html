@@ -1,0 +1,22 @@
+<html :title=${'Scopes'}>
+<head :charset=${'utf-8'}>
+  <:import src="/lib.htm" />
+  <title>${page.title}</title>
+</head>
+
+<body :items=${['reactivity', 'modularity', 'isomorphism']}>
+
+  <!--- Four names on one line, and each is a different question.
+
+        body  a named SCOPE -- go to definition lands on <body> below
+        items a value INSIDE that scope, reached by navigating there first
+        item  the loop alias, declared by the :for-as beside it -->
+  <ul>
+    <li :for-each=${body.items} :for-as="item">${item}</li>
+  </ul>
+
+  <!--- and the two the document always has, wherever they are written -->
+  <p>${page.title} in ${head.charset}</p>
+
+</body>
+</html>
