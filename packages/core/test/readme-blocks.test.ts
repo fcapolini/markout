@@ -98,11 +98,11 @@ describe('README examples', () => {
 
 describe('README code quoted from the demo', () => {
   it('matches what the demo actually contains', () => {
-    // the Componentization section quotes demo/bootstrap/index.html rather
+    // the Componentization section quotes the bootstrap demo rather
     // than standing alone, so it can drift from the file it describes
     const md = fs.readFileSync(path.resolve(__dirname, '../../../README.md'), 'utf8');
     const demo = fs.readFileSync(
-      path.resolve(__dirname, '../../../demo/bootstrap/index.html'),
+      path.resolve(__dirname, '../../../sites/site/demos/bootstrap/index.html'),
       'utf8'
     );
     // the whole call, not one attribute of it: pinning `:title="..."` meant

@@ -4,7 +4,7 @@ import { Browser } from 'happy-dom';
 import { Server } from '../../src/server';
 
 /**
- * Drives the real demo/setlist page, not a copy of it.
+ * Drives the real setlist demo page, not a copy of it.
  *
  * That is possible because this demo depends on nothing but markout: its
  * chrome is <:define> components rather than a component library off a CDN,
@@ -19,12 +19,12 @@ import { Server } from '../../src/server';
  * assertions come in pairs: what the element shows, and what the data holds.
  * Only the second would survive being saved.
  */
-describe('demo/setlist', () => {
+describe('the setlist demo', () => {
   let server: Server;
 
   beforeAll(async () => {
     server = await new Server({
-      docroot: path.resolve(__dirname, '../../../../demo'),
+      docroot: path.resolve(__dirname, '../../../../sites/site'),
       port: 0,
       logger: () => {},
     }).start();
@@ -37,7 +37,7 @@ describe('demo/setlist', () => {
   async function open() {
     const browser = new Browser({ settings: { enableJavaScriptEvaluation: true } });
     const page = browser.newPage();
-    await page.goto(`http://127.0.0.1:${server.port}/setlist/index.html`);
+    await page.goto(`http://127.0.0.1:${server.port}/demos/setlist/index.html`);
     await page.waitUntilComplete();
     const doc = page.mainFrame.document;
     return {

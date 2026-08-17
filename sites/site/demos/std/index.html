@@ -28,7 +28,7 @@
       `$origin`, which the server takes from the request and the browser from
       `location`, so the two always agree.
     -->
-    <std-data :aka="people" :url=${'/index-data' + which + '.json'} />
+    <std-data :aka="people" :url=${'/demos/std/index-data' + which + '.json'} />
 
     <h2>${people.data?.title ?? 'Loading…'}</h2>
     <p class="note">Fetched by ${people.data?.fetchedBy ?? '—'}.</p>
@@ -73,7 +73,7 @@
       plain text.
     </p>
 
-    <std-data :aka="late" :client :url="/index-data2.json" />
+    <std-data :aka="late" :client :url="/demos/std/index-data2.json" />
     <p>${late.loading ? 'Loading…' : (late.error ?? late.data?.title ?? '—')}</p>
   </body>
 </html>

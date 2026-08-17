@@ -481,16 +481,16 @@
 
                 <div class="card-body p-0 code-surface">
 <pre class="mb-0"><code data-lang="html">&lt;head&gt;
-  &lt;:import src="/bootstrap-kit/all.htm" /&gt;
+  &lt;:import src="/npm/@markout/bootstrap-kit/all.htm" /&gt;
   &lt;title&gt;Northstar Studio&lt;/title&gt;
 &lt;/head&gt;
 
 &lt;body&gt;
-  &lt;bs-navbar :options=${[
+  &lt;bs-navbar :items=${[
     { name: 'Services', link: '#services' },
     { name: 'Our work', link: '#work' },
     { name: 'Insights', link: '#insights' },
-    { name: 'Start a project', link: '#contact', button: true, primary: true },
+    { name: 'Start a project', link: '#contact', button: true },
   ]}&gt;
     Northstar Studio
   &lt;/bs-navbar&gt;</code></pre>
@@ -566,13 +566,17 @@
           </div>
 
           <div class="d-flex flex-wrap gap-2 mt-4">
-            <a href="https://github.com/fcapolini/markout/tree/main/demo/bootstrap-kit"
+            <a href="/demos/kitchen-sink.html"
                class="btn btn-primary">
-              Read the kit source
+              See every component
             </a>
-            <a href="https://github.com/fcapolini/markout/tree/main/demo/bootstrap"
+            <a href="/demos/"
                class="btn btn-outline-secondary">
-              See the demo page
+              Browse the demos
+            </a>
+            <a href="https://github.com/fcapolini/markout/tree/main/kits/bootstrap-kit"
+               class="btn btn-link">
+              Read the kit source
             </a>
           </div>
         </div>
@@ -852,7 +856,7 @@
 <pre class="mb-0"><code data-lang="html">&lt;lib :k_bsBtnRadius="2rem"
      :k_appAccent="#6f42c1"&gt;
 
-  &lt;:import src="/bootstrap-kit/all.htm" /&gt;
+  &lt;:import src="/npm/@markout/bootstrap-kit/all.htm" /&gt;
 
   &lt;style&gt;
     .btn-primary {
@@ -1330,7 +1334,7 @@
                 </div>
 
                 <div class="card-body p-0 code-surface">
-<pre class="mb-0"><code data-lang="sh">npm install -g @markout/bootstrap-kit</code></pre>
+<pre class="mb-0"><code data-lang="sh">npm install @markout/bootstrap-kit</code></pre>
                 </div>
               </div>
             </div>

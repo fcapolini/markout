@@ -6,8 +6,8 @@ import { chromium, type Browser } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Compiler, discoverKits } from '@markout/core';
 import { renderPage } from '@markout/core';
-import { openOperationsDb } from '../../../../kits/bootstrap/orbit-db';
-import { createOrbitApp } from '../../../../kits/bootstrap/server';
+import { openOperationsDb } from '../../../../sites/site/orbit-db';
+import { createSite } from '../../../../sites/site/server';
 
 /**
  * The Bootstrap kit, compiled and rendered as a page would be.
@@ -26,8 +26,8 @@ import { createOrbitApp } from '../../../../kits/bootstrap/server';
  * produces, not what a CDN serves.
  */
 
-/** the pages that use the kit; the kit itself is an installed package */
-const KIT_ROOT = path.resolve(__dirname, '../../../../kits/bootstrap');
+/** the site, whose pages use the kit; the kit itself is an installed package */
+const SITE_ROOT = path.resolve(__dirname, '../../../../sites/site');
 /** the kit packages themselves, for the tests that vendor one into a docroot */
 const KIT_DIR = path.resolve(__dirname, '../../../../kits/bootstrap-kit');
 const STD_KIT_DIR = path.resolve(__dirname, '../../../../kits/std-kit');
@@ -73,13 +73,13 @@ afterAll(() => vi.restoreAllMocks());
 /**
  * The kits these pages use, discovered once.
  *
- * Discovered from KIT_ROOT rather than from each docroot because one test
+ * Discovered from SITE_ROOT rather than from each docroot because one test
  * below builds its docroot in a temp directory, where walking up finds no
  * `node_modules` at all. A kit records an absolute directory, so where it
  * was found and where the pages live are independent -- which is also what
  * lets an application install a kit anywhere above its docroot.
  */
-const KITS = discoverKits(KIT_ROOT).kits;
+const KITS = discoverKits(SITE_ROOT).kits;
 
 async function compile(docroot: string, pathname: string) {
   // the Compiler takes what is INSTALLED rather than discovering it itself,
@@ -147,7 +147,7 @@ describe('the showcase', () => {
   beforeAll(async () => {
     // the real page, not a copy: it uses every component the kit defines,
     // which is what makes it worth compiling here
-    result = await compile(KIT_ROOT, '/index.html');
+    result = await compile(SITE_ROOT, '/demos/kitchen-sink.html');
   });
 
   it('compiles and renders with nothing reported', () => {
@@ -244,7 +244,7 @@ describe('the demo application: served from a database', () => {
   // Orbit is the round trip end to end: its data is queried while rendering,
   // arrives in the markup, and the queries themselves stay behind.
   it('renders rows the database answered with', async () => {
-    const { markup } = await compile(KIT_ROOT, '/orbit.html');
+    const { markup } = await compile(SITE_ROOT, '/demos/orbit.html');
     expect(markup).toContain('edge-router');
     expect(markup).toContain('auth-service');
     expect(markup).toContain('d-2481');
@@ -254,12 +254,12 @@ describe('the demo application: served from a database', () => {
     // `incidents` cannot be asked for until `services` has answered -- which
     // incidents matter depends on which services are unwell -- so this text
     // is in the page only if the render waited twice
-    const { markup } = await compile(KIT_ROOT, '/orbit.html');
+    const { markup } = await compile(SITE_ROOT, '/demos/orbit.html');
     expect(markup).toContain('billing unreachable in eu-west');
   });
 
   it('sends no trace of the queries', async () => {
-    const { markup } = await compile(KIT_ROOT, '/orbit.html');
+    const { markup } = await compile(SITE_ROOT, '/demos/orbit.html');
     for (const trace of ['db.services', 'db.metrics', 'db.incidents', 'this.db', 'forServices']) {
       expect(markup).not.toContain(trace);
     }
@@ -272,7 +272,7 @@ describe('the demo application: served from a database', () => {
     // same mechanism as the kit's URL tokens; nothing about it is a library
     // privilege, which is the point worth having a test for
     const docroot = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-base-'));
-    fs.cpSync(path.join(KIT_ROOT, 'orbit'), path.join(docroot, 'orbit'), { recursive: true });
+    fs.cpSync(path.join(SITE_ROOT, 'demos/orbit'), path.join(docroot, 'demos/orbit'), { recursive: true });
     // vendored rather than installed: `/npm/` is resolved against the
     // filesystem from the DOCROOT upwards, and nothing above a temp
     // directory has a node_modules. A kit copied into the docroot is
@@ -285,7 +285,7 @@ describe('the demo application: served from a database', () => {
       path.join(docroot, 'moved.html'),
       '<html><head><:import src="/std-kit/all.htm" /></head>' +
         '<body :apiBase="https://elsewhere.test/v2">' +
-        '<:include src="/orbit/sources.htm" />${servicesSrc.data}</body></html>'
+        '<:include src="/demos/orbit/sources.htm" />${servicesSrc.data}</body></html>'
     );
     const calls = (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock;
     const before = calls.calls.length;
@@ -302,7 +302,7 @@ describe('the demo application: served from a database', () => {
     // is left with nothing to fetch, which is the whole claim
     const calls = (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock;
     const before = calls.calls.length;
-    await compile(KIT_ROOT, '/orbit.html');
+    await compile(SITE_ROOT, '/demos/orbit.html');
     const asked = calls.calls.slice(before).map(c => new URL(`${c[0]}`).pathname);
     expect(asked).toContain('/api/services');
     expect(asked).toContain('/api/incidents');
@@ -314,7 +314,7 @@ describe('the demo application', () => {
   let result: Awaited<ReturnType<typeof compile>>;
 
   beforeAll(async () => {
-    result = await compile(KIT_ROOT, '/orbit.html');
+    result = await compile(SITE_ROOT, '/demos/orbit.html');
   });
 
   it('compiles and renders with nothing reported', () => {
@@ -564,7 +564,7 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
       dereference: true,
     });
     // Orbit's own parts: its components and its datasources
-    fs.cpSync(path.join(KIT_ROOT, 'orbit'), path.join(docroot, 'orbit'), { recursive: true });
+    fs.cpSync(path.join(SITE_ROOT, 'demos/orbit'), path.join(docroot, 'demos/orbit'), { recursive: true });
     fs.mkdirSync(path.join(docroot, 'vendor'));
     fs.writeFileSync(path.join(docroot, 'vendor/bootstrap.js'), STUB);
     fs.writeFileSync(path.join(docroot, 'vendor/bootstrap.css'), '');
@@ -573,7 +573,7 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     // the real demo, pointed at the stub. The URL tokens are what makes
     // that possible without forking the page: it imports the kit exactly as
     // it does when served, and only where Bootstrap comes from changes
-    const demo = fs.readFileSync(path.join(KIT_ROOT, 'orbit.html'), 'utf8');
+    const demo = fs.readFileSync(path.join(SITE_ROOT, 'demos/orbit.html'), 'utf8');
     const offline = demo.replace(
       '<head>',
       '<head ::bsCssUrl="/vendor/bootstrap.css"\n' +
@@ -589,7 +589,7 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
 
     // the kit's OWN app, so the browser drives the same API routes the dev
     // server serves rather than a second copy of them
-    server = createOrbitApp({ docroot }).listen(0);
+    server = createSite({ docroot }).listen(0);
     await new Promise<void>(resolve => server.once('listening', () => resolve()));
     port = (server.address() as import('net').AddressInfo).port;
     browser = await chromium.launch();
@@ -707,7 +707,7 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
   // Orbit is the round trip end to end: its data is queried while rendering,
   // arrives in the markup, and the queries themselves stay behind.
   it('renders rows the database answered with', async () => {
-    const { markup } = await compile(KIT_ROOT, '/orbit.html');
+    const { markup } = await compile(SITE_ROOT, '/demos/orbit.html');
     expect(markup).toContain('edge-router');
     expect(markup).toContain('auth-service');
     expect(markup).toContain('d-2481');
@@ -717,12 +717,12 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     // `incidents` cannot be asked for until `services` has answered -- which
     // incidents matter depends on which services are unwell -- so this text
     // is in the page only if the render waited twice
-    const { markup } = await compile(KIT_ROOT, '/orbit.html');
+    const { markup } = await compile(SITE_ROOT, '/demos/orbit.html');
     expect(markup).toContain('billing unreachable in eu-west');
   });
 
   it('sends no trace of the queries', async () => {
-    const { markup } = await compile(KIT_ROOT, '/orbit.html');
+    const { markup } = await compile(SITE_ROOT, '/demos/orbit.html');
     for (const trace of ['db.services', 'db.metrics', 'db.incidents', 'this.db', 'forServices']) {
       expect(markup).not.toContain(trace);
     }
@@ -735,7 +735,7 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     // same mechanism as the kit's URL tokens; nothing about it is a library
     // privilege, which is the point worth having a test for
     const docroot = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-base-'));
-    fs.cpSync(path.join(KIT_ROOT, 'orbit'), path.join(docroot, 'orbit'), { recursive: true });
+    fs.cpSync(path.join(SITE_ROOT, 'demos/orbit'), path.join(docroot, 'demos/orbit'), { recursive: true });
     // vendored rather than installed: `/npm/` is resolved against the
     // filesystem from the DOCROOT upwards, and nothing above a temp
     // directory has a node_modules. A kit copied into the docroot is
@@ -748,7 +748,7 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
       path.join(docroot, 'moved.html'),
       '<html><head><:import src="/std-kit/all.htm" /></head>' +
         '<body :apiBase="https://elsewhere.test/v2">' +
-        '<:include src="/orbit/sources.htm" />${servicesSrc.data}</body></html>'
+        '<:include src="/demos/orbit/sources.htm" />${servicesSrc.data}</body></html>'
     );
     const calls = (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock;
     const before = calls.calls.length;
@@ -765,7 +765,7 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     // is left with nothing to fetch, which is the whole claim
     const calls = (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock;
     const before = calls.calls.length;
-    await compile(KIT_ROOT, '/orbit.html');
+    await compile(SITE_ROOT, '/demos/orbit.html');
     const asked = calls.calls.slice(before).map(c => new URL(`${c[0]}`).pathname);
     expect(asked).toContain('/api/services');
     expect(asked).toContain('/api/incidents');

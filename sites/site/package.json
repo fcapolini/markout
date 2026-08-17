@@ -1,0 +1,28 @@
+{
+  "name": "@markout/site",
+  "private": true,
+  "version": "0.4.0",
+  "description": "The Markout homepage and its demos, written in Markout and served by @markout/express",
+  "scripts": {
+    "dev": "tsx --tsconfig ../../packages/cli/tsconfig.dev.json server.ts",
+    "start": "tsx --tsconfig ../../packages/cli/tsconfig.dev.json server.ts --prod",
+    "build": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "author": "Fabrizio Capolini",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/compression": "^1.8.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.2.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@markout/bootstrap-kit": "^0.4.0",
+    "@markout/express": "^0.4.0",
+    "@markout/std-kit": "^0.4.0",
+    "compression": "^1.8.1",
+    "express": "^5.2.1"
+  }
+}
