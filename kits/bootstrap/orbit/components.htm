@@ -25,9 +25,9 @@
       whole content is one binding rather than one per interpolation.
     */
     :root {
-      --dash-accent: ${accent};
-      --dash-cell-y: ${dense ? '0.3rem' : '0.7rem'};
-      --dash-gutter: ${dense ? '0.75rem' : '1.25rem'};
+      --dash-accent: ${theme.accent};
+      --dash-cell-y: ${theme.dense ? '0.3rem' : '0.7rem'};
+      --dash-gutter: ${theme.dense ? '0.75rem' : '1.25rem'};
 
       /*
         Where the page begins under the sticky navbar: its height plus the
@@ -343,7 +343,7 @@
          :quiet=${false}      // the dot alone, without the word
 
          // private
-         :_tone=${toneOf(state)}
+         :_tone=${theme.tone(state)}
 >
   <span class="dash-dot bg-${_tone}"></span>
   <span :if=${!quiet}

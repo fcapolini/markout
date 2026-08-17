@@ -43,7 +43,7 @@
           <dash-panel :heading="Plan usage">
             <div class="small text-body-secondary d-flex justify-content-between">
               <span>Requests</span>
-              <span>${_compact(requests)} / 2M</span>
+              <span>${fmt.compact(requests)} / 2M</span>
             </div>
             <bs-progress :value=${Math.min(100, (requests / 2000000) * 100)}
                          :height="0.5rem"
@@ -145,7 +145,7 @@
         </span>
         <span>
           ${services.length} services · ${deploys.length} deployments ·
-          ${_num(requests)} requests in the window
+          ${fmt.num(requests)} requests in the window
         </span>
       </div>
   </:define>
@@ -173,7 +173,7 @@
                     :extra="d-flex flex-wrap justify-content-between align-items-center gap-3">
             <span>
               <strong>${incidents.length} open incident${incidents.length === 1 ? '' : 's'}.</strong>
-              ${data.title}, ${_ago(data.since)}.
+              ${data.title}, ${fmt.ago(data.since)}.
             </span>
             <span class="d-flex gap-2">
               <bs-link :href="#incidents" :button :variant="light" :size="sm">Details</bs-link>
@@ -210,7 +210,7 @@
               <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-4">
                 <div class="col">
                   <dash-stat :caption="Requests"
-                             :figure=${_compact(requests)}
+                             :figure=${fmt.compact(requests)}
                              :delta=${requestsDelta}
                              :trend=${requestsTrend}>
                     vs. the ${span} readings before
@@ -224,7 +224,7 @@
                              :tone=${errorRate > 0.5 ? 'danger' : 'success'}
                              :delta=${faultsDelta}
                              :trend=${faultsNow}>
-                    ${_num(_sum(faultsNow))} failed requests
+                    ${fmt.num(calc.sum(faultsNow))} failed requests
                   </dash-stat>
                 </div>
 
@@ -300,9 +300,9 @@
                       <bs-tab-pane :name="dash-pane-requests" :active>
                         <dash-chart :points=${requestsTrend} :tall />
                         <div class="d-flex justify-content-between small text-body-secondary mt-2">
-                          <span>${_num(Math.min(...requestsTrend))} low</span>
-                          <span>${_num(Math.round(_mean(requestsTrend)))} mean</span>
-                          <span>${_num(Math.max(...requestsTrend))} peak</span>
+                          <span>${fmt.num(Math.min(...requestsTrend))} low</span>
+                          <span>${fmt.num(Math.round(calc.mean(requestsTrend)))} mean</span>
+                          <span>${fmt.num(Math.max(...requestsTrend))} peak</span>
                         </div>
                       </bs-tab-pane>
 
@@ -358,7 +358,7 @@
                               :for-as="zone"
                               class="d-inline-flex align-items-center gap-2">
                           <span class="dash-dot bg-${zone.tone}"></span>
-                          ${zone.name} · ${_compact(requests * zone.share / 100)}
+                          ${zone.name} · ${fmt.compact(requests * zone.share / 100)}
                         </span>
                       </div>
                     </dash-panel>
@@ -378,8 +378,8 @@
 
                       <div :for-data=${forecast}>
                         <div class="d-flex justify-content-between align-items-baseline">
-                          <span class="dash-figure">$${_num(data.spend)}</span>
-                          <span class="text-body-secondary small">of $${_num(data.budget)}</span>
+                          <span class="dash-figure">$${fmt.num(data.spend)}</span>
+                          <span class="text-body-secondary small">of $${fmt.num(data.budget)}</span>
                         </div>
                         <bs-progress :value=${(data.spend / data.budget) * 100}
                                      :variant=${data.projected > data.budget ? 'danger' : 'success'}
@@ -387,7 +387,7 @@
                                      :name="Spend against budget"
                                      :extra="mt-2 mb-2" />
                         <p class="small text-body-secondary mb-0">
-                          Projected $${_num(data.projected)} —
+                          Projected $${fmt.num(data.projected)} —
                           ${data.projected > data.budget ? 'over' : 'under'} budget.
                         </p>
                       </div>
@@ -443,10 +443,10 @@
                           </td>
                           <td class="text-body-secondary">${svc.owner}</td>
                           <td class="text-end">${svc.latency ? svc.latency + 'ms' : '—'}</td>
-                          <td class="text-end d-none d-md-table-cell">${_compact(svc.rps)}/s</td>
+                          <td class="text-end d-none d-md-table-cell">${fmt.compact(svc.rps)}/s</td>
                           <td style="min-width: 8rem">
                             <bs-progress :value=${Math.max(2, 100 - svc.errors * 40)}
-                                         :variant=${toneOf(svc.state)}
+                                         :variant=${theme.tone(svc.state)}
                                          :height="0.4rem"
                                          :name="Error budget for ${svc.name}" />
                             <span class="small text-body-secondary">${svc.errors.toFixed(2)}% errors</span>
@@ -475,7 +475,7 @@
                               ]}
                               :rows=${endpoints.map(e => ({
                                 path: e.path,
-                                calls: _compact(e.calls),
+                                calls: fmt.compact(e.calls),
                                 share: `${e.share}%`,
                               }))} />
 
@@ -665,8 +665,8 @@
                           <dash-dot :state=${row.state} />
                         </span>
                       </td>
-                      <td>${row.secs ? _secs(row.secs) : '—'}</td>
-                      <td class="text-body-secondary">${_ago(row.ago)}</td>
+                      <td>${row.secs ? fmt.secs(row.secs) : '—'}</td>
+                      <td class="text-body-secondary">${fmt.ago(row.ago)}</td>
                       <td class="text-end">
                         <bs-button :size="sm"
                                    :variant="secondary"
@@ -721,7 +721,7 @@
                                          :title="#${inc.id} — ${inc.title}">
                         <p>${inc.detail}</p>
                         <p class="small text-body-secondary mb-3">
-                          Open for ${_ago(inc.since)} · severity
+                          Open for ${fmt.ago(inc.since)} · severity
                           <bs-badge :variant=${inc.tone}>${inc.tone === 'danger' ? 'high' : 'medium'}</bs-badge>
                         </p>
                         <bs-button :size="sm"
@@ -804,7 +804,7 @@
                     <bs-list-group :flush
                                    :items=${feed.map(f => ({
                                      name: `${f.who} ${f.what}`,
-                                     text: _ago(f.ago),
+                                     text: fmt.ago(f.ago),
                                      badge: { name: f.kind, variant: f.kind },
                                    }))} />
                   </dash-panel>
