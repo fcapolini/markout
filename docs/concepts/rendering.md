@@ -17,6 +17,48 @@ The broad flow is:
 The important point is that the runtime is not a separate semantic model. The
 server and browser both execute the same scope/value logic.
 
+## Two ways to deliver a page
+
+The compiled props object is the same artifact wherever it runs, which is what
+lets a page be delivered two ways. The difference is not what the page is, it
+is *when the render happens* — and therefore whether the page may read
+anything only a server has.
+
+**Served by Node** — `markout <docroot>`, or the Express middleware. The render
+runs per request, so a value may reach the request's environment: `:server-`
+values run there, `$origin` comes from the request, and a datasource fetches
+before the page is serialized. The browser receives finished markup and
+hydrates it.
+
+**Compiled ahead of time** — one build, then plain static files on any host.
+The same render pass runs at build time instead of per request, so the output
+still carries its markup, not an empty page waiting for JavaScript: everything
+derivable from the page's own values is already there, and the runtime picks it
+up exactly as it picks up a served page. What is missing is only what a request
+would have supplied. This is the mode for a project whose pages are served by
+Rails, Django, Laravel, PHP or a CDN — the backend stays as it is, and Markout
+is a build step rather than something in the request path.
+
+> The `compile` CLI command is not implemented yet. Until it lands, delivery
+> means serving from Node.
+
+### What ahead-of-time compilation cannot carry
+
+A pre-compiled page has no request behind it, so anything that needed one has
+no result to travel with:
+
+- **`:server-` values** never ran, so they arrive with no value rather than a
+  frozen one. Everything reading them derives from nothing.
+- **A datasource in its default `served` mode** is the case worth spelling out,
+  because it fails quietly: its fetch is a `:server-` value, so there is no
+  data, and it does not fall back to fetching on arrival. Mark it `:client` and
+  the browser fetches when the page comes up — a loading state instead of an
+  empty one.
+
+Both are reasons to choose the mode deliberately rather than to discover it,
+which is why they are stated here rather than left to be found in a page that
+renders blank.
+
 ## Dynamic text and DOM markers
 
 The browser layer needs to find the DOM nodes for dynamic text values. The
