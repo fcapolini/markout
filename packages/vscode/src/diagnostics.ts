@@ -1,4 +1,4 @@
-import { Compiler, discoverKits, type ReadFile } from '@markout/core';
+import { Compiler, discoverKits, Resolver, type ReadFile } from '@markout/core';
 import * as path from 'path';
 
 /**
@@ -241,6 +241,31 @@ export function isMarkoutProject(docroot: string): boolean {
     // guessing yes would put errors on a project that never asked
     return false;
   }
+}
+
+/**
+ * The file a directive's `src` names, as an absolute path.
+ *
+ * Answered by the compiler's own `Resolver` rather than by joining paths
+ * here, which is the difference between go-to-definition that works and one
+ * that works until it matters. `/npm/@markout/bootstrap-kit/all.htm` has to
+ * land inside an installed package, a relative path has to resolve against
+ * the file that wrote it, and a path leaving the docroot has to resolve to
+ * nothing at all -- three rules the editor has no business having a second
+ * copy of.
+ */
+export function resolveReference(props: {
+  docroot: string;
+  /** the file doing the importing, so a relative path has something to be relative to */
+  fromPathname: string;
+  /** the `src` as written */
+  spec: string;
+}): string | undefined {
+  const { docroot, fromPathname, spec } = props;
+  const { kits } = discoverKits(docroot);
+  const currDir = path.posix.dirname(fromPathname);
+  const resolved = new Resolver(docroot, kits).resolve(spec, currDir);
+  return resolved.ok ? resolved.filePath : undefined;
 }
 
 /** the pathname a docroot would serve a file at */

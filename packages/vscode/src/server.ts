@@ -3,6 +3,7 @@ import {
   createServer,
   createSimpleProject,
 } from '@volar/language-server/node';
+import { create as createHtmlService } from 'volar-service-html';
 import { URI } from 'vscode-uri';
 import { createMarkoutLanguagePlugin } from './plugin';
 import { createMarkoutService } from './service';
@@ -33,6 +34,12 @@ connection.onInitialize(params => {
     params,
     createSimpleProject([createMarkoutLanguagePlugin()]),
     [
+      // HTML's own features -- tag and attribute completion, folding, hovers
+      // -- over the embedded HTML the plugin produces. Nothing about markout
+      // is reimplemented here: the expressions are masked to characters that
+      // cannot end a tag, so what this service sees is ordinary HTML at
+      // exactly the offsets the author's is at
+      createHtmlService(),
       createMarkoutService({
         workspaceFolder: folders[0],
         // `always` is how a project that uses markout without depending on

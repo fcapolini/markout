@@ -7,8 +7,10 @@ import {
   isMarkoutProject,
   looksLikeMarkout,
   pathnameOf,
+  resolveReference,
 } from './diagnostics';
 import { isPage } from './plugin';
+import { fileReferenceAt } from './references';
 
 /**
  * The compiler, as a language service.
@@ -35,21 +37,77 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
     name: 'markout',
     capabilities: {
       diagnosticProvider: { interFileDependencies: true, workspaceDiagnostics: false },
+      definitionProvider: true,
     },
     create(context) {
+      /**
+       * The source file behind a virtual document, if this service owns it.
+       *
+       * A service is asked about every virtual document, not about the file:
+       * Volar hands over `volar-embedded-content://<code id>/<the encoded
+       * source uri>`. So the source has to be decoded back out -- and only
+       * ONE of the embedded codes may answer, or the same compiler error
+       * arrives once per embedded document.
+       */
+      const sourceOf = (uri: string) => {
+        const decoded = context.decodeEmbeddedDocumentUri(URI.parse(uri));
+        if (!decoded || decoded[1] !== 'root') {
+          return undefined;
+        }
+        const source = decoded[0];
+        return source.scheme === 'file' && isPage(source.path) ? source : undefined;
+      };
+
       return {
-        async provideDiagnostics(document) {
-          // A service is asked about every virtual document, not about the
-          // file: Volar hands over `volar-embedded-content://<code id>/<the
-          // encoded source uri>`. So the source has to be decoded back out,
-          // and only ONE of the embedded codes may answer -- otherwise the
-          // same compiler error is reported once per embedded document.
-          const decoded = context.decodeEmbeddedDocumentUri(URI.parse(document.uri));
-          if (!decoded || decoded[1] !== 'root') {
-            return [];
+        /**
+         * Ctrl-click on an `<:import src>` opens the file.
+         *
+         * Worth having even though the path looks obvious: half of them are
+         * not. `/lib.htm` is docroot-relative rather than
+         * file-relative, and `/npm/@markout/bootstrap-kit/all.htm` is inside
+         * an installed package -- neither is somewhere an editor would find
+         * by guessing, and both are somewhere the compiler already knows.
+         */
+        provideDefinition(document, position) {
+          const uri = sourceOf(document.uri);
+          if (!uri) {
+            return undefined;
           }
-          const uri = decoded[0];
-          if (uri.scheme !== 'file' || !isPage(uri.path)) {
+          const text = document.getText();
+          const reference = fileReferenceAt(text, document.offsetAt(position));
+          if (!reference) {
+            return undefined;
+          }
+          const filePath = uri.fsPath;
+          const docroot = props.docroot ?? guessDocroot(filePath, props.workspaceFolder);
+          const target = resolveReference({
+            docroot,
+            fromPathname: pathnameOf(filePath, docroot),
+            spec: reference.value,
+          });
+          if (!target) {
+            // refused or outside the docroot: the diagnostic says so, and
+            // opening something plausible instead would hide that
+            return undefined;
+          }
+          const start = { line: 0, character: 0 };
+          return [
+            {
+              targetUri: URI.file(target).toString(),
+              targetRange: { start, end: start },
+              targetSelectionRange: { start, end: start },
+              // what the editor underlines: the path, not the tag round it
+              originSelectionRange: {
+                start: document.positionAt(reference.start),
+                end: document.positionAt(reference.end),
+              },
+            },
+          ];
+        },
+
+        async provideDiagnostics(document) {
+          const uri = sourceOf(document.uri);
+          if (!uri) {
             return [];
           }
           const filePath = uri.fsPath;
