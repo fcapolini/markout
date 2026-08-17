@@ -1616,5 +1616,5 @@ function validateName(
 }
 
 function addError(page: Page, msg: string, loc?: SourceLocation) {
-  page.errors.push({ type: 'error', msg, loc });
+  page.addError(msg, loc);
 }

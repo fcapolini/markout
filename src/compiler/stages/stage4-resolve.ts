@@ -237,7 +237,7 @@ function resolvesToKnownValue(scope: Scope, key: string, navigated = false): boo
 }
 
 function addError(page: Page, msg: string, loc: Value['node']['loc']) {
-  page.errors.push({ type: 'error', msg, loc });
+  page.addError(msg, loc);
 }
 
 /**

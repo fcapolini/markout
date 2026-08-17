@@ -2,7 +2,6 @@ import * as estraverse from 'estraverse';
 import { generate } from 'escodegen';
 import type { Expression, Node } from 'estree';
 import { NodeType } from '../../html/dom';
-import { PageError } from '../../html/parser';
 import type { Page } from '../ir/Page';
 import type { Scope } from '../ir/Scope';
 import type { Value, ValueDepRef } from '../ir/Value';
@@ -324,5 +323,5 @@ function writeBack(value: Value, ast: Node) {
 }
 
 function addError(page: Page, msg: string, value: Value) {
-  page.errors.push(new PageError('error', msg, value.node.loc || undefined));
+  page.addError(msg, value.node.loc);
 }

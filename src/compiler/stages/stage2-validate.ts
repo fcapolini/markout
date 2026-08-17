@@ -1,6 +1,5 @@
 import * as estraverse from 'estraverse';
 import type { Node } from 'estree';
-import { PageError } from '../../html/parser';
 import type { Page } from '../ir/Page';
 import {
   ATTR_VALUE_PREFIX,
@@ -271,7 +270,5 @@ function validateNoClassicFunctions(page: Page, name: string, ast: Node, loc: an
 }
 
 function addError(page: Page, msg: string, loc?: any) {
-  page.errors.push(
-    new PageError('error', msg, loc)
-  );
+  page.addError(msg, loc);
 }
