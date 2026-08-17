@@ -227,13 +227,49 @@ function namedScopeIn(scope: Scope, name: string): Scope | undefined {
  * is a step the runtime has no edge for. See Scope.resolvesVia().
  */
 function resolvesToKnownValue(scope: Scope, key: string, navigated = false): boolean {
+  return !!lookup(scope, key, navigated);
+}
+
+/**
+ * What a bare `key` resolves to from `scope`, walking the same chain the
+ * compiler walks: a value declared here or further out, or a named scope.
+ *
+ * Split out of `resolvesToKnownValue` so that something other than an error
+ * message can be built on it -- an editor's go-to-definition is this exact
+ * question asked about the name under a cursor, and asking it any other way
+ * would be a second implementation of the language's scoping rules, drifting
+ * from this one the first time either changed. See declarationFor.
+ */
+function lookup(
+  scope: Scope,
+  key: string,
+  navigated = false
+): { value?: Value; scope?: Scope } | undefined {
   let s: Scope | undefined = scope;
   while (s) {
-    if (s.values.has(key)) return true;
-    if (namedScopeIn(s, key)) return true;
+    const value = s.values.get(key);
+    if (value) return { value };
+    const named = namedScopeIn(s, key);
+    if (named) return { scope: named };
     s = navigated ? s.resolvesVia() : s.lexical();
   }
-  return false;
+  return undefined;
+}
+
+/**
+ * The value that `key`, written inside `from`'s expression, refers to.
+ *
+ * The two halves an editor cannot get right on its own: where the lookup
+ * STARTS -- which is not simply the value's own scope, because a usage site,
+ * a replicated usage and slotted markup each resolve from somewhere else --
+ * and where it goes from there. Both are the compiler's, and this is the
+ * compiler answering.
+ *
+ * `undefined` when the name is a named scope rather than a value, or is not
+ * declared at all: neither has a declaration site to open.
+ */
+export function declarationFor(from: Value, key: string): Value | undefined {
+  return lookup(resolvesFrom(from), key)?.value;
 }
 
 function addError(page: Page, msg: string, loc: Value['node']['loc']) {

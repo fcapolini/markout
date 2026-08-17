@@ -55,14 +55,27 @@ export interface DiagnoseProps {
  * that no longer exists. If it shows up in a profile, cache it against the
  * docroot and invalidate on package.json -- not before.
  */
-export async function diagnose(props: DiagnoseProps): Promise<MarkoutDiagnostic[]> {
-  const { docroot, pathname, open } = props;
-  const readFile: ReadFile | undefined = open
+/**
+ * A reader over the editor's unsaved buffers, with the disk behind it.
+ *
+ * The whole reason `readFile` is a parameter of the compiler: what the author
+ * is looking at is not what is saved, and it is the former they want told
+ * about.
+ */
+export function openReader(
+  open?: (filePath: string) => string | undefined
+): ReadFile | undefined {
+  return open
     ? async filePath => {
         const buffer = open(filePath);
         return buffer !== undefined ? buffer : await readFromDisk(filePath);
       }
     : undefined;
+}
+
+export async function diagnose(props: DiagnoseProps): Promise<MarkoutDiagnostic[]> {
+  const { docroot, pathname, open } = props;
+  const readFile = openReader(open);
 
   const { kits } = discoverKits(docroot);
   let errors;
