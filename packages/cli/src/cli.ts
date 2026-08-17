@@ -1,10 +1,49 @@
 #!/usr/bin/env node
 
 import path from 'path';
-import { readFileSync } from 'fs';
+import { readFileSync, statSync } from 'fs';
 import { Server } from './server';
 import { build, type BuildResult } from './server/build';
 import { formatRuntimeError } from '@markout/core';
+
+/**
+ * The directory served when none is named.
+ *
+ * A convention rather than a rule, and a load-bearing one: it is what lets a
+ * project use markout with nothing installed and nothing configured -- write
+ * the pages, run `markout`, done. The editor support leans on the same name
+ * to find a docroot when there is no package.json to find one by, so the two
+ * agree about where a page's `/lib.htm` resolves. See
+ * docs/design/editor-support.md.
+ *
+ * Distinctive on purpose. `public`, `www` and `static` belong to every
+ * static-site tool there is, and a tool claiming one of those would be
+ * guessing at somebody else's layout.
+ */
+export const DEFAULT_DOCROOT = 'markout';
+
+/**
+ * Where a build writes when no output directory is named: a `dist` BESIDE
+ * the docroot, not inside it.
+ *
+ * Beside, because `build` refuses an outdir under the docroot -- the next run
+ * would compile its own output -- so a sibling is the only default that
+ * cannot be refused. With the docroot default that makes the whole
+ * ahead-of-time mode `markout build`, with a layout the CLI and the editor
+ * both already understand:
+ *
+ *     markout/     the pages
+ *     dist/        what to deploy
+ */
+export const DEFAULT_OUTDIR = 'dist';
+
+function hasDefaultDocroot(): boolean {
+  try {
+    return statSync(path.resolve(process.cwd(), DEFAULT_DOCROOT)).isDirectory();
+  } catch {
+    return false;
+  }
+}
 
 async function main() {
   const { Command } = await import('commander');
@@ -37,19 +76,27 @@ async function main() {
   program
     .command('build')
     .description('compile a docroot ahead of time into static files')
-    .argument('<pathname>', 'path to directory containing HTML files (docroot)')
-    .argument('<outdir>', 'where to write the compiled pages and assets')
+    .argument('[pathname]', `path to the docroot; defaults to ./${DEFAULT_DOCROOT}`)
+    .argument('[outdir]', `where to write; defaults to a ./${DEFAULT_OUTDIR} beside the docroot`)
     .option(
       '-p, --page <pathname>',
       'compile only this page, docroot-relative; repeatable',
       (value: string, previous: string[]) => previous.concat(value),
       [] as string[]
     )
-    .action(async (pathname: string, outdir: string, options: { page: string[] }) => {
-      const docroot = path.resolve(process.cwd(), pathname);
-      const target = path.resolve(process.cwd(), outdir);
+    .action(async (pathname: string | undefined, outdir: string | undefined, options: { page: string[] }) => {
+      const docroot = path.resolve(process.cwd(), pathname ?? DEFAULT_DOCROOT);
+      // beside the docroot rather than inside it: `build` refuses an output
+      // directory under the docroot, because the next run would compile its
+      // own output. A sibling is the only default that cannot be refused
+      const target = outdir
+        ? path.resolve(process.cwd(), outdir)
+        : path.join(path.dirname(docroot), DEFAULT_OUTDIR);
       try {
-        report(await build({ docroot, outdir: target, pages: options.page }));
+        report(
+          await build({ docroot, outdir: target, pages: options.page }),
+          options.page.length > 0
+        );
       } catch (err) {
         // a refusal about the arguments themselves (nested directories, no
         // runtime bundle): nothing was written, and the message says why
@@ -59,11 +106,12 @@ async function main() {
     });
 
   program
-    .argument('<pathname>', 'path to directory containing HTML files (docroot)')
+    .argument('[pathname]', `path to the docroot; defaults to ./${DEFAULT_DOCROOT}`)
     .option('-p, --port <number>', 'port number, default: 3000')
     .option('-d, --dev', 'dev mode: show runtime expression errors in the page')
     .option('-c, --compress', 'compress responses (gzip/deflate) when the client accepts it')
     .action((pathname, options) => {
+      pathname = pathname ?? DEFAULT_DOCROOT;
       console.log(`Starting server for ${pathname}...`);
       // resolve, not join: an ABSOLUTE docroot was being appended to the
       // working directory, so `markout /srv/site` watched and served
@@ -79,7 +127,10 @@ async function main() {
       }).start();
     });
 
-  if (process.argv.length === 2) {
+  // Bare `markout` serves ./markout when it is there, and otherwise says
+  // what it would have needed. Help rather than an error: somebody typing
+  // the bare name is asking what this is, and the answer is the usage.
+  if (process.argv.length === 2 && !hasDefaultDocroot()) {
     program.help();
   }
 
@@ -105,7 +156,7 @@ async function main() {
  * permanently without whatever it was for. It is the failure this mode invites,
  * since there is no request here to supply what such a value usually reads.
  */
-function report(result: BuildResult) {
+function report(result: BuildResult, restricted = false) {
   // First, and on their own: a refused kit is decided before any page is
   // read, so there is nothing else to report and nothing was written. Every
   // one of these names two things that cannot both have the same URL, so the
@@ -150,7 +201,9 @@ function report(result: BuildResult) {
   const kinds = [...new Set(result.assets.map(a => path.extname(a) || '(none)'))].sort();
   const assets = result.assets.length
     ? `, ${result.assets.length} asset(s) [${kinds.join(' ')}]`
-    : ', no assets copied (restricted to named pages)';
+    : restricted
+      ? ', no assets copied (restricted to named pages)'
+      : ', no assets';
   console.log(
     `${result.pages.length} page(s)${assets}, runtime at ${result.runtime}`
   );

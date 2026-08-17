@@ -175,6 +175,12 @@ purpose, since those belong to every static-site tool there is and claiming
 one would mean guessing at a Rails app's docroot. `markout.docroot` overrides
 both.
 
+**That convention is the language's, not the editor's**, which is what makes
+it usable at all: bare `markout` serves `./markout` and bare `markout build`
+compiles it into a sibling `./dist`, so the name means the same thing to the
+CLI, to a build and to this extension. An editor-only convention would have
+been a second thing to learn that only one tool honoured; see the README.
+
 ## What the wiring turned out to be
 
 Two things about Volar that the documentation states and that are still

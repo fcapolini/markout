@@ -99,12 +99,40 @@ they already run.
 
 ## CLI
 
-Build the project, then serve a directory containing Markout HTML files:
+Serve a directory of Markout HTML files:
 
 ```sh
-npm run build
-npx markout ./demo
+npx markout ./site
 ```
+
+### The `markout/` convention
+
+Name that directory `markout/` and there is nothing to type and nothing to
+configure:
+
+```
+markout/          your pages
+  index.html
+  lib.htm
+```
+
+```sh
+npx markout          # serves ./markout
+npx markout build    # compiles ./markout into ./dist
+```
+
+This is a convention, not a rule — any directory works when you name it. It
+earns its place by being the one thing a project can say without installing
+anything: there is no `package.json` in the layout above, and nothing had to
+be configured for either command to know what to do.
+
+It is also what the editor support reads. [The VS Code
+extension](docs/design/editor-support.md) has to resolve `/lib.htm` the same
+way the server will, and in a project with no `package.json` the folder name
+is the only thing that says where the docroot is. `markout/` rather than
+`public/`, `www/` or `static/` for exactly that reason: those belong to every
+static-site tool there is, and claiming one would mean guessing at somebody
+else's layout.
 
 The CLI accepts an optional port with `-p` or `--port` and uses port `3000` by
 default:
@@ -137,11 +165,19 @@ npx markout ./demo --compress
 ### Building static files
 
 `markout build` compiles a docroot ahead of time into a directory you can put on
-any host. The source is the first argument and the output the second, and both
-are required:
+any host. The source is the first argument and the output the second:
 
 ```sh
-npx markout build ./demo ./dist
+npx markout build ./site ./dist
+```
+
+Both are optional. The docroot defaults to `./markout` and the output to a
+`dist/` *beside* it — beside rather than inside, because a build refuses an
+output directory under the docroot: the next run would compile its own output.
+So the whole ahead-of-time mode is:
+
+```sh
+npx markout build
 ```
 
 It compiles every `.html` under the docroot, writes the browser runtime beside
