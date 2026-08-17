@@ -14,7 +14,7 @@
     "clean": "rm -rf dist",
     "dev": "tsx src/index.ts -d ./demo",
     "dev:bench": "tsx src/index.ts -d ./bench",
-    "dev:bootstrap-kit": "tsx kits/bootstrap/server.ts",
+    "dev:bootstrap-kit": "tsx kits/bootstrap/server.ts --prod",
     "dev:std-kit": "tsx src/index.ts -d ./kits/std",
     "test": "vitest run",
     "test:watch": "vitest",
