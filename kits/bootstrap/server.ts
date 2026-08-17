@@ -15,7 +15,7 @@
  */
 import compression from "compression";
 import express, { type Express } from 'express';
-import { markout } from '../../src/server/middleware';
+import { markout } from '../../packages/cli/src/server/middleware';
 import { openOperationsDb, type OperationsDb } from './orbit-db';
 
 export interface OrbitAppProps {

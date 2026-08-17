@@ -48,6 +48,9 @@ pages above — what was chosen, what was rejected, and why.
 - [Kits from npm packages](design/npm-kits.md) - `/npm/` imports, a kit's
   logical root, and the rule that an installed kit behaves as though it were
   symlinked into the docroot.
+- [Five deliverables, one repository](design/monorepo.md) - the split into npm
+  workspaces, which package each layer lands in, and the order the move
+  happens in.
 
 ## Mental model
 
@@ -67,4 +70,4 @@ It stays intentionally small:
 - The compiler discovers dependencies once; the runtime executes them.
 
 The README in the repository root shows the main language examples, and the
-core runtime contract is documented in [src/runtime/RUNTIME.md](../src/runtime/RUNTIME.md).
+core runtime contract is documented in [src/runtime/RUNTIME.md](../packages/cli/src/runtime/RUNTIME.md).

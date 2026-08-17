@@ -18,7 +18,7 @@ import type { PageState } from '../../src/runtime/core/core-context';
  * has to do -- which is also how a page under test would supply its own.
  */
 
-const KIT_ROOT = path.resolve(__dirname, '../../kits/std');
+const KIT_ROOT = path.resolve(__dirname, '../../../../kits/std');
 
 const PAYLOAD = {
   title: 'Example data 1',

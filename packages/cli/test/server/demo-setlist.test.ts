@@ -24,7 +24,7 @@ describe('demo/setlist', () => {
 
   beforeAll(async () => {
     server = await new Server({
-      docroot: path.resolve(__dirname, '../../demo'),
+      docroot: path.resolve(__dirname, '../../../../demo'),
       port: 0,
       logger: () => {},
     }).start();
