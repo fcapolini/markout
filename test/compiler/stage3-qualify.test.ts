@@ -10,7 +10,11 @@ import {
   ServerText,
   SourceLocation,
 } from '../../src/html/server-dom';
-import { Source } from '../../src/html/parser';
+import { Source, parse } from '../../src/html/parser';
+import { stage1load } from '../../src/compiler/stages/stage1-load';
+import { stage2validate } from '../../src/compiler/stages/stage2-validate';
+import { stage4resolve } from '../../src/compiler/stages/stage4-resolve';
+import { stage7generate } from '../../src/compiler/stages/stage7-generate';
 
 const LOC: SourceLocation = {
   start: { line: 0, column: 0 },
@@ -174,5 +178,58 @@ describe('stage3-qualify', () => {
     expect(qualified.object.type).toBe('MemberExpression');
     expect(qualified.object.object.type).toBe('ThisExpression');
     expect(qualified.object.property.name).toBe('data');
+  });
+});
+
+describe('destructuring: a binding or a target', () => {
+  // The same shapes serve both. `const [a] = xs` declares `a`; `[a] = xs`
+  // writes to whatever `a` already is -- and every pattern member used to
+  // count as a binding, so the second kind stayed bare. `[n] = [5]`
+  // compiled to `[n] = [5]`, wrote an undeclared global, and left the value
+  // it was aimed at exactly where it was, with nothing reported anywhere.
+  function handler(body: string): string {
+    const page = new Page(
+      parse(
+        '<html><body :n=${1} :m=${2}><button :on-click=${' + body + '}>x</button></body></html>',
+        'test.html'
+      )
+    );
+    stage1load(page);
+    stage2validate(page);
+    stage3qualify(page);
+    stage4resolve(page);
+    stage7generate(page);
+    expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+    const props = page.propsString ?? '';
+    // the generated props have to BE JavaScript, which is what a bad
+    // qualification costs: `({ n } = o)` cannot keep its shorthand once its
+    // target is an expression rather than the bare name
+    expect(() => new Function(`return (${props});`)()).not.toThrow();
+    return props;
+  }
+
+  it('qualifies an array pattern target', () => {
+    expect(handler('() => { [n] = [5]; }')).toContain('[this.n]=[5]');
+  });
+
+  it('qualifies an object pattern target, but not the property it names', () => {
+    expect(handler('() => { ({v: n} = {v: 5}); }')).toContain('{v:this.n}');
+  });
+
+  it('spells out a shorthand it had to qualify', () => {
+    expect(handler('() => { ({n} = {n: 5}); }')).toContain('{n:this.n}');
+  });
+
+  it('handles defaults, rests and several targets at once', () => {
+    expect(handler('() => { [n = 9] = []; }')).toContain('[this.n=9]');
+    expect(handler('() => { [n, ...m] = [1, 2, 3]; }')).toContain('[this.n,...this.m]');
+    // the one worth being able to write
+    expect(handler('() => { [n, m] = [m, n]; }')).toContain('[this.n,this.m]=[this.m,this.n]');
+  });
+
+  it('leaves a real binding alone', () => {
+    expect(handler('() => { const [x] = [n]; return x; }')).toContain('const [x]=[this.n]');
+    expect(handler('({ v }) => v + n')).toContain('({v})=>v+this.n');
+    expect(handler('() => { const {a: {b}} = {a: {b: n}}; return b; }')).toContain('{a:{b}}');
   });
 });
