@@ -56,9 +56,12 @@ problem Markout solves: having chosen components that are just markup, they
 now have to add presentation logic to them by hand.
 
 The risk of leading with one CSS framework is being typecast as "a Bootstrap
-thing" when `shoelace-kit` and `webawesome-kit` exist too. Mitigated by
-keeping the decoupling argument visible on the page: Bootstrap is *the first
-kit*, not the point.
+thing". That used to be answered by pointing at `shoelace-kit` and
+`webawesome-kit`, which overstates two twenty-line demo stubs. The real second
+kit is [`kits/std/`](kits/std/) — the system parts of a page, not a design
+system — and it is better evidence anyway, because it shows the mechanism is
+not "wrap a CSS framework", it is "define tags". Bootstrap is *the first kit*,
+not the point, and the page has to keep saying so.
 
 ## The competitor is Alpine, not React
 
@@ -131,6 +134,23 @@ claim above is safe to make in public -- "compile ahead of time and deploy
 static assets" cannot quietly produce a page with no data in it. A datasource
 that needed a server says so, and names the one-word fix (`:client`).
 
+## Which Bootstrap kit the argument rests on
+
+There are two, and only one of them is the product.
+
+[`kits/bootstrap/bootstrap-kit/`](kits/bootstrap/bootstrap-kit/) is the kit:
+every component on [Bootstrap's 5.3
+cheatsheet](https://getbootstrap.com/docs/5.3/examples/cheatsheet/), one file
+per component, landed 2026-08-15. It ships two pages of its own — a showcase
+that puts every component on screen at once, and
+[Orbit](kits/bootstrap/orbit.html), an operations console built out of them
+against an API of its own.
+
+[`demo/bootstrap-kit/`](demo/bootstrap-kit/) is five hand-written definitions
+that predate it, and exists only to serve the `demo/bootstrap` before/after
+page. Everything the homepage and README currently link to is that one. It
+should be read as a demo asset, never as evidence of what the kit contains.
+
 ## The kit has to prove reactivity, not boilerplate removal
 
 The `demo/bootstrap` before/after — 28 lines of hand-wired navbar against a
@@ -139,24 +159,49 @@ everything it demonstrates is achievable with server includes, Jinja, Eleventy
 or a PHP function. Nothing in it *needs* reactivity, so on its own it argues
 for a template engine.
 
-At least one kit component therefore has to do something only reactivity can.
-Bootstrap ships the *styles* for validation states (`.is-invalid`,
-`.invalid-feedback`) and leaves you to toggle them yourself — that gap is
-exactly the pitch, which is why the homepage's reactivity section now shows a
-form driving Bootstrap's own validation classes rather than a counter.
+That is not a defect of the demo; it is what the *first* tier of the real kit
+does too. A component earns its place there by removing something a person
+would otherwise keep right by hand — the id that ties `aria-controls`,
+`for`, `data-bs-target` and `data-bs-parent` to the element they name, the
+`role`/`aria-*` text written once instead of per use, the one shape repeated
+over a list. All of that is templating, and the kit's own test asserts it
+mechanically: every generated id reference has to name an element that
+exists.
+
+So the proof has to come from the two tiers above it, and now does:
+
+- **Values that are read *and* written.** `bs-input`, `bs-select`, `bs-check`,
+  `bs-range`, `bs-modal`, `bs-offcanvas` and `bs-toast` keep `:value` or
+  `:open` in step with the screen, so `<bs-input :aka="email" />` and
+  `<bs-button :disabled=${!email.value}>` is the whole wiring. Validity is the
+  sharpest case, because Bootstrap ships the *styles* for it (`.is-invalid`,
+  `.invalid-feedback`) and leaves the toggling to you: `bs-input`'s `:_invalid`
+  is one expression over its own `:value`, which is why the homepage's
+  reactivity section shows a form driving Bootstrap's classes rather than a
+  counter.
+- **A whole application.** Orbit is the argument the component gallery cannot
+  make on its own: filters, charts, KPI rows and tables over one page's data,
+  with no store, no reducer, no event bus and no effect copying one value into
+  another — and server-rendered complete, because its `std-data` sources
+  resolve while the page renders and the browser asks for nothing. It is also
+  where the two kits meet, which is worth showing rather than asserting.
 
 ## One prefix: everything is `bs-`
 
-Every component in the kit is a `bs-` tag, in one flat `parts/` directory. The
-noun after the prefix is always the thing Bootstrap calls it — `bs-input`, not
-`bs-field`, because Bootstrap's docs have inputs and "field" is vocabulary
-borrowed from other component libraries.
+Every component in the kit is a `bs-` tag, in one flat `parts/` directory of
+around thirty files, one per Bootstrap component. `all.htm` pulls in
+everything, and each part imports `base.htm` itself, so importing parts by
+hand can never leave Bootstrap out. The noun after the prefix is always the
+thing Bootstrap calls it — `bs-input`, not `bs-field`, because Bootstrap's
+docs have inputs and "field" is vocabulary borrowed from other component
+libraries.
 
 Reaching for `bs-input` should feel like reaching for the markup it replaces.
 When a component does more than the plain version — `bs-navbar` taking an
-`:options` array, `bs-input` deciding when a value counts as invalid — that is
+`:items` array, `bs-input` deciding when a value counts as invalid — that is
 discoverable where it should be: in the docs, or in the fragment itself, which
-is a click away and readable.
+is a click away and readable. The kit holds itself to that: every part carries
+a comment saying up front what it decides on the caller's behalf.
 
 **A two-tier naming scheme was tried and dropped.** The idea was `bs-` for
 mechanical componentization and `bsx-` for components adding behavior, so a
@@ -175,40 +220,91 @@ Two things worth keeping from the exercise:
   fragment says up front what it decides on the caller's behalf.
 - "No new concepts, only Bootstrap's own, reached through attributes" was never
   quite true anyway. `bs-button` takes `:variant`/`:outline`/`:size` — Bootstrap
-  concepts, but not Bootstrap spellings — and `bs-navbar` takes an `:options`
+  concepts, but not Bootstrap spellings — and `bs-navbar` takes an `:items`
   shape that Bootstrap has no equivalent for. Any promise about the prefix
   would have been overstated on contact.
+
+The completed kit added one more thing to be honest about: **`:extra`**. A
+`class` written at a usage site *replaces* the one a definition sets — the
+language's rule, deliberately, and not something a kit should override — so
+every component takes `:extra` for the utility classes a caller wants on top.
+It is a small tax that a Bootstrap user pays on their most reflexive habit,
+and the docs should show it in the first example rather than let it be
+discovered. There is a language-level answer queued in
+[TODO.md](TODO.md) for cumulative classes; until it lands, `:extra` is the
+kit's own convention and reads as one.
 
 A related idea also parked: having the extended component build on a plain one
 (`<:define tag="bsx-input:bs-input">`) so the pair could not drift. That needs
 component extension, which the compiler does not support — see TODO.
 
-## Gating work: `:did-init` / `:will-dispose`
+## The gating work landed, and it was the other pair
 
-The components needed to complete the kit — modal, dropdown, tabs, accordion —
-are precisely Bootstrap's **JavaScript** components. Wrapping them reactively
-means driving an imperative API (`new bootstrap.Modal(el).show()`) in response
-to a value change, which requires a mount/dispose hook.
+This section used to say the beachhead depended on `:did-init` /
+`:will-dispose`: modal, dropdown, tabs and accordion are Bootstrap's
+**JavaScript** components, the compiler recognised those two attributes but
+nothing in `src/runtime/` ever called them, so any component driving
+Bootstrap's own JS was blocked. The callbacks were implemented on 2026-08-15
+and the kit was completed the same day. Two things about how that turned out
+are worth keeping, because the prediction was wrong in both:
 
-`:did-init` and `:will-dispose` are recognised by
-[stage1-load.ts](src/compiler/stages/stage1-load.ts) and compiled into the
-page, but nothing in `src/runtime/` ever calls them.
+**The blocked list was much shorter than "the JavaScript components".**
+Dropdown, tabs, accordion, collapse, carousel and scrollspy need no hook at
+all — Bootstrap starts each of them itself from `data-bs-` attributes, and the
+component's entire job is writing the ids that connect the two elements.
+What actually needed a hook was a different five: `bs-modal`, `bs-offcanvas`,
+`bs-toast`, `bs-tooltip` and `bs-popover`. The first three because their
+`:open` is a value the page owns and `show()`/`hide()` are verbs no markup
+expresses; the last two because they are the only components Bootstrap does
+not start on its own, and the usual answer — a page-level loop over
+`[data-bs-toggle="tooltip"]` — misses anything added later.
 
-**So the beachhead strategy depends on these hooks landing** for any component
-that has to drive Bootstrap's own JavaScript.
+**The pair that mattered was `:did-attach` / `:will-detach`.** They were
+implemented as two pairs, and it is the attach pair the kit uses. A
+`:for-data` region takes its markup out of the page without its scope going
+anywhere, and a Bootstrap plugin left holding a removed element keeps its
+backdrop, its popper and the page's scroll lock behind. So the lifetime a kit
+component needs is the element's presence in the document, not the scope's
+existence — a distinction that only shows up once something real is built on
+it.
 
-The blocker is narrower than it first appears, though. `bs-input` shows that
-anything whose behavior is expressible as *derived state* needs no lifecycle
-hook at all: `:_invalid` is an expression over `:_value`, and `:on-` handlers
-already work. Only components that must call an imperative API — `show()`,
-`hide()`, `dispose()` — are actually blocked. That is the modal/dropdown/tabs/
-accordion group, and nothing else so far.
+The general rule survived intact and is the one to repeat: anything expressible
+as *derived state* needs no lifecycle hook. `bs-input`'s `:_invalid` is an
+expression over its `:value`, and `:on-` handlers already worked. The
+imperative half of the DOM is reached through `:handle-` — a value changed, run
+this — and out of thirty components only those five and the colour-mode toggle
+reach for it.
 
-## Open question
+## Open questions
 
-The homepage advertises a fuller kit (modal, dropdown, tabs, accordion, form)
-than `demo/bootstrap-kit/` currently contains, as a deliberate choice about
-copy. The install line reads `npm install -g @markout/bootstrap-kit`, which
-does not match `package.json` (`"name": "markout"`, bin `markout`) and installs
-a kit of importable fragments globally rather than per-project. Both want
-settling before the page is published.
+The two questions this section used to hold have both moved, and left smaller
+ones behind.
+
+**The homepage no longer overstates the kit — it points at the wrong one.**
+Modal, dropdown, tabs, accordion and the form components all exist, and then
+some. What is stale is the *link*: the homepage and the README both send
+readers to `demo/bootstrap-kit/`, the five-definition stub. That aims the most
+traffic at the weakest artifact. Fixing the links is a line in each place; the
+open decision behind it is whether `demo/bootstrap`'s before/after should be
+rebuilt on the real kit, or deliberately kept minimal so the "after" side stays
+readable in one screen.
+
+**The install line has a spelling that works now.** npm kits landed 2026-08-17:
+a kit is an installed package, imported once by provenance and served at the
+logical root it declares —
+
+```html
+<:import src="/npm/@markout/bootstrap-kit/all.htm" />
+```
+
+— so the line to publish is `npm install @markout/bootstrap-kit`, per project,
+not the `-g` the page currently shows, which installed a set of importable
+fragments globally. What remains is that nothing under `kits/` is packaged as
+an npm package yet, so the copy is ahead of the registry rather than ahead of
+the code.
+
+**And one new one: two kits mean the page has to say what a kit is.** The
+Bootstrap kit wraps a design system; the std kit does not wrap anything. Both
+are "a directory of `<:define>`s you import", which is the honest and useful
+answer, but the homepage currently only shows the first shape and a reader
+would reasonably conclude kits are for CSS frameworks.
