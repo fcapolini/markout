@@ -161,7 +161,7 @@ looking at is the proof it works.
 
 ## The kit has to prove reactivity, not boilerplate removal
 
-The `demo/bootstrap` before/after — 28 lines of hand-wired navbar against a
+The before/after demo — 28 lines of hand-wired navbar against a
 `<:import>` and a list of links — is the strongest asset on the homepage. But
 everything it demonstrates is achievable with server includes, Jinja, Eleventy
 or a PHP function. Nothing in it *needs* reactivity, so on its own it argues

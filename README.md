@@ -280,8 +280,8 @@ Reactivity aside, `<:define>` alone is enough to turn recurring markup into
 a tag: no build step, no component base class, no separate file format —
 a fragment of HTML, given a name.
 
-[`demo/bootstrap/index.html`](sites/site/demos/bootstrap/index.html) and
-[`demo/bootstrap/index-plain.html`](sites/site/demos/bootstrap/index-plain.html) render
+[`demos/bootstrap/index.html`](sites/site/demos/bootstrap/index.html) and
+[`demos/bootstrap/index-plain.html`](sites/site/demos/bootstrap/index-plain.html) render
 the same page, and almost all of the difference between them is in the first
 35 lines. Plain Bootstrap needs 5 lines of `<head>` boilerplate (charset,
 viewport, CDN links with their integrity hashes) and 22 lines of navbar

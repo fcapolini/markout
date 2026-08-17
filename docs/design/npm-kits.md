@@ -18,11 +18,14 @@ folders.
 ## The problem
 
 A kit is a directory of `.htm` fragments and, usually, resources —
-stylesheets, images, fonts. Today it reaches a page by being *inside the
-docroot*: [kits/bootstrap/bootstrap-kit/](../../kits/bootstrap-kit/) sits
-next to the pages that import it, and `kits/bootstrap/std-kit` is a symlink
-to the std kit next door. That works for kits shipped in this repository and
-for nothing else.
+stylesheets, images, fonts. When this was written, a kit reached a page by
+being *inside the docroot*: the bootstrap kit sat next to the pages that
+imported it, and the std kit reached them through a symlink. That works for
+kits shipped in this repository and for nothing else.
+
+(Both are packages now — see [the monorepo split](monorepo.md) — and the
+pages that use them import through `/npm/`, which is this design in use
+rather than under test.)
 
 Publishing a kit as `@markout/bootstrap-kit` puts it under `node_modules`,
 outside the docroot, which two things currently forbid on purpose:
@@ -239,12 +242,13 @@ The test this design is held to, and the one to re-run against any change:
 >
 >     ln -s node_modules/@markout/bootstrap-kit docroot/bootstrap-kit
 
-Not an analogy. That arrangement *exists in this repository today* —
-`kits/bootstrap/std-kit` is a symlink to the std kit next door, and
-[src/server/build.ts](../../packages/cli/src/server/build.ts) has a comment explaining that
-`walk` follows it deliberately. So the model is not a thought experiment
-about how a kit ought to behave; it is a kit that already behaves that way,
-and the feature is the same behaviour reached without the manual step.
+Not an analogy. That arrangement *existed in this repository* when this was
+written — the std kit was reached through exactly such a symlink, and
+[build.ts](../../packages/cli/src/server/build.ts) still carries the comment
+explaining that `walk` follows one deliberately. So the model was never a
+thought experiment about how a kit ought to behave; it was a kit that already
+behaved that way, and the feature is the same behaviour reached without the
+manual step. The symlink is gone because the feature replaced it.
 
 It holds throughout, and in the two places where the reasoning was least
 obvious it is what confirms them:
@@ -261,8 +265,7 @@ obvious it is what confirms them:
 Confirmed too, at less cost: `.htm` fragments, `node_modules` and dotfiles
 are excluded because that is what happens to a symlinked directory today,
 and a transitively installed kit gets a mount of its own because that is a
-second symlink — which is, again, literally what `kits/bootstrap/std-kit`
-is.
+second symlink — which is, again, literally what the std kit's link was.
 
 ### Where it deliberately does not hold
 
@@ -340,9 +343,9 @@ route.
    `/npm/<package>/…` and never as `/bootstrap-kit/…`.
 
    Scoped to *mounts*, and the scope matters. A kit that is genuinely a
-   directory in the docroot — vendored, or the symlink that
-   `kits/bootstrap/std-kit` is today — is imported through its docroot path
-   as it always has been, because there is no package to name. The two
+   directory in the docroot — vendored, or copied in by a test that has no
+   `node_modules` above it — is imported through its docroot path as it
+   always has been, because there is no package to name. The two
    cannot be confused for one another: refusal 1 means any given path is a
    mount or a real directory, never both.
 
