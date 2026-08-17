@@ -68,11 +68,16 @@ export async function findDeclaration(
   // element that carries the name -- `body.items` should send someone to
   // `<body>` when they ask about `body`
   const loc = found?.value ? found.value.node.loc : found?.scope?.e?.loc;
-  if (!loc?.source) {
+  if (!loc) {
     return undefined;
   }
+  // A SYNTHESIZED element has offsets but no file: `<head>` and `<body>` are
+  // supplied by the parser for a document that did not write them, which is
+  // every fragment and plenty of pages. They were synthesized while parsing
+  // this file, so this file is where their offsets point -- and answering
+  // "line 1" beats answering nothing for a name that plainly resolves.
   return {
-    pathname: loc.source,
+    pathname: loc.source ?? pathname,
     range: {
       start: { line: loc.start.line - 1, character: loc.start.column },
       end: { line: loc.end.line - 1, character: loc.end.column },
