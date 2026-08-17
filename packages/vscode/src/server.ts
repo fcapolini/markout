@@ -35,6 +35,10 @@ connection.onInitialize(params => {
     [
       createMarkoutService({
         workspaceFolder: folders[0],
+        // `always` is how a project that uses markout without depending on
+        // it -- a vendored copy, a page opened on its own -- says so
+        enable: (params.initializationOptions as { enable?: 'auto' | 'always' | 'never' })
+          ?.enable,
         // the buffers the editor is holding, which is what the compiler is
         // given instead of the disk -- the reason `readFile` is a parameter
         open: filePath => server.documents.get(URI.file(filePath))?.getText(),

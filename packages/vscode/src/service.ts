@@ -1,7 +1,7 @@
 import type { LanguageServicePlugin } from '@volar/language-service';
 import * as path from 'path';
 import { URI } from 'vscode-uri';
-import { diagnose, guessDocroot, pathnameOf } from './diagnostics';
+import { diagnose, guessDocroot, isMarkoutProject, pathnameOf } from './diagnostics';
 import { isPage } from './plugin';
 
 /**
@@ -18,6 +18,8 @@ export interface MarkoutServiceProps {
   workspaceFolder?: string;
   /** an explicit docroot, from `markout.docroot`; guessed when absent */
   docroot?: string;
+  /** `markout.enable`: whether a project has to look like markout's */
+  enable?: 'auto' | 'always' | 'never';
   /** the editor's unsaved buffers, by file path */
   open: (filePath: string) => string | undefined;
 }
@@ -45,7 +47,16 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
             return [];
           }
           const filePath = uri.fsPath;
+          const enable = props.enable ?? 'auto';
+          if (enable === 'never') {
+            return [];
+          }
           const docroot = props.docroot ?? guessDocroot(filePath, props.workspaceFolder);
+          // this extension has no file suffix of its own to hide behind, so
+          // the question is about the project rather than the file
+          if (enable === 'auto' && !isMarkoutProject(docroot)) {
+            return [];
+          }
           const pathname = pathnameOf(filePath, docroot);
           // a fragment is compiled by the pages that import it, not on its
           // own: on its own it has no scope chain to resolve against, and

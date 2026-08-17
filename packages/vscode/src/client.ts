@@ -27,8 +27,16 @@ export async function activate(context: vscode.ExtensionContext) {
       options: { execArgv: ['--nolazy', '--inspect=6039'] },
     },
   };
+  const settings = vscode.workspace.getConfiguration('markout');
   const options: LanguageClientOptions = {
-    documentSelector: [{ language: 'markout' }],
+    initializationOptions: {
+      enable: settings.get<'auto' | 'always' | 'never'>('enable', 'auto'),
+      docroot: settings.get<string>('docroot') || undefined,
+    },
+    // `html`, not a language of our own: see PAGE_LANGUAGE_ID. Whether a
+    // given HTML file is a markout page is a question about the PROJECT, and
+    // the server answers it -- see isMarkoutProject
+    documentSelector: [{ language: 'html', scheme: 'file' }],
     synchronize: {
       // a page is recompiled when a fragment it imports changes, and the
       // fragment may never have been opened -- so the server has to hear

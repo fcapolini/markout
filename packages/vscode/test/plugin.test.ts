@@ -16,7 +16,7 @@ function codesOf(source: string): { root: VirtualCode; embedded: VirtualCode[] }
   const plugin = createMarkoutLanguagePlugin();
   const root = plugin.createVirtualCode!(
     { path: '/index.html' } as never,
-    'markout',
+    'html',
     snapshotOf(source),
     undefined as never
   )!;
@@ -28,11 +28,14 @@ function textOf(code: VirtualCode): string {
 }
 
 describe('what the plugin claims', () => {
-  it('claims pages and fragments', () => {
+  it('claims pages and fragments as HTML, not as a language of its own', () => {
     const plugin = createMarkoutLanguagePlugin();
     const id = (p: string) => plugin.getLanguageId({ path: p } as never);
-    expect(id('/index.html')).toBe('markout');
-    expect(id('/parts/card.htm')).toBe('markout');
+    // `html`, deliberately: a language of our own would REPLACE VS Code's
+    // for every .html file on the machine, taking Emmet and the built-in
+    // IntelliSense with it. Markout extends HTML; so does its tooling
+    expect(id('/index.html')).toBe('html');
+    expect(id('/parts/card.htm')).toBe('html');
     expect(id('/app.css')).toBeUndefined();
     expect(id('/server.ts')).toBeUndefined();
   });

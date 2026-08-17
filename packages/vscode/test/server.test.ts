@@ -62,7 +62,19 @@ beforeAll(async () => {
   expect(fs.existsSync(SERVER)).toBe(true);
 
   docroot = fs.mkdtempSync(path.join(os.tmpdir(), 'markout-lsp-server-'));
-  fs.writeFileSync(path.join(docroot, 'package.json'), '{"name":"fixture"}');
+  // a project that uses markout, which is what turns the extension on: it
+  // claims no file suffix of its own, so this is the only thing separating a
+  // markout page from anybody else's HTML
+  fs.writeFileSync(
+    path.join(docroot, 'package.json'),
+    JSON.stringify({ name: 'fixture', dependencies: { markout: '^0.4.0' } })
+  );
+  // and a project next door that has never heard of it
+  fs.mkdirSync(path.join(docroot, 'other'));
+  fs.writeFileSync(
+    path.join(docroot, 'other/package.json'),
+    JSON.stringify({ name: 'other', dependencies: { express: '^5.0.0' } })
+  );
 
   child = spawn(process.execPath, [SERVER, '--stdio'], { stdio: 'pipe' });
   const buffer = { data: Buffer.alloc(0) };
@@ -102,7 +114,9 @@ afterAll(() => {
 async function diagnosticsFor(name: string, text: string) {
   const uri = `file://${path.join(docroot, name)}`;
   notify('textDocument/didOpen', {
-    textDocument: { uri, languageId: 'markout', version: 1, text },
+    // `html`, which is what VS Code sends: this extension contributes no
+    // language of its own, so as not to displace HTML's
+    textDocument: { uri, languageId: 'html', version: 1, text },
   });
   const report = await request('textDocument/diagnostic', { textDocument: { uri } });
   return (report?.items ?? []) as { message: string; range: any; source?: string }[];
@@ -123,6 +137,17 @@ describe('the server, over stdio', () => {
     expect(found[0].message).toMatch(/nope/);
     expect(found[0].source).toBe('markout');
     expect(found[0].range.start.line).toBe(2);
+  });
+
+  it('says nothing at all in a project that is not markout\'s', async () => {
+    // the same page that produces an error above. A `.html` file holding
+    // `${…}` is JSP EL or Thymeleaf far more often than it is a markout
+    // page, and this extension does not get to assume otherwise
+    const found = await diagnosticsFor(
+      'other/broken.html',
+      ['<html>', '  <body>', '    ${nope}', '  </body>', '</html>'].join('\n')
+    );
+    expect(found).toStrictEqual([]);
   });
 
   it('reports the buffer it was sent, not the file on disk', async () => {
