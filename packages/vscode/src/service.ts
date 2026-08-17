@@ -11,6 +11,7 @@ import {
 } from './diagnostics';
 import { isPage } from './plugin';
 import { fileReferenceAt } from './references';
+import { fileOf, findDeclaration } from './declarations';
 
 /**
  * The compiler, as a language service.
@@ -117,39 +118,65 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
          * an installed package -- neither is somewhere an editor would find
          * by guessing, and both are somewhere the compiler already knows.
          */
-        provideDefinition(document, position) {
+        async provideDefinition(document, position) {
           const uri = sourceOf(document.uri);
           if (!uri) {
             return undefined;
           }
           const text = document.getText();
-          const reference = fileReferenceAt(text, document.offsetAt(position));
-          if (!reference) {
-            return undefined;
-          }
+          const offset = document.offsetAt(position);
           const filePath = uri.fsPath;
           const docroot = props.docroot ?? guessDocroot(filePath, props.workspaceFolder);
-          const target = resolveReference({
+          const pathname = pathnameOf(filePath, docroot);
+
+          // a file a directive names
+          const reference = fileReferenceAt(text, offset);
+          if (reference) {
+            const target = resolveReference({
+              docroot,
+              fromPathname: pathname,
+              spec: reference.value,
+            });
+            if (!target) {
+              // refused or outside the docroot: the diagnostic says so, and
+              // opening something plausible instead would hide that
+              return undefined;
+            }
+            const start = { line: 0, character: 0 };
+            return [
+              {
+                targetUri: URI.file(target).toString(),
+                targetRange: { start, end: start },
+                targetSelectionRange: { start, end: start },
+                // what the editor underlines: the path, not the tag round it
+                originSelectionRange: {
+                  start: document.positionAt(reference.start),
+                  end: document.positionAt(reference.end),
+                },
+              },
+            ];
+          }
+
+          // otherwise a name in an expression, which the compiler resolves
+          const declaration = await findDeclaration({
             docroot,
-            fromPathname: pathnameOf(filePath, docroot),
-            spec: reference.value,
+            pathname,
+            text,
+            offset,
+            open: props.open,
           });
-          if (!target) {
-            // refused or outside the docroot: the diagnostic says so, and
-            // opening something plausible instead would hide that
+          if (!declaration) {
             return undefined;
           }
-          const start = { line: 0, character: 0 };
+          const file = fileOf(declaration, { docroot, from: pathname });
+          if (!file) {
+            return undefined;
+          }
           return [
             {
-              targetUri: URI.file(target).toString(),
-              targetRange: { start, end: start },
-              targetSelectionRange: { start, end: start },
-              // what the editor underlines: the path, not the tag round it
-              originSelectionRange: {
-                start: document.positionAt(reference.start),
-                end: document.positionAt(reference.end),
-              },
+              targetUri: URI.file(file).toString(),
+              targetRange: declaration.range,
+              targetSelectionRange: declaration.range,
             },
           ];
         },

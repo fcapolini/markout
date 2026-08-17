@@ -139,7 +139,10 @@ async function definitionAt(name: string, text: string, at: string) {
   notify('textDocument/didOpen', {
     textDocument: { uri, languageId: 'html', version: 1, text },
   });
-  const before = text.indexOf(at);
+  // to the first LETTER: `$` is an identifier character, so scanning for one
+  // stops on the `$` of `${` and puts the cursor on the brace
+  let before = text.indexOf(at);
+  while (before < text.length && !/[A-Za-z_]/.test(text[before])) before++;
   const line = text.slice(0, before).split('\n').length - 1;
   const character = before - (text.lastIndexOf('\n', before - 1) + 1);
   return (await request('textDocument/definition', {
@@ -213,11 +216,28 @@ describe('the server, over stdio', () => {
     expect(fs.existsSync(decodeURIComponent(targets[0]!.replace('file://', '')))).toBe(true);
   });
 
+  it('goes from a name to the value that declares it', async () => {
+    const text = [
+      '<lib>',
+      '  <:define tag="x-card:div"',
+      "           :title=${'Untitled'}>",
+      '    <h2>${title}</h2>',
+      '  </:define>',
+      '</lib>',
+    ].join('\n');
+    const found = await definitionAt('markout/card.htm', text, '${title}</h2>');
+    expect(found).toHaveLength(1);
+    // the `:title` on line 3, not the `${title}` that was clicked
+    expect((found![0] as any).targetRange.start.line).toBe(2);
+  });
+
   it('offers nothing where there is nothing to follow', async () => {
+    // ordinary markup. `${n}` would now resolve to its `:n`, which is what
+    // the test above is for -- this one is about the rest of a page
     const found = await definitionAt(
       'plain.html',
-      '<html><body :n=${1}>${n}</body></html>',
-      '${n}'
+      '<html><body :n=${1}><p class="thing">${n}</p></body></html>',
+      'thing'
     );
     expect(found === null || found.length === 0).toBe(true);
   });

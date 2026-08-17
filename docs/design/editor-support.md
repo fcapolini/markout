@@ -86,7 +86,18 @@ Ranked by what a markout author actually feels, not by what is easy:
    Not a re-implementation of a subset of the rules: the same `Compiler` the
    server and `build` run, so anything it catches the editor catches, for
    free and forever.
-2. **Navigation.** `<:import src>` and `<:include src>` go to the file, using
+2. **Navigation, two kinds.** A name in an expression goes to the value that
+   declares it — `${title}` inside a `<:define>` to its `:title=${…}` — which
+   is the one an editor cannot approximate. A name belongs to the nearest
+   enclosing scope; a usage site resolves from somewhere other than where it
+   sits; slotted markup resolves from where it was *written*. Those are the
+   language's rules, so core exports
+   [`declarationFor`](../../packages/core/src/compiler/stages/stage4-resolve.ts),
+   which is the same walk stage4 already did to decide whether a reference
+   was known at all — one implementation, two callers, and no chance of the
+   editor and the compiler disagreeing about what a name means.
+
+   And `<:import src>` and `<:include src>` go to the file, using
    the compiler's own `Resolver` rather than a second copy of its rules —
    which is the difference between go-to-definition that works and one that
    works until it matters. Three rules the editor has no business
