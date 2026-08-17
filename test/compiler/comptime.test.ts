@@ -91,6 +91,30 @@ describe('stage5-comptime', () => {
     expect(r.errors.join()).toMatch(/has to be a string, number, boolean, null or undefined/);
   });
 
+  it('refuses being assigned to', async () => {
+    // it is gone by the time the page runs, so there is nothing to assign
+    // to -- and substitution rewrote the target along with every read,
+    // turning `k_n = 5` into `2 = 5` and handing stage7 a function body
+    // that is not JavaScript. `new Function` then threw while the page was
+    // being built, taking the page with it, and nothing had said a word
+    const r = await build(
+      '<html><body :k_n=${2}><button :on-click=${() => k_n = 5}>b</button></body></html>'
+    );
+    expect(r.errors.join()).toMatch(/not there to be assigned to/);
+  });
+  it('refuses being incremented', async () => {
+    const r = await build(
+      '<html><body :k_n=${2}><button :on-click=${() => k_n++}>b</button></body></html>'
+    );
+    expect(r.errors.join()).toMatch(/not there to be assigned to/);
+  });
+  it('still lets an ordinary value be assigned to', async () => {
+    const r = await build(
+      '<html><body :n=${2}><button :on-click=${() => n = 5}>b</button></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+  });
+
   it('refuses a cycle', async () => {
     const r = await build('<html :k_a=${k_b} :k_b=${k_a}><body>${k_a}</body></html>');
     expect(r.errors.join()).toMatch(/cycle of k_ values/);
