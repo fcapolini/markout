@@ -81,8 +81,18 @@ reloading the window, since only a fresh launch runs the build task.
 - HTML still behaves like HTML: Emmet, tag completion, auto-closing tags.
   The extension contributes an *injection* grammar rather than a language of
   its own, so none of that is displaced.
-- `${…}` and `:`-attributes are highlighted rather than reading as plain
-  text or as broken markup.
+- `${…}`, `:`-attributes and the `//` and `/* … */` comments between a tag's
+  attributes are highlighted rather than reading as plain text or as broken
+  markup. What the grammars actually do is a question with an answer:
+
+  ```sh
+  npm run tokens -w markout-vscode                 # every page in the repo
+  npm run tokens -w markout-vscode -- <file>       # one file, token by token
+  ```
+
+  It runs VS Code's own installed grammars over the pages here, with ours
+  injected the way the extension injects them, and reports every character
+  HTML is painting as an error.
 - Folding works around `<body :hidden=${a > b}>`. That `>` would end the tag
   for an HTML parser, and does not here — see the masking in `src/plugin.ts`.
 
