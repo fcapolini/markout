@@ -184,7 +184,32 @@ Ranked by what a markout author actually feels, not by what is easy:
    which also answers a question a single range could not: a name read twice
    in one expression is two references.
 
-8. **HTML's own features** — tag completion, attribute completion, folding —
+8. **Rename**, which is the only feature here that can break a project, and
+   the only one whose test had to *apply* it and compile the result. Three
+   things it has to get right, each found by that test rather than by
+   reasoning:
+
+   **References stop at a page**, and a definition lives in a fragment any
+   number of pages import — so every page under the docroot is compiled, and
+   the target matched across those compiles by *where it is declared*, since
+   the objects differ per compile and the file and offset do not.
+
+   **A usage site does not read the parameter**, it declares a value of its
+   own that the definition reads. Those attributes are not references and
+   `referencesTo` is right not to return them, but they carry the name.
+
+   **A read through an instance is a third thing again**: `intro.title`
+   resolves to the value the *usage* declared, not to the parameter, so it is
+   a second target rather than another reference to the first.
+
+   Which usages belong to a definition is settled by the tag the author
+   wrote — `usesTemplate` holds a stencil built per usage, not the
+   definition's id. An earlier attempt asked whether the instance still
+   carried a value declared inside the `<:define>`, which holds right up
+   until a usage passes every parameter there is, and a definition with one
+   parameter is the commonest kind.
+
+9. **HTML's own features** — tag completion, attribute completion, folding —
    through `volar-service-html` over the embedded HTML. This is where the
    masking earns its place, and it is checked by asking for folding ranges on
    a page whose `<body :hidden=${a > b}>` would, unmasked, have ended that
