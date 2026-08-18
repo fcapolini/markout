@@ -1,0 +1,14 @@
+<svg width="824" height="824" viewBox="0 0 824 824" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!-- The small-size variant: the same mark with the arrowheads enlarged, so
+     that the half of it which says "reactive" survives being drawn at 16px.
+     Same canvas and plate as logo.svg, so the two are interchangeable. -->
+<g transform="translate(-9, -2)">
+<rect x="9" y="2" width="824" height="824" rx="185" fill="white"/>
+<line x1="148.811" y1="418.416" x2="336.029" y2="605.634" stroke="black" stroke-width="86" stroke-linecap="round"/>
+<line x1="145.583" y1="415.136" x2="331.805" y2="228.914" stroke="black" stroke-width="86" stroke-linecap="round"/>
+<path d="M127.021 396.642C116.867 406.795 116.867 423.258 127.021 433.411C137.174 443.565 153.637 443.565 163.79 433.411L145.405 415.026L127.021 396.642ZM421.432 139L131.439 216.703L343.728 428.992L421.432 139ZM145.405 415.026L163.79 433.411L274.353 322.848L255.969 304.463L237.584 286.078L127.021 396.642L145.405 415.026Z" fill="black"/>
+<line x1="693.72" y1="411.445" x2="506.502" y2="224.227" stroke="black" stroke-width="86" stroke-linecap="round"/>
+<line x1="696.948" y1="414.725" x2="510.726" y2="600.947" stroke="black" stroke-width="86" stroke-linecap="round"/>
+<path d="M715.511 433.22C725.665 423.066 725.665 406.604 715.511 396.45C705.357 386.297 688.895 386.297 678.741 396.45L697.126 414.835L715.511 433.22ZM421.1 690.861L711.092 613.158L498.803 400.869L421.1 690.861ZM697.126 414.835L678.741 396.45L568.178 507.013L586.563 525.398L604.948 543.783L715.511 433.22L697.126 414.835Z" fill="black"/>
+</g>
+</svg>

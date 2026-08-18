@@ -7,6 +7,16 @@
   <meta name="viewport"
         content="width=device-width, initial-scale=1">
 
+  <!--
+    Both are the SMALL variant of the logo, whose arrowheads are drawn to
+    survive being 16 pixels across: a favicon is never anything else. The
+    .svg is for browsers that take one -- which is every current one bar
+    Safari, and they scale it themselves rather than reading the .ico. The
+    .ico needs no markup at all, being asked for by name at the site root,
+    which is how every other page here gets an icon too.
+  -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+
   <title>Markout — application logic, directly in your Bootstrap page</title>
   <meta name="description"
         content="Markout makes HTML modular, reactive and isomorphic. Start with an ordinary Bootstrap page and add application logic where it belongs: in the markup.">
