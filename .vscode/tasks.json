@@ -12,12 +12,28 @@
       "label": "npm: build"
     },
     {
+      // what the extension host loads is a BUNDLE now, so a tsc watch alone
+      // rebuilds nothing it reads: the two below run together
+      "label": "watch: extension",
+      "dependsOn": ["watch: types", "watch: bundle"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
       "type": "shell",
       "command": "npx tsc -b --watch",
       "options": { "cwd": "${workspaceFolder}/packages/vscode" },
       "isBackground": true,
       "problemMatcher": ["$tsc-watch"],
-      "label": "watch: extension"
+      "label": "watch: types"
+    },
+    {
+      "type": "npm",
+      "script": "watch",
+      "path": "packages/vscode",
+      "isBackground": true,
+      "problemMatcher": [],
+      "label": "watch: bundle"
     }
   ]
 }

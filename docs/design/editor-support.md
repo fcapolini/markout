@@ -527,6 +527,51 @@ distinct message, with both numbers in it — how many were checked and how
 many were not — because "some pages were skipped" is not something anybody
 can act on.
 
+## What a `.vsix` is, and what it is not
+
+An extension archive is unzipped into a directory with no `npm install`
+behind it. Every `require` the extension still performs at runtime has to be
+answerable by node or by the extension host — which is why the two entry
+points are **bundled**, and why the biggest dependency here makes it
+compulsory rather than merely tidy: `@markout/core` is a *workspace*
+package, resolved through a symlink that exists in this repository and
+nowhere else. Unbundled, the extension works perfectly in the development
+host, which runs from the repository, and fails the moment anyone installs
+it. The development-host launch config exercises none of the packaging path.
+
+`tsc` still runs and still checks everything; its output goes to `out/` and
+is thrown away, because esbuild does not type-check and a build that only
+bundles ships whatever it managed to parse. What ships is `dist/client.js`
+and `dist/server.js`, plus the grammars, the icon, the README and the
+licence — a `.vscodeignore` keeps the sources, the tests, the fixture and
+`node_modules` out, and `npm run package` prints the resulting file list
+every time.
+
+**The trap worth writing down**, because it survives every check that does
+not run the thing: `vscode-html-languageservice` ships UMD as its `main`,
+and a UMD wrapper passes `require` into its factory *as an argument*. A
+shadowed `require` is one esbuild cannot follow, so it leaves the call
+standing — and `require("./parser/htmlScanner")` then resolves against the
+directory the bundle sits in, where no such file exists. It compiled, it
+bundled without a warning, it packaged, it installed, and it died on the
+first question anyone asked it. Preferring the `module` field, whose ESM
+build has static imports, is the fix.
+
+Two tests hold that shut.
+[bundle.test.ts](../../packages/vscode/test/bundle.test.ts) builds into a
+directory of its own and asserts that neither bundle asks for anything by
+name except `vscode` and node's own modules — the exact shape of that bug,
+and it fails in a quarter of a second rather than at install time.
+[server.test.ts](../../packages/vscode/test/server.test.ts) then runs the
+BUNDLE over stdio, so what the suite talks to is the file the archive
+carries.
+
+Dropping `private: true` is what lets the manifest be published as it
+stands, and it takes with it the thing that kept this package out of npm —
+so a `prepublishOnly` that throws replaces it. `vsce` runs
+`vscode:prepublish` and never npm's own hook, so the guard stops
+`npm publish` and nothing else.
+
 ## Shape
 
 ```
@@ -535,7 +580,12 @@ packages/vscode/
     plugin.ts     the Volar language plugin: a page -> its virtual code
     server.ts     the language server (LSP, node)
     client.ts     the VS Code extension entry point
+  scripts/
+    bundle.mjs    esbuild: the two files that actually ship
+    probe.mjs     ask the built server what it answers
+    tokens.mjs    ask VS Code's tokenizer what colour it gives a page
   syntaxes/       the TextMate grammars, injected into HTML's
+  README.md       the Marketplace front page
   package.json    contributions: grammars, configuration
 ```
 

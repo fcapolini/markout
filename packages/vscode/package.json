@@ -1,8 +1,16 @@
 {
   "name": "markout-vscode",
-  "private": true,
   "version": "0.4.0",
   "description": "Markout language support for VS Code: the compiler's diagnostics, in the editor",
+  "keywords": [
+    "markout",
+    "html",
+    "reactive",
+    "ssr",
+    "isomorphic",
+    "language server",
+    "web components"
+  ],
   "displayName": "Markout",
   "publisher": "fcapolini",
   "engines": {
@@ -11,10 +19,24 @@
   "categories": [
     "Programming Languages"
   ],
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fcapolini/markout.git",
+    "directory": "packages/vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/fcapolini/markout/issues"
+  },
+  "homepage": "https://github.com/fcapolini/markout/tree/main/packages/vscode#readme",
   "main": "./dist/client.js",
   "scripts": {
-    "build": "tsc -b",
-    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "build": "tsc -b && node scripts/bundle.mjs",
+    "watch": "node scripts/bundle.mjs --watch",
+    "vscode:prepublish": "npm run build",
+    "package": "vsce package --no-dependencies",
+    "prepublishOnly": "node -e \"throw new Error('markout-vscode goes to the Marketplace with vsce, never to npm: npm run package')\"",
+    "clean": "rm -rf dist out tsconfig.tsbuildinfo *.vsix",
     "test": "vitest run",
     "typecheck": "tsc -b && npm run typecheck:test",
     "typecheck:test": "tsc -p tsconfig.test.json",
@@ -27,6 +49,8 @@
   "devDependencies": {
     "@types/node": "^26.2.0",
     "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.28.2",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10",
     "vscode-oniguruma": "^2.0.1",
