@@ -1,4 +1,5 @@
 import type { LanguageServicePlugin } from '@volar/language-service';
+import * as nodePath from 'path';
 import { URI } from 'vscode-uri';
 import {
   diagnose,
@@ -13,6 +14,7 @@ import { fileReferenceAt } from './references';
 import { fileOf, findDeclaration } from './declarations';
 import { findCompletions } from './completions';
 import { findHover } from './hovers';
+import { findReferences } from './references-to';
 
 /**
  * The compiler, as a language service.
@@ -93,6 +95,7 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
       // is also the moment the expression stops being valid JavaScript
       completionProvider: { triggerCharacters: ['.', '<', ':'] },
       hoverProvider: true,
+      referencesProvider: true,
     },
     create(context) {
       /**
@@ -137,6 +140,27 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
          * an installed package -- neither is somewhere an editor would find
          * by guessing, and both are somewhere the compiler already knows.
          */
+        async provideReferences(document, position, context) {
+          const uri = sourceOf(document.uri);
+          if (!uri) {
+            return undefined;
+          }
+          const filePath = uri.fsPath;
+          const docroot = props.docroot ?? guessDocroot(filePath, props.workspaceFolder);
+          const found = await findReferences({
+            docroot,
+            pathname: pathnameOf(filePath, docroot),
+            text: document.getText(),
+            offset: document.offsetAt(position),
+            open: props.open,
+            includeDeclaration: context.includeDeclaration,
+          });
+          return found.map(site => ({
+            uri: URI.file(nodePath.join(docroot, site.pathname)).toString(),
+            range: site.range,
+          }));
+        },
+
         async provideHover(document, position) {
           const uri = sourceOf(document.uri);
           if (!uri) {

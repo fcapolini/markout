@@ -1,12 +1,7 @@
-import {
-  Compiler,
-  declarationFor,
-  discoverKits,
-  type ReadFile,
-  type Scope,
-  type Value,
-} from '@markout/core';
+import { declarationFor, type Page, type Scope, type Value } from '@markout/core';
+import * as nodePath from 'path';
 import { openReader, resolveReference, type Range } from './diagnostics';
+import { compilePage } from './pages';
 
 /**
  * Where the name under the cursor was declared.
@@ -53,23 +48,52 @@ export interface DeclarationProps {
   open?: (filePath: string) => string | undefined;
 }
 
+/**
+ * What the cursor is on, as the compiler's own object.
+ *
+ * Split out of `findDeclaration` because go-to-definition wants a place and
+ * find-references wants the THING -- two questions with one answer between
+ * them, and resolving it twice by different routes is how they would come to
+ * disagree about what a name means.
+ */
+export async function declarationTargetAt(props: DeclarationProps): Promise<
+  { page: Page; target: Value | Scope } | undefined
+> {
+  const found = await resolveAt(props);
+  return found?.target ? { page: found.page, target: found.target } : undefined;
+}
+
 export async function findDeclaration(
   props: DeclarationProps
 ): Promise<Declaration | undefined> {
+  const found = await resolveAt(props);
+  if (!found?.target) {
+    return undefined;
+  }
+  const loc = 'node' in found.target ? found.target.node.loc : scopeLoc(found.target);
+  return locate(loc, props.pathname);
+}
+
+async function resolveAt(
+  props: DeclarationProps
+): Promise<{ page: Page; target?: Value | Scope } | undefined> {
   const tag = tagNameAt(props.text, props.offset);
   const attribute = tag ? undefined : attributeAt(props.text, props.offset);
-  const path = tag || attribute ? undefined : chainAt(props.text, props.offset);
-  if (!tag && !attribute && !path) {
+  const chain = tag ? undefined : chainAt(props.text, props.offset);
+  if (!tag && !attribute && !chain) {
     return undefined;
   }
 
   const { docroot, pathname } = props;
-  const readFile: ReadFile | undefined = openReader(props.open);
-  const { kits } = discoverKits(docroot);
-  let page;
-  try {
-    page = await new Compiler({ docroot, kits, readFile }).compile(pathname);
-  } catch {
+  const page = await compilePage({
+    docroot,
+    pathname,
+    text: props.text,
+    readFile: openReader(filePath =>
+      filePath === nodePath.join(docroot, pathname) ? props.text : props.open?.(filePath)
+    ),
+  });
+  if (!page) {
     return undefined;
   }
 
@@ -77,15 +101,24 @@ export async function findDeclaration(
   // another file entirely and is the one thing a reader of a page most often
   // wants. The compiler keeps the map because it needs it to compile at all
   if (tag) {
-    return locate(page.customTags.get(tag)?.e?.loc, pathname);
+    return { page, target: page.customTags.get(tag) };
   }
 
   // an attribute of a custom tag: the PARAMETER it sets, declared on the
   // `<:define>`. What the usage writes is a value of its own, sitting right
   // under the cursor -- the question is about the other end of it
-  if (attribute) {
-    const parameter = page.customTags.get(attribute.tag)?.values.get(attribute.name);
-    return locate(parameter?.node.loc, pathname);
+  const parameter = attribute
+    ? page.customTags.get(attribute.tag)?.values.get(attribute.name)
+    : undefined;
+  if (parameter) {
+    return { page, target: parameter };
+  }
+  // an attribute that sets no parameter is an ordinary declaration -- `:items`
+  // on a `<body>`. There is nowhere to go from it, which is why
+  // go-to-definition asks nothing more; but it is exactly where someone
+  // stands to ask who READS this, so it has to resolve to the value itself
+  if (!chain) {
+    return { page };
   }
 
   // A fragment compiles on its own, which is what makes this work inside one:
@@ -95,17 +128,13 @@ export async function findDeclaration(
   // which is why that is an error rather than a gap here.
   const from = expressionAt(page.values.values(), pathname, props.offset);
   if (!from) {
-    return undefined;
+    return { page };
   }
-
-  const found = declarationFor(from, path!);
   // a value is declared by its attribute or its text; a named scope by the
   // element that carries the name -- `body.items` should send someone to
   // `<body>` when they ask about `body`
-  return locate(
-    found?.value ? found.value.node.loc : found?.scope && scopeLoc(found.scope),
-    pathname
-  );
+  const found = declarationFor(from, chain!);
+  return { page, target: found?.value ?? found?.scope };
 }
 
 /**

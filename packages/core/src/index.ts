@@ -22,8 +22,10 @@ export { DEFAULT_RUNTIME_SRC } from './compiler/stages/stage7-generate';
 // re-derived: see the editor support in packages/vscode
 export {
   declarationFor,
+  referencesTo,
   visibleFrom,
   type Declaration,
+  type Reference,
   type Visible,
 } from './compiler/stages/stage4-resolve';
 export type { Scope } from './compiler/ir/Scope';
