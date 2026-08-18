@@ -308,7 +308,7 @@ for (const [name, typed] of [['tags.html', '<x-'], ['tags.html', '<x-card :']]) 
 }
 
 console.log('\ndiagnostics\n');
-for (const name of ['index.html', 'broken.html', 'missing.html', 'plain.html']) {
+for (const name of ['index.html', 'broken.html', 'missing.html', 'plain.html', 'lib.htm']) {
   const doc = open(name);
   const report = await request('textDocument/diagnostic', {
     textDocument: { uri: doc.uri },
