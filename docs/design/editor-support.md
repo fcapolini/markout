@@ -252,6 +252,45 @@ compiles it into a sibling `./dist`, so the name means the same thing to the
 CLI, to a build and to this extension. An editor-only convention would have
 been a second thing to learn that only one tool honoured; see the README.
 
+## A fragment is not a page, and is checked anyway
+
+`.htm` fragments got no diagnostics at all to begin with, on the reasoning
+that a fragment has no scope chain of its own. That is half true, and the
+half that is false is where kit authors spend their time.
+
+Compiling one on its own does not work, and the way it fails is instructive:
+`<:import>` is legal only directly in a `<head>`, and a fragment has no head,
+so **37 of the 45 fragments in this repository** would light up with a rule
+they do not break. Nor is compiling it optional-but-lenient the answer — an
+`<:include>`d fragment is an *instance*, and instances resolve names where
+they are written, so on its own every name its host supplies reads as
+unknown.
+
+So a fragment is compiled the way it is used: through a page that imports it.
+A real one where the docroot has one, found by reading the pages and seeing
+which names this file; and otherwise a page whose only job is to import it.
+All 29 parts of the Bootstrap kit come back clean, and a typo in one is
+reported in the fragment, on its line.
+
+## Answering four times per keystroke
+
+Diagnostics, completion, a definition and a hover can all be asked against
+the same buffer, and compiling Orbit costs about 125ms. Compiled pages are
+therefore kept for a quarter of a second, keyed on the text they were
+compiled from.
+
+A TTL rather than a dependency graph, deliberately. Correct invalidation is
+"any file this page read has changed", which the compiler can only report
+*after* compiling; 250ms of staleness is imperceptible and needs no
+bookkeeping that can itself be wrong. The installed-kit scan is kept longer,
+since an `npm install` is rarer than a keystroke.
+
+The text a caller passes is both the content compiled and the cache key, and
+that is not a convenience: allowing them to differ allows a cache keyed on
+text that was never compiled, which answers about a file nobody has. Two
+tests were already making that mistake when the key was introduced, and said
+so immediately.
+
 ## What the wiring turned out to be
 
 Two things about Volar that the documentation states and that are still

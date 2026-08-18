@@ -28,10 +28,27 @@ function write(rel: string, text: string) {
   return full;
 }
 
+/**
+ * Diagnose a file, reading its text off the disk.
+ *
+ * `diagnose` requires the text because that is what a compile is cached on,
+ * and a caller that leaves it out gets somebody else's answer. These tests
+ * are about files that were just written, so reading it back is the honest
+ * short form -- the one case that is about an UNSAVED buffer passes its own.
+ */
+async function diagnoseFile(rel: string, open?: (p: string) => string | undefined) {
+  return diagnose({
+    docroot,
+    pathname: `/${rel}`,
+    text: fs.readFileSync(path.join(docroot, rel), 'utf8'),
+    open,
+  });
+}
+
 describe('a page with nothing wrong', () => {
   it('reports nothing', async () => {
     write('index.html', '<html :n=${21}><body>${n * 2}</body></html>');
-    expect(await diagnose({ docroot, pathname: '/index.html' })).toStrictEqual([]);
+    expect(await diagnoseFile('index.html')).toStrictEqual([]);
   });
 });
 
@@ -41,7 +58,7 @@ describe('a page with a mistake', () => {
       'index.html',
       ['<html>', '  <body>', '    ${nope}', '  </body>', '</html>'].join('\n')
     );
-    const [d, ...rest] = await diagnose({ docroot, pathname: '/index.html' });
+    const [d, ...rest] = await diagnoseFile('index.html');
     expect(rest).toStrictEqual([]);
     expect(d.message).toMatch(/nope/);
     expect(d.severity).toBe('error');
@@ -53,14 +70,14 @@ describe('a page with a mistake', () => {
 
   it('reports a file that is not there', async () => {
     write('index.html', '<html><head><:import src="/gone.htm" /></head></html>');
-    const found = await diagnose({ docroot, pathname: '/index.html' });
+    const found = await diagnoseFile('index.html');
     expect(found.map(d => d.message)).toStrictEqual(['File not found "/gone.htm"']);
   });
 
   it('blames the fragment when the fault is in the fragment', async () => {
     write('index.html', '<html><head><:import src="/lib.htm" /></head><body><x-a /></body></html>');
     write('lib.htm', '<lib>\n  <:define tag="x-a:div">${missing}</:define>\n</lib>');
-    const [d] = await diagnose({ docroot, pathname: '/index.html' });
+    const [d] = await diagnoseFile('index.html');
     expect(d.message).toMatch(/missing/);
     // the author has to be sent to the file that is actually wrong
     expect(d.pathname).toBe('/lib.htm');
@@ -71,14 +88,16 @@ describe('a page with a mistake', () => {
 describe('the buffer, not the file', () => {
   it('diagnoses what is being typed', async () => {
     const file = write('index.html', '<html :n=${21}><body>${n}</body></html>');
-    const clean = await diagnose({ docroot, pathname: '/index.html' });
+    const clean = await diagnoseFile('index.html');
     expect(clean).toStrictEqual([]);
 
     // the same file, with an unsaved mistake in it
+    const typed = '<html :n=${21}><body>${typo}</body></html>';
     const found = await diagnose({
       docroot,
       pathname: '/index.html',
-      open: p => (p === file ? '<html :n=${21}><body>${typo}</body></html>' : undefined),
+      text: typed,
+      open: p => (p === file ? typed : undefined),
     });
     expect(found.map(d => d.message)).toHaveLength(1);
     expect(found[0].message).toMatch(/typo/);
@@ -89,11 +108,13 @@ describe('the buffer, not the file', () => {
 
   it('clears once the buffer is fixed, without a save', async () => {
     const file = write('index.html', '<html><body>${typo}</body></html>');
-    expect(await diagnose({ docroot, pathname: '/index.html' })).toHaveLength(1);
+    expect(await diagnoseFile('index.html')).toHaveLength(1);
+    const typed = '<html :n=${1}><body>${n}</body></html>';
     const fixed = await diagnose({
       docroot,
       pathname: '/index.html',
-      open: p => (p === file ? '<html :n=${1}><body>${n}</body></html>' : undefined),
+      text: typed,
+      open: p => (p === file ? typed : undefined),
     });
     expect(fixed).toStrictEqual([]);
   });
@@ -104,6 +125,7 @@ describe('the buffer, not the file', () => {
     const found = await diagnose({
       docroot,
       pathname: '/index.html',
+      text: fs.readFileSync(path.join(docroot, 'index.html'), 'utf8'),
       open: p => (p === lib ? '<lib><:define tag="x-a:div">${broken}</:define></lib>' : undefined),
     });
     expect(found.map(d => d.message)).toHaveLength(1);
@@ -127,8 +149,11 @@ describe('where a page is served from', () => {
     expect(pathnameOf(page, guessed)).toBe('/index.html');
     // and the proof that it matters: compiled against this docroot the page
     // is clean, and against the workspace folder it is not
-    expect(await diagnose({ docroot: guessed, pathname: '/index.html' })).toStrictEqual([]);
-    const wrong = await diagnose({ docroot, pathname: '/markout/index.html' });
+    const pageText = fs.readFileSync(page, 'utf8');
+    expect(
+      await diagnose({ docroot: guessed, pathname: '/index.html', text: pageText })
+    ).toStrictEqual([]);
+    const wrong = await diagnoseFile('markout/index.html');
     expect(wrong.map(d => d.message)).toStrictEqual(['File not found "/lib.htm"']);
   });
 
