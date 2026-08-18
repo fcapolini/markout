@@ -113,10 +113,25 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
   return {
     name: 'markout',
     capabilities: {
-      // workspace diagnostics: the Problems panel is where somebody asks
-      // whether the PROJECT is alright, and answering only about open
-      // editors makes it a panel about what has been looked at
-      diagnosticProvider: { interFileDependencies: true, workspaceDiagnostics: true },
+      /**
+       * `interFileDependencies: false` is the load-bearing half of this,
+       * and it does not mean what it says.
+       *
+       * A page's diagnostics plainly do depend on other files -- it imports
+       * them. But Volar reads that flag as "this cannot be answered by
+       * pulling", and answers by PUSHING instead: it publishes diagnostics
+       * for open documents when they change, and advertises no diagnostic
+       * provider at all. A client with nothing to pull from never asks about
+       * a file it has not opened, which is why the Problems panel listed
+       * only what was on screen.
+       *
+       * Declaring false turns the pull model on, workspace diagnostics with
+       * it. What that model does not do by itself is notice that editing a
+       * fragment changes the pages importing it -- so the server asks for a
+       * refresh when any document changes, which is the same knowledge
+       * arriving by the other door. See server.ts.
+       */
+      diagnosticProvider: { interFileDependencies: false, workspaceDiagnostics: true },
       definitionProvider: true,
       // `.` because `body.` is the moment the list is most worth having, and
       // is also the moment the expression stops being valid JavaScript

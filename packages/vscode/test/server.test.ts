@@ -21,6 +21,9 @@ const SERVER = path.join(PACKAGE, 'dist', 'server.js');
 let docroot: string;
 let child: ChildProcess;
 let nextId = 1;
+let capabilities: any;
+/** the server asking the editor to pull again, which is not a thing it can do alone */
+let refreshes = 0;
 const pending = new Map<number, (result: unknown) => void>();
 
 function send(message: object) {
@@ -86,6 +89,13 @@ beforeAll(async () => {
   child.stdout!.on('data', chunk => {
     buffer.data = Buffer.concat([buffer.data, chunk]);
     readMessages(buffer, message => {
+      if (message.method === 'workspace/diagnostic/refresh') {
+        refreshes++;
+        // a request, not a notification: leaving it unanswered would make the
+        // server wait on an editor that never replies
+        send({ id: message.id, result: null });
+        return;
+      }
       const resolve = message.id !== undefined ? pending.get(message.id) : undefined;
       if (resolve) {
         pending.delete(message.id);
@@ -110,9 +120,15 @@ beforeAll(async () => {
         definition: { linkSupport: true },
         documentLink: { dynamicRegistration: false },
       },
+      // and WITHOUT this the server sees a client that cannot pull, falls
+      // back to publishing diagnostics for open documents, and advertises no
+      // diagnostic provider at all -- which is precisely the arrangement that
+      // left the Problems panel empty
+      workspace: { diagnostics: { refreshSupport: true } },
     },
   });
   expect(result.capabilities).toBeTruthy();
+  capabilities = result.capabilities;
   notify('initialized', {});
 }, 120000);
 
@@ -262,6 +278,71 @@ describe('the server, over stdio', () => {
     // the <div> on line 2 folds to line 4, which it only can if the `>` in
     // the expression above did not end the tag and swallow the rest
     expect(ranges).toContainEqual(expect.objectContaining({ startLine: 2, endLine: 3 }));
+  });
+
+  it('offers to be asked about the whole project, not only what is open', async () => {
+    // the Problems panel is a client of these two flags and nothing else: no
+    // provider means no pull, and no pull means the panel only ever hears
+    // about documents that happen to be open
+    expect(capabilities.diagnosticProvider).toStrictEqual({
+      interFileDependencies: false,
+      workspaceDiagnostics: true,
+    });
+  });
+
+  it('reports a broken page nobody has opened', async () => {
+    // in the `markout/` docroot, which has no package.json of its own: the
+    // `=${` is the page speaking for itself, which is what a project that
+    // runs `npx markout` and installs nothing has to do
+    fs.writeFileSync(
+      path.join(docroot, 'markout/unopened.html'),
+      '<html :n=${1}>\n  <body>${absent}</body>\n</html>'
+    );
+    const report = await request('workspace/diagnostic', { previousResultIds: [] });
+    const found = (report?.items ?? []).flatMap((item: any) =>
+      (item.items ?? []).map((d: any) => `${path.basename(item.uri)}: ${d.message}`)
+    );
+    expect(found).toContainEqual(expect.stringMatching(/unopened\.html: .*absent/));
+  });
+
+  it('checks a page again when the fragment it imports changes', async () => {
+    // What `interFileDependencies: false` costs, paid back. Volar caches a
+    // document's diagnostics against its version, and the page here does not
+    // change -- its IMPORT does. Without the invalidation in server.ts this
+    // answers with the errors from before the edit, forever.
+    const fragment = path.join(docroot, 'markout/parts.htm');
+    const whole = '<lib>\n  <:define tag="x-part:div" :title=${1}>${title}</:define>\n</lib>';
+    fs.writeFileSync(fragment, whole);
+    const fragmentUri = `file://${fragment}`;
+    notify('textDocument/didOpen', {
+      textDocument: { uri: fragmentUri, languageId: 'html', version: 1, text: whole },
+    });
+
+    const pageUri = `file://${path.join(docroot, 'markout/uses.html')}`;
+    notify('textDocument/didOpen', {
+      textDocument: {
+        uri: pageUri,
+        languageId: 'html',
+        version: 1,
+        text: '<html><head><:import src="/parts.htm" /></head><body><x-part /></body></html>',
+      },
+    });
+    const before = await request('textDocument/diagnostic', { textDocument: { uri: pageUri } });
+    expect(before.items).toStrictEqual([]);
+
+    const seen = refreshes;
+    notify('textDocument/didChange', {
+      textDocument: { uri: fragmentUri, version: 2 },
+      contentChanges: [{ text: whole.replace('${title}', '${titel}') }],
+    });
+    // past the debounce, and past the refresh that follows it
+    await new Promise(resolve => setTimeout(resolve, 600));
+    expect(refreshes).toBeGreaterThan(seen);
+
+    const after = await request('textDocument/diagnostic', { textDocument: { uri: pageUri } });
+    expect(after.items).toHaveLength(1);
+    // attributed to the fragment, which is where it was written
+    expect(after.items[0].message).toMatch(/parts\.htm: .*titel/);
   });
 
   it('reports the buffer it was sent, not the file on disk', async () => {

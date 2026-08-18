@@ -413,6 +413,30 @@ advertises no `textDocument.diagnostic` capability gets silence from
 also publishes diagnostics the old way, so a real editor sees them either
 way; a test harness pretending to be an editor has to say what it supports.
 
+**`interFileDependencies` does not mean what it says, and it is what the
+Problems panel hangs on.** A markout page's diagnostics plainly do depend on
+other files — it imports them — so the flag reads as an obvious `true`. Volar
+takes it to mean "this cannot be answered by pulling" and switches to the
+push model, publishing for open documents and advertising *no diagnostic
+provider at all*. A client with nothing to pull from never asks about a file
+it has not opened, and the panel lists only what is on screen. That is the
+whole of the bug behind "the Problems panel is empty but we know
+broken.html should appear there".
+
+Declaring `false` turns pull on and workspace diagnostics with it, and buys
+the thing the flag was honestly describing: Volar then caches a document's
+diagnostics against its **version**, and a page whose imported fragment
+changed has the version it had a moment ago. Refreshing does not help — the
+refresh is answered from the cache. The one invalidation Volar exposes is
+the configuration-changed callback, which its diagnostics feature registers
+in order to drop exactly that cache, and it reaches it through the
+environment, which reads it off `server.configurations` when the project is
+set up. Owning that registration before `initialize` lets the server fire it
+on the event that actually invalidates — a document changing — without a
+spurious `didChangeConfiguration` from the client and without disturbing the
+real configuration cache. Both halves are needed and neither works alone:
+a refresh is answered from the cache, and a cleared cache is never consulted.
+
 Both were found by [server.test.ts](../../packages/vscode/test/server.test.ts),
 which starts the built server over stdio and asks it a question. That test
 exists precisely because the failures it catches — a plugin never registered,
