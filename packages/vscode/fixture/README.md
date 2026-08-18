@@ -96,5 +96,28 @@ reloading the window, since only a fresh launch runs the build task.
 - Folding works around `<body :hidden=${a > b}>`. That `>` would end the tag
   for an HTML parser, and does not here — see the masking in `src/plugin.ts`.
 
+## Trying the packaged extension
+
+None of the above exercises packaging, and packaging is where an extension
+that works breaks: the development host runs from this repository, where
+`@markout/core` resolves through a workspace symlink that no `.vsix`
+carries. So before publishing, install the archive and use that:
+
+```sh
+npm run package -w markout-vscode
+code --install-extension packages/vscode/markout-vscode-0.4.0.vsix --force
+```
+
+It prints what went into the archive as it builds it — two bundles, the
+grammars, the icon, the README, the licence, and nothing else. Reload the
+window afterwards. To go back to the development host alone:
+
+```sh
+code --uninstall-extension fcapolini.markout-vscode
+```
+
+Running both at once means two language servers answering about the same
+page, which looks like the extension reporting everything twice.
+
 See [the design note](../../../docs/design/editor-support.md) for why any of
 this is shaped the way it is.

@@ -1,4 +1,4 @@
-import { execSync, spawn, type ChildProcess } from 'child_process';
+import { execFileSync, spawn, type ChildProcess } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -69,8 +69,16 @@ function readMessages(buffer: { data: Buffer }, onMessage: (m: any) => void) {
 
 beforeAll(async () => {
   // the server under test is the BUILT one, which is also what the extension
-  // loads -- a stale dist here would be a test of the previous commit
-  execSync('npx tsc -b', { cwd: PACKAGE, stdio: 'ignore' });
+  // loads and what a `.vsix` carries -- a stale dist here would be a test of
+  // the previous commit, and the OUTPUT OF tsc would be a test of a file that
+  // is never shipped: dist/server.js is a bundle, and whether everything it
+  // needs is inside it is exactly what fails only once packaged. Run
+  // directly rather than through `npm run`, which hangs when it is npm that
+  // started this process.
+  execFileSync(process.execPath, [path.join(PACKAGE, 'scripts/bundle.mjs')], {
+    cwd: PACKAGE,
+    stdio: 'ignore',
+  });
   expect(fs.existsSync(SERVER)).toBe(true);
 
   docroot = fs.mkdtempSync(path.join(os.tmpdir(), 'markout-lsp-server-'));

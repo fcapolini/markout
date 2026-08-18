@@ -1,0 +1,24 @@
+# What does NOT travel. The extension is bundled -- dist/client.js and
+# dist/server.js carry everything they need, `@markout/core` included -- so
+# node_modules is dead weight in the archive rather than a dependency of it.
+node_modules/**
+
+# the sources, which the bundle already contains, and everything that only
+# builds or checks them
+src/**
+out/**
+test/**
+scripts/**
+coverage/**
+**/tsconfig*.json
+**/*.tsbuildinfo
+vitest.config.cjs
+**/*.map
+
+# the development host's workspace: a fixture for pressing F5 against, and
+# nothing a user of the extension has any use for
+fixture/**
+
+# and the archives themselves, so that packaging twice does not nest them
+*.vsix
+.vscodeignore

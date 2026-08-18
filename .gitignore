@@ -1,5 +1,7 @@
 node_modules/
 dist/
+out/
+*.vsix
 coverage/
 packages/cli/bench/medium/bench-*.html
 *.tsbuildinfo
