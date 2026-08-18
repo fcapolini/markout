@@ -156,6 +156,37 @@ describe('a page that speaks for itself', () => {
   });
 });
 
+describe('before any gate, the extension has to be running at all', () => {
+  const manifest = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8')
+  );
+
+  it('starts on a workspace that holds a markout docroot', () => {
+    // Reported as "at launch it's still empty, but as soon as I open any
+    // source file it populates with the problems of the whole project" --
+    // which was not the server at all. `onLanguage:html` alone starts the
+    // extension when an HTML document is OPENED, and a Problems panel that
+    // waits to be shown a file is the very thing the workspace sweep exists
+    // to stop being.
+    expect(manifest.activationEvents).toContain('workspaceContains:**/markout/**/*.html');
+  });
+
+  it('names a convention that is really the convention', () => {
+    // the glob above is a claim about where markout pages live, and the
+    // fixture is a project laid out the way the CLI's default expects
+    const fixture = path.resolve(__dirname, '../fixture/markout/index.html');
+    expect(fs.existsSync(fixture)).toBe(true);
+  });
+
+  it('still starts when HTML is opened, for a docroot named anything else', () => {
+    // the convention is the only thing VS Code can check cheaply before
+    // running anything -- a project that depends on markout but calls its
+    // docroot something else cannot be recognised without opening a file,
+    // and this extension does not get to run everywhere on the chance
+    expect(manifest.activationEvents).toContain('onLanguage:html');
+  });
+});
+
 describe('this repository', () => {
   it('is recognised by its own gate', () => {
     // the site is where the pages are, and it is the case that has to work

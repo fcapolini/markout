@@ -22,6 +22,7 @@ let docroot: string;
 let child: ChildProcess;
 let nextId = 1;
 let capabilities: any;
+let coldSweep: any;
 /** the server asking the editor to pull again, which is not a thing it can do alone */
 let refreshes = 0;
 const pending = new Map<number, (result: unknown) => void>();
@@ -76,6 +77,11 @@ beforeAll(async () => {
   // catches a link resolved against the wrong root
   fs.mkdirSync(path.join(docroot, 'markout'));
   fs.writeFileSync(path.join(docroot, 'markout/lib.htm'), '<lib></lib>');
+  // broken, on disk, before the server has ever run
+  fs.writeFileSync(
+    path.join(docroot, 'markout/cold.html'),
+    '<html :n=${1}>\n  <body>${chilly}</body>\n</html>'
+  );
 
   // and a project next door that has never heard of it
   fs.mkdirSync(path.join(docroot, 'other'));
@@ -130,6 +136,11 @@ beforeAll(async () => {
   expect(result.capabilities).toBeTruthy();
   capabilities = result.capabilities;
   notify('initialized', {});
+
+  // asked here, in setup, because it can only be asked once: the state it is
+  // about is having opened nothing at all, which is the state the editor is
+  // in the moment it launches and the one the Problems panel was empty in
+  coldSweep = await request('workspace/diagnostic', { previousResultIds: [] });
 }, 120000);
 
 afterAll(() => {
@@ -288,6 +299,18 @@ describe('the server, over stdio', () => {
       interFileDependencies: false,
       workspaceDiagnostics: true,
     });
+  });
+
+  it('answers about the project with nothing open at all', () => {
+    // no document has been sent, so there is no editor, no buffer and no
+    // language service built from one -- only files. What was reported as
+    // "at launch it's still empty, but as soon as I open any source file it
+    // populates" was the extension not being STARTED yet, and this is the
+    // half of that claim the server owes
+    const found = (coldSweep?.items ?? []).flatMap((item: any) =>
+      (item.items ?? []).map((d: any) => `${path.basename(item.uri)}: ${d.message}`)
+    );
+    expect(found).toContainEqual(expect.stringMatching(/cold\.html: .*chilly/));
   });
 
   it('reports a broken page nobody has opened', async () => {

@@ -413,6 +413,17 @@ advertises no `textDocument.diagnostic` capability gets silence from
 also publishes diagnostics the old way, so a real editor sees them either
 way; a test harness pretending to be an editor has to say what it supports.
 
+**An extension that has not started answers nothing, correctly.** With
+`onLanguage:html` as the only activation event, the server does not exist
+until an HTML document is opened — so the panel was empty at launch and
+filled the moment any file was opened, *including a correct one*, which reads
+exactly like a diagnostic bug and is not one. The docroot convention is the
+one piece of evidence VS Code can check before running anything, so
+`workspaceContains:**/markout/**/*.html` is added alongside. A project that
+depends on markout but names its docroot something else still waits for a
+file to be opened: there is no dependency-based activation event, and this
+extension does not get to run in every window on the chance.
+
 **`interFileDependencies` does not mean what it says, and it is what the
 Problems panel hangs on.** A markout page's diagnostics plainly do depend on
 other files — it imports them — so the flag reads as an obvious `true`. Volar
