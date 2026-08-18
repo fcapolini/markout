@@ -295,6 +295,43 @@ export function visibleFrom(from: Value, path: string[] = []): Visible[] {
   return found;
 }
 
+/**
+ * Every expression that reads `target`, and the name it reads it by.
+ *
+ * The reverse of `declarationFor`, and it has to be computed rather than
+ * looked up: what stage4 records on each value is the SHAPE of what it reads
+ * -- `{ via: ['body'], key: 'items' }` -- and two pages can spell the same
+ * name meaning different things. So each dependency is resolved the way the
+ * compiler resolved it, and kept only if it lands on the target.
+ *
+ * Every prefix is tried, because one dependency mentions more than one
+ * thing: `body.items` reads the value `items` and the scope `body`, and
+ * somebody asking where `body` is used means that one too.
+ */
+export function referencesTo(page: Page, target: Value | Scope): Reference[] {
+  const found: Reference[] = [];
+  for (const value of page.values.values()) {
+    for (const dep of value.deps) {
+      const path = [...(dep.via ?? []), dep.key];
+      for (let i = 1; i <= path.length; i++) {
+        const at = declarationFor(value, path.slice(0, i));
+        if (at?.value === target || at?.scope === target) {
+          found.push({ from: value, key: path[i - 1] });
+        }
+      }
+    }
+  }
+  return found;
+}
+
+/** an expression that reads something, and the name it reads it by */
+export interface Reference {
+  /** the value whose expression does the reading */
+  from: Value;
+  /** the name as written there, which is the word to underline */
+  key: string;
+}
+
 /** a name that resolves, and what it resolves to */
 export interface Visible {
   name: string;

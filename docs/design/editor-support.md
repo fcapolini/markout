@@ -170,7 +170,21 @@ Ranked by what a markout author actually feels, not by what is easy:
    before any of this — so the partial tag is blanked out first, the same
    trick the expression case uses and for the same reason.
 
-7. **HTML's own features** — tag completion, attribute completion, folding —
+7. **Find all references**, which is go-to-definition run backwards and
+   cannot be a text search for the same reason: two `title`s in two
+   definitions are different things, and `body.items` is the same thing as
+   `items` spelled differently. `referencesTo` in core resolves each recorded
+   dependency the way the compiler resolved it and keeps the ones that land
+   on the target — every prefix of it, since `body.items` reads a scope and
+   a value both, and someone asking where `body` is used means that one too.
+
+   What the compiler has no reason to record is *where inside* an expression
+   a name is written, an expression being one thing as far as compiling goes.
+   So the expression's source is sliced back out and the name found in it,
+   which also answers a question a single range could not: a name read twice
+   in one expression is two references.
+
+8. **HTML's own features** — tag completion, attribute completion, folding —
    through `volar-service-html` over the embedded HTML. This is where the
    masking earns its place, and it is checked by asking for folding ranges on
    a page whose `<body :hidden=${a > b}>` would, unmasked, have ended that

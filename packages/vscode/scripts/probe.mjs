@@ -280,6 +280,24 @@ for (const [name, typed] of [
   console.log(`  ${`${name} after "${typed}"`.padEnd(30)} ${names.length ? names.slice(0, 8).join(' ') : 'NOTHING'}`);
 }
 
+console.log('\nfind references\n');
+for (const [name, label, needle, within] of [
+  ['scopes.html', 'the items value', ':items=', undefined],
+  ['scopes.html', 'the body scope', '${body.items}', undefined],
+  ['scopes.html', 'the item alias', '${item}</li>', undefined],
+  ['tags.html', 'appName', ':appName=', undefined],
+]) {
+  const doc = open(name);
+  const position = positionOf(doc, needle, within);
+  const found = await request('textDocument/references', {
+    textDocument: { uri: doc.uri },
+    position,
+    context: { includeDeclaration: true },
+  });
+  const where = (found ?? []).map(r => `${r.range.start.line + 1}:${r.range.start.character + 1}`);
+  console.log(`  ${`${name} ${label}`.padEnd(30)} ${where.length ? where.join(' ') : 'NOTHING'}`);
+}
+
 console.log('\nhover\n');
 for (const [name, label, needle, delta] of [
   ['scopes.html', 'a value', '${body.items}', 9],
