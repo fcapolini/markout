@@ -1,9 +1,24 @@
 # Markout for VS Code
 
-The [markout](https://github.com/fcapolini/markout) compiler's answers, in
-the editor: what is wrong with this page, where this name is declared, what
-is in scope here — from the same compiler that will serve the page, over the
-buffer you are typing in rather than the file on disk.
+[Markout](https://github.com/fcapolini/markout) is an HTML extension: it adds
+modularity, reactivity and isomorphism to plain HTML, and stops there. Not an
+application framework — you write pages rather than components, and the same
+scope-and-value model runs on the server and in the browser, so rendering
+server-side comes for free.
+
+Modularity is where that goes furthest. A `<:define>` makes a custom tag, and
+a directory of them is a **kit** — an npm package of plain `.htm` fragments a
+page pulls in with one import. Kits are how capability gets added without the
+language growing to hold it: `@markout/std-kit` supplies the system parts of
+a page, data sources and the outside world, written with the language rather
+than built into it, and `@markout/bootstrap-kit` puts Bootstrap's components
+behind tags of their own. A kit is ordinary markout, so there is no component
+API to learn beyond the language itself.
+
+This VS Code extension is its editor support: the compiler's answers, where
+you are typing. What is wrong with this page, where this name is declared,
+what is in scope here — from the same compiler that will serve the page, and
+over the buffer rather than the file on disk.
 
 Markout claims no file suffix of its own. A page is a `.html` file like any
 other, and this extension **adds to** VS Code's HTML support rather than
@@ -17,12 +32,16 @@ HTML extension keep working exactly as they did.
   reported in the file it was written in.
 - **The whole project, not only what is open.** The Problems panel is
   answered for every page in the workspace from the moment the window opens.
-- **Go to definition** on a name in `${…}`, on a custom tag, and on the path
-  in `<:import src="/lib.htm">` — which is docroot-relative, and so is
-  somewhere no editor could find by guessing.
+- **Go to definition** on a name in `${…}`, on a custom tag — including one a
+  kit defines, which lands on its `<:define>` inside the installed package —
+  and on the path in an `<:import>`, whether that is docroot-relative
+  (`/lib.htm`) or a kit (`/npm/@markout/bootstrap-kit/all.htm`). Neither is
+  somewhere an editor could find by guessing; both come from the compiler's
+  own resolver.
 - **Completion** of names in scope: `body.` offers what is in `body`, a bare
-  `${` offers everything visible from there, `<x-` offers the tags a kit
-  defines.
+  `${` offers everything visible from there, `<x-` offers the tags every
+  imported kit defines, and `:` inside such a tag offers the parameters that
+  one takes.
 - **Hover, rename and find-references** across the pages and fragments a
   name actually reaches.
 - **Syntax highlighting** for `${…}`, `:`-attributes, `<:…>` directives and
