@@ -1,4 +1,4 @@
-import { visibleFrom, type Visible } from '@markout/core';
+import { visibleFrom, type Visible } from '@markout-dev/core';
 import { openReader } from './diagnostics';
 import { expressionAt, IDENT_PART } from './declarations';
 import { compilePage } from './pages';

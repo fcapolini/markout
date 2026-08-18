@@ -12,7 +12,7 @@ import path from 'path';
  *
  * The declaration is mandatory and is not derived from the package name.
  * npm guarantees the FULL name is unique and scopes exist so the unscoped
- * part need not be, so `@markout/bootstrap-kit` and `@acme/bootstrap-kit`
+ * part need not be, so `@markout-dev/bootstrap-kit` and `@acme/bootstrap-kit`
  * would derive the same root while being a perfectly legal pair to install;
  * and a kit vendored into a docroot has no package name left to derive from,
  * while still needing the identity its own files refer to. See docs/design/npm-kits.md.
@@ -36,7 +36,7 @@ export const KIT_KEY = 'markout';
 const ROOT_RE = /^(\/[A-Za-z0-9][A-Za-z0-9._-]*)+$/;
 
 export interface Kit {
-  /** package name, e.g. `@markout/bootstrap-kit` */
+  /** package name, e.g. `@markout-dev/bootstrap-kit` */
   name: string;
   /** absolute path of the package directory */
   dir: string;

@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
  * No import in `src/` points upward through core's layering, and nothing in
  * core reaches outside the package.
  *
- * The layers below are what `@markout/core` is made of -- see
+ * The layers below are what `@markout-dev/core` is made of -- see
  * docs/design/monorepo.md. They were asserted before the package existed,
  * while everything was still one package and nothing enforced them, and they
  * are still asserted now for the reason they were then: a cycle inside core
@@ -113,7 +113,7 @@ describe('core layering', () => {
       // an editor process will load, and reaching sideways into the CLI or
       // the middleware is how express ends up in it.
       const escaping = targets.filter(t => t.startsWith('..'));
-      expect(escaping, 'reaches outside @markout/core').toEqual([]);
+      expect(escaping, 'reaches outside @markout-dev/core').toEqual([]);
 
       // an import nothing claims means the member lists went stale, and a
       // stale list is indistinguishable from a clean result. So it fails

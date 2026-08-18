@@ -4,7 +4,7 @@
  * Not markout's own `Server` class but a plain Express app, because one of
  * the demos is a whole application. Orbit has an API of its own, and markout
  * is the middleware that renders its pages -- so this file is also the
- * worked example of the arrangement `@markout/express` is for: the
+ * worked example of the arrangement `@markout-dev/express` is for: the
  * application's own routes FIRST, then markout, then static files. That
  * order is a requirement rather than a preference; a path with no extension
  * is a page request, and markout answers it.
@@ -16,7 +16,7 @@
  */
 import compression from "compression";
 import express, { type Express } from 'express';
-import { markout } from '@markout/express';
+import { markout } from '@markout-dev/express';
 import { openOperationsDb, type OperationsDb } from './orbit-db';
 
 export interface SiteProps {

@@ -16,7 +16,7 @@ import {
   RuntimeError,
   type Kit,
   type Page,
-} from "@markout/core";
+} from "@markout-dev/core";
 import { defaultLogger, MarkoutLogger } from "./logger";
 import { createReloader, RELOAD_REQ, Reloader, withReloadScript } from "./livereload";
 import { TreeWatcher, watchTree } from "./watcher";

@@ -1,7 +1,16 @@
 {
-  "name": "@markout/bootstrap-kit",
+  "name": "@markout-dev/bootstrap-kit",
   "version": "0.4.0",
   "description": "Bootstrap 5.3 as Markout components: one part per component, with the id wiring, the ARIA attributes and the repetition written once",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fcapolini/markout.git",
+    "directory": "kits/bootstrap-kit"
+  },
+  "bugs": {
+    "url": "https://github.com/fcapolini/markout/issues"
+  },
+  "homepage": "https://markout.dev",
   "markout": {
     "root": "/bootstrap-kit"
   },
@@ -13,5 +22,13 @@
     "html"
   ],
   "author": "Fabrizio Capolini",
-  "license": "MIT"
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "all.htm",
+    "parts",
+    "README.md"
+  ]
 }

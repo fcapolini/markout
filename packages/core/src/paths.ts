@@ -20,7 +20,7 @@ import { findPackage, Kit, KIT_KEY } from './kits';
 /**
  * How a kit's files are addressed at COMPILE time, and only then.
  *
- * `<:import src="/npm/@markout/bootstrap-kit/all.htm" />` names a package,
+ * `<:import src="/npm/@markout-dev/bootstrap-kit/all.htm" />` names a package,
  * which is the one place provenance is worth stating. Everything else -- and
  * everything that survives into the served page -- speaks in the kit's
  * logical root, because that is the only thing a URL can mean. Two spellings,
@@ -225,8 +225,8 @@ export function normalizeLogical(p: string): { pathname: string; escape: number 
  * The trailing separator is the whole point: a plain `startsWith(dir)` also
  * matches a sibling directory sharing the prefix, so a docroot of `/a/site`
  * would accept `/a/site-other/secret`. That hazard gets more load-bearing
- * with kits, not less -- in `node_modules`, `@markout/bootstrap-kit` and a
- * `@markout/bootstrap-kit-extras` are literal directory siblings.
+ * with kits, not less -- in `node_modules`, `@markout-dev/bootstrap-kit` and a
+ * `@markout-dev/bootstrap-kit-extras` are literal directory siblings.
  *
  * Lexical, and that is a decision rather than an oversight. It answers "did
  * this path escape its root", not "these bytes came from inside that

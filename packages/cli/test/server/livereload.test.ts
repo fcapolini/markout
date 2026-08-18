@@ -8,7 +8,7 @@ import {
   createReloader,
   RELOAD_REQ,
   withReloadScript,
-} from '@markout/express';
+} from '@markout-dev/express';
 import { Server } from '../../src/server';
 
 /**

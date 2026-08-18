@@ -4,12 +4,12 @@ The system parts of a page — the things a framework usually builds *into* the
 language — written **with** it instead.
 
 ```sh
-npm install @markout/std-kit
+npm install @markout-dev/std-kit
 ```
 
 ```html
 <head>
-  <:import src="/npm/@markout/std-kit/all.htm" />
+  <:import src="/npm/@markout-dev/std-kit/all.htm" />
 </head>
 ```
 

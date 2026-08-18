@@ -1,7 +1,16 @@
 {
-  "name": "@markout/core",
+  "name": "@markout-dev/core",
   "version": "0.4.0",
   "description": "Markout's compiler and isomorphic runtime: lexically scoped values on the DOM tree, compile-time dependency extraction, and server-side rendering. No HTTP.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fcapolini/markout.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/fcapolini/markout/issues"
+  },
+  "homepage": "https://markout.dev",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -23,7 +32,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc -b && npm run typecheck:test && npm run typecheck:dom",
     "typecheck:test": "tsc -p tsconfig.test.json",
-    "typecheck:dom": "tsc -p tsconfig.dom.json"
+    "typecheck:dom": "tsc -p tsconfig.dom.json",
+    "prepack": "npm run build"
   },
   "keywords": [
     "html",
@@ -52,5 +62,8 @@
     "entities": "^7.0.1",
     "escodegen": "^2.1.0",
     "estraverse": "^5.3.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

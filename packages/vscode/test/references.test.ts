@@ -33,8 +33,8 @@ describe('what counts as a file reference', () => {
   });
 
   it('finds a package import, which is the one worth following', () => {
-    expect(values('<:import src="/npm/@markout/bootstrap-kit/all.htm" />')).toStrictEqual([
-      '/npm/@markout/bootstrap-kit/all.htm',
+    expect(values('<:import src="/npm/@markout-dev/bootstrap-kit/all.htm" />')).toStrictEqual([
+      '/npm/@markout-dev/bootstrap-kit/all.htm',
     ]);
   });
 
@@ -117,19 +117,19 @@ describe('following one to a file', () => {
   });
 
   it('follows a package import into the installed package', () => {
-    // `/npm/@markout/bootstrap-kit/all.htm` is inside node_modules, which is
+    // `/npm/@markout-dev/bootstrap-kit/all.htm` is inside node_modules, which is
     // nowhere an editor would look. The compiler's resolver knows because it
     // is the same call the compiler makes when it reads the file
-    const target = write('node_modules/@markout/bootstrap-kit/all.htm');
+    const target = write('node_modules/@markout-dev/bootstrap-kit/all.htm');
     write(
-      'node_modules/@markout/bootstrap-kit/package.json',
-      JSON.stringify({ name: '@markout/bootstrap-kit', markout: { root: '/bootstrap-kit' } })
+      'node_modules/@markout-dev/bootstrap-kit/package.json',
+      JSON.stringify({ name: '@markout-dev/bootstrap-kit', markout: { root: '/bootstrap-kit' } })
     );
     expect(
       resolveReference({
         docroot,
         fromPathname: '/index.html',
-        spec: '/npm/@markout/bootstrap-kit/all.htm',
+        spec: '/npm/@markout-dev/bootstrap-kit/all.htm',
       })
     ).toBe(target);
   });

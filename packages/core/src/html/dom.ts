@@ -9,7 +9,7 @@
  *
  * The collision with `lib.dom` globals is therefore intended. Consumers that
  * also include the DOM lib should import this module as a namespace
- * (`import * as dom from '@markout/html/dom'`) to keep the two apart.
+ * (`import * as dom from '@markout-dev/html/dom'`) to keep the two apart.
  *
  * Members here are the intersection of what both implementations provide;
  * anything server-only (`loc`, `unlink()`) is optional, so real DOM nodes

@@ -58,7 +58,7 @@ now have to add presentation logic to them by hand.
 The risk of leading with one CSS framework is being typecast as "a Bootstrap
 thing". That used to be answered by pointing at `shoelace-kit` and
 `webawesome-kit`, which overstates two twenty-line demo stubs. The real second
-kit is [`@markout/std-kit`](kits/std-kit/) — the system parts of a page, not a
+kit is [`@markout-dev/std-kit`](kits/std-kit/) — the system parts of a page, not a
 design system — and it is better evidence anyway, because it shows the mechanism is
 not "wrap a CSS framework", it is "define tags". Bootstrap is *the first kit*,
 not the point, and the page has to keep saying so.
@@ -152,11 +152,11 @@ before/after page rebuilt on the real kit, which is also the first page in
 the repository to install the kit rather than keep a copy of it:
 
 ```html
-<:import src="/npm/@markout/bootstrap-kit/all.htm" />
+<:import src="/npm/@markout-dev/bootstrap-kit/all.htm" />
 ```
 
 That spelling is worth the churn on its own. A reader who wants what the demo
-has now types `npm install @markout/bootstrap-kit`, and the page they are
+has now types `npm install @markout-dev/bootstrap-kit`, and the page they are
 looking at is the proof it works.
 
 ## The kit has to prove reactivity, not boilerplate removal
@@ -301,10 +301,10 @@ a kit is an installed package, imported once by provenance and served at the
 logical root it declares —
 
 ```html
-<:import src="/npm/@markout/bootstrap-kit/all.htm" />
+<:import src="/npm/@markout-dev/bootstrap-kit/all.htm" />
 ```
 
-— so the line to publish is `npm install @markout/bootstrap-kit`, per project,
+— so the line to publish is `npm install @markout-dev/bootstrap-kit`, per project,
 not the `-g` the page currently shows, which installed a set of importable
 fragments globally. Both kits became real npm packages on 2026-08-17, so what
 remains is only that neither has been pushed to the registry: the copy is

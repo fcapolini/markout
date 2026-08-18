@@ -16,11 +16,11 @@
     "test-coverage": "vitest run --coverage",
     "pretest-coverage": "npm run build",
     "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
-    "dev": "npm run dev -w @markout/site",
-    "dev:bench": "npm run dev:bench -w markout --",
-    "bench:medium": "npm run bench:medium -w markout --",
-    "bench:compare": "npm run bench:compare -w markout --",
-    "start": "npm run start -w @markout/site"
+    "dev": "npm run dev -w @markout-dev/site",
+    "dev:bench": "npm run dev:bench -w @markout-dev/cli --",
+    "bench:medium": "npm run bench:medium -w @markout-dev/cli --",
+    "bench:compare": "npm run bench:compare -w @markout-dev/cli --",
+    "start": "npm run start -w @markout-dev/site"
   },
   "author": "Fabrizio Capolini",
   "license": "MIT",

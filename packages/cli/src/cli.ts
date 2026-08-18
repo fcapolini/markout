@@ -4,7 +4,7 @@ import path from 'path';
 import { readFileSync, statSync } from 'fs';
 import { Server } from './server';
 import { build, type BuildResult } from './server/build';
-import { formatRuntimeError } from '@markout/core';
+import { formatRuntimeError } from '@markout-dev/core';
 
 /**
  * The directory served when none is named.

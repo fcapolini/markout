@@ -1,12 +1,12 @@
 # Five deliverables, one repository
 
 Status: **done except the extension.** Six workspaces:
-[`@markout/core`](../../packages/core/),
-[`@markout/express`](../../packages/express/) and
+[`@markout-dev/core`](../../packages/core/),
+[`@markout-dev/express`](../../packages/express/) and
 [`markout`](../../packages/cli/) for the code;
-[`@markout/bootstrap-kit`](../../kits/bootstrap-kit/) and
-[`@markout/std-kit`](../../kits/std-kit/) for the kits; and
-[`@markout/site`](../../sites/site/), private, for the homepage and the demos.
+[`@markout-dev/bootstrap-kit`](../../kits/bootstrap-kit/) and
+[`@markout-dev/std-kit`](../../kits/std-kit/) for the kits; and
+[`@markout-dev/site`](../../sites/site/), private, for the homepage and the demos.
 The VS Code extension is the one deliverable still to build, and the reason
 the split was worth doing. This file records the decisions and the order, so
 the work can be picked up without the reasoning being lost with it.
@@ -18,8 +18,8 @@ The repository has to produce five things:
 | Deliverable | Published as |
 | --- | --- |
 | the CLI | `markout` on npm |
-| the middleware, for Express applications | `@markout/express` on npm |
-| the Bootstrap kit | `@markout/bootstrap-kit` on npm |
+| the middleware, for Express applications | `@markout-dev/express` on npm |
+| the Bootstrap kit | `@markout-dev/bootstrap-kit` on npm |
 | the homepage, with a demos section | a site |
 | the VS Code extension, on Volar | the marketplace |
 
@@ -44,7 +44,7 @@ rather than remembered:
 
 | | Result |
 | --- | --- |
-| `"@markout/core": "workspace:*"` | **rejected** — `EUNSUPPORTEDPROTOCOL` |
+| `"@markout-dev/core": "workspace:*"` | **rejected** — `EUNSUPPORTEDPROTOCOL` |
 | `"^0.4.0"`, local package at `0.4.0` | symlinked to the local package |
 | `"^0.4.0"`, local package bumped to `0.5.0` | **silently resolved from the registry** |
 | `npm version patch --workspaces` | bumps each package, leaves sibling ranges untouched |
@@ -52,7 +52,7 @@ rather than remembered:
 
 The second and third rows are the ones to design around, and together they
 rule out the obvious shortcut. `"*"` always links locally — and is published
-verbatim, so a consumer of the CLI would resolve `@markout/core@*` to
+verbatim, so a consumer of the CLI would resolve `@markout-dev/core@*` to
 whatever is newest, including the next major. Real ranges are therefore
 mandatory, and since npm will not keep them in step on a version bump, and
 resolves a stale one from the registry *without saying so*, the failure mode
@@ -69,13 +69,13 @@ read off every cross-directory import in `packages/cli/src/`:
 
 | Layer | Files | Lands in |
 | --- | --- | --- |
-| base | [kits.ts](../../packages/core/src/kits.ts), [paths.ts](../../packages/core/src/paths.ts) | `@markout/core` |
-| html | [src/html/](../../packages/core/src/html/) | `@markout/core` |
-| publish | [publish.ts](../../packages/core/src/publish.ts) | `@markout/core` |
-| runtime | [src/runtime/](../../packages/core/src/runtime/) | `@markout/core` |
-| compiler | [src/compiler/](../../packages/core/src/compiler/) | `@markout/core` |
-| render | `render.ts`, `serialize.ts`, `runtime-bundle.ts` | `@markout/core` |
-| http | `middleware.ts`, `livereload.ts`, `watcher.ts`, `logger.ts` | `@markout/express` |
+| base | [kits.ts](../../packages/core/src/kits.ts), [paths.ts](../../packages/core/src/paths.ts) | `@markout-dev/core` |
+| html | [src/html/](../../packages/core/src/html/) | `@markout-dev/core` |
+| publish | [publish.ts](../../packages/core/src/publish.ts) | `@markout-dev/core` |
+| runtime | [src/runtime/](../../packages/core/src/runtime/) | `@markout-dev/core` |
+| compiler | [src/compiler/](../../packages/core/src/compiler/) | `@markout-dev/core` |
+| render | `render.ts`, `serialize.ts`, `runtime-bundle.ts` | `@markout-dev/core` |
+| http | `middleware.ts`, `livereload.ts`, `watcher.ts`, `logger.ts` | `@markout-dev/express` |
 | cli | `cli.ts`, `server/index.ts`, `build.ts`, `exit-hook.ts` | `markout` |
 
 Nothing in the tree points upward through that table, and there are no
@@ -91,9 +91,9 @@ imposed on them.
 
 Each boundary exists because some consumer must not see what is above it:
 
-- **`@markout/core`** — compile and render, no HTTP. Dependencies: acorn,
+- **`@markout-dev/core`** — compile and render, no HTTP. Dependencies: acorn,
   escodegen, estraverse, entities. This is what the extension imports.
-- **`@markout/express`** — the middleware and the machinery it drives: the
+- **`@markout-dev/express`** — the middleware and the machinery it drives: the
   logger, the watcher, the reloader. Depends on core, with express as a
   *peer* dependency, since an application that mounts middleware already has
   one and two copies of express in a tree is its own kind of bug.
@@ -108,7 +108,7 @@ Each boundary exists because some consumer must not see what is above it:
   thing to avoid, and `Server` uses
   [exit-hook.ts](../../packages/cli/src/server/exit-hook.ts) to do exactly
   that.
-- **`@markout/bootstrap-kit`**, **`@markout/std-kit`** — no TypeScript at
+- **`@markout-dev/bootstrap-kit`**, **`@markout-dev/std-kit`** — no TypeScript at
   all: `.htm` files and the mandatory `markout.root` from
   [npm-kits.md](npm-kits.md).
 - **the site** and **the extension** — private workspaces, never published.
@@ -118,7 +118,7 @@ Each boundary exists because some consumer must not see what is above it:
 **`render.ts` and `serialize.ts` go in core, not in the Express package.**
 Server-side rendering is not an Express concern; it is the isomorphism the
 language is built on, and [build.ts](../../packages/cli/src/server/build.ts) needs it with
-no server present. Putting them in `@markout/express` would make
+no server present. Putting them in `@markout-dev/express` would make
 `markout build` — the ahead-of-time path, whose entire audience is people who
 cannot run Node in the request path — depend on an HTTP framework.
 
@@ -177,7 +177,7 @@ follows the files.
    - **`npm install` in an existing tree pruned esbuild's platform binary.**
      Optional dependencies do not survive the reshuffle. `rm -rf node_modules`
      and install again; nothing is wrong with the tree.
-3. **Extract `@markout/core`.** The largest step, and the one that unblocks
+3. **Extract `@markout-dev/core`.** The largest step, and the one that unblocks
    the extension. **Done**, and four decisions inside it are the ones to
    reuse in step 4:
    - **The barrel is curated, one name at a time.**
@@ -204,7 +204,7 @@ follows the files.
    - `publish.ts` turned out to sit *above* html rather than beside `paths`,
      which the layering test caught the moment core had its own copy. The
      table above says base; the code says otherwise, and the code was right.
-4. **Extract `@markout/express`.** Small, once core is out. **Done** — four
+4. **Extract `@markout-dev/express`.** Small, once core is out. **Done** — four
    files, and the machinery from step 3 applied unchanged. Two things it
    added rather than repeated:
    - **The package now has a test of the thing it is for.** Every existing
@@ -240,7 +240,7 @@ follows the files.
 6. **The site.** **Done.** [sites/site/](../../sites/site/) is one docroot with
    the homepage at `/` and everything else under `/demos/`, served by a plain
    Express app — which makes it the worked example of what
-   `@markout/express` is for, including the ordering rule step 4 turned up:
+   `@markout-dev/express` is for, including the ordering rule step 4 turned up:
    its own API routes come before `markout()`.
 
    Every demo was kept and moved, none deleted. The index lists them, which
@@ -248,7 +248,7 @@ follows the files.
    worth deleting, and now there is somewhere for that judgement to be made.
 
    The remaining deliverable is **the VS Code extension**, on Volar, against
-   `@markout/core`.
+   `@markout-dev/core`.
 
 ## Two traps, both npm's
 

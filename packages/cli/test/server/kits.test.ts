@@ -26,14 +26,14 @@ beforeAll(async () => {
   docroot = path.join(root, 'site');
   fs.mkdirSync(docroot);
 
-  const kit = path.join(root, 'node_modules', '@markout', 'bootstrap-kit');
+  const kit = path.join(root, 'node_modules', '@markout-dev', 'bootstrap-kit');
   fs.mkdirSync(path.join(kit, 'res'), { recursive: true });
   fs.mkdirSync(path.join(kit, 'parts'), { recursive: true });
   fs.mkdirSync(path.join(kit, 'node_modules', 'left-pad'), { recursive: true });
   fs.writeFileSync(
     path.join(kit, 'package.json'),
     JSON.stringify({
-      name: '@markout/bootstrap-kit',
+      name: '@markout-dev/bootstrap-kit',
       markout: { root: '/bootstrap-kit' },
     })
   );
@@ -51,7 +51,7 @@ beforeAll(async () => {
 
   fs.writeFileSync(
     path.join(docroot, 'index.html'),
-    '<html><head><:import src="/npm/@markout/bootstrap-kit/all.htm"/></head>' +
+    '<html><head><:import src="/npm/@markout-dev/bootstrap-kit/all.htm"/></head>' +
       '<body><img src="/bootstrap-kit/res/logo.png">' +
       '<kit-badge :label="ok">shipped</kit-badge></body></html>'
   );
@@ -99,8 +99,8 @@ describe('serving a mounted kit', () => {
   it('refuses /npm/ over HTTP', async () => {
     // the compile-time spelling, which must never be a second URL for bytes
     // the logical root already names
-    expect((await request(app).get('/npm/@markout/bootstrap-kit/all.htm')).status).toBe(404);
-    expect((await request(app).get('/npm/@markout/bootstrap-kit/res/logo.png')).status).toBe(404);
+    expect((await request(app).get('/npm/@markout-dev/bootstrap-kit/all.htm')).status).toBe(404);
+    expect((await request(app).get('/npm/@markout-dev/bootstrap-kit/res/logo.png')).status).toBe(404);
   });
 
   it('refuses a dotfile and node_modules inside the kit', async () => {

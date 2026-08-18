@@ -57,7 +57,7 @@
     "vscode-textmate": "^9.3.2"
   },
   "dependencies": {
-    "@markout/core": "^0.4.0",
+    "@markout-dev/core": "^0.4.0",
     "@volar/language-core": "^2.4.28",
     "@volar/language-server": "^2.4.28",
     "volar-service-html": "0.0.71",

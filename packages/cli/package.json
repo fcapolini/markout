@@ -1,7 +1,16 @@
 {
-  "name": "markout",
+  "name": "@markout-dev/cli",
   "version": "0.4.0",
   "description": "HTML-first reactive web framework: lexically scoped values on the DOM tree, compile-time dependency extraction, and isomorphic SSR",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fcapolini/markout.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/fcapolini/markout/issues"
+  },
+  "homepage": "https://markout.dev",
   "bin": {
     "markout": "dist/cli.js"
   },
@@ -20,7 +29,8 @@
     "typecheck": "tsc -b && npm run typecheck:test",
     "typecheck:test": "tsc -p tsconfig.test.json",
     "bench:medium": "node scripts/gen-bench-pages.mjs && tsx --tsconfig tsconfig.dev.json scripts/bench-medium.ts",
-    "bench:compare": "tsx --tsconfig tsconfig.dev.json scripts/bench-compare.ts"
+    "bench:compare": "tsx --tsconfig tsconfig.dev.json scripts/bench-compare.ts",
+    "prepack": "npm run build"
   },
   "keywords": [
     "html",
@@ -49,10 +59,13 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "@markout/core": "^0.4.0",
-    "@markout/express": "^0.4.0",
+    "@markout-dev/core": "^0.4.0",
+    "@markout-dev/express": "^0.4.0",
     "commander": "^15.0.0",
     "compression": "^1.8.1",
     "express": "^5.2.1"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

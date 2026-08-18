@@ -14,7 +14,7 @@ import {
   type Kit,
   type PageError,
   type RuntimeError,
-} from '@markout/core';
+} from '@markout-dev/core';
 
 export interface BuildProps {
   /** where the sources are */

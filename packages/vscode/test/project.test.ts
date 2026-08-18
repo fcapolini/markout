@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { Compiler } from '@markout/core';
+import { Compiler } from '@markout-dev/core';
 import { isMarkoutProject, looksLikeMarkout } from '../src/diagnostics';
 
 /**
@@ -85,7 +85,7 @@ describe('so the question is asked about the project', () => {
   it('says yes to one that depends on a scoped package of ours', () => {
     write(
       'package.json',
-      JSON.stringify({ name: 'site', devDependencies: { '@markout/express': '^0.4.0' } })
+      JSON.stringify({ name: 'site', devDependencies: { '@markout-dev/express': '^0.4.0' } })
     );
     expect(isMarkoutProject(dir)).toBe(true);
   });
@@ -93,7 +93,7 @@ describe('so the question is asked about the project', () => {
   it('says yes to one of our own workspaces, which depends on nothing', () => {
     // a kit is a package.json and a directory of fragments; it has no
     // dependencies at all, and its own pages are the ones most worth checking
-    write('package.json', JSON.stringify({ name: '@markout/bootstrap-kit' }));
+    write('package.json', JSON.stringify({ name: '@markout-dev/bootstrap-kit' }));
     expect(isMarkoutProject(dir)).toBe(true);
   });
 

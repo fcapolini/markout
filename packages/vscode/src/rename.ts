@@ -1,4 +1,4 @@
-import { referencesTo, type Page, type Scope, type Value } from '@markout/core';
+import { referencesTo, type Page, type Scope, type Value } from '@markout-dev/core';
 import fs from 'fs';
 import path from 'path';
 import { declarationTargetAt, identifierAt } from './declarations';
