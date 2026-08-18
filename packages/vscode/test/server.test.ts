@@ -269,6 +269,14 @@ describe('the server, over stdio', () => {
     expect(found === null || found.length === 0).toBe(true);
   });
 
+  it('leaves the Outline to the editor\'s own HTML support', async () => {
+    // These are `html` documents on purpose, so VS Code's HTML support is
+    // reading them too and already builds an outline. The Outline view shows
+    // one tree per PROVIDER rather than merging them, so a second one is not
+    // a better outline, it is two of the same -- which is what a page showed.
+    expect(capabilities.documentSymbolProvider).toBeFalsy();
+  });
+
   it('answers HTML\'s own questions too, through the embedded code', async () => {
     // volar-service-html over the masked HTML: proof that the second service
     // sees valid markup at the author's offsets, not a page cut in half by a

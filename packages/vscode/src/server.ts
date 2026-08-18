@@ -2,6 +2,7 @@ import {
   createConnection,
   createServer,
   createSimpleProject,
+  type LanguageServicePlugin,
 } from '@volar/language-server/node';
 import {
   create as createHtmlService,
@@ -63,6 +64,27 @@ server.configurations = {
   },
 };
 
+/**
+ * The one thing HTML's own service must NOT answer here: the Outline.
+ *
+ * These pages are `html` documents -- deliberately, so as not to displace
+ * anything -- which means VS Code's own HTML support is looking at them too,
+ * and it already builds an outline. A second provider does not merge with
+ * it the way folding ranges or document links do: the Outline view shows one
+ * tree PER PROVIDER, so every page grew two identical trees.
+ *
+ * Everything else this service offers stays, because everything else either
+ * merges or answers something HTML gets wrong on its own -- an expression
+ * holding a `>` ends a tag for anybody parsing the raw text, and the whole
+ * point of the embedded document is that it does not. The rule is to
+ * contribute what HTML cannot answer, and an outline of ordinary markup is
+ * not that.
+ */
+function withoutOutline(service: LanguageServicePlugin): LanguageServicePlugin {
+  const { documentSymbolProvider, ...capabilities } = service.capabilities;
+  return { ...service, capabilities };
+}
+
 connection.onInitialize(params => {
   const settings = params.initializationOptions as
     | { enable?: 'auto' | 'always' | 'never'; docroot?: string }
@@ -81,18 +103,20 @@ connection.onInitialize(params => {
       // is reimplemented here: the expressions are masked to characters that
       // cannot end a tag, so what this service sees is ordinary HTML at
       // exactly the offsets the author's is at
-      createHtmlService({
-        // WITHOUT this, `/lib.htm` in an <:import> resolves against the
-        // workspace folder and the editor offers a link it cannot open
-        getDocumentContext: context =>
-          createDocumentContext({
-            workspaceFolder: folders[0],
-            docroot: settings?.docroot,
-            decode: uri => context.decodeEmbeddedDocumentUri(uri)?.[0],
-            fallback: (ref, base) =>
-              resolveHtmlReference(ref, base, context.env.workspaceFolders),
-          }),
-      }),
+      withoutOutline(
+        createHtmlService({
+          // WITHOUT this, `/lib.htm` in an <:import> resolves against the
+          // workspace folder and the editor offers a link it cannot open
+          getDocumentContext: context =>
+            createDocumentContext({
+              workspaceFolder: folders[0],
+              docroot: settings?.docroot,
+              decode: uri => context.decodeEmbeddedDocumentUri(uri)?.[0],
+              fallback: (ref, base) =>
+                resolveHtmlReference(ref, base, context.env.workspaceFolders),
+            }),
+        })
+      ),
       createMarkoutService({
         workspaceFolder: folders[0],
         docroot: settings?.docroot,
