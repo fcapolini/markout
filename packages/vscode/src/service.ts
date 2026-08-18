@@ -12,6 +12,7 @@ import {
 import { isPage } from './plugin';
 import { fileReferenceAt } from './references';
 import { fileOf, findDeclaration } from './declarations';
+import { findCompletions } from './completions';
 
 /**
  * The compiler, as a language service.
@@ -88,6 +89,9 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
     capabilities: {
       diagnosticProvider: { interFileDependencies: true, workspaceDiagnostics: false },
       definitionProvider: true,
+      // `.` because `body.` is the moment the list is most worth having, and
+      // is also the moment the expression stops being valid JavaScript
+      completionProvider: { triggerCharacters: ['.'] },
     },
     create(context) {
       /**
@@ -118,6 +122,37 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
          * an installed package -- neither is somewhere an editor would find
          * by guessing, and both are somewhere the compiler already knows.
          */
+        async provideCompletionItems(document, position) {
+          const uri = sourceOf(document.uri);
+          if (!uri) {
+            return undefined;
+          }
+          const filePath = uri.fsPath;
+          const docroot = props.docroot ?? guessDocroot(filePath, props.workspaceFolder);
+          const found = await findCompletions({
+            docroot,
+            pathname: pathnameOf(filePath, docroot),
+            text: document.getText(),
+            offset: document.offsetAt(position),
+            open: props.open,
+            filePath,
+          });
+          return {
+            isIncomplete: false,
+            items: found.map((item, i) => ({
+              label: item.name,
+              // Field for a value, Module for a scope: the distinction the
+              // language makes, in the vocabulary an editor already draws
+              kind: item.kind === 'value' ? 5 : 9,
+              detail: item.detail,
+              // `visibleFrom` answers nearest-first, and a list sorted
+              // alphabetically would bury the values of the scope actually
+              // asked about under everything visible from it
+              sortText: String(i).padStart(4, '0'),
+            })),
+          };
+        },
+
         async provideDefinition(document, position) {
           const uri = sourceOf(document.uri);
           if (!uri) {

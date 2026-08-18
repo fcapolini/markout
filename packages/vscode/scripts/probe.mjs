@@ -226,6 +226,34 @@ for (const [name, label, needle, within] of CASES) {
   console.log(`  ${`${name} ${label}`.padEnd(34)} -> ${where.padEnd(16)} ${line}`);
 }
 
+console.log('\ncompletion (typed into a copy of the page, which does not compile)\n');
+for (const [name, typed] of [
+  ['scopes.html', '${body.'],
+  ['scopes.html', '${'],
+  ['tags.html', '${$parent.'],
+]) {
+  const doc = open(name);
+  // insert the half-typed expression, the way an author would
+  const at = doc.text.indexOf('<body');
+  const cut = doc.text.indexOf('>', at) + 1;
+  const text = `${doc.text.slice(0, cut)}\n  <p>${typed}}</p>${doc.text.slice(cut)}`;
+  const uri = `${doc.uri}#typing`;
+  send({
+    method: 'textDocument/didOpen',
+    params: { textDocument: { uri, languageId: 'html', version: 1, text } },
+  });
+  const offset = text.indexOf(typed, cut) + typed.length;
+  const items = await request('textDocument/completion', {
+    textDocument: { uri },
+    position: {
+      line: text.slice(0, offset).split('\n').length - 1,
+      character: offset - (text.lastIndexOf('\n', offset - 1) + 1),
+    },
+  });
+  const names = (items?.items ?? items ?? []).map(i => i.label);
+  console.log(`  ${`${name} after "${typed}"`.padEnd(34)} ${names.length ? names.join(' ') : 'NOTHING'}`);
+}
+
 console.log('\ndiagnostics\n');
 for (const name of ['index.html', 'broken.html', 'missing.html', 'plain.html']) {
   const doc = open(name);

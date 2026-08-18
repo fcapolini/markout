@@ -20,7 +20,12 @@ export type { Page } from './compiler/ir/Page';
 export { DEFAULT_RUNTIME_SRC } from './compiler/stages/stage7-generate';
 // what a name in an expression refers to, asked of the compiler rather than
 // re-derived: see the editor support in packages/vscode
-export { declarationFor, type Declaration } from './compiler/stages/stage4-resolve';
+export {
+  declarationFor,
+  visibleFrom,
+  type Declaration,
+  type Visible,
+} from './compiler/stages/stage4-resolve';
 export type { Scope } from './compiler/ir/Scope';
 export type { Value } from './compiler/ir/Value';
 export { PageError } from './html/parser';
