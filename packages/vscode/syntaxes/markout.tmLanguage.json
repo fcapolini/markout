@@ -5,6 +5,7 @@
   "injectionSelector": "L:text.html -comment -string",
   "patterns": [
     { "include": "#interpolation" },
+    { "include": "#directive-close-tag" },
     { "include": "#directive-tag" },
     { "include": "#colon-attribute" }
   ],
@@ -18,18 +19,40 @@
       "name": "meta.embedded.expression.markout",
       "patterns": [{ "include": "source.js" }]
     },
-    "directive-tag": {
-      "comment": "<:import>, <:include>, <:define>, <:slot>, <:group>, <:logic>",
-      "match": "(</?)(:[a-zA-Z][\\w-]*)",
+    "directive-close-tag": {
+      "comment": "</:define>, </:group>, ... -- matched before the open tag, so that the `<` of a `</` never starts one",
+      "match": "(</)(:[a-zA-Z][\\w-]*)\\s*(>)",
       "captures": {
         "1": { "name": "punctuation.definition.tag.markout" },
-        "2": { "name": "entity.name.tag.directive.markout" }
+        "2": { "name": "entity.name.tag.directive.markout" },
+        "3": { "name": "punctuation.definition.tag.markout" }
       }
     },
+    "directive-tag": {
+      "comment": "<:import>, <:include>, <:define>, <:slot>, <:group>, <:logic> -- tags HTML doesn't know, so it leaves their attributes unpainted and we do them ourselves. It runs to the closing `>` as a block, both to reach those attributes and to give the tag a meta.tag scope: that's what the inter-attribute comments inject into.",
+      "begin": "(<)(:[a-zA-Z][\\w-]*)",
+      "end": "(/?>)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.markout" },
+        "2": { "name": "entity.name.tag.directive.markout" }
+      },
+      "endCaptures": { "1": { "name": "punctuation.definition.tag.markout" } },
+      "name": "meta.tag.directive.markout",
+      "patterns": [
+        { "include": "#colon-attribute" },
+        { "include": "text.html.basic#attribute" }
+      ]
+    },
     "colon-attribute": {
-      "comment": "the attributes HTML has no name for: values, class and style toggles, events, lifecycle, replication",
-      "match": "(?<=[\\s\"'])(::?[a-zA-Z_$][\\w:$-]*)",
-      "captures": { "1": { "name": "entity.other.attribute-name.markout" } }
+      "comment": "the attributes HTML has no name for: values, class and style toggles, events, lifecycle, replication. A block rather than a bare name, so the `=` and the value that follows are ours too -- left to HTML they are characters it thinks are illegal there",
+      "begin": "(?<=[\\s\"'])(::?[a-zA-Z_$][\\w:$-]*)",
+      "end": "(?=\\s*+[^=\\s])",
+      "beginCaptures": { "1": { "name": "entity.other.attribute-name.markout" } },
+      "name": "meta.attribute.markout",
+      "patterns": [
+        { "include": "#interpolation" },
+        { "include": "text.html.basic#attribute-interior" }
+      ]
     }
   }
 }

@@ -48,6 +48,14 @@
         "embeddedLanguages": {
           "meta.embedded.expression.markout": "javascript"
         }
+      },
+      {
+        "scopeName": "text.html.markout.tag",
+        "path": "./syntaxes/markout-tag.tmLanguage.json",
+        "injectTo": [
+          "text.html.basic",
+          "text.html.derivative"
+        ]
       }
     ],
     "configuration": {

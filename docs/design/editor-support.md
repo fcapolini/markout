@@ -143,7 +143,8 @@ Ranked by what a markout author actually feels, not by what is easy:
    earliest of its `callSiteValues`, a set that exists because a definition
    must not read its caller and happens to be exactly the list of things the
    author typed on that tag.
-3. **Syntax highlighting** for `${…}` and `:`-attributes, so the language
+3. **Syntax highlighting** for `${…}`, `:`-attributes and the `//` and
+   `/* … */` comments a tag may hold between its attributes, so the language
    stops looking like malformed HTML.
 4. **Completion of names.** `body.` offers what is in `body`; a bare name
    offers everything in scope. The list comes from `visibleFrom`, the
@@ -255,8 +256,11 @@ constraint on this extension.
 file gets exactly one language id, so every HTML file on the machine would
 open as "Markout" and lose Emmet, the built-in IntelliSense, and every
 extension registered against `html`. The grammar is an **injection** into
-`text.html.basic` instead, which adds `${…}` and `:`-attribute highlighting
-on top of the real HTML grammar rather than in place of it.
+`text.html.basic` instead, which adds `${…}`, `:`-attribute and
+inter-attribute comment highlighting on top of the real HTML grammar rather
+than in place of it. The comments go in a second injection, selected on
+`meta.tag` rather than on the file, because `//` inside a tag is a comment
+and `//` in text is text.
 
 **Diagnostics are gated on the project, not the file.** Plain HTML is quiet
 under the compiler, because markout is a superset — script contents are not
