@@ -19,12 +19,20 @@ const PACKAGE = path.resolve(__dirname, '..');
 const SERVER = path.join(PACKAGE, 'dist', 'server.js');
 
 let docroot: string;
+/** a SECOND folder in the same window, which is a second project, not a subfolder */
+let second: string;
 let child: ChildProcess;
 let nextId = 1;
 let capabilities: any;
 let coldSweep: any;
 /** the server asking the editor to pull again, which is not a thing it can do alone */
 let refreshes = 0;
+/** `markout.*` as this editor currently holds it, which the server asks for */
+let configuration: { enable?: string; docroot?: string } = {};
+/** resolved when the server has asked and been answered */
+let configurationPulled: (() => void) | undefined;
+/** what the server asked the editor to SHOW, which is the only place a person looks */
+const shown: string[] = [];
 const pending = new Map<number, (result: unknown) => void>();
 
 function send(message: object) {
@@ -83,6 +91,18 @@ beforeAll(async () => {
     '<html :n=${1}>\n  <body>${chilly}</body>\n</html>'
   );
 
+  // a SEPARATE folder of the same window, with a docroot of its own: a page
+  // here is resolved against this folder, never against the first one
+  second = fs.mkdtempSync(path.join(os.tmpdir(), 'markout-lsp-second-'));
+  fs.writeFileSync(
+    path.join(second, 'package.json'),
+    JSON.stringify({ name: 'next-door', dependencies: { markout: '^0.4.0' } })
+  );
+  fs.writeFileSync(
+    path.join(second, 'next-door.html'),
+    '<html>\n  <body>${elsewhere}</body>\n</html>'
+  );
+
   // and a project next door that has never heard of it
   fs.mkdirSync(path.join(docroot, 'other'));
   fs.writeFileSync(
@@ -95,6 +115,24 @@ beforeAll(async () => {
   child.stdout!.on('data', chunk => {
     buffer.data = Buffer.concat([buffer.data, chunk]);
     readMessages(buffer, message => {
+      if (message.method === 'workspace/configuration') {
+        // the server asking what the settings are NOW. An editor answers
+        // this at any time, which is what lets a setting take effect in the
+        // window it was changed in rather than after a reload
+        send({
+          id: message.id,
+          result: (message.params.items ?? []).map((item: any) =>
+            item.section === 'markout' ? configuration : null
+          ),
+        });
+        configurationPulled?.();
+        return;
+      }
+      if (message.method === 'window/showMessageRequest') {
+        shown.push(message.params.message);
+        send({ id: message.id, result: null });
+        return;
+      }
       if (message.method === 'workspace/diagnostic/refresh') {
         refreshes++;
         // a request, not a notification: leaving it unanswered would make the
@@ -113,7 +151,12 @@ beforeAll(async () => {
   const result = await request('initialize', {
     processId: process.pid,
     rootUri: `file://${docroot}`,
-    workspaceFolders: [{ uri: `file://${docroot}`, name: 'fixture' }],
+    // TWO folders, because a window is allowed to hold several and they are
+    // separate projects: the sweep owes an answer about both
+    workspaceFolders: [
+      { uri: `file://${docroot}`, name: 'fixture' },
+      { uri: `file://${second}`, name: 'next-door' },
+    ],
     // pull diagnostics, which is what an editor asks for and what the
     // server only turns on when the client says it understands them
     capabilities: {
@@ -130,7 +173,11 @@ beforeAll(async () => {
       // back to publishing diagnostics for open documents, and advertises no
       // diagnostic provider at all -- which is precisely the arrangement that
       // left the Problems panel empty
-      workspace: { diagnostics: { refreshSupport: true } },
+      workspace: {
+        diagnostics: { refreshSupport: true },
+        // an editor that can be ASKED for its settings, which VS Code is
+        configuration: true,
+      },
     },
   });
   expect(result.capabilities).toBeTruthy();
@@ -146,6 +193,7 @@ beforeAll(async () => {
 afterAll(() => {
   child?.kill();
   fs.rmSync(docroot, { recursive: true, force: true });
+  fs.rmSync(second, { recursive: true, force: true });
 });
 
 /** open a page with the given text and ask what is wrong with it */
@@ -319,6 +367,53 @@ describe('the server, over stdio', () => {
       (item.items ?? []).map((d: any) => `${path.basename(item.uri)}: ${d.message}`)
     );
     expect(found).toContainEqual(expect.stringMatching(/cold\.html: .*chilly/));
+  });
+
+  it('sweeps every folder of the window, not only the first', async () => {
+    // `folders[0]` is one project of however many are open, and the pages of
+    // the others are not somebody else's problem -- they are in the same
+    // Problems panel, under the same window
+    const found = (coldSweep?.items ?? []).flatMap((item: any) =>
+      (item.items ?? []).map((d: any) => `${path.basename(item.uri)}: ${d.message}`)
+    );
+    expect(found).toContainEqual(expect.stringMatching(/next-door\.html: .*elsewhere/));
+  });
+
+  it('shows the author nothing about a project it got to the end of', () => {
+    // the sweep's bound is announced with a notification, which is the right
+    // channel precisely because it is intrusive: a window that has been
+    // swept clean must not produce one
+    expect(shown).toStrictEqual([]);
+  });
+
+  it('takes a changed setting there and then, without a reload', async () => {
+    const uri = `file://${path.join(docroot, 'markout/settings.html')}`;
+    const text = '<html :n=${1}>\n  <body>${missing}</body>\n</html>';
+    notify('textDocument/didOpen', {
+      textDocument: { uri, languageId: 'html', version: 1, text },
+    });
+    expect((await request('textDocument/diagnostic', { textDocument: { uri } })).items)
+      .toHaveLength(1);
+
+    // the editor now holds a different answer, and says so the way a client
+    // does: a notification, with the settings themselves left to be asked for
+    configuration = { enable: 'never' };
+    let pulled = new Promise<void>(resolve => (configurationPulled = () => resolve()));
+    notify('workspace/didChangeConfiguration', { settings: { markout: configuration } });
+    await pulled;
+    // past the invalidation the server does once it has read them
+    await new Promise(resolve => setTimeout(resolve, 100));
+    expect((await request('textDocument/diagnostic', { textDocument: { uri } })).items)
+      .toStrictEqual([]);
+
+    // and back, because a setting is not a one-way door either
+    configuration = { enable: 'auto' };
+    pulled = new Promise<void>(resolve => (configurationPulled = () => resolve()));
+    notify('workspace/didChangeConfiguration', { settings: { markout: configuration } });
+    await pulled;
+    await new Promise(resolve => setTimeout(resolve, 100));
+    expect((await request('textDocument/diagnostic', { textDocument: { uri } })).items)
+      .toHaveLength(1);
   });
 
   it('reports a broken page nobody has opened', async () => {

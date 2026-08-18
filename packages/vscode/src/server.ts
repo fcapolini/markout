@@ -50,6 +50,15 @@ const server = createServer(connection);
  */
 const invalidations = new Set<Parameters<typeof server.configurations.onDidChange>[0]>();
 const configurations = server.configurations;
+
+/** drop what Volar cached, and ask the editor to pull it all again */
+function invalidate() {
+  for (const invalidated of invalidations) {
+    invalidated({ settings: {} });
+  }
+  server.languageFeatures.requestRefresh(false);
+}
+
 server.configurations = {
   ...configurations,
   onDidChange(cb) {
@@ -85,14 +94,71 @@ function withoutOutline(service: LanguageServicePlugin): LanguageServicePlugin {
   return { ...service, capabilities };
 }
 
-connection.onInitialize(params => {
-  const settings = params.initializationOptions as
-    | { enable?: 'auto' | 'always' | 'never'; docroot?: string }
-    | undefined;
-  const folders = (params.workspaceFolders ?? [])
-    .map(f => URI.parse(f.uri))
+/**
+ * Something the author has to hear, said where they are looking.
+ *
+ * `console.warn` in a language server goes to an output channel nobody has
+ * opened, which for the one thing the sweep has to admit -- that it stopped
+ * early, so an empty Problems panel is not a clean project -- is the same as
+ * not saying it. The log line stays, for a bug report; the notification is
+ * what gets read.
+ *
+ * Once per distinct message, because a workspace sweep runs whenever the
+ * editor asks and a toast per pull would be its own bug.
+ */
+const said = new Set<string>();
+function warn(message: string) {
+  connection.console.warn(message);
+  if (!said.has(message)) {
+    said.add(message);
+    connection.window.showWarningMessage(message);
+  }
+}
+
+/**
+ * `markout.docroot` and `markout.enable`, as they are NOW.
+ *
+ * They arrive twice, which is not redundancy. `initializationOptions` is
+ * what the client sent at startup and the only answer a client that cannot
+ * be asked for configuration will ever give; the pull below is the live one,
+ * and it is what makes changing a setting take effect in the window it was
+ * changed in rather than after a reload.
+ *
+ * Everything downstream reads this through a getter -- see the props passed
+ * to the services -- because they are built once, at initialize, and a value
+ * copied in then is a value frozen then.
+ */
+let settings: { enable?: 'auto' | 'always' | 'never'; docroot?: string } = {};
+
+/**
+ * Re-read them, and make the editor ask everything again.
+ *
+ * Both halves are needed for the same reason a changed fragment needs both:
+ * Volar answers a diagnostic request from its cache until something clears
+ * it, and the editor does not ask again until it is told to.
+ */
+async function settingsChanged() {
+  const pulled = await configurations.get<{ enable?: 'auto' | 'always' | 'never'; docroot?: string }>(
+    'markout'
+  );
+  if (pulled) {
+    settings = { enable: pulled.enable, docroot: pulled.docroot || undefined };
+  }
+  invalidate();
+}
+
+/** the folders the window is open on, as paths, right now */
+function workspaceFolders() {
+  return server.workspaceFolders.all
     .filter(uri => uri.scheme === 'file')
     .map(uri => uri.fsPath);
+}
+
+connection.onInitialize(params => {
+  const initial = params.initializationOptions as
+    | { enable?: 'auto' | 'always' | 'never'; docroot?: string }
+    | undefined;
+  settings = { enable: initial?.enable, docroot: initial?.docroot || undefined };
 
   return server.initialize(
     params,
@@ -109,8 +175,12 @@ connection.onInitialize(params => {
           // workspace folder and the editor offers a link it cannot open
           getDocumentContext: context =>
             createDocumentContext({
-              workspaceFolder: folders[0],
-              docroot: settings?.docroot,
+              get workspaceFolders() {
+                return workspaceFolders();
+              },
+              get docroot() {
+                return settings.docroot;
+              },
               decode: uri => context.decodeEmbeddedDocumentUri(uri)?.[0],
               fallback: (ref, base) =>
                 resolveHtmlReference(ref, base, context.env.workspaceFolders),
@@ -118,14 +188,23 @@ connection.onInitialize(params => {
         })
       ),
       createMarkoutService({
-        workspaceFolder: folders[0],
-        docroot: settings?.docroot,
+        // getters, not values: this service is built once and the window
+        // outlives every setting it was built with
+        get workspaceFolders() {
+          return workspaceFolders();
+        },
+        get docroot() {
+          return settings.docroot;
+        },
         // `always` is how a project that uses markout without depending on
         // it -- a vendored copy, a page opened on its own -- says so
-        enable: settings?.enable,
+        get enable() {
+          return settings.enable;
+        },
         // the buffers the editor is holding, which is what the compiler is
         // given instead of the disk -- the reason `readFile` is a parameter
         open: filePath => server.documents.get(URI.file(filePath))?.getText(),
+        warn,
       }),
     ]
   );
@@ -151,13 +230,21 @@ connection.onInitialized(() => {
   let pending: NodeJS.Timeout | undefined;
   server.documents.onDidChangeContent(() => {
     clearTimeout(pending);
-    pending = setTimeout(() => {
-      for (const invalidate of invalidations) {
-        invalidate({ settings: {} });
-      }
-      server.languageFeatures.requestRefresh(false);
-    }, 300);
+    pending = setTimeout(invalidate, 300);
   });
+
+  // A setting is changed to be used, so it is read again and everything is
+  // asked again. Registered on the ORIGINAL callback list rather than the
+  // wrapper above: the wrapper's members are fired on every keystroke, and
+  // re-reading the configuration that often would be a round trip to the
+  // editor per edit.
+  configurations.onDidChange(() => void settingsChanged());
+  // and a folder added to the workspace is a project nobody has swept yet
+  server.workspaceFolders.onDidChange(() => invalidate());
+
+  // and once now, because what the client sent at startup is what it chose
+  // to send: asking is the only way to be sure of the answer it would give
+  void settingsChanged();
 });
 connection.onShutdown(() => server.shutdown());
 connection.listen();

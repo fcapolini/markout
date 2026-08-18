@@ -29,6 +29,9 @@ export async function activate(context: vscode.ExtensionContext) {
   };
   const settings = vscode.workspace.getConfiguration('markout');
   const options: LanguageClientOptions = {
+    // what the server starts with. It asks for these again itself, and again
+    // whenever they change -- see synchronize below -- so this is the first
+    // answer rather than the only one
     initializationOptions: {
       enable: settings.get<'auto' | 'always' | 'never'>('enable', 'auto'),
       docroot: settings.get<string>('docroot') || undefined,
@@ -42,6 +45,11 @@ export async function activate(context: vscode.ExtensionContext) {
       // fragment may never have been opened -- so the server has to hear
       // about files the editor is not showing
       fileEvents: vscode.workspace.createFileSystemWatcher('**/*.{html,htm}'),
+      // and `markout.docroot` decides what every absolute path in every page
+      // means, so changing it has to reach the server that is already
+      // running. Without this the client sends nothing, the server never
+      // re-reads, and a setting only takes effect on the next window
+      configurationSection: 'markout',
     },
   };
   client = new LanguageClient('markout', 'Markout', server, options);
