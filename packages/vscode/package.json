@@ -18,7 +18,8 @@
     "test": "vitest run",
     "typecheck": "tsc -b && npm run typecheck:test",
     "typecheck:test": "tsc -p tsconfig.test.json",
-    "probe": "node scripts/probe.mjs"
+    "probe": "node scripts/probe.mjs",
+    "tokens": "node scripts/tokens.mjs"
   },
   "author": "Fabrizio Capolini",
   "license": "MIT",
@@ -27,7 +28,9 @@
     "@types/node": "^26.2.0",
     "@types/vscode": "^1.90.0",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.3.2"
   },
   "dependencies": {
     "@markout/core": "^0.4.0",

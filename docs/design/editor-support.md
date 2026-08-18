@@ -262,6 +262,13 @@ than in place of it. The comments go in a second injection, selected on
 `meta.tag` rather than on the file, because `//` inside a tag is a comment
 and `//` in text is text.
 
+What an injection is worth depends entirely on what the grammar it is
+injected into was going to do at the same position, which no `.tmLanguage`
+file says and no unit test reads. `npm run tokens -w markout-vscode` answers
+it: vscode-textmate, over VS Code's own installed grammars, over every page
+in this repository, counting the characters HTML is painting as an error.
+It went from 1,893 to none.
+
 **And no language configuration either**, for the same reason. A
 `language-configuration.json` is contributed *through* a language id, so the
 only way to ship one here is to claim `html` — which does not add to VS
