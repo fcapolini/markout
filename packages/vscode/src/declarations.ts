@@ -243,7 +243,7 @@ export function fileOf(declaration: Declaration, props: { docroot: string; from:
  * those offsets are into the fragment, where they would otherwise match
  * whatever happens to sit at the same numbers here.
  */
-function expressionAt(
+export function expressionAt(
   values: Iterable<Value>,
   pathname: string,
   offset: number
@@ -264,7 +264,7 @@ function expressionAt(
   return best;
 }
 
-const IDENT_PART = /[A-Za-z0-9_$]/;
+export const IDENT_PART = /[A-Za-z0-9_$]/;
 
 /**
  * The dotted chain up to and including the identifier the offset is on.

@@ -46,6 +46,16 @@ question. `body` is a named *scope* and goes to the `<body>` tag; `items` is
 a value *inside* it, reached by navigating there first; `item` is the loop
 alias and goes to the `:for-as` beside it. `page` and `head` are there too.
 
+## Completion
+
+Type `${body.` anywhere in `markout/scopes.html` and the list is `body`'s
+values first, then what is visible from there — because `body.appName` really
+does resolve, and a list that hid it would be shorter than the truth. A bare
+`${` offers everything in scope, scopes included.
+
+Worth noticing while you do it: the page does not compile at that moment, and
+the list appears anyway.
+
 ## When the editor disagrees with all of that
 
 Run the same questions past the built server, with no VS Code in between:

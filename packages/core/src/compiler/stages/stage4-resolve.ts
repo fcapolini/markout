@@ -252,6 +252,57 @@ function lookup(scope: Scope, key: string, navigated = false): Declaration | und
   return undefined;
 }
 
+/**
+ * Every name that would resolve from a point in a page.
+ *
+ * The completion half of `declarationFor`, walking the same chain for the
+ * same reason: what an editor offers and what the compiler accepts have to
+ * be the same set, or the list is a list of things that might not work.
+ *
+ * `path` is the navigation prefix -- empty for a bare name, `['body']` for
+ * what follows `body.` -- and nearest wins, so a name declared closer hides
+ * one further out exactly as it does at compile time.
+ */
+export function visibleFrom(from: Value, path: string[] = []): Visible[] {
+  let scope: Scope | undefined = resolvesFrom(from);
+  let navigated = false;
+  for (const segment of path) {
+    const step = navigate(scope, segment, navigated);
+    if (!step.isNavigation || !step.scope) {
+      return [];
+    }
+    scope = step.scope;
+    navigated = true;
+  }
+
+  const found: Visible[] = [];
+  const seen = new Set<string>();
+  for (let s: Scope | undefined = scope; s; s = navigated ? s.resolvesVia() : s.lexical()) {
+    for (const [name, value] of s.values) {
+      // the runtime's own bookkeeping, which nobody writes by hand
+      if (!seen.has(name) && !name.includes('$')) {
+        seen.add(name);
+        found.push({ name, kind: 'value', value });
+      }
+    }
+    for (const child of s.lexicalChildren ?? []) {
+      if (child.name && !seen.has(child.name)) {
+        seen.add(child.name);
+        found.push({ name: child.name, kind: 'scope', scope: child });
+      }
+    }
+  }
+  return found;
+}
+
+/** a name that resolves, and what it resolves to */
+export interface Visible {
+  name: string;
+  kind: 'value' | 'scope';
+  value?: Value;
+  scope?: Scope;
+}
+
 /** what a reference resolves to: a value, or a scope that has a name */
 export type Declaration = { value: Value; scope?: undefined } | { scope: Scope; value?: undefined };
 

@@ -136,7 +136,22 @@ Ranked by what a markout author actually feels, not by what is easy:
    author typed on that tag.
 3. **Syntax highlighting** for `${…}` and `:`-attributes, so the language
    stops looking like malformed HTML.
-4. **HTML's own features** — tag completion, attribute completion, folding —
+4. **Completion of names.** `body.` offers what is in `body`; a bare name
+   offers everything in scope. The list comes from `visibleFrom`, the
+   listing half of the same walk `declarationFor` uses — so what is offered
+   and what resolves are the same set, rather than a list of things that
+   might work.
+
+   The hard part is not the listing. Completion happens **while typing**, and
+   `${body.}` is not valid JavaScript: the compile fails, and a failed
+   compile has no scopes to ask, so the moment the list is wanted is the
+   moment there is nothing to ask. So the expression under the cursor is
+   repaired before compiling — its contents replaced by `0` and spaces, the
+   same length, leaving every other offset exactly where it was. Only that
+   one: another broken expression elsewhere is a mistake the author has yet
+   to fix, and the diagnostics already say so.
+
+5. **HTML's own features** — tag completion, attribute completion, folding —
    through `volar-service-html` over the embedded HTML. This is where the
    masking earns its place, and it is checked by asking for folding ranges on
    a page whose `<body :hidden=${a > b}>` would, unmasked, have ended that
