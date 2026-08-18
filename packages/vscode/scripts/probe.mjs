@@ -116,6 +116,8 @@ await request('initialize', {
       definition: { linkSupport: true },
       diagnostic: { dynamicRegistration: false },
       documentLink: { dynamicRegistration: false },
+      completion: { completionItem: { snippetSupport: false } },
+      hover: { contentFormat: ['markdown'] },
     },
   },
 });
@@ -226,32 +228,83 @@ for (const [name, label, needle, within] of CASES) {
   console.log(`  ${`${name} ${label}`.padEnd(34)} -> ${where.padEnd(16)} ${line}`);
 }
 
-console.log('\ncompletion (typed into a copy of the page, which does not compile)\n');
-for (const [name, typed] of [
-  ['scopes.html', '${body.'],
-  ['scopes.html', '${'],
-  ['tags.html', '${$parent.'],
-]) {
+/**
+ * Type into an open document and ask what is offered.
+ *
+ * `didChange` on the real uri, not a made-up one: the server looks a buffer
+ * up by the file's own uri, so a document opened under `file.html#typing`
+ * has no buffer as far as it is concerned -- which reads as a feature that
+ * does not work, and cost a round of exactly that.
+ */
+let version = 1;
+async function completionAfter(name, typed, suffix = '') {
   const doc = open(name);
-  // insert the half-typed expression, the way an author would
-  const at = doc.text.indexOf('<body');
-  const cut = doc.text.indexOf('>', at) + 1;
-  const text = `${doc.text.slice(0, cut)}\n  <p>${typed}}</p>${doc.text.slice(cut)}`;
-  const uri = `${doc.uri}#typing`;
+  const cut = doc.text.indexOf('</body>');
+  // `suffix` closes what was typed without moving the cursor past it: an
+  // expression needs its `}` to be lexed at all, and a cursor after that
+  // brace is outside the expression and asking a different question
+  const text = `${doc.text.slice(0, cut)}  ${typed}${suffix}\n${doc.text.slice(cut)}`;
   send({
-    method: 'textDocument/didOpen',
-    params: { textDocument: { uri, languageId: 'html', version: 1, text } },
+    method: 'textDocument/didChange',
+    params: {
+      textDocument: { uri: doc.uri, version: ++version },
+      contentChanges: [{ text }],
+    },
   });
   const offset = text.indexOf(typed, cut) + typed.length;
   const items = await request('textDocument/completion', {
-    textDocument: { uri },
+    textDocument: { uri: doc.uri },
     position: {
       line: text.slice(0, offset).split('\n').length - 1,
       character: offset - (text.lastIndexOf('\n', offset - 1) + 1),
     },
   });
-  const names = (items?.items ?? items ?? []).map(i => i.label);
-  console.log(`  ${`${name} after "${typed}"`.padEnd(34)} ${names.length ? names.join(' ') : 'NOTHING'}`);
+  // put the document back, so the next question is asked about the real page
+  send({
+    method: 'textDocument/didChange',
+    params: {
+      textDocument: { uri: doc.uri, version: ++version },
+      contentChanges: [{ text: doc.text }],
+    },
+  });
+  return (items?.items ?? items ?? []).map(i => i.label);
+}
+
+console.log('\ncompletion (typed into the page, which does not compile)\n');
+for (const [name, typed] of [
+  ['scopes.html', '${body.'],
+  ['scopes.html', '${'],
+  ['tags.html', '${$parent.'],
+]) {
+  const names = await completionAfter(name, typed, '}');
+  console.log(`  ${`${name} after "${typed}"`.padEnd(30)} ${names.length ? names.slice(0, 8).join(' ') : 'NOTHING'}`);
+}
+
+console.log('\nhover\n');
+for (const [name, label, needle, delta] of [
+  ['scopes.html', 'a value', '${body.items}', 9],
+  ['tags.html', 'a custom tag', '<x-card', 2],
+  ['tags.html', 'a parameter', ':title=${', 2],
+]) {
+  const doc = open(name);
+  const at = doc.text.indexOf(needle) + delta;
+  const hover = await request('textDocument/hover', {
+    textDocument: { uri: doc.uri },
+    position: {
+      line: doc.text.slice(0, at).split('\n').length - 1,
+      character: at - (doc.text.lastIndexOf('\n', at - 1) + 1),
+    },
+  });
+  const first = (hover?.contents?.value ?? '').split('\n')[1] ?? 'NOTHING';
+  console.log(`  ${`${name} ${label}`.padEnd(30)} ${first}`);
+}
+
+console.log('\nmarkup completion (ours only; the list is several services merged)\n');
+for (const [name, typed] of [['tags.html', '<x-'], ['tags.html', '<x-card :']]) {
+  const names = (await completionAfter(name, typed)).filter(
+    label => label.startsWith('x-') || label.startsWith(':')
+  );
+  console.log(`  ${`${name} after "${typed}"`.padEnd(30)} ${names.length ? names.join(' ') : 'NOTHING'}`);
 }
 
 console.log('\ndiagnostics\n');

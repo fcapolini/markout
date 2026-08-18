@@ -12,6 +12,7 @@ import { isPage } from './plugin';
 import { fileReferenceAt } from './references';
 import { fileOf, findDeclaration } from './declarations';
 import { findCompletions } from './completions';
+import { findHover } from './hovers';
 
 /**
  * The compiler, as a language service.
@@ -90,7 +91,8 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
       definitionProvider: true,
       // `.` because `body.` is the moment the list is most worth having, and
       // is also the moment the expression stops being valid JavaScript
-      completionProvider: { triggerCharacters: ['.'] },
+      completionProvider: { triggerCharacters: ['.', '<', ':'] },
+      hoverProvider: true,
     },
     create(context) {
       /**
@@ -102,9 +104,9 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
        * ONE of the embedded codes may answer, or the same compiler error
        * arrives once per embedded document.
        */
-      const sourceOf = (uri: string) => {
+      const sourceOf = (uri: string, code: 'root' | 'html' = 'root') => {
         const decoded = context.decodeEmbeddedDocumentUri(URI.parse(uri));
-        if (!decoded || decoded[1] !== 'root') {
+        if (!decoded || decoded[1] !== code) {
           return undefined;
         }
         const source = decoded[0];
@@ -112,6 +114,20 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
       };
 
       return {
+        /**
+         * Completion is a list SEVERAL services contribute to, and Volar
+         * lets the first one that answers claim the position -- every other
+         * service is then skipped. Embedded documents are visited
+         * innermost-first, so `volar-service-html` answers on the embedded
+         * HTML before this service is reached on the root, and a markout
+         * list would never appear at all.
+         *
+         * Saying the contribution is additional is what keeps both: an
+         * additional provider does not claim the position, and is merged
+         * with whoever did.
+         */
+        isAdditionalCompletion: true,
+
         /**
          * Ctrl-click on an `<:import src>` opens the file.
          *
@@ -121,17 +137,43 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
          * an installed package -- neither is somewhere an editor would find
          * by guessing, and both are somewhere the compiler already knows.
          */
-        async provideCompletionItems(document, position) {
+        async provideHover(document, position) {
           const uri = sourceOf(document.uri);
           if (!uri) {
             return undefined;
           }
           const filePath = uri.fsPath;
           const docroot = props.docroot ?? guessDocroot(filePath, props.workspaceFolder);
-          const found = await findCompletions({
+          const found = await findHover({
             docroot,
             pathname: pathnameOf(filePath, docroot),
             text: document.getText(),
+            offset: document.offsetAt(position),
+            open: props.open,
+          });
+          return found ? { contents: { kind: 'markdown', value: found.markdown } } : undefined;
+        },
+
+        async provideCompletionItems(document, position) {
+          // ...and being merged means answering on the document the claim
+          // was made against, which is the embedded HTML rather than the
+          // root. Its text is the page with the expressions masked, so the
+          // buffer is read separately -- the mask is character for
+          // character, which is what makes this offset the right one.
+          const uri = sourceOf(document.uri, 'html');
+          if (!uri) {
+            return undefined;
+          }
+          const filePath = uri.fsPath;
+          const text = props.open(filePath);
+          if (text === undefined) {
+            return undefined;
+          }
+          const docroot = props.docroot ?? guessDocroot(filePath, props.workspaceFolder);
+          const found = await findCompletions({
+            docroot,
+            pathname: pathnameOf(filePath, docroot),
+            text,
             offset: document.offsetAt(position),
             open: props.open,
             filePath,

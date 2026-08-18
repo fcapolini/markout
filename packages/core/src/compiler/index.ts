@@ -32,6 +32,16 @@ export interface CompilerProps {
   /** emit the dev flag, so the browser runtime surfaces errors in the page */
   dev?: boolean;
   /**
+   * Drop definitions no page element uses. On by default, because a page
+   * should not ship a component it never mentions.
+   *
+   * An editor turns it off. What it needs is what the page COULD use -- the
+   * list a completion offers is the whole imported kit, not the handful of
+   * tags already typed -- and a definition that has just been imported and
+   * not yet used is exactly the one somebody is about to ask about.
+   */
+  treeshake?: boolean;
+  /**
    * Names the host supplies to the server at runtime -- see Page.serverGlobals.
    * Names only; the compiler never sees, and never needs, the objects.
    */
@@ -42,12 +52,14 @@ export class Compiler {
   preprocessor: Preprocessor;
   runtimeSrc: string;
   dev: boolean;
+  treeshake: boolean;
   serverGlobals: ReadonlySet<string>;
 
   constructor(options: CompilerProps) {
     this.preprocessor = new Preprocessor(options.docroot, options.kits, options.readFile);
     this.runtimeSrc = options.runtimeSrc ?? DEFAULT_RUNTIME_SRC;
     this.dev = options.dev ?? false;
+    this.treeshake = options.treeshake ?? true;
     this.serverGlobals = new Set(options.serverGlobals ?? []);
     // a name that is already the language's would be unreachable behind it,
     // and the page author would have no way to tell which one they got
@@ -70,7 +82,7 @@ export class Compiler {
     page.errors.length || stage3qualify(page);
     page.errors.length || stage4resolve(page);
     page.errors.length || stage5comptime(page);
-    page.errors.length || stage6treeshake(page);
+    page.errors.length || !this.treeshake || stage6treeshake(page);
     page.errors.length || stage7generate(page, this.runtimeSrc, this.dev);
     return page;
   }
