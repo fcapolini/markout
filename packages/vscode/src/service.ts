@@ -1,5 +1,4 @@
 import type { LanguageServicePlugin } from '@volar/language-service';
-import * as path from 'path';
 import { URI } from 'vscode-uri';
 import {
   diagnose,
@@ -238,14 +237,12 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
             return [];
           }
           const pathname = pathnameOf(filePath, docroot);
-          // a fragment is compiled by the pages that import it, not on its
-          // own: on its own it has no scope chain to resolve against, and
-          // every reference in it would be reported as unknown
-          if (path.extname(filePath).toLowerCase() === '.htm') {
-            return [];
-          }
-
-          const found = await diagnose({ docroot, pathname, open: props.open });
+          const found = await diagnose({
+            docroot,
+            pathname,
+            text: document.getText(),
+            open: props.open,
+          });
           return found.map(d => {
             const here = d.pathname === pathname;
             return {

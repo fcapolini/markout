@@ -1,4 +1,5 @@
-import { Compiler, discoverKits, Resolver, type ReadFile } from '@markout/core';
+import { Resolver, type ReadFile } from '@markout/core';
+import { compilePage, hostPageFor, kitsFor, probeFor, PROBE_PAGE } from './pages';
 import * as path from 'path';
 
 /**
@@ -42,6 +43,19 @@ export interface DiagnoseProps {
   docroot: string;
   /** the page to compile, as a pathname under the docroot */
   pathname: string;
+  /**
+   * Its text: what the author is looking at.
+   *
+   * Both the content compiled for this file and the key a compile is cached
+   * on, which are deliberately the same thing -- passing one without the
+   * other allows them to disagree, and a cache keyed on text that is not the
+   * text compiled is a cache that answers about a file nobody has.
+   *
+   * Required rather than defaulted for the same reason: a caller that omits
+   * it would get somebody else's answer, which looks exactly like a feature
+   * that has stopped noticing edits.
+   */
+  text: string;
   /** the editor's unsaved buffers, by absolute path; the disk answers the rest */
   open?: (filePath: string) => string | undefined;
 }
@@ -75,28 +89,34 @@ export function openReader(
 
 export async function diagnose(props: DiagnoseProps): Promise<MarkoutDiagnostic[]> {
   const { docroot, pathname, open } = props;
-  const readFile = openReader(open);
 
-  const { kits } = discoverKits(docroot);
-  let errors;
-  try {
-    const page = await new Compiler({ docroot, kits, readFile }).compile(pathname);
-    errors = page.errors;
-  } catch (e) {
+  // A FRAGMENT is not a page and cannot be compiled as one. It is compiled
+  // through a page that imports it -- a real one where the docroot has one,
+  // since a fragment written to be included reads names from its host, and
+  // otherwise a page whose only job is to import it. See ./pages.
+  const fragment = pathname.toLowerCase().endsWith('.htm');
+  const host = fragment ? hostPageFor(docroot, pathname) : undefined;
+  const compiled = fragment ? host ?? PROBE_PAGE : pathname;
+  const self = path.join(docroot, pathname);
+  const readFile = openReader(filePath =>
+    filePath.endsWith(PROBE_PAGE)
+      ? probeFor(pathname)
+      : filePath === self
+        ? props.text
+        : open?.(filePath)
+  );
+
+  const page = await compilePage({ docroot, pathname: compiled, text: props.text, readFile });
+  if (!page) {
     // A compiler crash is a bug, and an editor is where it will be seen
     // first. Reported at the top of the file rather than swallowed: silence
     // here reads as "your page is fine", which is the one thing it is not.
     return [
-      {
-        range: at(1, 0),
-        message: `markout: ${e instanceof Error ? e.message : e}`,
-        severity: 'error',
-        pathname,
-      },
+      { range: at(1, 0), message: 'markout: the compiler failed', severity: 'error', pathname },
     ];
   }
 
-  return errors.map(error => {
+  return page.errors.map(error => {
     const loc = error.loc;
     return {
       // the compiler counts lines from 1 and columns from 0; LSP counts both
@@ -275,9 +295,8 @@ export function resolveReference(props: {
   spec: string;
 }): string | undefined {
   const { docroot, fromPathname, spec } = props;
-  const { kits } = discoverKits(docroot);
   const currDir = path.posix.dirname(fromPathname);
-  const resolved = new Resolver(docroot, kits).resolve(spec, currDir);
+  const resolved = new Resolver(docroot, kitsFor(docroot)).resolve(spec, currDir);
   return resolved.ok ? resolved.filePath : undefined;
 }
 
