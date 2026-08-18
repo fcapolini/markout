@@ -1,5 +1,6 @@
 import type { LanguageServicePlugin } from '@volar/language-service';
 import * as nodePath from 'path';
+import type { Position } from 'vscode-languageserver-protocol';
 import { URI } from 'vscode-uri';
 import {
   diagnose,
@@ -15,6 +16,7 @@ import { fileOf, findDeclaration } from './declarations';
 import { findCompletions } from './completions';
 import { findHover } from './hovers';
 import { findReferences } from './references-to';
+import { prepareRename, renameEdits } from './rename';
 
 /**
  * The compiler, as a language service.
@@ -96,6 +98,7 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
       completionProvider: { triggerCharacters: ['.', '<', ':'] },
       hoverProvider: true,
       referencesProvider: true,
+      renameProvider: { prepareProvider: true },
     },
     create(context) {
       /**
@@ -114,6 +117,29 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
         }
         const source = decoded[0];
         return source.scheme === 'file' && isPage(source.path) ? source : undefined;
+      };
+
+      /** the props every one of these needs, from a virtual document */
+      const ask = async (
+        document: { uri: string; getText(): string; offsetAt(p: Position): number },
+        position: Position
+      ) => {
+        const uri = sourceOf(document.uri);
+        if (!uri) {
+          return undefined;
+        }
+        const filePath = uri.fsPath;
+        const docroot = props.docroot ?? guessDocroot(filePath, props.workspaceFolder);
+        return {
+          docroot,
+          props: {
+            docroot,
+            pathname: pathnameOf(filePath, docroot),
+            text: document.getText(),
+            offset: document.offsetAt(position),
+            open: props.open,
+          },
+        };
       };
 
       return {
@@ -140,6 +166,34 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
          * an installed package -- neither is somewhere an editor would find
          * by guessing, and both are somewhere the compiler already knows.
          */
+        async provideRenameRange(document, position) {
+          const asked = await ask(document, position);
+          if (!asked) {
+            return undefined;
+          }
+          const found = await prepareRename(asked.props);
+          // undefined refuses the rename, which is the right answer for a
+          // word that names nothing the compiler knows about
+          return found?.range;
+        },
+
+        async provideRenameEdits(document, position, newName) {
+          const asked = await ask(document, position);
+          if (!asked) {
+            return undefined;
+          }
+          const edits = await renameEdits(asked.props);
+          if (!edits.length) {
+            return undefined;
+          }
+          const changes: Record<string, { range: typeof edits[0]['range']; newText: string }[]> = {};
+          for (const edit of edits) {
+            const uri = URI.file(nodePath.join(asked.docroot, edit.pathname)).toString();
+            (changes[uri] ??= []).push({ range: edit.range, newText: newName });
+          }
+          return { changes };
+        },
+
         async provideReferences(document, position, context) {
           const uri = sourceOf(document.uri);
           if (!uri) {

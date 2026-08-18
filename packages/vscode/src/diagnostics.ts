@@ -1,5 +1,5 @@
 import { Resolver, type ReadFile } from '@markout/core';
-import { compilePage, hostPageFor, kitsFor, probeFor, PROBE_PAGE } from './pages';
+import { compileFileFor, kitsFor } from './pages';
 import * as path from 'path';
 
 /**
@@ -90,23 +90,12 @@ export function openReader(
 export async function diagnose(props: DiagnoseProps): Promise<MarkoutDiagnostic[]> {
   const { docroot, pathname, open } = props;
 
-  // A FRAGMENT is not a page and cannot be compiled as one. It is compiled
-  // through a page that imports it -- a real one where the docroot has one,
-  // since a fragment written to be included reads names from its host, and
-  // otherwise a page whose only job is to import it. See ./pages.
-  const fragment = pathname.toLowerCase().endsWith('.htm');
-  const host = fragment ? hostPageFor(docroot, pathname) : undefined;
-  const compiled = fragment ? host ?? PROBE_PAGE : pathname;
-  const self = path.join(docroot, pathname);
-  const readFile = openReader(filePath =>
-    filePath.endsWith(PROBE_PAGE)
-      ? probeFor(pathname)
-      : filePath === self
-        ? props.text
-        : open?.(filePath)
-  );
-
-  const page = await compilePage({ docroot, pathname: compiled, text: props.text, readFile });
+  // A FRAGMENT is not a page and cannot be compiled as one -- see
+  // compileFileFor, which is where that decision lives for everything that
+  // has to look at one file.
+  const found = await compileFileFor({ docroot, pathname, text: props.text, open });
+  const page = found?.page;
+  const compiled = found?.compiled;
   if (!page) {
     // A compiler crash is a bug, and an editor is where it will be seen
     // first. Reported at the top of the file rather than swallowed: silence
