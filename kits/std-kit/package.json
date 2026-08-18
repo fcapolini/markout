@@ -27,7 +27,6 @@
   },
   "files": [
     "all.htm",
-    "parts",
-    "README.md"
+    "parts"
   ]
 }
