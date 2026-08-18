@@ -413,6 +413,15 @@ advertises no `textDocument.diagnostic` capability gets silence from
 also publishes diagnostics the old way, so a real editor sees them either
 way; a test harness pretending to be an editor has to say what it supports.
 
+**Not everything merges, and the Outline is the one that does not.** Folding
+ranges, document links and completions from several providers are combined,
+which is what makes extending HTML rather than replacing it work at all. The
+Outline view instead shows one tree *per provider*, so contributing document
+symbols over the embedded HTML gave every page two identical trees — with the
+second labelled by whatever VS Code could find to call the provider. The rule
+the rest of the wiring already follows settles it: contribute what HTML
+cannot answer, and an outline of ordinary markup is not that.
+
 **An extension that has not started answers nothing, correctly.** With
 `onLanguage:html` as the only activation event, the server does not exist
 until an HTML document is opened — so the panel was empty at launch and
