@@ -285,6 +285,13 @@ they do not break. Nor is compiling it optional-but-lenient the answer — an
 they are written, so on its own every name its host supplies reads as
 unknown.
 
+Errors belonging to that page are then dropped rather than reported, which is
+the half that was missing at first: `lib.htm` opened in the fixture was
+compiled through `broken.html`, which imports it and is broken on purpose,
+and the fragment was blamed for the page's typo. A file is told about its own
+faults; what a page thinks of its imports is the page's business, and is
+already reported there.
+
 So a fragment is compiled the way it is used: through a page that imports it.
 A real one where the docroot has one, found by reading the pages and seeing
 which names this file; and otherwise a page whose only job is to import it.

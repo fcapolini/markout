@@ -116,7 +116,15 @@ export async function diagnose(props: DiagnoseProps): Promise<MarkoutDiagnostic[
     ];
   }
 
-  return page.errors.map(error => {
+  // A fragment was compiled through something else -- a page that imports it,
+  // or a probe -- and that page's own mistakes are its own. Reporting them
+  // here puts `broken.html`'s typo on `lib.htm`, which names a file the
+  // author is not looking at and blames one they are.
+  const viaAnother = compiled !== pathname;
+
+  return page.errors
+    .filter(error => !viaAnother || (error.loc?.source ?? pathname) === pathname)
+    .map(error => {
     const loc = error.loc;
     return {
       // the compiler counts lines from 1 and columns from 0; LSP counts both

@@ -94,6 +94,52 @@ describe('a fragment a page does import', () => {
   });
 });
 
+describe('a host page with mistakes of its own', () => {
+  /**
+   * A fragment is compiled through a page that imports it, and that page may
+   * be broken -- which has nothing to do with the fragment. Reported here it
+   * puts the page's typo on the fragment, naming a file the author is not
+   * looking at and blaming one they are.
+   *
+   * Found by opening lib.htm in the fixture and being told about
+   * broken.html, which imports it and is broken on purpose.
+   */
+  const LIB = '<lib>\n  <:define tag="x-a:div" :title=${1}>${title}</:define>\n</lib>';
+
+  it('keeps the page\u2019s errors off the fragment', async () => {
+    write('lib.htm', LIB);
+    write(
+      'broken.html',
+      '<html>\n<head><:import src="/lib.htm" /></head>\n<body>${nope}</body>\n</html>'
+    );
+    expect(await diagnoseFragment('lib.htm', LIB)).toStrictEqual([]);
+  });
+
+  it('still reports the fragment\u2019s own, through that same page', async () => {
+    const broken = LIB.replace('${title}', '${titel}');
+    write('lib.htm', broken);
+    write(
+      'broken.html',
+      '<html>\n<head><:import src="/lib.htm" /></head>\n<body>${nope}</body>\n</html>'
+    );
+    const found = await diagnoseFragment('lib.htm', broken);
+    expect(found.map(d => d.message)).toStrictEqual(['Unknown reference: "titel"']);
+    expect(found[0].pathname).toBe('/lib.htm');
+  });
+
+  it('leaves the page telling the whole truth about itself', async () => {
+    write('lib.htm', LIB.replace('${title}', '${titel}'));
+    const page = write(
+      'broken.html',
+      '<html>\n<head><:import src="/lib.htm" /></head>\n<body>${nope}</body>\n</html>'
+    );
+    // a page that imports a broken fragment has to say so -- that is the
+    // other direction, and it is not what was being filtered
+    const found = await diagnose({ docroot, pathname: '/broken.html', text: page });
+    expect(found.map(d => d.pathname).sort()).toStrictEqual(['/broken.html', '/lib.htm']);
+  });
+});
+
 describe('what a page costs to ask about twice', () => {
   it('is compiled once for the same buffer', async () => {
     // one keystroke asks for diagnostics, completion, a definition and a
