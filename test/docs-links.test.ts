@@ -10,7 +10,18 @@ import { describe, expect, it } from 'vitest';
  */
 
 const ROOT = path.resolve(__dirname, '..');
-const SKIP = new Set(['node_modules', '.git', 'coverage', 'dist']);
+const SKIP = new Set(['node_modules', 'coverage', 'dist', 'out']);
+
+/**
+ * Nothing hidden, which is not tidiness: the CLI's own suite builds into
+ * `packages/cli/.cli-build-out-XXXX/` and deletes it when it is done, and a
+ * kit materialized there brings its README with it. This walk listing a file
+ * that a test removes a moment later is a failure about nothing, in a suite
+ * about links. No dot-directory in this repository holds documentation.
+ */
+function hidden(name: string): boolean {
+  return name.startsWith('.');
+}
 const LINK = /\[[^\]]*\]\(([^)\s]+)\)/g;
 const HEADING = /^#{1,6}\s+(.*)$/gm;
 
@@ -36,7 +47,7 @@ function anchorsOf(file: string): Set<string> {
 function markdownFiles(dir: string): string[] {
   const found: string[] = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (SKIP.has(entry.name)) continue;
+    if (SKIP.has(entry.name) || hidden(entry.name)) continue;
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) found.push(...markdownFiles(full));
     else if (entry.name.endsWith('.md')) found.push(full);
