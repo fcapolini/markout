@@ -1,4 +1,4 @@
-import { declarationFor, type Page, type Scope, type Value } from '@markout/core';
+import { declarationFor, type Page, type Scope, type Value } from '@markout-dev/core';
 import * as nodePath from 'path';
 import { openReader, resolveReference, type Range } from './diagnostics';
 import { compilePage } from './pages';

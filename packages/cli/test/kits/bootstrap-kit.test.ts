@@ -4,8 +4,8 @@ import path from 'path';
 import { execSync } from 'child_process';
 import { chromium, type Browser } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { Compiler, discoverKits } from '@markout/core';
-import { renderPage } from '@markout/core';
+import { Compiler, discoverKits } from '@markout-dev/core';
+import { renderPage } from '@markout-dev/core';
 import { openOperationsDb } from '../../../../sites/site/orbit-db';
 import { createSite } from '../../../../sites/site/server';
 
@@ -556,7 +556,7 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     // directory has a node_modules. Copying them here is what makes the
     // copy self-contained -- and it is also what a real install looks like,
     // so the page under test is the served one, unedited
-    const modules = path.join(docroot, 'node_modules/@markout');
+    const modules = path.join(docroot, 'node_modules/@markout-dev');
     fs.mkdirSync(modules, { recursive: true });
     fs.cpSync(KIT_DIR, path.join(modules, 'bootstrap-kit'), { recursive: true });
     fs.cpSync(STD_KIT_DIR, path.join(modules, 'std-kit'), {

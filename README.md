@@ -329,7 +329,7 @@ fragments, the same thing is:
 
 ```html
 <head>
-  <:import src="/npm/@markout/bootstrap-kit/all.htm" />
+  <:import src="/npm/@markout-dev/bootstrap-kit/all.htm" />
   <title>Northstar Studio | Product Design for Growing Teams</title>
 </head>
 
@@ -347,7 +347,7 @@ fragments, the same thing is:
 The markup that was only ever mechanical becomes data. The pinned Bootstrap
 version, the integrity hashes, the toggler/collapse `id` wiring and the
 accessibility attributes are written once in
-[`@markout/bootstrap-kit`](kits/bootstrap-kit/) and can't drift from page to
+[`@markout-dev/bootstrap-kit`](kits/bootstrap-kit/) and can't drift from page to
 page. The kit is an installed package here, which is what `/npm/` in the
 import says — see [npm kits](docs/design/npm-kits.md); a kit vendored into
 the docroot is imported by its path instead.

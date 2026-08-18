@@ -3,7 +3,7 @@ import express, { Application } from "express";
 import path from "path";
 import http from "http";
 import exitHook from './exit-hook';
-import { defaultLogger, markout, type MarkoutLogger } from "@markout/express";
+import { defaultLogger, markout, type MarkoutLogger } from "@markout-dev/express";
 import process from "process";
 import { AddressInfo } from "net";
 

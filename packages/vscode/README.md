@@ -9,9 +9,9 @@ server-side comes for free.
 Modularity is where that goes furthest. A `<:define>` makes a custom tag, and
 a directory of them is a **kit** — an npm package of plain `.htm` fragments a
 page pulls in with one import. Kits are how capability gets added without the
-language growing to hold it: `@markout/std-kit` supplies the system parts of
+language growing to hold it: `@markout-dev/std-kit` supplies the system parts of
 a page, data sources and the outside world, written with the language rather
-than built into it, and `@markout/bootstrap-kit` puts Bootstrap's components
+than built into it, and `@markout-dev/bootstrap-kit` puts Bootstrap's components
 behind tags of their own. A kit is ordinary markout, so there is no component
 API to learn beyond the language itself.
 
@@ -35,7 +35,7 @@ HTML extension keep working exactly as they did.
 - **Go to definition** on a name in `${…}`, on a custom tag — including one a
   kit defines, which lands on its `<:define>` inside the installed package —
   and on the path in an `<:import>`, whether that is docroot-relative
-  (`/lib.htm`) or a kit (`/npm/@markout/bootstrap-kit/all.htm`). Neither is
+  (`/lib.htm`) or a kit (`/npm/@markout-dev/bootstrap-kit/all.htm`). Neither is
   somewhere an editor could find by guessing; both come from the compiler's
   own resolver.
 - **Completion** of names in scope: `body.` offers what is in `body`, a bare
@@ -57,7 +57,7 @@ reporting anything. Either kind will do:
   is an expression (`:count=${…}`). It is the `=${` that is markout's: Alpine
   and Vue write `:class="…"` quoted, and Thymeleaf's `th:text` does not begin
   with a colon.
-- **the project** — a `package.json` depending on `markout` or `@markout/*`.
+- **the project** — a `package.json` depending on `markout` or `@markout-dev/*`.
 
 `markout.enable: always` is the escape hatch for a project that uses markout
 without depending on it — a vendored copy, or a page opened on its own.

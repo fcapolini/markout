@@ -100,7 +100,7 @@ reloading the window, since only a fresh launch runs the build task.
 
 None of the above exercises packaging, and packaging is where an extension
 that works breaks: the development host runs from this repository, where
-`@markout/core` resolves through a workspace symlink that no `.vsix`
+`@markout-dev/core` resolves through a workspace symlink that no `.vsix`
 carries. So before publishing, install the archive and use that:
 
 ```sh

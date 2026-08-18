@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      // the extension host loads packages/vscode/dist, and @markout/core
+      // the extension host loads packages/vscode/dist, and @markout-dev/core
       // resolves to packages/core/dist -- so both have to be built, which is
       // what the root build does
       "type": "npm",

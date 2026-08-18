@@ -1,4 +1,4 @@
-import { Resolver, type ReadFile } from '@markout/core';
+import { Resolver, type ReadFile } from '@markout-dev/core';
 import { compileFileFor, kitsFor } from './pages';
 import * as path from 'path';
 
@@ -287,8 +287,14 @@ export function isMarkoutProject(docroot: string): boolean {
       ...Object.keys(json.peerDependencies ?? {}),
       json.name,
     ];
+    // `markout` unscoped is somebody else's package on npm today, and is
+    // kept here anyway: it is the name this project would use if that ever
+    // changes, and a project depending on a dead 0.0.1 from 2018 is not a
+    // false positive worth designing around
     return named.some(
-      name => name === 'markout' || (typeof name === 'string' && name.startsWith('@markout/'))
+      name =>
+        name === 'markout' ||
+        (typeof name === 'string' && name.startsWith('@markout-dev/'))
     );
   } catch {
     // a package.json that does not parse is not evidence either way, and
@@ -302,7 +308,7 @@ export function isMarkoutProject(docroot: string): boolean {
  *
  * Answered by the compiler's own `Resolver` rather than by joining paths
  * here, which is the difference between go-to-definition that works and one
- * that works until it matters. `/npm/@markout/bootstrap-kit/all.htm` has to
+ * that works until it matters. `/npm/@markout-dev/bootstrap-kit/all.htm` has to
  * land inside an installed package, a relative path has to resolve against
  * the file that wrote it, and a path leaving the docroot has to resolve to
  * nothing at all -- three rules the editor has no business having a second

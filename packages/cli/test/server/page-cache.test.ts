@@ -5,8 +5,8 @@ import path from 'path';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Server } from '../../src/server';
-import { Compiler } from '@markout/core';
-import { renderPage } from '@markout/core';
+import { Compiler } from '@markout-dev/core';
+import { renderPage } from '@markout-dev/core';
 
 /**
  * The middleware keeps compiled pages in memory and renders each request

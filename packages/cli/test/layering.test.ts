@@ -6,8 +6,8 @@ import { describe, expect, it } from 'vitest';
  * The CLI's boundary with the packages under it.
  *
  * There is one layer left here, so unlike core's and the middleware's twins
- * this file is almost entirely the boundary check: `@markout/core` and
- * `@markout/express` are reached BY THEIR PACKAGE NAMES and never by a
+ * this file is almost entirely the boundary check: `@markout-dev/core` and
+ * `@markout-dev/express` are reached BY THEIR PACKAGE NAMES and never by a
  * relative path. A workspace makes `../express/src/middleware` resolve
  * perfectly well from here, so nothing but this test stands between the
  * curated surface each package exports and a dependency on one of its
@@ -25,7 +25,7 @@ const SRC = path.join(ROOT, 'src');
 const LAYERS: { name: string; pkg: string; members: string[] }[] = [
   {
     name: 'cli',
-    pkg: 'markout',
+    pkg: '@markout-dev/cli',
     members: [
       'cli.ts',
       'server/build.ts',

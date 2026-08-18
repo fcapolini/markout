@@ -130,7 +130,7 @@ Ranked by what a markout author actually feels, not by what is easy:
    which is the difference between go-to-definition that works and one that
    works until it matters. Three rules the editor has no business
    reimplementing: `/lib.htm` is docroot-relative and not file-relative,
-   `/npm/@markout/bootstrap-kit/all.htm` is inside an installed package, and
+   `/npm/@markout-dev/bootstrap-kit/all.htm` is inside an installed package, and
    a path leaving the docroot resolves to nothing at all. Only the
    directives' `src` is followed: a `<script src>` names a URL the browser
    fetches, whose place on disk depends on how the site is deployed.
@@ -304,7 +304,7 @@ So the extension looks for **evidence**, and either kind will do:
   the `=${` that is ours. Measured against every page and fragment in this
   repository, and against Alpine, Vue, Thymeleaf, JSP EL and Underscore.
 - **the project** — the nearest `package.json` depending on `markout` or
-  `@markout/*`.
+  `@markout-dev/*`.
 
 The first is the one that matters, and a project-only gate was the first
 version's mistake. Markout's delivery story is that you install *nothing*:
@@ -533,7 +533,7 @@ An extension archive is unzipped into a directory with no `npm install`
 behind it. Every `require` the extension still performs at runtime has to be
 answerable by node or by the extension host — which is why the two entry
 points are **bundled**, and why the biggest dependency here makes it
-compulsory rather than merely tidy: `@markout/core` is a *workspace*
+compulsory rather than merely tidy: `@markout-dev/core` is a *workspace*
 package, resolved through a symlink that exists in this repository and
 nowhere else. Unbundled, the extension works perfectly in the development
 host, which runs from the repository, and fails the moment anyone installs
@@ -589,7 +589,7 @@ packages/vscode/
   package.json    contributions: grammars, configuration
 ```
 
-Depends on `@markout/core` and nothing else of ours — which is the constraint
+Depends on `@markout-dev/core` and nothing else of ours — which is the constraint
 the whole [monorepo split](monorepo.md) existed to satisfy, and the one thing
 here worth asserting rather than intending. It is:
 [dependencies.test.ts](../../packages/vscode/test/dependencies.test.ts) walks

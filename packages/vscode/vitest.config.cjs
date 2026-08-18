@@ -4,7 +4,7 @@ const { defineConfig } = require("vitest/config");
 module.exports = defineConfig({
   resolve: {
     alias: {
-      "@markout/core": path.resolve(__dirname, "../core/src/index.ts")
+      "@markout-dev/core": path.resolve(__dirname, "../core/src/index.ts")
     }
   },
   test: {
