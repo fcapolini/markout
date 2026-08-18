@@ -4,6 +4,7 @@ import type { Position } from 'vscode-languageserver-protocol';
 import { URI } from 'vscode-uri';
 import {
   diagnose,
+  type MarkoutDiagnostic,
   guessDocroot,
   isMarkoutProject,
   looksLikeMarkout,
@@ -17,6 +18,7 @@ import { findCompletions } from './completions';
 import { findHover } from './hovers';
 import { findReferences } from './references-to';
 import { prepareRename, renameEdits } from './rename';
+import { diagnoseWorkspace } from './workspace';
 
 /**
  * The compiler, as a language service.
@@ -87,11 +89,34 @@ export function createDocumentContext(props: {
   };
 }
 
+/**
+ * One diagnostic, as LSP wants it.
+ *
+ * `here` is the file being reported ON, which is not always the file the
+ * compiler blamed: a page that imports a broken fragment has to say so
+ * somewhere its author can see, or a broken library reads as a page that is
+ * fine. Those are named and put at the top. In a workspace sweep there is no
+ * such page -- every fault is reported against the file it is in -- so the
+ * argument is left out.
+ */
+function asDiagnostic(d: MarkoutDiagnostic, here?: string) {
+  const own = here === undefined || d.pathname === here;
+  return {
+    range: own ? d.range : { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } },
+    message: own ? d.message : `${d.pathname}: ${d.message}`,
+    severity: d.severity === 'error' ? (1 as const) : (2 as const),
+    source: 'markout',
+  };
+}
+
 export function createMarkoutService(props: MarkoutServiceProps): LanguageServicePlugin {
   return {
     name: 'markout',
     capabilities: {
-      diagnosticProvider: { interFileDependencies: true, workspaceDiagnostics: false },
+      // workspace diagnostics: the Problems panel is where somebody asks
+      // whether the PROJECT is alright, and answering only about open
+      // editors makes it a panel about what has been looked at
+      diagnosticProvider: { interFileDependencies: true, workspaceDiagnostics: true },
       definitionProvider: true,
       // `.` because `body.` is the moment the list is most worth having, and
       // is also the moment the expression stops being valid JavaScript
@@ -336,6 +361,29 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
           ];
         },
 
+        async provideWorkspaceDiagnostics() {
+          if (!props.workspaceFolder) {
+            return [];
+          }
+          const { problems, skipped } = await diagnoseWorkspace({
+            workspaceFolder: props.workspaceFolder,
+            docroot: props.docroot,
+            enable: props.enable,
+            open: props.open,
+          });
+          if (skipped) {
+            // a bound that is never mentioned reads as "nothing else is
+            // wrong", which is the one thing it does not mean
+            console.warn(`markout: ${skipped} page(s) not checked -- the project is large`);
+          }
+          return problems.map(problem => ({
+            uri: URI.file(problem.filePath).toString(),
+            version: null,
+            kind: 'full' as const,
+            items: problem.diagnostics.map(d => asDiagnostic(d)),
+          }));
+        },
+
         async provideDiagnostics(document) {
           const uri = sourceOf(document.uri);
           if (!uri) {
@@ -363,20 +411,7 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
             text: document.getText(),
             open: props.open,
           });
-          return found.map(d => {
-            const here = d.pathname === pathname;
-            return {
-              // an error inside an imported fragment still has to be visible
-              // from the page that pulled it in, or a broken library reads
-              // as a page that is fine. Reported at the top, named
-              range: here
-                ? d.range
-                : { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } },
-              message: here ? d.message : `${d.pathname}: ${d.message}`,
-              severity: d.severity === 'error' ? 1 : 2,
-              source: 'markout',
-            };
-          });
+          return found.map(d => asDiagnostic(d, pathname));
         },
       };
     },

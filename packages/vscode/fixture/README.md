@@ -46,6 +46,13 @@ question. `body` is a named *scope* and goes to the `<body>` tag; `items` is
 a value *inside* it, reached by navigating there first; `item` is the loop
 alias and goes to the `:for-as` beside it. `page` and `head` are there too.
 
+## The Problems panel
+
+Open the fixture and look at Problems before opening anything: `broken.html`
+and `missing.html` are listed already. The whole project is compiled, not
+only what is on screen — and a fault inside a fragment is listed against the
+fragment, at its line, because the page that imports it is what found it.
+
 ## Completion
 
 Type `${body.` anywhere in `markout/scopes.html` and the list is `body`'s

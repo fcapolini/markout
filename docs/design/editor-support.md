@@ -86,6 +86,15 @@ Ranked by what a markout author actually feels, not by what is easy:
    Not a re-implementation of a subset of the rules: the same `Compiler` the
    server and `build` run, so anything it catches the editor catches, for
    free and forever.
+
+   For the whole project as well as the open file, because the Problems panel
+   is where somebody asks whether the project is *alright*, and answering
+   only about open editors makes it a panel about what has been looked at.
+   `build` has always known the whole answer; this is that answer without
+   leaving the editor. Only pages are compiled — a fragment's faults are
+   reported by whichever page imports it, in the file they are in, so
+   sweeping pages covers fragments too and a fragment nobody imports goes
+   unchecked exactly as `build` leaves it.
 2. **Navigation, five kinds**, and the point of listing them is that each
    answers a question the text cannot: a custom tag, an attribute of one, a
    name, a scope, and a file. A custom tag goes to the `<:define>` that
