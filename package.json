@@ -10,9 +10,11 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present",
+    "pretest": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "test-coverage": "vitest run --coverage",
+    "pretest-coverage": "npm run build",
     "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
     "dev": "npm run dev -w @markout/site",
     "dev:bench": "npm run dev:bench -w markout --",
