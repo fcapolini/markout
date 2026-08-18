@@ -1,6 +1,7 @@
-import { Compiler, discoverKits, visibleFrom, type Visible } from '@markout/core';
+import { visibleFrom, type Visible } from '@markout/core';
 import { openReader } from './diagnostics';
 import { expressionAt, IDENT_PART } from './declarations';
+import { compilePage } from './pages';
 
 /**
  * What could be written where the cursor is.
@@ -33,21 +34,25 @@ export interface CompletionProps {
 }
 
 export async function findCompletions(props: CompletionProps): Promise<Completion[]> {
+  const markup = markupAt(props.text, props.offset);
+  if (markup) {
+    return markupCompletions(props, markup);
+  }
   const path = completionPathAt(props.text, props.offset);
   if (!path) {
     return [];
   }
   const text = repaired(props.text, props.offset) ?? props.text;
   const { docroot, pathname } = props;
-  const readFile = openReader(filePath =>
-    filePath === props.filePath ? text : props.open?.(filePath)
-  );
-
-  const { kits } = discoverKits(docroot);
-  let page;
-  try {
-    page = await new Compiler({ docroot, kits, readFile }).compile(pathname);
-  } catch {
+  const page = await compilePage({
+    docroot,
+    pathname,
+    text,
+    readFile: openReader(filePath =>
+      filePath === props.filePath ? text : props.open?.(filePath)
+    ),
+  });
+  if (!page) {
     return [];
   }
   const from = expressionAt(page.values.values(), pathname, props.offset);
@@ -55,6 +60,105 @@ export async function findCompletions(props: CompletionProps): Promise<Completio
     return [];
   }
   return visibleFrom(from, path).map(describe);
+}
+
+/**
+ * The tags a page can use, and the parameters one of them takes.
+ *
+ * Both come out of `customTags`, which the compiler keeps because it cannot
+ * compile a page without it -- so a kit of thirty components documents
+ * itself, and its README stops being something anyone has to have open.
+ */
+async function markupCompletions(
+  props: CompletionProps,
+  markup: MarkupContext
+): Promise<Completion[]> {
+  // a half-written tag is not markup the parser will accept: `<bs-` is an
+  // unterminated tag, and an unterminated tag means no page and therefore no
+  // list. Blanked out, the rest of the document parses -- and what is wanted
+  // comes from the imports in its head, which this does not touch
+  const text = blanked(props.text, markup.from, markup.to);
+  const page = await compilePage({
+    docroot: props.docroot,
+    pathname: props.pathname,
+    text,
+    readFile: openReader(filePath =>
+      filePath === props.filePath ? text : props.open?.(filePath)
+    ),
+  });
+  if (!page) {
+    return [];
+  }
+  if (markup.kind === 'tag') {
+    return [...page.customTags.entries()].map(([name, scope]) => ({
+      name,
+      kind: 'scope',
+      detail: scope.e?.loc?.source ?? undefined,
+    }));
+  }
+  const definition = page.customTags.get(markup.tag);
+  if (!definition) {
+    return [];
+  }
+  return [...definition.values.keys()]
+    // the runtime's own bookkeeping, and the privates a definition keeps for
+    // itself -- neither is anybody's to pass in
+    .filter(name => !name.includes('$') && !name.startsWith('_'))
+    .map(name => ({
+      name: `:${name}`,
+      kind: 'value',
+      detail: definition.values.get(name)?.node.loc.source ?? undefined,
+    }));
+}
+
+/** where a tag is being written, if the cursor is inside one */
+export type MarkupContext =
+  | { kind: 'tag'; from: number; to: number }
+  | { kind: 'attribute'; tag: string; from: number; to: number };
+
+/**
+ * Whether the cursor is in a tag rather than in text or an expression, and
+ * if so whether it is on the tag's NAME or among its attributes.
+ *
+ * `<bs-` is the first; `<bs-input :` is the second. A cursor in text is
+ * neither, and neither is one inside an expression -- an expression can hold
+ * a `<`, and the check for an unclosed `${` before it is what keeps
+ * `${a < b}` from reading as the start of a tag.
+ */
+export function markupAt(text: string, offset: number): MarkupContext | undefined {
+  const open = text.lastIndexOf('<', offset - 1);
+  if (open < 0 || text.lastIndexOf('>', offset - 1) > open) {
+    return undefined;
+  }
+  const expression = text.lastIndexOf('${', offset);
+  if (expression > 0 && expression > text.lastIndexOf('}', offset) && expression < open) {
+    return undefined;
+  }
+  const written = text.slice(open + 1, offset);
+  // a directive is the language's own and takes no parameters from anyone
+  if (written.startsWith(':') || written.startsWith('/') || written.startsWith('!')) {
+    return undefined;
+  }
+  const to = tagEnd(text, offset);
+  const space = written.search(/\s/);
+  if (space < 0) {
+    return { kind: 'tag', from: open, to };
+  }
+  return { kind: 'attribute', tag: written.slice(0, space), from: open, to };
+}
+
+/** where the tag being written ends: its `>`, or wherever the author has got to */
+function tagEnd(text: string, from: number): number {
+  const at = text.slice(from).search(/[<>\n]/);
+  return at < 0 ? text.length : from + at + (text[from + at] === '>' ? 1 : 0);
+}
+
+/** the same text with one region replaced by spaces, newlines kept */
+function blanked(text: string, from: number, to: number): string {
+  const region = text
+    .slice(from, to)
+    .replace(/[^\n]/g, ' ');
+  return text.slice(0, from) + region + text.slice(to);
 }
 
 function describe(visible: Visible): Completion {

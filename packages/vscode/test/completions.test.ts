@@ -88,6 +88,61 @@ describe('a bare name', () => {
   });
 });
 
+describe('in markup rather than in an expression', () => {
+  const LIB = [
+    '<lib>',
+    '  <:define tag="x-card:div" :title=${1} :tone=${2} :_inner=${3}>',
+    '    <:slot />',
+    '  </:define>',
+    '  <:define tag="x-note:p">n</:define>',
+    '</lib>',
+  ].join('\n');
+
+  function page(body: string) {
+    write('lib.htm', LIB);
+    return [
+      '<html>',
+      '<head><:import src="/lib.htm" /></head>',
+      '<body>',
+      `  ${body}`,
+      '</body>',
+      '</html>',
+    ].join('\n');
+  }
+
+  it('offers the tags a page can use', async () => {
+    // typed halfway, which is when it is wanted and also when the page has
+    // an unterminated tag in it and will not compile
+    const names = await offered(page('<x-'), '<x-');
+    expect(names.sort()).toStrictEqual(['x-card', 'x-note']);
+  });
+
+  it("offers a tag's parameters, by the names it declares", async () => {
+    const names = await offered(page('<x-card :'), '<x-card :');
+    expect(names).toContain(':title');
+    expect(names).toContain(':tone');
+  });
+
+  it('leaves out what is not the caller\u2019s to pass', async () => {
+    const names = await offered(page('<x-card :'), '<x-card :');
+    expect(names).not.toContain(':_inner');
+  });
+
+  it('offers nothing for a tag nobody defined', async () => {
+    expect(await offered(page('<div :'), '<div :')).toStrictEqual([]);
+  });
+
+  it('offers nothing inside a directive, which takes no parameters', async () => {
+    expect(await offered(page('<:slot '), '<:slot ')).toStrictEqual([]);
+  });
+
+  it('is not fooled by a `<` inside an expression', async () => {
+    // `${a < b}` is a comparison, not the start of a tag
+    const names = await offered(page('<p>${appName < '), '${appName < ');
+    expect(names).not.toContain('x-card');
+  });
+});
+
 describe('nothing to offer', () => {
   it('says nothing outside an expression', async () => {
     expect(await offered(PAGE.replace('PLACEHOLDER', 'plain text'), 'plain')).toStrictEqual([]);

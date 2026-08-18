@@ -151,7 +151,26 @@ Ranked by what a markout author actually feels, not by what is easy:
    one: another broken expression elsewhere is a mistake the author has yet
    to fix, and the diagnostics already say so.
 
-5. **HTML's own features** — tag completion, attribute completion, folding —
+5. **Hover**, which is go-to-definition for someone who does not want to
+   leave the page — and shows the declaring line itself rather than a
+   description of it, because a summary is a second thing to keep true and
+   the source cannot go stale.
+
+6. **Completion in markup**: `<x-` offers the tags a page can use, `<x-card :`
+   the parameters that tag declares. Both are `customTags` again, so a kit of
+   thirty components documents itself and its README stops being something
+   anyone has to have open. Two things this needed:
+
+   The compiler **tree-shakes unused definitions**, which is right for a page
+   and wrong for an editor: shaken, `customTags` holds only the tags already
+   typed, so a kit offers the three someone has got round to using.
+   `treeshake` is now a compiler option, and the editor turns it off.
+
+   And a half-written `<x-` is an unterminated tag, which fails the parse
+   before any of this — so the partial tag is blanked out first, the same
+   trick the expression case uses and for the same reason.
+
+7. **HTML's own features** — tag completion, attribute completion, folding —
    through `volar-service-html` over the embedded HTML. This is where the
    masking earns its place, and it is checked by asking for folding ranges on
    a page whose `<body :hidden=${a > b}>` would, unmasked, have ended that
@@ -323,6 +342,15 @@ reveal a region the cursor is already inside gets the only sensible answer,
 which is nothing at all. `head` appeared to work throughout, for the sole
 reason that a page's `<head>` does not contain the `<body>` the click was in.
 That is what "`head` works, `body` and `page` do not" turned out to mean.
+
+**Completion is a list several services build, and the first to answer
+claims it.** Volar visits embedded documents innermost-first, so
+`volar-service-html` answers on the embedded HTML before this service is
+reached on the root, and every other provider is then skipped — a markout
+list that never appears at all, with nothing anywhere reporting a problem.
+Declaring the contribution `isAdditionalCompletion` is what merges it
+instead of competing, and it has to be offered against the same document the
+claim was made on, which is the embedded HTML rather than the root.
 
 **Pull diagnostics are off unless the client asks for them.** A client that
 advertises no `textDocument.diagnostic` capability gets silence from
