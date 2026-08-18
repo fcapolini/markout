@@ -1,0 +1,24 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "scopeName": "text.html.markout.tag",
+  "name": "Markout (inside tags)",
+  "comment": "markout lets a tag hold comments between its attributes, the way JavaScript does -- HTML doesn't, and calls them illegal characters, so this injection claims them first. It only applies inside a tag: `//` in text is text, not a comment.",
+  "injectionSelector": "L:meta.tag -comment -string",
+  "patterns": [{ "include": "#comment-block" }, { "include": "#comment-line" }],
+  "repository": {
+    "comment-block": {
+      "comment": "/* ... */, and it may span lines",
+      "begin": "/\\*",
+      "end": "\\*/",
+      "name": "comment.block.markout",
+      "beginCaptures": { "0": { "name": "punctuation.definition.comment.begin.markout" } },
+      "endCaptures": { "0": { "name": "punctuation.definition.comment.end.markout" } }
+    },
+    "comment-line": {
+      "comment": "// to the end of the line -- which takes the `>` with it, as the parser does. It must start a word: this grammar is injected into every HTML file, and `<script src=//cdn.example.com/x.js>` is a protocol-relative URL, not a comment",
+      "match": "(?:^|(?<=[\\s\"'}]))(//).*$",
+      "name": "comment.line.double-slash.markout",
+      "captures": { "1": { "name": "punctuation.definition.comment.markout" } }
+    }
+  }
+}
