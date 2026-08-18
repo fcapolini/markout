@@ -28,7 +28,7 @@ function write(rel: string, text: string) {
 
 /** the problems, as `file: message` with nothing opened first */
 async function sweep(props: Parameters<typeof diagnoseWorkspace>[0] | undefined = undefined) {
-  const { problems } = await diagnoseWorkspace({ workspaceFolder: root, ...props });
+  const { problems } = await diagnoseWorkspace({ workspaceFolders: [root], ...props });
   return problems
     .flatMap(p => p.diagnostics.map(d => `${path.basename(p.filePath)}: ${d.message}`))
     .sort();
@@ -54,7 +54,7 @@ describe('a project nobody has opened', () => {
       '<lib>\n  <:define tag="x-a:div" :title=${1}>\n    <h2>${titel}</h2>\n  </:define>\n</lib>'
     );
     write('index.html', '<html><head><:import src="/lib.htm" /></head>\n<body><x-a /></body></html>');
-    const { problems } = await diagnoseWorkspace({ workspaceFolder: root });
+    const { problems } = await diagnoseWorkspace({ workspaceFolders: [root] });
     expect(problems).toHaveLength(1);
     expect(path.basename(problems[0].filePath)).toBe('lib.htm');
     expect(problems[0].diagnostics[0].range.start.line).toBe(2);
@@ -79,7 +79,7 @@ describe('a project that is not markout\\u2019s', () => {
   it('is checked anyway when told to be', async () => {
     write('package.json', JSON.stringify({ name: 'app' }));
     write('page.html', '<html><body>${nope}</body></html>');
-    expect(await sweep({ workspaceFolder: root, enable: 'always' })).toStrictEqual([
+    expect(await sweep({ workspaceFolders: [root], enable: 'always' })).toStrictEqual([
       'page.html: Unknown reference: "nope"',
     ]);
   });
@@ -87,7 +87,59 @@ describe('a project that is not markout\\u2019s', () => {
   it('says nothing at all when turned off', async () => {
     write('package.json', JSON.stringify({ name: 's', dependencies: { markout: '^0.4.0' } }));
     write('bad.html', '<html><body>${nope}</body></html>');
-    expect(await sweep({ workspaceFolder: root, enable: 'never' })).toStrictEqual([]);
+    expect(await sweep({ workspaceFolders: [root], enable: 'never' })).toStrictEqual([]);
+  });
+});
+
+describe('a window open on more than one folder', () => {
+  let second: string;
+
+  beforeEach(() => {
+    second = fs.mkdtempSync(path.join(os.tmpdir(), 'markout-ws2-'));
+  });
+  afterEach(() => fs.rmSync(second, { recursive: true, force: true }));
+
+  it('sweeps them all, each against its own docroot', async () => {
+    write('package.json', JSON.stringify({ name: 'a', dependencies: { markout: '^0.4.0' } }));
+    write('a.html', '<html><body>${nope}</body></html>');
+    fs.writeFileSync(
+      path.join(second, 'package.json'),
+      JSON.stringify({ name: 'b', dependencies: { markout: '^0.4.0' } })
+    );
+    // its own docroot, and the proof of it: `/lib.htm` is resolved against
+    // the folder this page is in, not against the first folder in the list
+    fs.writeFileSync(path.join(second, 'lib.htm'), '<lib><:define tag="x-b:div">${nope2}</:define></lib>');
+    fs.writeFileSync(
+      path.join(second, 'b.html'),
+      '<html><head><:import src="/lib.htm" /></head><body><x-b /></body></html>'
+    );
+
+    const { problems } = await diagnoseWorkspace({ workspaceFolders: [root, second] });
+    const said = problems
+      .flatMap(p => p.diagnostics.map(d => `${path.basename(p.filePath)}: ${d.message}`))
+      .sort();
+    expect(said).toStrictEqual([
+      'a.html: Unknown reference: "nope"',
+      'lib.htm: Unknown reference: "nope2"',
+    ]);
+  });
+
+  it('spends one budget over all of them', async () => {
+    write('package.json', JSON.stringify({ name: 'a', dependencies: { markout: '^0.4.0' } }));
+    write('a.html', '<html><body>${nope}</body></html>');
+    fs.writeFileSync(
+      path.join(second, 'package.json'),
+      JSON.stringify({ name: 'b', dependencies: { markout: '^0.4.0' } })
+    );
+    fs.writeFileSync(path.join(second, 'b.html'), '<html><body>${nope}</body></html>');
+    // a limit that is per folder is not a limit: five folders would compile
+    // five times what the bound says
+    const { checked, skipped } = await diagnoseWorkspace({
+      workspaceFolders: [root, second],
+      limit: 1,
+    });
+    expect(checked).toBe(1);
+    expect(skipped).toBe(1);
   });
 });
 
@@ -97,7 +149,7 @@ describe('a project too big to sweep', () => {
     for (let i = 0; i < 5; i++) {
       write(`p${i}.html`, '<html><body>${nope}</body></html>');
     }
-    const { problems, skipped } = await diagnoseWorkspace({ workspaceFolder: root, limit: 2 });
+    const { problems, skipped } = await diagnoseWorkspace({ workspaceFolders: [root], limit: 2 });
     expect(problems).toHaveLength(2);
     // a bound never mentioned reads as "nothing else is wrong"
     expect(skipped).toBe(3);
@@ -107,7 +159,7 @@ describe('a project too big to sweep', () => {
     write('package.json', JSON.stringify({ name: 's', dependencies: { markout: '^0.4.0' } }));
     write('plain.html', '<!doctype html><html><body><p>ordinary</p></body></html>');
     write('page.html', '<html :n=${1}><body>${n}</body></html>');
-    const { skipped } = await diagnoseWorkspace({ workspaceFolder: root });
+    const { skipped } = await diagnoseWorkspace({ workspaceFolders: [root] });
     expect(skipped).toBe(0);
   });
 });

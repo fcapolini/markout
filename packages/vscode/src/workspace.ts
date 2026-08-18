@@ -2,6 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import {
   diagnose,
+  folderOf,
   guessDocroot,
   isMarkoutProject,
   looksLikeMarkout,
@@ -32,7 +33,15 @@ export interface WorkspaceProblem {
 }
 
 export interface WorkspaceProps {
-  workspaceFolder: string;
+  /**
+   * The folders the window is open on, swept as one.
+   *
+   * A multi-root workspace is several projects at once, so each file's
+   * docroot is guessed under the folder it is in rather than under the first
+   * one -- but the answer is a single set of problems, because the Problems
+   * panel is one panel and the limit below is one budget.
+   */
+  workspaceFolders: string[];
   /** an explicit docroot, from `markout.docroot`; guessed per file when absent */
   docroot?: string;
   enable?: 'auto' | 'always' | 'never';
@@ -49,17 +58,21 @@ export interface WorkspaceProps {
 
 export async function diagnoseWorkspace(props: WorkspaceProps): Promise<{
   problems: WorkspaceProblem[];
+  /** pages compiled, which is what the limit bounds */
+  checked: number;
   /** pages not compiled because the limit was reached */
   skipped: number;
 }> {
   const limit = props.limit ?? 200;
   const enable = props.enable ?? 'auto';
   if (enable === 'never') {
-    return { problems: [], skipped: 0 };
+    return { problems: [], checked: 0, skipped: 0 };
   }
 
   const found = new Map<string, Map<string, MarkoutDiagnostic>>();
-  const files = pagesUnder(props.workspaceFolder);
+  // one list, deduplicated: workspace folders are allowed to nest, and a
+  // page reached through two of them is still one page
+  const files = [...new Set(props.workspaceFolders.flatMap(folder => pagesUnder(folder)))];
   let compiled = 0;
   let skipped = 0;
 
@@ -75,7 +88,8 @@ export async function diagnoseWorkspace(props: WorkspaceProps): Promise<{
     if (text === undefined) {
       continue;
     }
-    const docroot = props.docroot ?? guessDocroot(file, props.workspaceFolder);
+    const docroot =
+      props.docroot ?? guessDocroot(file, folderOf(file, props.workspaceFolders));
     if (enable === 'auto' && !looksLikeMarkout(text) && !isMarkoutProject(docroot)) {
       continue;
     }
@@ -101,6 +115,7 @@ export async function diagnoseWorkspace(props: WorkspaceProps): Promise<{
       filePath,
       diagnostics: [...per.values()],
     })),
+    checked: compiled,
     skipped,
   };
 }

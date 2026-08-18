@@ -184,6 +184,30 @@ export function guessDocroot(filePath: string, workspaceFolder?: string): string
   }
 }
 
+/**
+ * The workspace folder a file is in, out of several.
+ *
+ * A window can hold more than one folder, and they are not variations on one
+ * project: each has its own docroot, its own package.json, its own answer to
+ * whether it is markout's at all. So the ceiling for the docroot guess is the
+ * folder the file is actually IN -- the longest that contains it, since a
+ * workspace is allowed to nest them -- and nothing at all for a file in none
+ * of them, which is what an editor sends when a page is opened from outside
+ * the workspace.
+ */
+export function folderOf(filePath: string, folders: string[] = []): string | undefined {
+  const file = path.resolve(filePath);
+  let found: string | undefined;
+  for (const folder of folders) {
+    const root = path.resolve(folder);
+    const within = file === root || file.startsWith(root.endsWith(path.sep) ? root : root + path.sep);
+    if (within && (!found || root.length > found.length)) {
+      found = root;
+    }
+  }
+  return found;
+}
+
 /** the one directory name that means "pages are served from here" */
 export const DOCROOT_DIR_NAME = 'markout';
 

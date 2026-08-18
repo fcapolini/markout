@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { diagnose, guessDocroot, pathnameOf } from '../src/diagnostics';
+import { diagnose, folderOf, guessDocroot, pathnameOf } from '../src/diagnostics';
 
 /**
  * What the editor will show, checked against the real compiler.
@@ -174,5 +174,29 @@ describe('where a page is served from', () => {
     const page = write('loose/x.html', '<html></html>');
     expect(guessDocroot(page, docroot)).toBe(path.resolve(docroot));
     expect(pathnameOf(page, docroot)).toBe('/loose/x.html');
+  });
+
+  it('looks under the folder the file is in, out of several', () => {
+    // a multi-root window is several projects at once, and the ceiling for
+    // the guess is the one this file belongs to -- under the wrong folder
+    // the walk goes nowhere near this page's package.json
+    const a = write('a/package.json', '{}');
+    const b = write('b/package.json', '{}');
+    const page = write('b/deep/x.html', '<html></html>');
+    const folders = [path.dirname(a), path.dirname(b)];
+    expect(folderOf(page, folders)).toBe(path.join(docroot, 'b'));
+    expect(guessDocroot(page, folderOf(page, folders))).toBe(path.join(docroot, 'b'));
+  });
+
+  it('prefers the innermost folder, and none at all for a file outside them', () => {
+    // folders are allowed to nest, and an editor is allowed to open a file
+    // that is in none of them
+    const outer = write('w/package.json', '{}');
+    const inner = write('w/nested/package.json', '{}');
+    const page = write('w/nested/x.html', '<html></html>');
+    const folders = [path.dirname(outer), path.dirname(inner)];
+    expect(folderOf(page, folders)).toBe(path.join(docroot, 'w/nested'));
+    expect(folderOf(write('elsewhere/x.html', '<html></html>'), folders)).toBeUndefined();
+    expect(folderOf(page, [])).toBeUndefined();
   });
 });

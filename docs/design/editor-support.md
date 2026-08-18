@@ -262,6 +262,15 @@ than in place of it. The comments go in a second injection, selected on
 `meta.tag` rather than on the file, because `//` inside a tag is a comment
 and `//` in text is text.
 
+**And no language configuration either**, for the same reason. A
+`language-configuration.json` is contributed *through* a language id, so the
+only way to ship one here is to claim `html` — which does not add to VS
+Code's, it replaces it, taking its indentation rules, its on-enter rules and
+its comment toggling with it. Auto-closing `${` is not worth that trade, so
+the file this extension used to carry was deleted rather than wired up. The
+rule is the Outline rule again: contribute what HTML cannot answer, not a
+second answer to what it can.
+
 **Diagnostics are gated on the project, not the file.** Plain HTML is quiet
 under the compiler, because markout is a superset — script contents are not
 interpolated, and `{{…}}`, `{%…%}` and `<?php … ?>` mean nothing to it.
@@ -467,6 +476,50 @@ exists precisely because the failures it catches — a plugin never registered,
 a capability never announced, a `main` pointing at nothing — leave every unit
 test green and the extension doing nothing.
 
+## A window is not a constant
+
+Three things about the window were read once, at startup, and treated as
+facts about the world thereafter. Each of them is something a person changes
+in the ordinary course of using an editor.
+
+**Settings.** `markout.docroot` decides what every absolute path in every
+page means, and it arrived in `initializationOptions` — read once, so
+changing it needed a window reload, which is a thing to be told about and
+mostly is not. The server now holds them as state and asks the editor for
+them again on `didChangeConfiguration`, which the client subscribes it to
+with `synchronize.configurationSection`. Both halves of the invalidation
+follow: nothing downstream is allowed to *copy* the settings, since every
+service is built once at initialize, so they are passed as getters — and a
+re-read is followed by the same cache-drop-and-refresh a changed fragment
+gets, or the editor answers the next question from what it computed under
+the old setting.
+
+`initializationOptions` stays, as the first answer rather than the only one:
+a client that cannot be asked for configuration will never give another.
+
+**Folders.** A window can be open on several, and they are separate projects
+— separate docroots, separate `package.json`s, separate answers to whether
+this is markout's at all. `folders[0]` was one of them. Every file's docroot
+is now guessed under the folder that file is *in* (the innermost, since
+folders may nest), and the workspace sweep walks all of them as one pass
+with one budget, deduplicated: a limit spent per folder is not a limit.
+Folders added to a window after it opened are picked up too, since the list
+is read from Volar's live `workspaceFolders` on every request rather than
+from the initialize params.
+
+One thing deliberately left: `markout.docroot` is a window-scoped setting, so
+a multi-root window applies one value to every folder. Set it per project and
+it is wrong for the others — the default, which guesses per file, is the
+right answer in that window.
+
+**The sweep's bound.** It compiles at most 200 pages, which is a bound worth
+having and a bound that must be *admitted*: an empty Problems panel after an
+early stop reads as a clean project. It said so with `console.warn`, into an
+output channel nobody has opened. It now asks the editor to show it, once per
+distinct message, with both numbers in it — how many were checked and how
+many were not — because "some pages were skipped" is not something anybody
+can act on.
+
 ## Shape
 
 ```
@@ -475,8 +528,8 @@ packages/vscode/
     plugin.ts     the Volar language plugin: a page -> its virtual code
     server.ts     the language server (LSP, node)
     client.ts     the VS Code extension entry point
-  syntaxes/       the TextMate grammar
-  package.json    contributions: languages, grammars, configuration
+  syntaxes/       the TextMate grammars, injected into HTML's
+  package.json    contributions: grammars, configuration
 ```
 
 Depends on `@markout/core` and nothing else of ours — which is the constraint

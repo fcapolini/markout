@@ -5,6 +5,7 @@ import { URI } from 'vscode-uri';
 import {
   diagnose,
   type MarkoutDiagnostic,
+  folderOf,
   guessDocroot,
   isMarkoutProject,
   looksLikeMarkout,
@@ -30,14 +31,28 @@ import { diagnoseWorkspace } from './workspace';
  */
 
 export interface MarkoutServiceProps {
-  /** the folder a file's docroot is looked for under */
-  workspaceFolder?: string;
+  /**
+   * The folders the window is open on, in any order.
+   *
+   * A file's docroot is looked for under the one it is IN -- see folderOf --
+   * because the folders of a multi-root workspace are separate projects, not
+   * views of one.
+   *
+   * Read on every request rather than at startup, so that a setting changed
+   * or a folder added takes effect where it is changed: server.ts passes
+   * these as getters.
+   */
+  workspaceFolders?: string[];
   /** an explicit docroot, from `markout.docroot`; guessed when absent */
   docroot?: string;
   /** `markout.enable`: whether a project has to look like markout's */
   enable?: 'auto' | 'always' | 'never';
   /** the editor's unsaved buffers, by file path */
   open: (filePath: string) => string | undefined;
+  /** something the author needs to hear about, said where they will see it */
+  warn?: (message: string) => void;
+  /** how many pages a workspace sweep may compile; the default is in workspace.ts */
+  limit?: number;
 }
 
 /**
@@ -61,7 +76,7 @@ export interface MarkoutServiceProps {
  * decoded before it names anything on disk.
  */
 export function createDocumentContext(props: {
-  workspaceFolder?: string;
+  workspaceFolders?: string[];
   docroot?: string;
   /** turns an embedded document's uri back into the file's */
   decode: (uri: URI) => URI | undefined;
@@ -75,7 +90,8 @@ export function createDocumentContext(props: {
         return props.fallback(ref, baseUri);
       }
       const filePath = baseUri.fsPath;
-      const docroot = props.docroot ?? guessDocroot(filePath, props.workspaceFolder);
+      const docroot =
+        props.docroot ?? guessDocroot(filePath, folderOf(filePath, props.workspaceFolders));
       const target = resolveReference({
         docroot,
         fromPathname: pathnameOf(filePath, docroot),
@@ -141,6 +157,10 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
       renameProvider: { prepareProvider: true },
     },
     create(context) {
+      /** the docroot a file is read against: the setting, or the guess */
+      const docrootFor = (filePath: string) =>
+        props.docroot ?? guessDocroot(filePath, folderOf(filePath, props.workspaceFolders));
+
       /**
        * The source file behind a virtual document, if this service owns it.
        *
@@ -169,7 +189,7 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
           return undefined;
         }
         const filePath = uri.fsPath;
-        const docroot = props.docroot ?? guessDocroot(filePath, props.workspaceFolder);
+        const docroot = docrootFor(filePath);
         return {
           docroot,
           props: {
@@ -240,7 +260,7 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
             return undefined;
           }
           const filePath = uri.fsPath;
-          const docroot = props.docroot ?? guessDocroot(filePath, props.workspaceFolder);
+          const docroot = docrootFor(filePath);
           const found = await findReferences({
             docroot,
             pathname: pathnameOf(filePath, docroot),
@@ -261,7 +281,7 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
             return undefined;
           }
           const filePath = uri.fsPath;
-          const docroot = props.docroot ?? guessDocroot(filePath, props.workspaceFolder);
+          const docroot = docrootFor(filePath);
           const found = await findHover({
             docroot,
             pathname: pathnameOf(filePath, docroot),
@@ -287,7 +307,7 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
           if (text === undefined) {
             return undefined;
           }
-          const docroot = props.docroot ?? guessDocroot(filePath, props.workspaceFolder);
+          const docroot = docrootFor(filePath);
           const found = await findCompletions({
             docroot,
             pathname: pathnameOf(filePath, docroot),
@@ -320,7 +340,7 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
           const text = document.getText();
           const offset = document.offsetAt(position);
           const filePath = uri.fsPath;
-          const docroot = props.docroot ?? guessDocroot(filePath, props.workspaceFolder);
+          const docroot = docrootFor(filePath);
           const pathname = pathnameOf(filePath, docroot);
 
           // a file a directive names
@@ -377,19 +397,26 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
         },
 
         async provideWorkspaceDiagnostics() {
-          if (!props.workspaceFolder) {
+          const folders = props.workspaceFolders ?? [];
+          if (!folders.length) {
             return [];
           }
-          const { problems, skipped } = await diagnoseWorkspace({
-            workspaceFolder: props.workspaceFolder,
+          const { problems, checked, skipped } = await diagnoseWorkspace({
+            workspaceFolders: folders,
             docroot: props.docroot,
             enable: props.enable,
             open: props.open,
+            limit: props.limit,
           });
           if (skipped) {
-            // a bound that is never mentioned reads as "nothing else is
-            // wrong", which is the one thing it does not mean
-            console.warn(`markout: ${skipped} page(s) not checked -- the project is large`);
+            // A bound that is never mentioned reads as "nothing else is
+            // wrong", which is the one thing it does not mean -- and it was
+            // said to `console`, where the author of a page is not looking.
+            // The editor's own warning is where they are.
+            props.warn?.(
+              `markout checked ${checked} pages of this workspace and stopped: ` +
+                `${skipped} more are not reported on.`
+            );
           }
           return problems.map(problem => ({
             uri: URI.file(problem.filePath).toString(),
@@ -409,7 +436,7 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
           if (enable === 'never') {
             return [];
           }
-          const docroot = props.docroot ?? guessDocroot(filePath, props.workspaceFolder);
+          const docroot = docrootFor(filePath);
           // This extension has no file suffix of its own to hide behind, so
           // it has to be shown evidence. Either will do, and the first is the
           // one that matters: a project that installs nothing and runs
