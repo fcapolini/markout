@@ -31,6 +31,16 @@ JavaScript template literal in a `<script>`. Nothing is reported and nothing
 should be: plain HTML is a subset of markout, and the extension has no
 opinion about a file that is not using it.
 
+**`markout/tags.html`** — a custom tag and the directions that live a few
+characters apart. Ctrl-click `x-card` for its `<:define>`; `:title` for the
+*parameter* it sets, in the other file; and inside that attribute's **value**
+for what the value reads, back in this page — because an expression written
+at a usage site is evaluated there. `:aka` and `class` go nowhere, being the
+language's and HTML's rather than the tag's. It also holds `$parent`, which
+navigates, and `$host`, which deliberately does not: that is whichever
+instance encloses this one, a property of each usage rather than of the
+definition.
+
 **`markout/scopes.html`** — four names on one line, each a different
 question. `body` is a named *scope* and goes to the `<body>` tag; `items` is
 a value *inside* it, reached by navigating there first; `item` is the loop

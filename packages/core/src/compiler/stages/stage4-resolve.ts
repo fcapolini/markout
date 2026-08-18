@@ -288,7 +288,19 @@ export function declarationFor(from: Value, path: string[]): Declaration | undef
     scope = step.scope;
     navigated = true;
   }
-  return lookup(scope, path[path.length - 1], navigated);
+  const key = path[path.length - 1];
+  const found = lookup(scope, key, navigated);
+  if (found) {
+    return found;
+  }
+  // `$parent` names a scope without being a name IN one, so the lookup above
+  // cannot see it -- and asking where `$parent` goes is a fair question with
+  // an exact answer. `$host` is the deliberate non-answer: it is whichever
+  // instance encloses this one, which is a property of each usage rather
+  // than of the definition, so `navigate` reports it as dynamic and there is
+  // no single element to open.
+  const step = navigate(scope, key, navigated);
+  return step.isNavigation && step.scope ? { scope: step.scope } : undefined;
 }
 
 function addError(page: Page, msg: string, loc: Value['node']['loc']) {
