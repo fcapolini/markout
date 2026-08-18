@@ -117,6 +117,8 @@ await request('initialize', {
       diagnostic: { dynamicRegistration: false },
       documentLink: { dynamicRegistration: false },
       completion: { completionItem: { snippetSupport: false } },
+      // the Problems panel asks this one, and only if the client says it can
+      diagnostic: { dynamicRegistration: false },
       hover: { contentFormat: ['markdown'] },
     },
   },
@@ -325,7 +327,22 @@ for (const [name, typed] of [['tags.html', '<x-'], ['tags.html', '<x-card :']]) 
   console.log(`  ${`${name} after "${typed}"`.padEnd(30)} ${names.length ? names.join(' ') : 'NOTHING'}`);
 }
 
-console.log('\ndiagnostics\n');
+console.log('\nworkspace diagnostics (nothing opened for these)\n');
+{
+  const report = await request('workspace/diagnostic', { previousResultIds: [] });
+  const items = report?.items ?? [];
+  if (!items.length) {
+    console.log('  NOTHING');
+  }
+  for (const entry of items) {
+    const name = decodeURIComponent(entry.uri.split('/').pop() ?? '');
+    for (const d of entry.items ?? []) {
+      console.log(`  ${name.padEnd(18)} line ${d.range.start.line + 1}: ${d.message}`);
+    }
+  }
+}
+
+console.log('\ndiagnostics (the open document)\n');
 for (const name of ['index.html', 'broken.html', 'missing.html', 'plain.html', 'lib.htm']) {
   const doc = open(name);
   const report = await request('textDocument/diagnostic', {
