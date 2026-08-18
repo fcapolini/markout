@@ -86,7 +86,9 @@ Ranked by what a markout author actually feels, not by what is easy:
    Not a re-implementation of a subset of the rules: the same `Compiler` the
    server and `build` run, so anything it catches the editor catches, for
    free and forever.
-2. **Navigation, three kinds.** A custom tag goes to the `<:define>` that
+2. **Navigation, five kinds**, and the point of listing them is that each
+   answers a question the text cannot: a custom tag, an attribute of one, a
+   name, a scope, and a file. A custom tag goes to the `<:define>` that
    gives it meaning, which is usually in another file and is the thing a
    reader of a page most often wants — the compiler keeps that map because it
    needs it to compile at all, so the editor only has to ask.
@@ -123,6 +125,15 @@ Ranked by what a markout author actually feels, not by what is easy:
    a path leaving the docroot resolves to nothing at all. Only the
    directives' `src` is followed: a `<script src>` names a URL the browser
    fetches, whose place on disk depends on how the site is deployed.
+
+   Two of these needed the compiler to say something it had not been asked
+   before, and in both cases it already knew. An attribute of a custom tag
+   goes to the *parameter* it sets, which is `customTags` again. And an
+   `:aka` on a custom tag has no element to point at — the usage is spliced
+   out of the tree once its values are handed over — so the answer is the
+   earliest of its `callSiteValues`, a set that exists because a definition
+   must not read its caller and happens to be exactly the list of things the
+   author typed on that tag.
 3. **Syntax highlighting** for `${…}` and `:`-attributes, so the language
    stops looking like malformed HTML.
 4. **HTML's own features** — tag completion, attribute completion, folding —

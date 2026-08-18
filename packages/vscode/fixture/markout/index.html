@@ -15,6 +15,9 @@
 
   <h1>${count} things</h1>
 
+  <!--- ctrl-click `:title` and you land on the parameter in lib.htm;
+        ctrl-click inside its VALUE and you land on what the value reads,
+        here in this page. A few characters apart, opposite directions -->
   <x-card :title=${'Everything is fine here'} :tone=${'warm'}>
     <ul>
       <li :for-each=${items} :for-as="item">${item}</li>

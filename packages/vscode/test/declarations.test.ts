@@ -263,6 +263,138 @@ describe('a custom tag', () => {
   });
 });
 
+describe("a custom tag's attributes", () => {
+  const LIB = [
+    '<lib>',
+    '  <:define tag="x-card:div"',
+    "           :title=${'Untitled'}",
+    "           :tone=${'plain'}>${title}</:define>",
+    '</lib>',
+  ].join('\n');
+  const PAGE = [
+    '<html :n=${1}>',
+    '<head><:import src="/lib.htm" /></head>',
+    '<body>',
+    "  <x-card :title=${'Hi'} :aka=\"c\" class=\"wide\" />",
+    '</body>',
+    '</html>',
+  ].join('\n');
+
+  it('goes from the attribute to the parameter it sets', async () => {
+    write('lib.htm', LIB);
+    const text = write('index.html', PAGE);
+    const found = await declarationAt('index.html', text, ':title=');
+    expect(found!.pathname).toBe('/lib.htm');
+    expect(found!.selection.start.line).toBe(2);
+  });
+
+  it('but from its VALUE to what the value reads, which is the other way', async () => {
+    // a few characters apart and opposite directions: the name asks about
+    // the definition, the expression about the call site
+    write('lib.htm', LIB);
+    const text = write(
+      'index.html',
+      PAGE.replace("${'Hi'}", '${n}')
+    );
+    const found = await declarationAt('index.html', text, ':title=${n}', 'n}');
+    expect(found!.pathname).toBe('/index.html');
+    expect(found!.selection.start.line).toBe(0);
+  });
+
+  it('says nothing for an attribute the definition does not declare', async () => {
+    // `:aka` is the language's and `class` is HTML's; neither is a parameter
+    write('lib.htm', LIB);
+    const text = write('index.html', PAGE);
+    expect(await declarationAt('index.html', text, ':aka=')).toBeUndefined();
+    expect(await declarationAt('index.html', text, 'class="wide"')).toBeUndefined();
+  });
+
+  it('says nothing for an attribute of an ordinary tag', async () => {
+    const text = write('index.html', '<html :n=${1}>\n  <p class="thing">${n}</p>\n</html>');
+    expect(await declarationAt('index.html', text, 'class="thing"')).toBeUndefined();
+  });
+});
+
+describe('an :aka on a custom tag', () => {
+  it('goes to the usage, which has no element left to point at', async () => {
+    // the instance was spliced out of the tree once its values had been
+    // handed over, so the scope named `intro` has no element. What it keeps
+    // is the values the usage WROTE, and the compiler says which those are
+    write(
+      'lib.htm',
+      '<lib>\n  <:define tag="x-card:div" :title=${\'d\'}>${title}</:define>\n</lib>'
+    );
+    const text = write(
+      'index.html',
+      [
+        '<html>',
+        '<head><:import src="/lib.htm" /></head>',
+        '<body>',
+        "  <x-card :title=${'Hi'} :aka=\"intro\" />",
+        '  <p>${intro.title}</p>',
+        '</body>',
+        '</html>',
+      ].join('\n')
+    );
+    const found = await declarationAt('index.html', text, '${intro.title}');
+    expect(found!.pathname).toBe('/index.html');
+    // the usage on line 4, not the definition and not nothing
+    expect(found!.selection.start.line).toBe(3);
+  });
+
+  it('reads a value of that instance as the usage wrote it', async () => {
+    write(
+      'lib.htm',
+      '<lib>\n  <:define tag="x-card:div" :title=${\'d\'}>${title}</:define>\n</lib>'
+    );
+    const text = write(
+      'index.html',
+      [
+        '<html>',
+        '<head><:import src="/lib.htm" /></head>',
+        '<body>',
+        "  <x-card :title=${'Hi'} :aka=\"intro\" />",
+        '  <p>${intro.title}</p>',
+        '</body>',
+        '</html>',
+      ].join('\n')
+    );
+    // `intro.title` is the value on that instance, which the usage supplied
+    const found = await declarationAt('index.html', text, 'intro.title', '.title');
+    expect(found!.pathname).toBe('/index.html');
+    expect(found!.selection.start.line).toBe(3);
+  });
+});
+
+describe('the scope-navigation names', () => {
+  const PAGE = [
+    '<html :n=${1}>',
+    '<body :m=${2}>',
+    '  <p>${$parent.n} ${$host}</p>',
+    '</body>',
+    '</html>',
+  ].join('\n');
+
+  it('goes from $parent to the scope it names', async () => {
+    const text = write('index.html', PAGE);
+    // from <body>, one step out is <html>
+    expect(lineOf(await declarationAt('index.html', text, '$parent.n'))).toBe(1);
+  });
+
+  it('goes through $parent to a name in there', async () => {
+    const text = write('index.html', PAGE);
+    expect(lineOf(await declarationAt('index.html', text, '$parent.n', 'n}'))).toBe(1);
+  });
+
+  it('says nothing for $host, which has no single answer', async () => {
+    // whichever instance encloses this one is a property of each usage
+    // rather than of the definition -- the compiler calls it dynamic, and
+    // there is no one element to open
+    const text = write('index.html', PAGE);
+    expect(await declarationAt('index.html', text, '${$host}')).toBeUndefined();
+  });
+});
+
 describe('where the cursor is actually put', () => {
   /**
    * The bug this exists to prevent, which cost a round of "still doesn't

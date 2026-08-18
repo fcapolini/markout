@@ -44,6 +44,14 @@ const CASES = [
   ['lib.htm', 'tone', 'tone === '],
   ['index.html', '<x-card> (a custom tag)', '<x-card'],
   ['index.html', '</x-card> (its closing tag)', '</x-card'],
+  ['tags.html', 'x-card (the tag)', '<x-card'],
+  ['tags.html', ':title (the parameter it sets)', ':title=${'],
+  ['tags.html', 'appName (inside that value)', ':title=${appName}', 'appName}'],
+  ['tags.html', ':aka (not a parameter)', ':aka='],
+  ['tags.html', 'class (HTML\'s, not a parameter)', 'class="lead"'],
+  ['tags.html', '$parent', '${$parent.appName}'],
+  ['tags.html', 'appName through $parent', '$parent.appName', '.appName'],
+  ['tags.html', 'intro (an :aka scope)', '${intro.title}'],
 ];
 
 /** `<file> <line>:<col>`, both 1-based, as an editor shows them */

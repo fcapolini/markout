@@ -1,0 +1,38 @@
+<html :appName=${'Fixture'}>
+<head>
+  <:import src="/lib.htm" />
+  <title>${appName}</title>
+</head>
+
+<body :tone=${'warm'}>
+
+  <!---
+    A custom tag, and the two directions that live a few characters apart.
+
+      x-card   ctrl-click the TAG and you land on its <:define>, in lib.htm
+      :title   ctrl-click the NAME and you land on the parameter it sets,
+               also in lib.htm -- that is what the definition calls it
+      appName  ctrl-click inside the VALUE and you land here in this page,
+               because an expression written at a usage site is evaluated
+               at the usage site
+
+    And two that are not parameters at all: `:aka` belongs to the language
+    and `class` to HTML, so neither goes anywhere.
+  -->
+  <x-card :title=${appName} :tone=${tone} :aka="intro" class="lead">
+    <p>Both `:title` and its value are on this line, and they answer
+       different questions.</p>
+  </x-card>
+
+  <!---
+    The names that navigate rather than name a value.
+
+      $parent  one scope out from here, which is <html> above
+      $host    deliberately unanswerable: it is whichever instance encloses
+               this one, a property of each usage rather than of the
+               definition, so there is no one element to open
+  -->
+  <p>${$parent.appName} is ${tone}, and ${intro.title} came from the card.</p>
+
+</body>
+</html>

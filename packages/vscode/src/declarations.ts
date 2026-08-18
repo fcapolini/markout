@@ -1,4 +1,11 @@
-import { Compiler, declarationFor, discoverKits, type ReadFile, type Value } from '@markout/core';
+import {
+  Compiler,
+  declarationFor,
+  discoverKits,
+  type ReadFile,
+  type Scope,
+  type Value,
+} from '@markout/core';
 import { openReader, resolveReference, type Range } from './diagnostics';
 
 /**
@@ -50,8 +57,9 @@ export async function findDeclaration(
   props: DeclarationProps
 ): Promise<Declaration | undefined> {
   const tag = tagNameAt(props.text, props.offset);
-  const path = tag ? undefined : chainAt(props.text, props.offset);
-  if (!tag && !path) {
+  const attribute = tag ? undefined : attributeAt(props.text, props.offset);
+  const path = tag || attribute ? undefined : chainAt(props.text, props.offset);
+  if (!tag && !attribute && !path) {
     return undefined;
   }
 
@@ -72,6 +80,14 @@ export async function findDeclaration(
     return locate(page.customTags.get(tag)?.e?.loc, pathname);
   }
 
+  // an attribute of a custom tag: the PARAMETER it sets, declared on the
+  // `<:define>`. What the usage writes is a value of its own, sitting right
+  // under the cursor -- the question is about the other end of it
+  if (attribute) {
+    const parameter = page.customTags.get(attribute.tag)?.values.get(attribute.name);
+    return locate(parameter?.node.loc, pathname);
+  }
+
   // A fragment compiles on its own, which is what makes this work inside one:
   // a definition may not read its call site, so everything a name in there can
   // refer to is declared in the same file. What a fragment cannot resolve is a
@@ -86,7 +102,40 @@ export async function findDeclaration(
   // a value is declared by its attribute or its text; a named scope by the
   // element that carries the name -- `body.items` should send someone to
   // `<body>` when they ask about `body`
-  return locate(found?.value ? found.value.node.loc : found?.scope?.e?.loc, pathname);
+  return locate(
+    found?.value ? found.value.node.loc : found?.scope && scopeLoc(found.scope),
+    pathname
+  );
+}
+
+/**
+ * Where a scope was written.
+ *
+ * Its element, except for an instance of a custom tag, which has none: the
+ * usage was spliced out of the tree once its values had been handed over, so
+ * `<x-card :aka="intro" …>` leaves a scope named `intro` and no element to
+ * point at.
+ *
+ * What it does leave is the values the usage site wrote, and the compiler
+ * says which those are -- `callSiteValues` exists because a definition must
+ * not read its caller, and it happens to be the exact list of things the
+ * author typed on that tag. The earliest of them is the usage. Its own
+ * values are no good for this: a definition's defaults are in the
+ * definition's file, and the earliest of THOSE would send someone to a
+ * different file entirely.
+ */
+function scopeLoc(scope: Scope): Value['node']['loc'] | undefined {
+  if (scope.e?.loc) {
+    return scope.e.loc;
+  }
+  let earliest: Value['node']['loc'] | undefined;
+  for (const name of scope.callSiteValues ?? []) {
+    const loc = scope.values.get(name)?.node.loc;
+    if (loc && (!earliest || loc.i1 < earliest.i1)) {
+      earliest = loc;
+    }
+  }
+  return earliest;
 }
 
 /**
@@ -110,6 +159,46 @@ function locate(
     range: { start, end: { line: loc.end.line - 1, character: loc.end.column } },
     selection: { start, end: start },
   };
+}
+
+/**
+ * The attribute name the offset is on, and the tag it belongs to.
+ *
+ * `:title` in `<x-card :title=${'Hi'}>` -- the name, not the value, which is
+ * an expression and resolves at the call site like any other. The two are a
+ * few characters apart and mean opposite directions: the name asks about the
+ * definition, the value about here.
+ */
+export function attributeAt(
+  text: string,
+  offset: number
+): { tag: string; name: string } | undefined {
+  const isPart = (c: string) => /[A-Za-z0-9_:$-]/.test(c);
+  let start = offset;
+  while (start > 0 && isPart(text[start - 1])) start--;
+  let end = offset;
+  while (end < text.length && isPart(text[end])) end++;
+  if (start === end || text[start - 1] === '<' || text[start - 1] === '/') {
+    return undefined;
+  }
+  // an attribute NAME is followed by `=`, or by nothing at all when it is a
+  // bare one; a word inside a value or in text is followed by neither
+  const after = text.slice(end).match(/^\s*(.?)/)?.[1] ?? '';
+  if (!'=/>'.includes(after) || after === '') {
+    return undefined;
+  }
+  const tag = enclosingTag(text, start);
+  const name = text.slice(start, end).replace(/^:+/, '');
+  return tag && name ? { tag, name } : undefined;
+}
+
+/** the tag whose opening `<` is before `from`, with no `>` in between */
+function enclosingTag(text: string, from: number): string | undefined {
+  const open = text.lastIndexOf('<', from);
+  if (open < 0 || text.lastIndexOf('>', from) > open) {
+    return undefined;
+  }
+  return /^<([A-Za-z][A-Za-z0-9_-]*)/.exec(text.slice(open, from))?.[1];
 }
 
 /**
