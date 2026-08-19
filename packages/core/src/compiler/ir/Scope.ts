@@ -51,6 +51,18 @@ export class Scope {
   /** where name resolution continues; the structural parent unless slotted */
   lexicalParent?: Scope;
   /**
+   * This scope carries an `:else`/`:else-if`: the branch immediately before
+   * it, and the one after, once stage1 has linked the chain.
+   *
+   * Both directions are kept because the runtime needs both and can derive
+   * neither: it finds a branch's neighbours among its parent's children by
+   * id, so the head of a chain has no way back to its followers and a
+   * follower no way to the head. Absent on a lone `:if`, which is what lets
+   * that case cost nothing at all.
+   */
+  elseOf?: Scope;
+  elseNext?: Scope;
+  /**
    * Scopes whose `lexical()` is this one -- i.e. whose `:aka` name was
    * WRITTEN here, whatever subtree their DOM ended up in.
    *

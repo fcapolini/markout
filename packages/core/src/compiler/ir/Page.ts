@@ -60,6 +60,29 @@ export const SERVER_VALUE_ATTR_PREFIX = 'server-';
  */
 export const WHEN_USED_ATTR = 'when-used';
 export const IF_ATTR = 'if';
+/**
+ * `:else-if=${expr}` and `:else`: the branches after an `:if`.
+ *
+ * They compile to the same `if$` value the `:if` does, because they are the
+ * same question at the same arity -- does this element render -- and only
+ * the way the answer is arrived at differs. What a branch adds is a link to
+ * the one before it, so the runtime can show the first whose condition
+ * holds and no more (see CoreScopeProps.elseOf).
+ *
+ * `else` is a reserved word, so it was free for exactly the reason `if` was.
+ * `else-if` is free for a different one: a dash cannot appear in a plain
+ * value name, and no family owns an `else-` prefix, so it was already a
+ * compile error and no page can have been using it.
+ *
+ * Which branch a chain member continues is said by position and nothing
+ * else, which is the one thing this feature asks of an author that `:if`
+ * does not: an `:else` has to be the very next element after the branch it
+ * belongs to. That adjacency is checked while loading, where the markup is
+ * still the markup -- afterwards every branch has been wrapped in a
+ * `<template>` and the question can no longer be asked.
+ */
+export const ELSE_IF_ATTR = 'else-if';
+export const ELSE_ATTR = 'else';
 export const IF_VALUE = 'if$';
 export const TEXT_VALUE_PREFIX = 't$';
 // compiled form of the ATTR prefixes above, as stored in Scope.values keys
@@ -177,6 +200,26 @@ export class Page {
   /** `:slot` targets, kept aside by stage1 before it strips `:` attributes */
   slotTargets: Map<ServerElement, string>;
   /**
+   * Each `:else`/`:else-if` scope against the branch it continues.
+   *
+   * Recorded while loading, where adjacency can still be read off the
+   * markup, and turned into `Scope.elseOf`/`elseNext` links only once the
+   * tree has stopped moving -- a custom tag's usage scope is detached and
+   * replaced by an instance, so a link taken down any earlier would name a
+   * scope the runtime never sees. See stage1's linkElseChains.
+   */
+  elseChains: Map<Scope, Scope>;
+  /**
+   * A custom tag usage's loaded scope -> the instance scope standing in for
+   * it, as expandCustomTagUsages replaces one with the other.
+   *
+   * The usage scope keeps its values and its parent link, so it is not
+   * simply gone -- which is what makes this needed: anything recorded
+   * against it while loading has to be re-pointed at the scope that is
+   * actually compiled.
+   */
+  usageInstances: Map<Scope, Scope>;
+  /**
    * The `<template>`s wrapping a `:for-data` rather than a `:for-each`.
    *
    * Both arities are compiled into a stencil, but only one of them is
@@ -237,6 +280,8 @@ export class Page {
     }
     this.customTags = new Map();
     this.slotTargets = new Map();
+    this.elseChains = new Map();
+    this.usageInstances = new Map();
     this.optionalStencils = new Set();
     this.slottedInto = new Map();
     this.definitionScopes = new Set();

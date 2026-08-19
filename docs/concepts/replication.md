@@ -125,6 +125,21 @@ binds nothing:
 <p :if=${errors.length}>${errors.length} problems</p>
 ```
 
+`:else-if=${expr}` and `:else` continue it. The chain shows the first branch
+whose condition holds and no other, which two `:if`s cannot do — the branch
+that has to give up the position is the one whose own condition did not
+change:
+
+```html
+<p :if=${errors.length}>${errors.length} problems</p>
+<p :else-if=${warnings.length}>${warnings.length} warnings</p>
+<p :else>all clear</p>
+```
+
+Which branch an `:else` belongs to is said by position alone, so it has to
+be the very next element after the branch before it; whitespace and comments
+in between are fine, and anything that renders is a compile error.
+
 `:for-data` below answers the same arity — zero or one — but by a different
 test, and for a different purpose: it is `!= null`, so `0` and `''` remain
 data, and it binds the item so the body can read it. Use it when there is

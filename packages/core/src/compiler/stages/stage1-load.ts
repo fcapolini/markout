@@ -33,6 +33,8 @@ import {
   FOR_DATA_ATTR,
   FOR_AS_ATTR,
   FOR_KEY_ATTR,
+  ELSE_ATTR,
+  ELSE_IF_ATTR,
   IF_ATTR,
   IF_VALUE,
   WHEN_USED_ATTR,
@@ -83,6 +85,7 @@ export function stage1load(page: Page) {
   // expanding anything at all once a definition is based on another one
   // would work on a stencil that is about to be rewritten underneath it
   rejectDerivedDefines(page) || expandCustomTagUsages(page);
+  linkElseChains(page);
   checkLogicPlacement(page);
   // after every usage has had its chance to clone a stencil with the slot
   // still in place. A directive tag isn't serialized -- children and all --
@@ -90,6 +93,28 @@ export function stage1load(page: Page) {
   // exactly the fallback a usage supplying nothing should get
   unwrapSlots(page.source.doc.documentElement!);
   return page;
+}
+
+/**
+ * Turns each recorded `:else` adjacency into the links the runtime walks.
+ *
+ * Both directions, since neither can be derived from the other where it is
+ * needed: a branch finds its neighbours among its parent's children by id,
+ * so a follower could never find the head's other followers, nor the head
+ * its first follower.
+ *
+ * Done here rather than while loading because a custom tag used as a branch
+ * is not compiled as the scope load() gave it: expandCustomTagUsages builds
+ * an instance in its place and detaches that one, so a link taken down
+ * earlier would name a scope that reaches no output.
+ */
+function linkElseChains(page: Page): void {
+  for (const [branch, previous] of page.elseChains) {
+    const self = page.usageInstances.get(branch) ?? branch;
+    const before = page.usageInstances.get(previous) ?? previous;
+    self.elseOf = before;
+    before.elseNext = self;
+  }
 }
 
 function unwrapSlots(e: ServerElement): void {
@@ -123,6 +148,8 @@ const LIFECYCLE_SUFFIXES = new Set([
 // there is nothing for `:server-` to mark on one
 const SERVER_REJECTED_ATTRS = new Set([
   IF_ATTR,
+  ELSE_IF_ATTR,
+  ELSE_ATTR,
   WHEN_USED_ATTR,
   SLOT_TARGET_ATTR,
   SCOPE_NAME_ATTR,
@@ -154,12 +181,23 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
   }
   extractValues(page, scope, e);
   let i = -1;
+  // what an `:else` here would be continuing: the previous element sibling
+  // and the scope it got, kept as the walk goes because that is the only
+  // moment the question can be asked -- a branch is wrapped in a
+  // `<template>` on its way past, so by the end of this loop no element is
+  // next to the one it was written next to
+  let previous: { scope: Scope; branch?: string } | undefined;
+  // something that renders came between the two, so they are not adjacent
+  // in the sense that matters
+  let separated = false;
   for (const child of [...e.childNodes]) {
     i++;
     if (child.nodeType === NodeType.ELEMENT) {
       const childEl = child as ServerElement;
       if (childEl.tagName === LOGIC_DIRECTIVE_TAG) {
         loadLogic(page, scope, childEl);
+        previous = undefined;
+        separated = false;
         continue;
       }
       if (childEl.tagName === DEFINE_DIRECTIVE_TAG) {
@@ -169,8 +207,13 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
         // template.content is invisible to this function's normal childNodes walk
         const inner = expandDefine(page, childEl);
         if (inner) load(page, scope, inner);
+        previous = undefined;
+        separated = false;
         continue;
       }
+      const branch = branchAttr(childEl);
+      const continues = branch === ELSE_IF_ATTR || branch === ELSE_ATTR;
+      const after = continues ? branchBefore(page, childEl, branch!, previous, separated) : undefined;
       // the stencil the runtime renders from: `:for-each` clones it once
       // per item, `:for-data` shows the one it already has. Neither
       // element is itself a live rendering
@@ -178,17 +221,25 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
         const stencil = wrapInTemplate(childEl);
         // an OPTIONAL stencil is one whose element may be in the page: both
         // arities of "zero or one" park their element rather than clone it
-        (hasAttr(childEl, FOR_DATA_ATTR) || hasAttr(childEl, IF_ATTR)) &&
+        (hasAttr(childEl, FOR_DATA_ATTR) || !!branchAttr(childEl)) &&
           page.optionalStencils.add(stencil);
       }
-      load(page, scope, childEl);
+      const childScope = load(page, scope, childEl);
+      after && page.elseChains.set(childScope, after);
+      previous = { scope: childScope, branch };
+      separated = false;
       continue;
     }
     if (child.nodeType === NodeType.TEXT) {
       const text = child as ServerText;
       if (typeof text.textContent === 'string') {
+        // whitespace is how markup is indented, not something between two
+        // alternatives; anything else is content that would sit there
+        // whichever branch won
+        separated = separated || !!text.textContent.trim();
         continue;
       }
+      separated = true;
       const id = scope.textCount++;
       const name = `${TEXT_VALUE_PREFIX}${id}`;
       scope.textValues.set(name, new Value(name, text, scope, page.createValueId()));
@@ -295,7 +346,128 @@ function literalOnly(
  * rendering, and the runtime decides how many times it appears.
  */
 function needsStencil(e: ServerElement): boolean {
-  return hasAttr(e, FOR_EACH_ATTR) || hasAttr(e, FOR_DATA_ATTR) || hasAttr(e, IF_ATTR);
+  return hasAttr(e, FOR_EACH_ATTR) || hasAttr(e, FOR_DATA_ATTR) || !!branchAttr(e);
+}
+
+/**
+ * Which of the three branch spellings this element carries, if any.
+ *
+ * One element answers with one of them -- extractValues refuses a second --
+ * so the order here only decides which is reported first when a page writes
+ * two.
+ */
+function branchAttr(e: ServerElement): string | undefined {
+  return [IF_ATTR, ELSE_IF_ATTR, ELSE_ATTR].find(name => hasAttr(e, name));
+}
+
+/**
+ * The branch an `:else`/`:else-if` continues, or an error saying why there
+ * isn't one.
+ *
+ * Position is the whole of what these two say. `:else` names no condition
+ * at all and `:else-if` names only the last one, so what they are an
+ * alternative TO can be read from nothing but where they sit -- which makes
+ * "immediately after the branch before it" a rule rather than a formatting
+ * preference, and one worth stating clearly when it is broken.
+ *
+ * Whitespace and comments between them are fine: an author indents markup
+ * and annotates it, and neither renders. Anything that does render is
+ * refused, because it would sit between two alternatives at most one of
+ * which is showing -- markup whose meaning depends on a branch it isn't
+ * part of.
+ */
+function branchBefore(
+  page: Page,
+  e: ServerElement,
+  branch: string,
+  previous: { scope: Scope; branch?: string } | undefined,
+  separated: boolean
+): Scope | undefined {
+  const self = `"${SPECIAL_ATTR_PREFIX}${branch}"`;
+  const opens = `"${SPECIAL_ATTR_PREFIX}${IF_ATTR}" or "${SPECIAL_ATTR_PREFIX}${ELSE_IF_ATTR}"`;
+  if (previous && previous.branch === ELSE_ATTR) {
+    addError(
+      page,
+      `${self} comes after an "${SPECIAL_ATTR_PREFIX}${ELSE_ATTR}", which already ` +
+        `answers for every case the branches before it did not`,
+      e.loc
+    );
+    return undefined;
+  }
+  if (!previous || !previous.branch) {
+    addError(
+      page,
+      `${self} needs an ${opens} on the element immediately before it: it ` +
+        `says which condition it is the alternative to by sitting there, and ` +
+        `nowhere else`,
+      e.loc
+    );
+    return undefined;
+  }
+  if (separated) {
+    addError(
+      page,
+      `${self} is separated from the ${opens} before it by content of its ` +
+        `own, which would render whichever branch won. Whitespace and ` +
+        `comments are fine; anything else has to go inside a branch`,
+      e.loc
+    );
+    return undefined;
+  }
+  return previous.scope;
+}
+
+/**
+ * Records `:if` / `:else-if` / `:else` as this scope's `if$`.
+ *
+ * One value for all three spellings, because they ask one question at one
+ * arity: does this element render. Everything already written against `if$`
+ * -- the stencil, the arity check against `:for-each`, `<:logic>`'s refusal
+ * of it, the rule that a declaration cannot live inside one -- therefore
+ * holds for the new spellings without knowing they exist.
+ *
+ * `:else` carries no expression, and so compiles to the literal `true` an
+ * attribute with no value already means. It is not "always render": what
+ * decides a branch is its position in the chain, and the last one is simply
+ * the one with no condition left to fail.
+ */
+function setBranchValue(
+  page: Page,
+  scope: Scope,
+  attr: ServerAttribute,
+  name: string
+): void {
+  const written = `"${SPECIAL_ATTR_PREFIX}${name}"`;
+  const already = scope.values.get(IF_VALUE);
+  if (already) {
+    addError(
+      page,
+      `Cannot use ${written} with "${(already.node as ServerAttribute).name}" on the ` +
+        `same element: an element is one branch, not the choice between two`,
+      attr.loc
+    );
+    return;
+  }
+  if (name === ELSE_ATTR && attr.value != null) {
+    addError(
+      page,
+      `${written} takes no condition: it is the branch that renders when ` +
+        `the ones before it did not. Use "${SPECIAL_ATTR_PREFIX}${ELSE_IF_ATTR}" ` +
+        `to test one more`,
+      attr.valueLoc ?? attr.loc
+    );
+    return;
+  }
+  if (name === ELSE_IF_ATTR && (attr.value == null || typeof attr.value === 'string')) {
+    addError(
+      page,
+      `${written} needs a condition, as "\${...}": without one it is the ` +
+        `last branch, which is what "${SPECIAL_ATTR_PREFIX}${ELSE_ATTR}" says`,
+      attr.valueLoc ?? attr.loc
+    );
+    return;
+  }
+  scope.values.set(IF_VALUE, new Value(IF_VALUE, attr, scope, page.createValueId()));
 }
 
 function hasAttr(e: ServerElement, name: string): boolean {
@@ -326,6 +498,8 @@ const LOGIC_FORBIDDEN_ATTRS: [string, string][] = [
   [FOR_AS_ATTR, 'nothing to replicate'],
   [FOR_KEY_ATTR, 'nothing to replicate'],
   [IF_ATTR, 'nothing to show or hide'],
+  [ELSE_IF_ATTR, 'nothing to show or hide'],
+  [ELSE_ATTR, 'nothing to show or hide'],
   [SLOT_TARGET_ATTR, 'no markup to put in a slot'],
   [WHEN_USED_ATTR, 'nothing to keep or drop'],
 ];
@@ -414,7 +588,12 @@ function checkLogicPlacement(page: Page): void {
     while (s && !why) {
       if (s.values.has(FOR_EACH_VALUE)) why = 'inside a ":for-each", which would declare it once per item';
       else if (s.values.has(FOR_DATA_VALUE)) why = 'inside a ":for-data", which would take it away again';
-      else if (s.values.has(IF_VALUE)) why = 'inside an ":if", which would take it away again';
+      // named as written: all three branch spellings are `if$`, and being
+      // told about an ":if" that isn't in the source is a puzzle
+      else if (s.values.has(IF_VALUE)) {
+        const written = (s.values.get(IF_VALUE)!.node as ServerAttribute).name;
+        why = `inside an "${written}", which would take it away again`;
+      }
       else if (page.definitionScopes.has(s)) why = 'inside a "<:define>", which would declare it once per instance';
       else if (s.slotted) why = 'inside a slot, where it would belong to the call site';
       s = s.parent;
@@ -647,6 +826,10 @@ function expandCustomTagUsages(page: Page): void {
       const index = loadedUsageScope.parent!.children.indexOf(loadedUsageScope);
       loadedUsageScope.parent!.children.splice(index, 1);
       loadedUsageScope.detachedUsageSite = true;
+      // anything recorded against the usage while loading -- a branch chain
+      // is the only such thing today -- belongs to the instance now, which
+      // is the scope that carries those values and the one the runtime sees
+      page.usageInstances.set(loadedUsageScope, scope);
     }
 
     // read now, not when the usage was collected: expanding an outer usage
@@ -1351,11 +1534,12 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
         : addError(page, `"${SPECIAL_ATTR_PREFIX}${WHEN_USED_ATTR}" needs at least one tag name`, attr.loc);
       continue;
     }
-    if (name === IF_ATTR) {
-      // before the family dispatch, which would send it through
-      // validateName and refuse it for being a reserved word -- which is
-      // exactly why the name was free to take
-      scope.values.set(IF_VALUE, new Value(IF_VALUE, attr, scope, page.createValueId()));
+    if (name === IF_ATTR || name === ELSE_IF_ATTR || name === ELSE_ATTR) {
+      // before the family dispatch, which would send `if` and `else`
+      // through validateName and refuse them for being reserved words, and
+      // `else-if` for its dash -- which is exactly why all three were free
+      // to take
+      setBranchValue(page, scope, attr, name);
       continue;
     }
     if (name === FOR_DATA_ATTR) {

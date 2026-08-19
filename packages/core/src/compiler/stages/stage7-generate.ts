@@ -184,6 +184,15 @@ function generateScope(scope: Scope, forClient: boolean): ObjectExpression {
     // definition (see CoreScope.hostFor)
     props.push(property('slottedText', literal(true)));
   }
+  if (scope.elseOf) {
+    // an `:else`/`:else-if`: which branch it continues, and which continues
+    // it. Emitted only for a chain, so a lone `:if` carries neither and the
+    // runtime's fast path stays the only path it takes
+    props.push(property('elseOf', literal(scope.elseOf.id)));
+  }
+  if (scope.elseNext) {
+    props.push(property('elseNext', literal(scope.elseNext.id)));
+  }
   if (scope.usesTemplate) {
     // a custom-tag usage instance: WebScope instantiates its DOM from the
     // named <:define> stencil if no already-rendered element is found

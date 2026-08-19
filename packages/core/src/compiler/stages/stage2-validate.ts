@@ -21,7 +21,6 @@ import {
   FOR_DATA_ATTR,
   FOR_KEY_ATTR,
   FOR_KEY_VALUE,
-  IF_ATTR,
   IF_VALUE,
   WHEN_USED_ATTR,
   DEFINE_DIRECTIVE_TAG,
@@ -33,6 +32,7 @@ import {
   HANDLE_VALUE_ATTR_PREFIX,
   HANDLE_VALUE_PREFIX,
 } from '../ir/Page';
+import type { ServerAttribute } from '../../html/server-dom';
 import { Scope } from '../ir/Scope';
 import { Value } from '../ir/Value';
 
@@ -152,9 +152,13 @@ function validateScope(page: Page, scope: Scope) {
   // tests, which is the pair most likely to be written together by accident
   const arity = [FOR_EACH_VALUE, FOR_DATA_VALUE, IF_VALUE].filter(k => scope.values.has(k));
   if (arity.length > 1 && scope.values.has(IF_VALUE)) {
+    // named as it was written: `if$` is what all three branch spellings
+    // compile to, and an author told their `:else` is an `:if` has to work
+    // out which of the two names the compiler means
+    const written = (scope.values.get(IF_VALUE)!.node as ServerAttribute).name;
     addError(
       page,
-      `Cannot use "${SPECIAL_ATTR_PREFIX}${IF_ATTR}" with ` +
+      `Cannot use "${written}" with ` +
         `"${SPECIAL_ATTR_PREFIX}${arity.find(k => k !== IF_VALUE) === FOR_EACH_VALUE
           ? FOR_EACH_ATTR : FOR_DATA_ATTR}" on the same element`,
       scope.values.get(IF_VALUE)!.node.loc

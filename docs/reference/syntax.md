@@ -379,6 +379,8 @@ it differs:
 | Syntax | Meaning |
 | --- | --- |
 | `:if=${expr}` | Render this element when the expression is truthy, not at all otherwise. Binds nothing. |
+| `:else-if=${expr}` | Another condition for the position, tried only if every branch before it failed. Goes on the element immediately after an `:if` or another `:else-if`. |
+| `:else` | The branch for when none of the conditions before it held. Takes no expression, and ends the chain. |
 | `:for-each=${expr}` | Repeat once per item in an iterable. `null`/`undefined` means zero items. |
 | `:for-as="name"` | Rename the per-item binding from the default `data`. |
 | `:for-key=${expr}` | Give each item an identity, so reordering moves replicas instead of rewriting them. Evaluated per item, and may read the per-item binding. Refused on `:for-data`, which has only ever one. |
@@ -386,6 +388,25 @@ it differs:
 
 `:if`, `:for-each` and `:for-data` all answer "how many times does this
 render", so an element may answer once: any two together is a compile error.
+`:else-if` and `:else` are the same answer under other spellings, and so
+count as `:if` here — an element is one branch, not the choice between two.
+
+A chain shows the first branch whose condition holds and no other:
+
+```html
+<p :if=${n === 0}>nothing yet</p>
+<p :else-if=${n === 1}>one thing</p>
+<p :else>${n} things</p>
+```
+
+Which branch an `:else` belongs to is said by position and by nothing else,
+so it has to be the very next element after the branch before it.
+Whitespace and comments in between are fine — neither renders — but
+anything that does render is a compile error, since it would appear between
+two alternatives at most one of which is showing. Everything true of `:if`
+stays true of the others: a branch that isn't showing evaluates nothing
+inside itself, and its element is parked in a `<template>` rather than
+rebuilt when it comes back.
 
 `:if` and `:for-data` differ in the question they ask. `:for-data` is
 `!= null`, so `0` and `''` are data — right for an item, wrong for a
@@ -453,7 +474,7 @@ What it refuses, in both cases because there is no element:
 | | |
 | --- | --- |
 | `:class-`, `:style-`, `:on-`, plain attributes | nothing to apply them to |
-| `:for-each`, `:for-data`, `:if`, `:slot` | nothing to replicate, show, or slot |
+| `:for-each`, `:for-data`, `:if`, `:else-if`, `:else`, `:slot` | nothing to replicate, show, or slot |
 | content of any kind | it holds values, not markup |
 
 And where it refuses to go: inside a `:for-each`, a `:for-data`, an `:if`, a
