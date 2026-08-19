@@ -17,8 +17,8 @@ What the page is *about*: the setlist's tracks and their cue notes, a
 basket's contents, a draft someone is halfway through. It should survive a
 reload, and losing it is a bug a user would report.
 
-Today it goes in ordinary values, declared on whichever scope owns it —
-usually `<body>`, so the whole page can read it:
+It goes in ordinary values, declared on whichever scope owns it — usually
+`<body>`, so the whole page can read it:
 
 ```html
 <body :tracks=${[{ id: 'lantern', name: 'Lantern Season', note: '' }]}>
@@ -35,9 +35,12 @@ leaving it in the `<input>` — an element is a projection, so anything left
 only there is unreachable and unsavable. It is the one mistake this page
 exists to prevent.
 
-Durable state is what [datasources](#datasources--designed-not-implemented)
-are for. Until they exist, it lives in values like anything else and is lost
-on reload.
+Where that data comes FROM is what [datasources](#datasources) are for: a
+value whose contents are fetched rather than written down, computed while the
+page is rendered and carried to the browser with it. What a datasource does
+not do is make the state durable by itself — a value edited in the page is
+lost on reload unless something is told about it, which is the application's
+job rather than the presenter's.
 
 ## Ephemeral view state
 
@@ -77,15 +80,32 @@ only in whether losing them on reload would be a bug, and that is a judgment
 about the application, not about the value.
 
 Worth making deliberately, because it is the one that decides what a
-datasource will eventually own.
+datasource owns.
 
-## Datasources — designed, not implemented
+## Datasources
 
-Datasources are the planned home for durable state: a value whose contents
-come from somewhere outside the page, computed once while server rendering
-and handed to the browser with the rest of the page's state, so the client
-resumes from what the server already worked out rather than fetching it
-again.
+Where the data outside the page comes in:
+[`std-data`](../../kits/std-kit/parts/data.htm), in the standard kit.
 
-They do not exist yet. Nothing in this section is available today, and
-durable state currently lives in ordinary values, with a reload losing it.
+```html
+<std-data :aka="rows" :url="/api/tracks" />
+
+<li :for-each=${rows.data ?? []}>${data.title}</li>
+```
+
+The thing worth noticing is that the language knows nothing about it. It is
+an ordinary component: `:server-` marks an expression that runs while the
+page is rendering, the server waits for the promise before serializing, and
+the result travels with the page — so the served markup is already complete
+and there is no flash. See [server-only
+values](../design/value-transfer.md).
+
+Two modes. **Served** is the default and is the one that renders: one request
+per page load, and the data is in the source. **`:client`** does nothing on
+the server and fetches on arrival, which is what anything the page should not
+publish needs — a session, another user's row — since a served value is
+written into the page as plain text where anyone can read it.
+
+That a framework-shaped feature lives in a kit rather than in the language is
+deliberate rather than incidental. The language stays the small thing it is,
+and what a page needs beyond it is markup somebody can open and read.

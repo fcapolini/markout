@@ -18,6 +18,23 @@ Use `:name=${expr}` on an element to declare a value on that element's scope.
 The element's descendants can read `count` and `light` directly through lexical
 scope lookup.
 
+### Values the compiler works out
+
+`::name=${expr}` declares a value computed while the page is built and
+substituted into every reader, so nothing of it reaches the runtime. It is
+for the things that never change — a design token, a pinned version — where
+watching them would be pure cost:
+
+```html
+<head ::accent="#6f42c1">
+```
+
+The rule that makes it decidable is that such a value may read only literals
+and other compile-time values. Anything it cannot work out is a compile
+error rather than a quiet fall back to being reactive, and the result has to
+be a primitive, since substituting an object would give every reader a copy
+of its own.
+
 ## Static vs. reactive
 
 Markout treats a value as either:
@@ -153,6 +170,11 @@ Some prefixes change how a value behaves at runtime:
 - `:did-x` and `:will-x` bind lifecycle callbacks — two pairs, one for the
   scope's own lifetime and one for its markup's presence in the page (see
   the [syntax reference](../reference/syntax.md#lifecycle)).
+- `:handle-x` runs its arrow whenever value `x` changes. Sugar for an
+  expression that calls the arrow with `x`, so the dependency falls out of
+  the ordinary extraction and the runtime needs to know nothing about it.
+- `:server-x` marks an expression that runs while the page is rendered and
+  nowhere else; the browser is handed the result rather than the expression.
 
 These are still values. They just have side effects instead of being pure logic values.
 
