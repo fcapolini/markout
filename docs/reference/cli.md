@@ -1,0 +1,242 @@
+# Running a page
+
+How a compiled page gets in front of a visitor: served by Node, built ahead
+of time, or served by an application that has its own routes. The language
+itself is the [syntax reference](syntax.md); this is everything around it.
+
+Which mode you pick decides how much of the page arrives already rendered,
+not how it is written — see [two ways to deliver a
+page](../../README.md#two-ways-to-deliver-a-page).
+
+## The `markout/` convention
+
+Name that directory `markout/` and there is nothing to type and nothing to
+configure:
+
+```
+markout/          your pages
+  index.html
+  lib.htm
+```
+
+```sh
+npx markout          # serves ./markout
+npx markout build    # compiles ./markout into ./dist
+```
+
+This is a convention, not a rule — any directory works when you name it. It
+earns its place by being the one thing a project can say without installing
+anything: there is no `package.json` in the layout above, and nothing had to
+be configured for either command to know what to do.
+
+It is also what the editor support reads. [The VS Code
+extension](../design/editor-support.md) has to resolve `/lib.htm` the same
+way the server will, and in a project with no `package.json` the folder name
+is the only thing that says where the docroot is. `markout/` rather than
+`public/`, `www/` or `static/` for exactly that reason: those belong to every
+static-site tool there is, and claiming one would mean guessing at somebody
+else's layout.
+
+The CLI accepts an optional port with `-p` or `--port` and uses port `3000` by
+default:
+
+```sh
+npx markout ./demo --port 8080
+```
+
+`-d`/`--dev` turns on dev mode, which does two things. It surfaces runtime
+expression errors instead of only logging them server-side: a page whose
+expressions failed during server rendering is replaced by one listing the
+errors (no content, no runtime — it would only fail the same way in the
+browser), while failures that happen after the page loads appear in a panel at
+the bottom of it. And it reloads open pages when anything under the docroot
+changes, error pages included, so fixing the file is enough to see the fix:
+
+```sh
+npx markout ./demo --dev
+```
+
+`-c`/`--compress` gzips rendered pages and static files for clients whose
+`Accept-Encoding` allows it. It's off by default: compressing costs CPU per
+request, and behind a reverse proxy that already does it the work would be
+done twice.
+
+```sh
+npx markout ./demo --compress
+```
+
+## Building static files
+
+`markout build` compiles a docroot ahead of time into a directory you can put on
+any host. The source is the first argument and the output the second:
+
+```sh
+npx markout build ./site ./dist
+```
+
+Both are optional. The docroot defaults to `./markout` and the output to a
+`dist/` *beside* it — beside rather than inside, because a build refuses an
+output directory under the docroot: the next run would compile its own output.
+So the whole ahead-of-time mode is:
+
+```sh
+npx markout build
+```
+
+It compiles every `.html` under the docroot, writes the browser runtime beside
+them, and copies everything else across — except `.htm` fragments, which are
+source that reaches the output inlined into the pages that imported them, and
+dot-prefixed files, which the server refuses to serve either.
+
+Three dot-prefixed names are copied, because a deployable needs them:
+`.well-known/` (RFC 8615 — ACME challenges, `security.txt`), `.nojekyll` and
+`.htaccess`. Everything else beginning with a dot stays behind, which is the
+way round that matters: what a host needs to serve is a short standardised
+list, while what must never be published — `.env`, `.git/`, `.DS_Store` —
+grows with every tool you install.
+
+`/.well-known/` is also served when running from Node, rather than 404'd with
+the other dot-paths, so a certificate can be issued for a docroot markout is
+serving. `.nojekyll` and `.htaccess` are not: a host reads those, a browser
+never asks for them.
+
+A compile error prints as `file:line:column: message` and **exits non-zero**, so
+CI can gate on it. The pages that did compile are still written; only the ones
+that failed are missing.
+
+An expression that throws while *rendering* is treated one of two ways,
+depending on whether anything can still repair it. An ordinary value is
+re-derived in the browser, where it may well succeed — `${user.name}` asked
+before its datasource has answered is the everyday case, and the served page is
+fine — so that is a warning and the page is written. A `:server-` value is not:
+it crosses frozen, with a result and no expression, so nothing re-runs it. That
+**fails the build**, and the page is not written, on the same grounds as one
+that would not compile.
+
+That is the failure this mode invites, since a built page has no request behind
+it and so no `$origin`. A datasource with a relative `:url` therefore fails the
+build and says to mark it `:client` — after which the browser fetches it on
+arrival. An *absolute* `:url` still fetches while building and bakes the answer
+into the page, which is static site generation and worth having.
+
+`--origin` is the third way out, and the one for a docroot whose data sits in
+it as files:
+
+```sh
+npx markout ./site                                   # in one terminal
+npx markout build ./site ./dist -o http://127.0.0.1:3000
+```
+
+It says what `$origin` is while the pages are built, so a relative `:url`
+resolves exactly as it does when served. Any server for the same directory will
+do — the one above, or the host the pages are being deployed to. This is what
+lets a page fetch its own data and still be a static deployment: the fetching
+happens once, here, and what ships is the answer.
+
+`-p`/`--page` restricts the build to one page, and can be given more than once.
+A leading slash and the `.html` extension are both optional:
+
+```sh
+npx markout build ./demo ./dist -p index -p /about.html
+```
+
+A restricted build still writes the runtime — a page without it is not a page —
+but does not copy assets, since re-copying the whole tree is the part nobody
+wanted repeated.
+
+Three things it refuses, each because the alternative is a silent failure
+someone finds later: an output directory inside the docroot (the next build
+would compile its own output), a docroot inside the output directory (it would
+write over its own sources), and a docroot file named like the runtime — that
+one used to be copied over the runtime after it was written, leaving every page
+in the output broken and the build reporting success.
+
+Every page, served or built, loads the runtime from `/markout-runtime.js`. It is
+deliberately not dot-prefixed: a served page has that path *answered* by the
+middleware, so it is never a file, but a built page makes it a real file on
+somebody else's host — and a dot is what hosts use to decide a file is not for
+publishing. GitHub Pages runs Jekyll, which drops dotfiles unless a `.nojekyll`
+sits beside them, and denying dot-paths is common server hardening. The cost of
+the plain name is that a docroot file at that path is shadowed when serving,
+which `markout()` warns about at startup.
+
+## Serving from your own program
+
+The CLI is a thin wrapper over a `Server` class, and most of what an
+application needs from a server is a prop on it rather than a reason to build
+its own:
+
+```ts
+import { Server } from '@markout-dev/cli';
+
+await new Server({
+  docroot: `${__dirname}/site`,
+  port: 3000,
+  hostname: '127.0.0.1',
+  trustProxy: true,          // behind a proxy: what `$origin` is built from
+  pageLimit: true,           // 300 pages a minute per address
+  globals: { db },           // what a `:server-` value may reach
+  routes: {
+    '/api': myApiRouter,     // the application's own handlers, mounted FIRST
+  },
+}).start();
+```
+
+`routes` is the one that matters most. A page is an extensionless path and so
+is most of an API, so the two have to be mounted in the right order — the
+application's own routes first, then Markout, then the static files. Passing
+them as a prop is what keeps that order the responsibility of the code that
+knows it. `init(app, props)` is the same position with the app itself, for
+anything that is not a mount, and it may be async so a database opens before
+the first request is answered.
+
+`create()` returns the configured app without listening on anything, which is
+what a test wants: drive it with supertest and no port is ever bound.
+
+`pageLimit` caps how often one address may ask for a **page** — not for the
+application's routes, and not for static files, since one page view pulls a
+stylesheet, a script and a dozen images and a shared budget would be spent by
+ordinary browsing. A page is the request that costs a render, which is the
+thing worth protecting. It is off unless asked for, because a limiter keyed on
+the wrong address is worse than none: behind an undeclared proxy every visitor
+arrives wearing the proxy's IP and the site rate-limits itself as a whole. Set
+`trustProxy` with it — if you don't, and a proxy is there, it says so.
+
+`compress` is the one to think twice about. Anything behind nginx, Caddy, a CDN
+or a managed platform is being compressed there already, and compressing twice
+buys nothing — the proxy compresses what it receives regardless, so the second
+pass is pure cost. It earns its place when the visitor's connection ends at
+this server, and for seeing locally what a page really weighs.
+
+`@markout-dev/express` is still there for an application that already has a
+server of its own:
+
+```ts
+app.use(markout({ docroot }));
+```
+
+## Error pages
+
+Put a `404.html` in the docroot and it is what a request for a missing page
+gets. It is an ordinary page — compiled and rendered like the rest, so it
+carries the same layout, kits and `:server-` values — and it needs no
+configuration, because `404.html` is already the name GitHub Pages, Netlify and
+S3 look for. A built docroot and a served one show the same page.
+
+```ts
+errorPages: {
+  notFound: '/errors/gone.html',   // another page; `false` disables the convention
+  error: '500.html',               // ready-made HTML for a docroot that will not compile
+}
+```
+
+The two are configured separately because one of them is rendered while
+everything works and the other exactly when something does not. `error` is a
+*file*, served verbatim: rendering a page to report that a page could not be
+rendered is a loop looking for somewhere to happen.
+
+Outside dev mode a compile error tells the visitor nothing about your sources —
+it is a bare 500, or that file. The listing naming the file, line and column is
+dev's, and the errors go to the log in **both** modes, since the operator is the
+one who can act on them.
+

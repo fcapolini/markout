@@ -275,6 +275,10 @@
             <a class="nav-link"
                href="#compared">Compared</a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link"
+               href="#editor">Editor</a>
+          </li>
 
           <li class="nav-item ms-lg-2">
             <button class="btn btn-sm btn-outline-secondary"
@@ -830,6 +834,90 @@
     </div>
   </section>
 
+  <!-- Conditionals -->
+
+  <section id="conditionals"
+           class="py-5">
+    <div class="container py-lg-4">
+
+      <div class="row justify-content-center text-center mb-5">
+        <div class="col-lg-8">
+          <h2 class="display-6 fw-bold mb-3">
+            Showing one thing or&nbsp;another
+          </h2>
+
+          <p class="lead text-body-secondary">
+            The other half of behavior: not what an element does, but whether
+            it is there at&nbsp;all.
+          </p>
+        </div>
+      </div>
+
+      <div class="row g-4 align-items-start justify-content-center">
+
+        <div class="col-lg-6">
+          <div class="card shadow-sm overflow-hidden h-100"
+               data-bs-theme="dark">
+            <div class="card-header">
+              <span class="font-monospace small">a chain of branches</span>
+            </div>
+
+            <div class="card-body p-0 code-surface">
+<pre class="mb-0"><code data-lang="html">&lt;bs-spinner :if=${loading} /&gt;
+
+&lt;bs-alert :else-if=${error}
+          :variant="danger"&gt;
+  ${error}
+&lt;/bs-alert&gt;
+
+&lt;bs-table :else
+          :columns=${columns}
+          :rows=${rows} /&gt;</code></pre>
+            </div>
+
+            <div class="card-footer text-body-secondary small">
+              The first branch whose condition holds is the one that renders.
+              Two separate <code class="rule-code">:if</code>s cannot do that:
+              the branch that has to give up its place is the one whose own
+              condition did not change.
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-5">
+          <h3 class="h5">Nothing inside it runs</h3>
+          <p class="text-body-secondary">
+            A branch that is not showing evaluates nothing, which is what
+            makes <code class="rule-code">${user.name}</code> safe to write in
+            one. It is a guarantee rather than an optimisation — a guard that
+            still evaluated its body would not be a guard.
+          </p>
+
+          <h3 class="h5 mt-4">The element is parked, not rebuilt</h3>
+          <p class="text-body-secondary">
+            Hiding moves the markup into a
+            <code class="rule-code">&lt;template&gt;</code> and showing moves
+            it back, so a scroll position, a focused input or a playing video
+            survives the round trip.
+          </p>
+
+          <h3 class="h5 mt-4">Truthiness, as JavaScript means it</h3>
+          <p class="text-body-secondary mb-0">
+            <code class="rule-code">:if</code> asks the question JavaScript
+            asks, so <code class="rule-code">${count}</code> and
+            <code class="rule-code">${name}</code> mean what they look like.
+            Where you want <em>an item, if there is one</em> — where
+            <code class="rule-code">0</code> and
+            <code class="rule-code">''</code> are data —
+            <code class="rule-code">:for-data</code> is the one that binds it.
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
   <!-- App-specific kits -->
 
   <section id="design-system"
@@ -1232,11 +1320,39 @@
                 <tr>
                   <th scope="row"
                       class="fw-normal text-body-secondary">
-                    Runs with no build step
+                    What it needs to run
                   </th>
-                  <td>Yes</td>
-                  <td>Yes</td>
-                  <td>Yes</td>
+                  <td class="text-body-secondary">
+                    A <code class="rule-code">&lt;script&gt;</code> tag
+                  </td>
+                  <td class="text-body-secondary">
+                    A <code class="rule-code">&lt;script&gt;</code> tag
+                  </td>
+                  <td class="text-body-secondary">
+                    Node serving the page, or a build step
+                  </td>
+                </tr>
+
+                <tr>
+                  <th scope="row"
+                      class="fw-normal text-body-secondary">
+                    Mistakes caught before the page loads
+                  </th>
+                  <td class="text-body-secondary">No, silent at runtime</td>
+                  <td class="text-body-secondary">—</td>
+                  <td class="fw-semibold">Yes, with a file and a line</td>
+                </tr>
+
+                <tr>
+                  <th scope="row"
+                      class="fw-normal text-body-secondary">
+                    Content present in the served HTML
+                  </th>
+                  <td class="text-body-secondary">
+                    No, <code class="rule-code">x-cloak</code> hides the gap
+                  </td>
+                  <td class="text-body-secondary">Yes, the server wrote it</td>
+                  <td class="fw-semibold">Yes, in both delivery modes</td>
                 </tr>
 
                 <tr>
@@ -1296,12 +1412,83 @@
           <div class="alert alert-secondary mt-4 mb-0">
             <strong class="d-block mb-1">And the honest costs.</strong>
             Alpine is mature, and its ecosystem, community and documentation
-            are far larger than Markout's. htmx is solving a different problem
-            — server-driven UI — and composes fine with either. Markout's claim
-            is narrower: one source that is modular, reactive, and renders in
-            both places.
+            are far larger than Markout's. It also asks for strictly less to
+            get started — one <code class="rule-code">&lt;script&gt;</code>
+            tag, on any host, behind any backend — where Markout wants Node in
+            the request path or a build step. htmx is solving a different
+            problem — server-driven UI — and composes fine with either.
+            Markout's claim is narrower: one source that is modular, reactive,
+            and renders in both places.
           </div>
 
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Editor support -->
+
+  <section id="editor"
+           class="py-5">
+    <div class="container py-lg-4">
+
+      <div class="row justify-content-center text-center mb-5">
+        <div class="col-lg-8">
+          <h2 class="display-6 fw-bold mb-3">
+            The row above, in your&nbsp;editor
+          </h2>
+
+          <p class="lead text-body-secondary">
+            "Caught before the page loads" is worth little if you find out in
+            a terminal. The VS Code extension puts the compiler where you are
+            typing.
+          </p>
+        </div>
+      </div>
+
+      <div class="row g-4 justify-content-center">
+
+        <div class="col-md-6 col-lg-4">
+          <h3 class="h5">The compiler's own errors</h3>
+          <p class="text-body-secondary mb-0">
+            On the right line, without saving — and for every page in the
+            project, not only the ones you have open. A page that imports a
+            broken fragment says so, and the fault is reported in the file it
+            was written in.
+          </p>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+          <h3 class="h5">It knows what is in scope</h3>
+          <p class="text-body-secondary mb-0">
+            Completion of the names visible where you are, the tags every
+            imported kit defines, and the parameters one of those tags takes.
+            Go to definition on a name, on a custom tag — including one inside
+            an installed kit — and on an
+            <code class="rule-code">&lt;:import&gt;</code> path.
+          </p>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+          <h3 class="h5">And it can format the file</h3>
+          <p class="text-body-secondary mb-0">
+            Which an HTML formatter cannot: the
+            <code class="rule-code">&gt;</code> in
+            <code class="rule-code">${a &gt; b}</code> ends no tag, and one
+            that thinks it does rewrites the rest of your attributes into
+            text.
+          </p>
+        </div>
+
+      </div>
+
+      <div class="row justify-content-center mt-4">
+        <div class="col-lg-8 text-center">
+          <p class="text-body-secondary mb-0">
+            The compiler is bundled, so it works on a project that has
+            installed nothing.
+          </p>
         </div>
       </div>
 

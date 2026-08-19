@@ -37,6 +37,9 @@ calls that out explicitly.
 - [Rendering](concepts/rendering.md) - how the compiler, server renderer, and
   browser runtime fit together.
 - [Syntax reference](reference/syntax.md) - the whole language on one page.
+- [Running a page](reference/cli.md) - the CLI, building ahead of time, the
+  Express middleware for an application with its own routes, and the error
+  pages both delivery modes serve.
 
 ## Design notes
 
