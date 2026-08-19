@@ -109,11 +109,25 @@ export function stage1load(page: Page) {
  * earlier would name a scope that reaches no output.
  */
 function linkElseChains(page: Page): void {
+  // every scope that stands for this branch in some compiled output: the one
+  // the loader built, the instance that replaced it if it was a custom tag,
+  // and one copy per usage site that filled a slot inside it
+  const standIns = (scope: Scope): Scope[] => [
+    page.usageInstances.get(scope) ?? scope,
+    ...(page.rehomedScopes.get(scope) ?? []),
+  ];
   for (const [branch, previous] of page.elseChains) {
-    const self = page.usageInstances.get(branch) ?? branch;
     const before = page.usageInstances.get(previous) ?? previous;
-    self.elseOf = before;
-    before.elseNext = self;
+    // pointed at the ORIGINAL, deliberately, even from a copy. What is
+    // emitted is the id, copies keep the id they were made from, and the
+    // runtime looks a neighbour up among its own siblings -- so an id
+    // resolves within whichever set of them this instance holds
+    for (const self of standIns(branch)) {
+      self.elseOf = before;
+    }
+    for (const back of standIns(previous)) {
+      back.elseNext = branch;
+    }
   }
 }
 
@@ -1228,6 +1242,10 @@ function rehomeNestedScopes(
 
     const copy = new Scope(page, undefined, el, child.name);
     copy.id = child.id;
+    // recorded, not copied: what this copy needs from `child` may not have
+    // been worked out yet. An `:else` link is decided once every usage has
+    // been expanded, which is after this runs -- see linkElseChains
+    (page.rehomedScopes.get(child) ?? page.rehomedScopes.set(child, []).get(child)!).push(copy);
     copy.parent = parent;
     copy.lexicalParent = child.lexicalParent;
     copy.slotted = child.slotted;
