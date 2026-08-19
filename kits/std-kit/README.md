@@ -3,14 +3,30 @@
 The system parts of a page — the things a framework usually builds *into* the
 language — written **with** it instead.
 
-```sh
-npm install @markout-dev/std-kit
+It ships with the compiler, so a page has it already:
+
+```html
+<body>
+  <std-data :url="/api/rows" :aka="rows" />
+</body>
 ```
+
+No install and no import. `@markout-dev/core` depends on this kit and splices
+it into the head of every page it compiles, before anything the page wrote —
+so a page that defines `std-data` itself simply wins the name back, and a
+page that would rather say it out loud can still write the import, which is
+skipped rather than doubled:
 
 ```html
 <head>
   <:import src="/npm/@markout-dev/std-kit/all.htm" />
 </head>
+```
+
+Installing it directly is only for pinning a version of your own:
+
+```sh
+npm install @markout-dev/std-kit
 ```
 
 Run the showcase — `/demos/std/` on [the site](../../sites/site/) — with:

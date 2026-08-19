@@ -10,6 +10,45 @@ import { stage6treeshake } from "./stages/stage6-treeshake";
 import { DEFAULT_RUNTIME_SRC, stage7generate } from "./stages/stage7-generate";
 import { GLOBAL_NAMES } from "./stages/stage4-resolve";
 
+/**
+ * The standard kit, which every page has without asking.
+ *
+ * `@markout-dev/std-kit` is the system parts of a page -- data sources, and
+ * the outside world -- written with the language rather than built into it.
+ * "Written with the language" is how it is BUILT; part of the language is
+ * what it IS, and a part of the language you have to import is ceremony HTML
+ * asks for nowhere else. So a page gets it the way it gets `<video>`: it is
+ * there.
+ *
+ * The decision lives here rather than in the preprocessor, which processes
+ * HTML and has no business knowing which package is special. It is handed a
+ * list of pathnames to splice and asks nothing about them.
+ *
+ * Three rules make it a convenience rather than a claim on the namespace:
+ *
+ * - **Spliced first**, ahead of anything the page wrote. `page.customTags`
+ *   is filled in document order, so a page's own `<:define>` -- or a kit it
+ *   imports after -- wins the name back with nothing to say about it.
+ * - **The explicit import still works.** `<:import>` is once-only by
+ *   resolved pathname, so saying it out loud gets it once, not twice.
+ * - **Absent is absent.** Only a MOUNTED kit is spliced, so a docroot
+ *   without it compiles exactly as it did.
+ *
+ * Through the kit's mounted root rather than through `/npm/`: both land on
+ * the same pathname, which is what lets the once-rule dedupe them, but this
+ * table is the one the caller handed us and has already validated, while
+ * `/npm/` resolves a second way -- walking `node_modules` up from the
+ * docroot -- which a host is free to have arranged differently, and hosts
+ * do.
+ *
+ * A millisecond a page, measured on a trivial one: 0.2ms to 1.3ms, against
+ * 17ms for a page that imports the bootstrap kit. Nothing reaches the
+ * output, since treeshaking drops what the page never mentions.
+ */
+export const STD_KIT_PACKAGE = '@markout-dev/std-kit';
+/** what a kit calls its everything file, by convention */
+export const STD_KIT_ENTRY = 'all.htm';
+
 export interface CompilerProps {
   docroot: string;
   /**
@@ -56,7 +95,13 @@ export class Compiler {
   serverGlobals: ReadonlySet<string>;
 
   constructor(options: CompilerProps) {
-    this.preprocessor = new Preprocessor(options.docroot, options.kits, options.readFile);
+    const std = options.kits?.find(kit => kit.name === STD_KIT_PACKAGE);
+    this.preprocessor = new Preprocessor(
+      options.docroot,
+      options.kits,
+      options.readFile,
+      std ? [`${std.root}/${STD_KIT_ENTRY}`] : []
+    );
     this.runtimeSrc = options.runtimeSrc ?? DEFAULT_RUNTIME_SRC;
     this.dev = options.dev ?? false;
     this.treeshake = options.treeshake ?? true;

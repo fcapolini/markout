@@ -58,6 +58,7 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
+    "@markout-dev/std-kit": "^0.4.0",
     "acorn": "^8.18.0",
     "entities": "^7.0.1",
     "escodegen": "^2.1.0",
