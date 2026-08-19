@@ -42,24 +42,36 @@ function run(html: string) {
   page.errors.length || stage3qualify(page);
   page.errors.length || stage4resolve(page);
   const errors = page.errors.map(e => e.msg);
-  if (errors.length) return { errors, runtime: [] as string[], read: '' };
-  stage7generate(page);
   const runtime: RuntimeError[] = [];
-  new WebContext({
+  if (errors.length) {
+    return { errors, runtime, ctx: undefined, read: () => '' };
+  }
+  stage7generate(page);
+  const ctx = new WebContext({
     root: new Function(`return (${page.propsString});`)(),
     doc: page.source.doc,
     onError: (e: RuntimeError) => runtime.push(e),
   }).refresh();
-  const s = page.source.doc.toString();
-  const body = s
-    .slice(s.indexOf('<body'), s.indexOf('<script'))
-    .replace(/<template>[\s\S]*?<\/template>/g, '')
-    .replace(/<!--.*?-->/g, '');
   return {
     errors,
-    runtime: runtime.map(e => `${e.phase}: ${e.message}`),
-    read: /<i>([\s\S]*?)<\/i>/.exec(body)?.[1] ?? '(no probe)',
+    /** read after each change, not snapshotted: half of these drive the page */
+    runtime: runtime as unknown as string[],
+    ctx,
+    read: () => {
+      const s = page.source.doc.toString();
+      const body = s
+        .slice(s.indexOf('<body'), s.indexOf('<script'))
+        .replace(/<template>[\s\S]*?<\/template>/g, '')
+        .replace(/<!--.*?-->/g, '');
+      return /<i>([\s\S]*?)<\/i>/.exec(body)?.[1] ?? '(no probe)';
+    },
   };
+}
+
+/** the same, with a context this test is going to drive */
+function live(html: string) {
+  const r = run(html);
+  return { ...r, ctx: r.ctx! };
 }
 
 /** compiles, links, and reads the value the markup says it should */
@@ -67,7 +79,7 @@ function reaches(html: string) {
   const r = run(html);
   expect(r.errors).toStrictEqual([]);
   expect(r.runtime).toStrictEqual([]);
-  expect(r.read).toBe('RIGHT');
+  expect(r.read()).toBe('RIGHT');
 }
 
 describe('a name the page can reach', () => {
@@ -130,70 +142,117 @@ describe('a name the page can reach', () => {
   });
 });
 
-describe('a name inside a region, read from outside it', () => {
-  // Refused rather than left to fail at link time. What is inside a region is
-  // not built while the region is a stencil, so its scopes do not exist and
-  // have registered no name -- there is nothing for the dependency to find.
-  const cases: [string, string, RegExp][] = [
-    [
-      ':if',
-      '<html :on=${true}><body><div :aka="ui" :if=${on}>' +
-        '<span :aka="pane" :open=${1}></span></div>' +
-        '<i>${ui.pane.open}</i></body></html>',
-      /takes it away again/,
-    ],
-    [
-      ':for-data',
-      '<html :d=${1}><body><div :aka="ui" :for-data=${d}>' +
-        '<span :aka="pane" :open=${1}></span></div>' +
-        '<i>${ui.pane.open}</i></body></html>',
-      /takes it away again/,
-    ],
-    [
-      ':for-each',
-      '<html><body><div :aka="ui" :for-each=${[1, 2]}>' +
-        '<span :aka="pane" :open=${1}></span></div>' +
-        '<i>${ui.pane.open}</i></body></html>',
-      /once per item/,
-    ],
-    [
-      'an :else branch',
-      '<html :on=${true}><body><div :if=${!on}>x</div>' +
-        '<div :aka="ui" :else><span :aka="pane" :open=${1}></span></div>' +
-        '<i>${ui.pane.open}</i></body></html>',
-      /takes it away again/,
-    ],
-  ];
+describe('a name inside a region', () => {
+  /** the shape every case here is a variation of */
+  const REGION =
+    '<div :aka="panel" :if=${on}><span :aka="field" :text=${msg}></span></div>';
 
-  for (const [what, html, why] of cases) {
-    it(`refuses it through ${what}, and says why`, () => {
-      const r = run(html);
-      expect(r.errors).toHaveLength(1);
-      expect(r.errors[0]).toMatch(/Cannot read "pane.open" through "ui"/);
-      expect(r.errors[0]).toMatch(why);
-      // and points at the way out, which is not obvious from the failure
-      expect(r.errors[0]).toMatch(/Declare what the outside needs to read outside the region/);
-    });
-  }
+  it('is read with "?." and is undefined while the region is away', () => {
+    // the whole cycle, because every stage of it has its own way to be wrong.
+    // Reading the last thing it saw would be worse than the compile error
+    // this replaced: wrong AND silent, where that was merely unhelpful
+    const r = live(
+      '<html :on=${false} :msg=${"A"}><body>' +
+        REGION +
+        '<i>${panel.field?.text ?? "away"}</i></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    expect(r.runtime).toStrictEqual([]);
+    expect(r.read()).toBe('away');
+
+    r.ctx.root.proxy['on'] = true;
+    expect(r.read()).toBe('A');
+
+    // a change INSIDE the region reaches the reader outside it: the edge is
+    // made when the region appears, not merely the value copied
+    r.ctx.root.proxy['msg'] = 'B';
+    expect(r.read()).toBe('B');
+
+    r.ctx.root.proxy['on'] = false;
+    expect(r.read()).toBe('away');
+
+    r.ctx.root.proxy['on'] = true;
+    expect(r.read()).toBe('B');
+    expect(r.runtime).toStrictEqual([]);
+  });
+
+  it('refuses the unguarded read, and shows the guarded spelling', () => {
+    const r = run(
+      '<html :on=${true} :msg=${"A"}><body>' +
+        REGION +
+        '<i>${panel.field.text}</i></body></html>'
+    );
+    expect(r.errors).toHaveLength(1);
+    expect(r.errors[0]).toMatch(/"field" is inside a ":if"/);
+    expect(r.errors[0]).toMatch(/Read it as "panel\.field\?\.text"/);
+  });
 
   it('names the directive as the page spelled it', () => {
-    const r = run(
-      '<html :on=${true}><body><div :if=${!on}>x</div>' +
-        '<div :aka="ui" :else><span :aka="pane" :open=${1}></span></div>' +
-        '<i>${ui.pane.open}</i></body></html>'
-    );
     // `:else` compiles to the same value `:if` does, and being told about an
     // ":if" that is not in the source is a puzzle rather than a report
+    const r = run(
+      '<html :on=${true}><body><div :if=${!on}>x</div>' +
+        '<div :aka="panel" :else><span :aka="field" :text=${1}></span></div>' +
+        '<i>${panel.field.text}</i></body></html>'
+    );
     expect(r.errors[0]).toContain('":else"');
   });
 
-  it('refuses it through a region inside a component too', () => {
+  it('refuses a WRITE, which has no guarded spelling at all', () => {
+    // `a?.b = c` is not JavaScript, and should not be: a write that lands
+    // nowhere while the region is away is a silent no-op, which is the shape
+    // this whole feature exists to get rid of
     const r = run(
-      '<html><head><:define tag="my-b:div">' +
-        '<div :if=${true}><:slot /></div></:define></head><body>' +
-        '<my-b :aka="bx"><span :aka="pane" :open=${1}></span></my-b>' +
-        '<i>${bx.pane.open}</i></body></html>'
+      '<html :on=${true} :msg=${"A"}><body>' +
+        REGION +
+        '<button :on-click=${() => panel.field.text = "X"}>b</button></body></html>'
     );
-    expect(r.errors.join()).toMatch(/Cannot read "pane.open" through "bx"/);
+    expect(r.errors).toHaveLength(1);
+    expect(r.errors[0]).toMatch(/Cannot write "field\.text" through "panel"/);
+    expect(r.errors[0]).toMatch(/a write has no way to say "if it is there"/);
+  });
+
+  it('refuses a :for-each even when guarded', () => {
+    // `?.` says "this may be absent", and a loop's trouble is not absence: the
+    // name means as many scopes as there are items. Offered exactly where the
+    // arity is zero-or-one
+    const r = run(
+      '<html><body><div :aka="ui" :for-each=${[1, 2]}>' +
+        '<span :aka="pane" :open=${1}></span></div>' +
+        '<i>${ui.pane?.open}</i></body></html>'
+    );
+    expect(r.errors).toHaveLength(1);
+    expect(r.errors[0]).toMatch(/once per item/);
+  });
+
+  it('guards a region that belongs to a component, not to the page', () => {
+    // the structural half of the rule: markup slotted into a component
+    // resolves its names at the call site but LIVES where the definition put
+    // it, which here is inside a region of the component's own
+    const r = live(
+      '<html :on=${true}><head><:define tag="my-b:div">' +
+        '<div :if=${true}><:slot /></div></:define></head><body>' +
+        '<my-b :aka="bx"><span :aka="pane" :text=${"RIGHT"}></span></my-b>' +
+        '<i>${bx.pane?.text ?? "away"}</i></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    expect(r.runtime).toStrictEqual([]);
+    expect(r.read()).toBe('RIGHT');
+  });
+
+  it('needs no guard for a value ON the region host', () => {
+    reaches(
+      '<html :on=${true}><body>' +
+        '<div :aka="ui" :if=${on} :open=${"RIGHT"}></div>' +
+        '<i>${ui.open}</i></body></html>'
+    );
+  });
+
+  it('needs no guard from inside the same region', () => {
+    reaches(
+      '<html :on=${true}><body><div :aka="ui" :if=${on}>' +
+        '<span :aka="pane" :open=${"RIGHT"}></span><i>${ui.pane.open}</i>' +
+        '</div></body></html>'
+    );
   });
 });

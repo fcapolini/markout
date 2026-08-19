@@ -353,12 +353,65 @@ export class CoreScope {
     parent.children.push(this);
     if (this.props.name) {
       const host = this.nameHost = this.nameSiteScope();
-      host.values[this.props.name] = new CoreValue(
-        { val: this.proxy },
-        host,
-        this.props.name,
-      );
+      const region = this.regionHost();
+      host.values[this.props.name] = region
+        ? this.regionName(host)
+        : new CoreValue({ val: this.proxy }, host, this.props.name);
     }
+  }
+
+  /**
+   * The value a name registers when its scope lives inside a region.
+   *
+   * It answers with this scope only while the region is showing, and with
+   * `undefined` while it is away. That is what makes the `?.` the compiler
+   * insists on at such a reference mean what it says: the scope really is not
+   * there, so the read really is undefined -- rather than the last thing it
+   * saw, which is the stale-and-silent answer this exists to avoid.
+   *
+   * Re-evaluated by the toggle rather than by a dependency on the region's
+   * own condition, which was the obvious way and does not work: this value
+   * lives on the region's HOST and is not among the keys a hidden region
+   * keeps live, so `unlinkInert` takes its edges away on the way down and it
+   * never hears that it went. It is registered with the context instead, and
+   * the toggle walks that -- see CoreContext.relinkMaybes.
+   */
+  private regionName(host: CoreScope): CoreValue<unknown> {
+    const value = new CoreValue<unknown>(
+      { exp: () => (this.rendered() ? this.proxy : undefined) },
+      host,
+      this.props.name
+    );
+    this.ctx.regionNames.add(value);
+    return value;
+  }
+
+  /**
+   * The nearest enclosing region whose markup comes and goes, if any.
+   *
+   * `:for-each` is not one of them: a replica is built when it exists and
+   * disposed when it does not, so there is no scope sitting there answering
+   * for markup that is away -- and a name inside a loop is refused at compile
+   * time anyway, being as many scopes as there are items.
+   */
+  private regionHost(): CoreScope | undefined {
+    for (let s: CoreScope | undefined = this.parent; s; s = s.parent) {
+      const values = s.props.values;
+      if (values?.[RT_IF_VALUE] || values?.[RT_FOR_DATA_VALUE]) {
+        return s;
+      }
+    }
+    return undefined;
+  }
+
+  /** whether this scope's markup is in the page, rather than parked in a stencil */
+  private rendered(): boolean {
+    for (let s: CoreScope | undefined = this; s; s = s.parent) {
+      if (s.isStencil()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -725,6 +778,9 @@ export class CoreScope {
       // the markup is back in the page without any scope having been built,
       // so nothing queued itself; the region says so on their behalf
       that.attachSubtree();
+      // and anything OUTSIDE reading into here can finally resolve: its
+      // dependency named a scope that did not exist a moment ago
+      that.ctx.relinkMaybes();
       return;
     }
     if (!that.showing) return;
@@ -738,6 +794,10 @@ export class CoreScope {
     that.unlinkInert();
     afterHide?.();
     that.hideView();
+    // the other half, and the one that matters more: a reader outside still
+    // holds the edge it made when this appeared, and would go on answering
+    // with what it last saw
+    that.ctx.relinkMaybes();
   }
 
   /**
