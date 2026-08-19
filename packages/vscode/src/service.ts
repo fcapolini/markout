@@ -16,6 +16,7 @@ import { isPage } from './plugin';
 import { fileReferenceAt } from './references';
 import { fileOf, findDeclaration } from './declarations';
 import { findCompletions } from './completions';
+import { formatEdits } from './formatting';
 import { findHover } from './hovers';
 import { findReferences } from './references-to';
 import { prepareRename, renameEdits } from './rename';
@@ -155,6 +156,20 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
       hoverProvider: true,
       referencesProvider: true,
       renameProvider: { prepareProvider: true },
+      /**
+       * Formatting is claimed rather than left to HTML's own service,
+       * which is the same rule as everything else here: contribute what
+       * HTML cannot answer. It cannot answer this one at all.
+       *
+       * `:_class=${['a'].filter(s => s)}` holds a `>` that ends no tag, and
+       * an HTML formatter believes it does -- it closes the tag there and
+       * turns every attribute after it into text, which is a different
+       * document rather than a differently indented one. It also reads
+       * `// parameters` in a definition's list as two attributes. So this
+       * is not a nicety on top of a working formatter; it is the reason
+       * server.ts takes the other one away.
+       */
+      documentFormattingProvider: true,
     },
     create(context) {
       /** the docroot a file is read against: the setting, or the guess */
@@ -424,6 +439,52 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
             kind: 'full' as const,
             items: problem.diagnostics.map(d => asDiagnostic(d)),
           }));
+        },
+
+        /**
+         * Indentation, gated the way diagnostics are.
+         *
+         * A formatter is the most invasive thing an extension does to a
+         * file, so it asks for the same evidence before touching one: a
+         * page that uses markout's syntax, or a project that depends on
+         * markout. An HTML file in someone else's project is left to
+         * whatever they already format it with.
+         */
+        provideDocumentFormattingEdits(document, range, options) {
+          // the embedded HTML rather than the root, for a reason worth
+          // writing down: Volar skips any virtual code one of whose children
+          // covers the same range, and this page's masked HTML covers all of
+          // it. So the root code -- which every other feature here answers on
+          // -- is never offered for formatting, and a provider hung off it
+          // is simply never called.
+          const uri = sourceOf(document.uri, 'html');
+          if (!uri) {
+            return undefined;
+          }
+          const enable = props.enable ?? 'auto';
+          if (enable === 'never') {
+            return undefined;
+          }
+          // ...and the buffer rather than that document's own text, which is
+          // the page with its expressions masked. The mask is character for
+          // character, so the two agree about every offset and every column;
+          // reading the real thing is what lets the scan see an expression as
+          // an expression
+          const text = props.open(uri.fsPath) ?? document.getText();
+          const docroot = docrootFor(uri.fsPath);
+          if (enable === 'auto' && !looksLikeMarkout(text) && !isMarkoutProject(docroot)) {
+            return undefined;
+          }
+          const edits = formatEdits({
+            text,
+            // the file's own name, since that is what says which of the two
+            // shapes it gets
+            pathname: uri.fsPath,
+            tabSize: options.tabSize,
+            insertSpaces: options.insertSpaces,
+            lines: { start: range.start.line, end: range.end.line },
+          });
+          return edits.length ? edits : undefined;
         },
 
         async provideDiagnostics(document) {

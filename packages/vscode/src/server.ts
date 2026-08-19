@@ -74,24 +74,50 @@ server.configurations = {
 };
 
 /**
- * The one thing HTML's own service must NOT answer here: the Outline.
+ * The two things HTML's own service must NOT answer here.
  *
  * These pages are `html` documents -- deliberately, so as not to displace
- * anything -- which means VS Code's own HTML support is looking at them too,
- * and it already builds an outline. A second provider does not merge with
- * it the way folding ranges or document links do: the Outline view shows one
- * tree PER PROVIDER, so every page grew two identical trees.
+ * anything -- which means VS Code's own HTML support is looking at them too.
+ *
+ * The Outline, because it already builds one, and a second provider does not
+ * merge with it the way folding ranges or document links do: the Outline view
+ * shows one tree PER PROVIDER, so every page grew two identical trees.
+ *
+ * Formatting, because HTML's is not merely redundant here, it is destructive.
+ * `:_class=${['a'].filter(s => s)}` holds a `>` that ends no tag; a formatter
+ * that reads the raw text closes the tag there and every attribute after it
+ * becomes text, which is a different document rather than a differently
+ * indented one. `// parameters` in a definition's list comes back as two
+ * attributes. So this one is not declined in favour of a better provider
+ * elsewhere -- it is declined because it is wrong, and ./formatting answers
+ * in its place.
  *
  * Everything else this service offers stays, because everything else either
- * merges or answers something HTML gets wrong on its own -- an expression
- * holding a `>` ends a tag for anybody parsing the raw text, and the whole
- * point of the embedded document is that it does not. The rule is to
+ * merges or answers something HTML gets wrong on its own. The rule is to
  * contribute what HTML cannot answer, and an outline of ordinary markup is
  * not that.
  */
-function withoutOutline(service: LanguageServicePlugin): LanguageServicePlugin {
-  const { documentSymbolProvider, ...capabilities } = service.capabilities;
-  return { ...service, capabilities };
+function withoutOutlineOrFormatting(service: LanguageServicePlugin): LanguageServicePlugin {
+  const { documentSymbolProvider, documentFormattingProvider, ...capabilities } =
+    service.capabilities;
+  return {
+    ...service,
+    capabilities,
+    create(context) {
+      return {
+        ...service.create(context),
+        // The capability alone is not enough, which is worth knowing: Volar
+        // gates ON-TYPE formatting on the capability but calls
+        // `provideDocumentFormattingEdits` on every plugin that has one,
+        // taking the first answer. So dropping the capability changes only
+        // what the server ADVERTISES -- the editor was still handed these
+        // edits, and they are made against the EMBEDDED document, whose
+        // text is the page with its expressions masked. Applied to the real
+        // file that inserts a masked copy of the page above the page.
+        provideDocumentFormattingEdits: undefined,
+      };
+    },
+  };
 }
 
 /**
@@ -169,7 +195,7 @@ connection.onInitialize(params => {
       // is reimplemented here: the expressions are masked to characters that
       // cannot end a tag, so what this service sees is ordinary HTML at
       // exactly the offsets the author's is at
-      withoutOutline(
+      withoutOutlineOrFormatting(
         createHtmlService({
           // WITHOUT this, `/lib.htm` in an <:import> resolves against the
           // workspace folder and the editor offers a link it cannot open

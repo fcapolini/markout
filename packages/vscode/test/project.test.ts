@@ -4,6 +4,7 @@ import path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Compiler } from '@markout-dev/core';
 import { isMarkoutProject, looksLikeMarkout } from '../src/diagnostics';
+import { formatEdits } from '../src/formatting';
 
 /**
  * Whether this extension should say anything about a given HTML file.
@@ -222,5 +223,38 @@ describe('this repository', () => {
       'index-plain.html',
       'index.html',
     ]);
+  });
+
+  it('is already formatted the way the formatter would format it', () => {
+    // the strongest thing that can be said about a formatter: run it over
+    // every file in the repository -- the kit, the demo site, both
+    // conventions -- and it asks for nothing. These files were laid out by
+    // hand and by a separate one-off script; this is a second implementation
+    // agreeing with them line for line, which neither could do by copying
+    // the other.
+    //
+    // It also means a contributor's Format Document is a no-op on a file
+    // nobody has touched, which is the only way a formatter earns being left
+    // on.
+    const roots = ['sites/site', 'kits'].map(r => path.resolve(__dirname, '../../..', r));
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.html?$/.test(entry.name)) files.push(full);
+      }
+    };
+    roots.forEach(walk);
+    expect(files.length).toBeGreaterThan(30);
+
+    const asked = files
+      .map(file => ({
+        file,
+        edits: formatEdits({ text: fs.readFileSync(file, 'utf8'), pathname: file }),
+      }))
+      .filter(({ edits }) => edits.length)
+      .map(({ file, edits }) => `${path.basename(file)}:${edits[0].range.start.line + 1}`);
+    expect(asked).toStrictEqual([]);
   });
 });
