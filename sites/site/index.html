@@ -123,6 +123,18 @@
     .tok-str { color: #ffb43d; }
     .tok-com { color: #7a8899; font-style: italic; }
 
+    /*
+      The brand mark, sized in `em` so it tracks the name beside it, and given
+      the same ink: the plate-less variant paints in `currentColor`, so the
+      mark follows the brand text through both color modes with nothing else
+      to keep in step.
+    */
+    .navbar-brand svg {
+      display: block;
+      width: 1.6em;
+      height: 1.6em;
+    }
+
     /* Markout's own additions to HTML: the only parts you have to learn. */
     .tok-mo { color: #ff4d9d; font-weight: 600; }
     .tok-exp { color: #c07cff; }
@@ -251,8 +263,24 @@
 
   <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom sticky-top">
     <div class="container">
-      <a class="navbar-brand fw-semibold"
-         href="#top">Markout</a>
+      <!--
+        The mark before the name, inlined rather than linked: it is drawn in
+        `currentColor`, which only means anything to markup that is part of
+        this page -- an <img> would be a document of its own and take the
+        black a lone svg defaults to. It carries no name, so it adds nothing
+        to the link's own text, which is what says "Markout" to a reader who
+        isn't looking at it.
+
+        `as="span"` makes this a literal include, dropping the file in whole
+        and wrapping it. Without it the file is read as markup, which for a
+        fragment means its root attributes are merged into the tag doing the
+        including -- an svg's viewBox landing on this <a>, and no svg left.
+      -->
+      <a class="navbar-brand fw-semibold d-flex align-items-center gap-2"
+         href="#top">
+        <:include src="/logo-small-plain.svg" as="span" />
+        Markout
+      </a>
 
       <button class="navbar-toggler"
               type="button"
