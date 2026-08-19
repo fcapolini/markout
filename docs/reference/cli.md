@@ -240,3 +240,79 @@ it is a bare 500, or that file. The listing naming the file, line and column is
 dev's, and the errors go to the log in **both** modes, since the operator is the
 one who can act on them.
 
+
+## Content Security Policy
+
+A served page carries three `<script>` tags you did not write — the compiled
+props, the transferred `:server-` state, and the runtime — plus the live-reload
+script in dev. Under a policy without `unsafe-inline` the first two are exactly
+what gets blocked, so `csp` gives them a nonce:
+
+```ts
+import { cspNonce, markout } from '@markout-dev/express';
+
+app.use(cspNonce());                     // mints it, before anything is written
+app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    `script-src 'nonce-${res.locals.markoutNonce}'`
+  );
+  next();
+});
+app.use(markout({ docroot, csp: true }));
+```
+
+That order is not a style. Markout **answers** a page request, so nothing
+mounted after it runs, and the header has to go out on the way in — which means
+the nonce has to exist by then. `cspNonce()` is what makes it exist that early;
+`csp: true` finds it on `res.locals.markoutNonce` and stamps the same value, and
+only mints one of its own when nothing already has.
+
+markout stamps its own scripts and does **not** send the header. That is the
+whole design: a policy has to cover your images, your styles and your analytics,
+none of which this middleware knows anything about, so a framework that writes
+it for you gets it wrong. What only markout can supply is the nonce for the
+scripts only markout put there — so it supplies that and stops. A fresh one per
+response, which is what makes it a nonce.
+
+Where your application already has one — helmet mints `res.locals.cspNonce`
+before this middleware runs — pass a function instead, so the page ends up with
+one nonce rather than two that disagree:
+
+```ts
+markout({ docroot, csp: (req, res) => res.locals.cspNonce })
+```
+
+Returning an empty string stamps nothing, which is how a policy that applies to
+some routes and not others says so.
+
+`Server` takes the same prop, where `init` is the place for the two middlewares
+— it mounts before the pages, which is the order this needs:
+
+```ts
+await new Server({
+  docroot,
+  csp: true,
+  init: app => {
+    app.use(cspNonce());
+    app.use((req, res, next) => {
+      res.setHeader(
+        'Content-Security-Policy',
+        `script-src 'nonce-${res.locals.markoutNonce}'`
+      );
+      next();
+    });
+  },
+}).start();
+```
+
+There is no `--csp` flag on the command line, and that is deliberate: a nonce is
+only worth anything to whoever writes the header, and from a bare
+`markout <docroot>` there is nobody to write one. A flag that sent a policy of
+markout's choosing would break the first page that carries a `<script>` of its
+own — markout does not nonce those, since doing so would make this middleware
+the reason an injected script ran.
+
+This is for **served** pages. `build` has no response to mint a nonce per, so a
+built site needs its policy written with script hashes instead — the pages are
+fixed at build time, which is what makes that possible.

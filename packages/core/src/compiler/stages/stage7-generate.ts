@@ -1,5 +1,11 @@
 import { generate } from 'escodegen';
-import type { Expression, Node, ObjectExpression, Property } from 'estree';
+import type {
+  Expression,
+  NewExpression,
+  Node,
+  ObjectExpression,
+  Property,
+} from 'estree';
 import { ServerText } from '../../html/server-dom';
 import { DEV_GLOBAL, PROPS_GLOBAL } from '../../runtime/core/core-context';
 import { EVENT_VALUE_PREFIX, TEXT_VALUE_PREFIX } from '../ir/Page';
@@ -60,6 +66,7 @@ export function stage7generate(
   const root = page.global.children[0];
   if (root) {
     page.propsAST = generateScope(root, false);
+    unwrapRegexLiterals(page.propsAST);
     page.propsString = generate(page.propsAST, codegenOptions(dev));
     // The browser gets a different copy, with every `:server-` expression
     // taken out of it. Two reasons, and the first is the serious one:
@@ -78,8 +85,13 @@ export function stage7generate(
     // Only generated a second time when there is something to take out, so a
     // page with no server value pays nothing and produces what it always did.
     const hasServerValues = [...page.values.values()].some(v => v.serverOnly);
-    page.clientPropsString = hasServerValues
-      ? generate(generateScope(root, true), codegenOptions(dev))
+    let clientAST: ObjectExpression | undefined;
+    if (hasServerValues) {
+      clientAST = generateScope(root, true);
+      unwrapRegexLiterals(clientAST);
+    }
+    page.clientPropsString = clientAST
+      ? generate(clientAST, codegenOptions(dev))
       : page.propsString;
     injectBootstrapScripts(page, runtimeSrc, dev);
   }
@@ -124,6 +136,7 @@ function injectBootstrapScripts(page: Page, runtimeSrc: string, dev: boolean) {
     )
   );
   body.appendChild(propsScript);
+  page.bootstrapScripts.push(propsScript);
 
   // reserved here, filled by the server once its render has settled -- see
   // Page.stateScript for why the position is decided at compile time. Only
@@ -132,12 +145,14 @@ function injectBootstrapScripts(page: Page, runtimeSrc: string, dev: boolean) {
   if ([...page.values.values()].some(value => value.serverOnly)) {
     page.stateScript = doc.createElement('script');
     body.appendChild(page.stateScript);
+    page.bootstrapScripts.push(page.stateScript);
   }
 
   const runtimeScript = doc.createElement('script');
   runtimeScript.setAttribute('src', runtimeSrc, body.loc);
   runtimeScript.setAttribute('async', null, body.loc);
   body.appendChild(runtimeScript);
+  page.bootstrapScripts.push(runtimeScript);
 }
 
 // a literal `</script` inside generated source (e.g. from a string a user
@@ -148,6 +163,76 @@ function injectBootstrapScripts(page: Page, runtimeSrc: string, dev: boolean) {
 // is a security boundary and belongs with the code that produces them.
 function escapeScriptClose(js: string): string {
   return js.replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');
+}
+
+/**
+ * Rewrites `/<!--x/u` into `new RegExp("<!--x", "u")`, so that the escaper
+ * above only ever meets those bytes inside a string.
+ *
+ * `escapeScriptClose` works on generated TEXT and so cannot see what its
+ * matches are inside. In a string literal both of its replacements are
+ * harmless -- `"<\\!--"` is `"<!--"`, since an unknown escape in a string is
+ * the character itself. In a REGEX literal the same rewrite is a syntax
+ * error under `u` or `v`, where identity escapes are exactly what those
+ * flags took away. And the cost of one syntax error here is the whole props
+ * blob: the script does not parse, so the page keeps its server-rendered
+ * markup and loses every binding it has, with nothing reported anywhere.
+ *
+ * Moving the pattern into a string argument puts the bytes back in the
+ * context the escaper was written for. Confined to a pattern that actually
+ * contains `<`, so the output of every page that has no such regex -- which
+ * is nearly all of them -- is byte-for-byte what it was.
+ *
+ * The AST is walked generically rather than by node type: a regex can appear
+ * anywhere an expression can, and this pass only cares about one leaf.
+ */
+function unwrapRegexLiterals(node: unknown): void {
+  if (!node || typeof node !== 'object') {
+    return;
+  }
+  // Object.keys covers arrays too, whose indices assign back just as well
+  const container = node as Record<string, unknown>;
+  for (const key of Object.keys(container)) {
+    const child = container[key];
+    const constructed = regexAsConstructor(child);
+    if (constructed) {
+      container[key] = constructed;
+    } else {
+      unwrapRegexLiterals(child);
+    }
+  }
+}
+
+function regexAsConstructor(node: unknown): NewExpression | undefined {
+  if (!node || typeof node !== 'object') {
+    return undefined;
+  }
+  const literal = node as {
+    type?: string;
+    regex?: { pattern: string; flags: string };
+    value?: unknown;
+  };
+  if (literal.type !== 'Literal') {
+    return undefined;
+  }
+  // acorn carries `regex` alongside the compiled value; the value alone is
+  // enough where a pass upstream built the node by hand
+  const regex =
+    literal.regex ??
+    (literal.value instanceof RegExp
+      ? { pattern: literal.value.source, flags: literal.value.flags }
+      : undefined);
+  if (!regex || !regex.pattern.includes('<')) {
+    return undefined;
+  }
+  return {
+    type: 'NewExpression',
+    callee: { type: 'Identifier', name: 'RegExp' },
+    arguments: [
+      { type: 'Literal', value: regex.pattern },
+      { type: 'Literal', value: regex.flags },
+    ],
+  };
 }
 
 function generateScope(scope: Scope, forClient: boolean): ObjectExpression {

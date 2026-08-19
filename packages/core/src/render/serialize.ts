@@ -9,8 +9,10 @@
  * argument from the other end -- `structuredClone` and `BigInt` are both on
  * the globals list, so the language already presents these as unremarkable.
  *
- * The output goes into a `<script>`, so it is escaped for that: see
- * `escapeScriptText`.
+ * The output goes into a `<script>`, so it is escaped for that: no `<` from
+ * a transferred value survives `quote`, which is what keeps a database row
+ * holding `</script>` from closing the element it is sitting in.
+ * `escapeScriptText` backs that up for the text around it.
  */
 
 /** thrown for a value that cannot cross; the caller reports it and moves on */
@@ -77,7 +79,14 @@ function writeObject(value: object, path: Set<object>): string {
     return `new Date(${writeNumber(value.getTime())})`;
   }
   if (value instanceof RegExp) {
-    return `${value}`;
+    // the constructor rather than a literal, so that the pattern crosses as
+    // a string and every byte of it goes through `quote` like all the
+    // others. A literal would put user bytes into the output raw, which is
+    // the one thing this file is careful never to do -- and `/<!--x/u`
+    // written out raw is a syntax error waiting for `escapeScriptText`.
+    // `source` round-trips exactly, an empty regex included: it reads back
+    // as `(?:)`, which is what the literal shows too
+    return `new RegExp(${quote(value.source)},${quote(value.flags)})`;
   }
   if (value instanceof Map) {
     const parts = [...value].map(([k, v]) => `[${write(k, path)},${write(v, path)}]`);
@@ -127,6 +136,13 @@ function quoteKey(key: string): string {
 const ESCAPES: { [ch: string]: string } = {
   '\\': '\\\\',
   '"': '\\"',
+  // not a JS concern at all: `<` is escaped because of where this lands.
+  // `</script` and `<!--` both end an inline script's contents early, and
+  // neither can be spelled without this character -- so escaping it means
+  // no string, key or pattern from a `:server-` value can reach for the
+  // markup around it, whatever else it holds. Six bytes per `<` in
+  // transferred text, which is a price worth not thinking about
+  '<': '\\u003c',
   '\n': '\\n',
   '\r': '\\r',
   '\t': '\\t',
@@ -135,7 +151,7 @@ const ESCAPES: { [ch: string]: string } = {
   '\v': '\\v',
 };
 
-function quote(s: string): string {
+export function quote(s: string): string {
   let out = '"';
   // by code unit rather than code point: a lone surrogate -- half an emoji,
   // left behind by a slice somewhere upstream -- is not valid on its own and
@@ -178,10 +194,16 @@ function isPaired(s: string, i: number, code: number): boolean {
  * The props script has needed the `</script` half of this all along, where
  * the only source of one was a string the page's own author wrote. A server-only
  * value can carry bytes from anywhere -- a fetch response, a database row --
- * so this is a security boundary rather than a correctness detail, and it
- * covers `<!--` too: inside a script element that sequence opens a legacy
- * comment, after which the parser stops treating `</script` as the end of
- * the element until it sees `-->`.
+ * and it covers `<!--` too: inside a script element that sequence opens a
+ * legacy comment, after which the parser stops treating `</script` as the
+ * end of the element until it sees `-->`.
+ *
+ * For everything `serialize` produces this is now a BACKSTOP and nothing
+ * more: `quote` escapes `<` itself, so neither sequence can be spelled by
+ * the time the text arrives here. That is deliberate -- the guarantee is
+ * easier to check where the value is written than by reasoning about what a
+ * regular expression over finished source can and cannot see. It stays
+ * because the state blob is not the only thing that reaches a `<script>`.
  */
 export function escapeScriptText(js: string): string {
   return js.replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');

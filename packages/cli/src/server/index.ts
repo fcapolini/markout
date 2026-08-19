@@ -11,6 +11,7 @@ import {
   markout,
   type ErrorPages,
   type MarkoutLogger,
+  type MarkoutProps,
 } from "@markout-dev/express";
 import process from "process";
 import { AddressInfo } from "net";
@@ -118,6 +119,22 @@ export interface ServerProps {
    * ErrorPages -- a docroot holding a `404.html` needs neither set.
    */
   errorPages?: ErrorPages;
+  /**
+   * Put a CSP nonce on every `<script>` markout injects, and hand it back on
+   * `res.locals.markoutNonce`. See MarkoutProps.csp -- the header stays
+   * yours, and here `init` is where it goes:
+   *
+   *   new Server({
+   *     docroot,
+   *     csp: true,
+   *     init: app => app.use((req, res, next) => {
+   *       res.setHeader('Content-Security-Policy',
+   *         `script-src 'nonce-${res.locals.markoutNonce}'`);
+   *       next();
+   *     }),
+   *   })
+   */
+  csp?: MarkoutProps['csp'];
   /**
    * A cap on how often one address may ask for a PAGE: `true` for
    * DEFAULT_PAGE_LIMIT, an object to say it yourself, absent for none.

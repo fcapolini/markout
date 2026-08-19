@@ -4,7 +4,7 @@ import type { PageState, RuntimeError } from "../runtime/core/core-context";
 import { STATE_GLOBAL } from "../runtime/core/core-context";
 import type { Page } from "../compiler/ir/Page";
 import { ServerText, type ServerNode } from "../html/server-dom";
-import { escapeScriptText, serialize, UnserializableError } from "./serialize";
+import { escapeScriptText, quote, serialize, UnserializableError } from "./serialize";
 
 /**
  * Server-side render: evaluates the compiled propsString into real
@@ -29,8 +29,23 @@ export async function renderPage(
     /** what the host supplied, by name -- see Compiler's serverGlobals */
     globals?: { [name: string]: unknown };
     settle?: { timeoutMs?: number; maxRounds?: number };
+    /**
+     * A Content-Security-Policy nonce for this response, stamped on the
+     * scripts markout injected so a page can be served under a policy that
+     * does not say `unsafe-inline`.
+     *
+     * Supplied per render rather than per compile because that is what a
+     * nonce IS: reused across responses it stops being one. The compiled
+     * page is cached and this writes to it, which is the same arrangement
+     * the state script already lives with -- see emitState on why that has
+     * to land in the same shape every time rather than accumulate.
+     */
+    nonce?: string;
   }
 ): Promise<RuntimeError[]> {
+  // before the early return: a page with no props still carries whatever
+  // scripts stage7 gave it, and one served under a policy needs them stamped
+  applyNonce(page, props?.nonce);
   if (!page.propsString) {
     return [];
   }
@@ -91,6 +106,21 @@ export async function renderPage(
 }
 
 /**
+ * Stamps this response's CSP nonce on the scripts markout injected.
+ *
+ * Removed rather than left alone when there is none, for the same reason
+ * emitState clears the state script before writing it: the document is
+ * cached and reused, so anything a render leaves behind is the PREVIOUS
+ * request's answer -- and a stale nonce is worse than no nonce, since it is
+ * the one value that must never outlive the response it was minted for.
+ */
+function applyNonce(page: Page, nonce?: string) {
+  for (const script of page.bootstrapScripts) {
+    nonce ? script.setAttribute('nonce', nonce) : script.removeAttribute('nonce');
+  }
+}
+
+/**
  * Writes the collected `:server-` results into the reserved `<script>`.
  *
  * Serialized one value at a time so that one unsendable result costs only
@@ -120,7 +150,14 @@ function emitState(page: Page, state: PageState, errors: RuntimeError[]) {
     const parts: string[] = [];
     for (const [key, value] of Object.entries(values)) {
       try {
-        parts.push(`${JSON.stringify(key)}:${serialize(value)}`);
+        // `quote`, not `JSON.stringify`: a JSON string is not a JS string
+        // literal, and the difference is exactly the characters that matter
+        // here -- it leaves `<` and the two line-terminator code points
+        // alone. Names are the compiler's own and hold none of that, but
+        // this is the one place data reached the output without passing
+        // through the serializer's escaper, and one escaper is the property
+        // worth having
+        parts.push(`${quote(key)}:${serialize(value)}`);
       } catch (err) {
         errors.push({
           phase: 'transfer',
@@ -139,7 +176,7 @@ function emitState(page: Page, state: PageState, errors: RuntimeError[]) {
         });
       }
     }
-    parts.length && scopes.push(`${JSON.stringify(uid)}:{${parts.join(',')}}`);
+    parts.length && scopes.push(`${quote(uid)}:{${parts.join(',')}}`);
   }
   if (!scopes.length) {
     // nothing to send: leave no empty script behind, which is the common

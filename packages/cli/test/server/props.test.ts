@@ -5,6 +5,7 @@ import path from "path";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Server } from "../../src/server";
+import { cspNonce } from "@markout-dev/express";
 
 /**
  * The props that exist so an application does not have to hand-roll its own
@@ -48,6 +49,49 @@ describe("Server props", () => {
       await server.start();
       expect(server.app).toBe(first);
       await server.stop();
+    });
+  });
+
+  describe("csp", () => {
+    it("reaches the middleware, and `init` is where the header goes", async () => {
+      // The point of the prop being here at all: `Server` is the arrangement
+      // where nobody hand-rolls an app, so without it a project would have to
+      // abandon `Server` to get a nonce. `init` mounts before the pages,
+      // which is the order this has to happen in -- see cspNonce()
+      const server = new Server({
+        docroot: tempDir,
+        mute: true,
+        csp: true,
+        init: app => {
+          app.use(cspNonce());
+          app.use((_req: Request, res: Response, next: NextFunction) => {
+            res.setHeader(
+              "Content-Security-Policy",
+              `script-src 'nonce-${res.locals.markoutNonce}'`
+            );
+            next();
+          });
+        },
+      });
+      const app = await server.create();
+
+      const res = await request(app).get("/index.html");
+      expect(res.status).toBe(200);
+      const nonce = res.text.match(/nonce="([^"]*)"/)?.[1];
+      expect(nonce).toBeTruthy();
+      // the page names the same nonce the policy does, which is the whole
+      // contract between the two halves
+      expect(res.headers["content-security-policy"]).toBe(
+        `script-src 'nonce-${nonce}'`
+      );
+    });
+
+    it("is off unless asked for", async () => {
+      const server = new Server({ docroot: tempDir, mute: true });
+      const app = await server.create();
+      const res = await request(app).get("/index.html");
+
+      expect(res.text).not.toContain("nonce");
     });
   });
 

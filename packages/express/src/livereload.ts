@@ -52,8 +52,9 @@ export interface Reloader {
   handle(req: Request, res: Response): boolean;
   /** tell every open page to reload; coalesced */
   notify(): void;
-  /** the markup a dev page carries, `<script>` included */
-  script(): string;
+  /** the markup a dev page carries, `<script>` included, with this
+   *  response's CSP nonce on it when the server was asked for one */
+  script(nonce?: string): string;
   /** drop every open stream, so nothing holds the process open */
   close(): void;
 }
@@ -119,8 +120,8 @@ export function createReloader(bootId = `${Date.now()}-${process.pid}`): Reloade
       pending.unref();
     },
 
-    script() {
-      return RELOAD_SCRIPT;
+    script(nonce?: string) {
+      return reloadScript(nonce);
     },
 
     close() {
@@ -146,12 +147,31 @@ export function createReloader(bootId = `${Date.now()}-${process.pid}`): Reloade
  * itself rather than sitting there connected to a server that has forgotten
  * it. `EventSource` does the reconnecting.
  */
-const RELOAD_SCRIPT =
-  `<script data-markout-reload>(function(){` +
+const RELOAD_BODY =
+  `(function(){` +
   `var b=null,s=new EventSource(${JSON.stringify(RELOAD_REQ)});` +
   `s.addEventListener("hello",function(e){` +
   `if(b!==null&&b!==e.data){location.reload();return}b=e.data});` +
-  `s.addEventListener("reload",function(){location.reload()})})()</script>`;
+  `s.addEventListener("reload",function(){location.reload()})})()`;
+
+/**
+ * Carries the response's CSP nonce when there is one -- see MarkoutProps.csp.
+ *
+ * Dev is included in that feature rather than exempted from it, and this is
+ * the reason to be careful about it: the reload script is the one markout
+ * adds after the document has been serialized, so it is the one that would
+ * be left out. A dev server that breaks under the policy an application just
+ * adopted is the version of this feature people would meet first.
+ *
+ * The nonce is a base64 or caller-supplied token going into a double-quoted
+ * attribute, so the character that would end it early is `"`. Refused rather
+ * than escaped: a nonce containing one is a caller mistake, and one quietly
+ * rewritten no longer matches the header it was minted for.
+ */
+function reloadScript(nonce?: string): string {
+  const attr = nonce && !nonce.includes('"') ? ` nonce="${nonce}"` : '';
+  return `<script data-markout-reload${attr}>${RELOAD_BODY}</script>`;
+}
 
 /**
  * The script, put where a script belongs.

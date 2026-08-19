@@ -279,6 +279,16 @@ export class Page {
    * arrive too late. Removed again if the render produces nothing to send.
    */
   stateScript?: ServerElement;
+  /**
+   * Every `<script>` stage7 put in the page: the props, the state one when
+   * there is one, and the runtime.
+   *
+   * Held so a render can stamp a CSP nonce on them. Only markout's OWN
+   * scripts are in here -- a `<script>` the page author wrote is theirs to
+   * account for in their policy, and silently nonce-ing it would make this
+   * middleware the reason an injected script ran.
+   */
+  bootstrapScripts: ServerElement[] = [];
   /** where `stateScript` stood, if a render took it out for having nothing
    *  to say -- so a later render of the same cached page can put it back */
   stateScriptAt?: { parent: ServerContainerNode; before?: ServerNode };

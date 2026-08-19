@@ -214,15 +214,41 @@ The mitigation is structural: it is opt-in per value and spelled at the
 declaration, so nothing travels by accident. That is a better position than
 frameworks that serialize a whole store.
 
+Being in a `<script>` also makes it a thing a Content-Security-Policy has an
+opinion about, and the page carries two more scripts nobody wrote. See
+`MarkoutProps.csp`: the server stamps a per-response nonce on the scripts it
+injected and leaves the header to the application, since a policy has to
+cover everything else on the page too. A built page has no response to mint
+one per and wants hashes instead.
+
 ### Escaping
 
-[`escapeScriptClose`](../../packages/core/src/compiler/stages/stage7-generate.ts#L81)
-currently handles `</script` in compiler-generated code, where the only source
-of a stray `</script` is a string the page author wrote themselves. The state
-blob carries third-party bytes, so that path becomes security-relevant:
-`<!--` needs handling too (it flips the browser's script parser), and the
-serializer deserves a test with a hostile payload rather than inheriting a
-function written for a friendlier threat model.
+The blob lands inside a `<script>`, so the bytes that end one early are the
+whole problem: `</script`, and `<!--`, which opens a legacy comment inside
+which the parser stops recognizing the closing tag at all.
+
+The rule is that neither can be *spelled*. `quote` escapes `<` itself, as
+`\u003c`, and everything a transferred value carries -- strings, keys,
+regex patterns -- goes through it. A regex crosses as `new RegExp("...")`
+rather than as a literal for exactly this reason: the constructor puts its
+pattern inside a string, where the same escaper covers it.
+[`escapeScriptText`](../../packages/core/src/render/serialize.ts) still runs
+over the finished text and is where the guarantee used to live; for anything
+`serialize` produced it is now a backstop that cannot fire. Checking a
+property of what is written beats reasoning about what a regular expression
+over finished source can see.
+
+That last point is not theoretical. The escaper worked on text and could not
+tell a string from a regex, and its two replacements do not agree there:
+`"<\!--"` is just `"<!--"`, while `/<\!--/u` is a **syntax error**, since
+`u` is the flag that removed identity escapes. The cost of one such error is
+not one value but the whole blob, which then does not parse -- and on the
+props side, where an author's own `${/<!--x/u}` reached the same function,
+that meant a page that rendered its markup and then had no bindings at all,
+with nothing reported anywhere.
+[`unwrapRegexLiterals`](../../packages/core/src/compiler/stages/stage7-generate.ts)
+moves such a pattern into a string before codegen, and only when it contains
+`<`, so every other page's output is unchanged.
 
 ## Mechanics
 

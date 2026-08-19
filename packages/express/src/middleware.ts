@@ -1,4 +1,5 @@
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Request, RequestHandler, Response } from "express";
+import { randomBytes } from "crypto";
 import fs from "fs";
 import path from "path";
 import {
@@ -79,6 +80,44 @@ export interface MarkoutProps {
    * What a visitor gets instead of a bare status line. See ErrorPages.
    */
   errorPages?: ErrorPages;
+  /**
+   * Serve the pages with a CSP nonce on every `<script>` markout injects --
+   * the props, the transferred state, the runtime, and in dev the reload
+   * script. Off by default, because a page that carries a nonce nobody put
+   * in a policy is a page carrying a useless attribute.
+   *
+   * What this deliberately does NOT do is send the header. A framework that
+   * writes your Content-Security-Policy gets it wrong for your application:
+   * the policy has to cover your images, your styles, your analytics, none
+   * of which markout knows about. But a framework that will not tell you its
+   * nonce makes a strict policy impossible, since three of the scripts on
+   * the page are ones you did not write. So it mints the nonce and hands it
+   * back, and the policy stays yours:
+   *
+   *   app.use(cspNonce());          // mints it, BEFORE the header is written
+   *   app.use((req, res, next) => {
+   *     res.setHeader('Content-Security-Policy',
+   *       `script-src 'nonce-${res.locals.markoutNonce}'`);
+   *     next();
+   *   });
+   *   app.use(markout({ docroot, csp: true }));
+   *
+   * That order is not a style: markout ANSWERS a page request, so nothing
+   * mounted after it runs, and a header therefore has to be written on the
+   * way in -- by which time the nonce has to exist. `cspNonce()` is what
+   * makes it exist that early; `true` mints one itself only when nothing
+   * already has, so a page never carries a token its own policy never heard
+   * of. Pass a function instead where the application already has one --
+   * helmet mints `res.locals.cspNonce` -- so that one nonce covers the whole
+   * page rather than two of them disagreeing:
+   *
+   *   markout({ docroot, csp: (req, res) => res.locals.cspNonce })
+   *
+   * Either way it lands on `res.locals.markoutNonce` for whatever writes the
+   * header. It applies to SERVED pages only: `build` has no response to mint
+   * one per, and a built page needs its policy written with hashes instead.
+   */
+  csp?: boolean | ((req: Request, res: Response) => string);
 }
 
 /**
@@ -217,6 +256,7 @@ function pageCache(
 export function markout(props: MarkoutProps) {
   const docroot = props.docroot || process.cwd();
   const dev = props.dev ?? false;
+  const csp = props.csp;
   const logger = props.logger ?? defaultLogger;
   const globals = props.globals;
   const discovered = props.kits ? { kits: props.kits, errors: [] } : discoverKits(docroot);
@@ -300,7 +340,8 @@ export function markout(props: MarkoutProps) {
     pathname: string,
     req: Request,
     /** where this page's own failures go; see serveNotFound */
-    report: (msg: string) => void
+    report: (msg: string) => void,
+    nonce?: string
   ): Promise<string | undefined> {
     try {
       return await cache.use<string | undefined>(pathname, async page => {
@@ -311,6 +352,7 @@ export function markout(props: MarkoutProps) {
         const runtimeErrors = await renderPage(page, {
           origin: originOf(req),
           globals,
+          nonce,
         });
         runtimeErrors.forEach(e =>
           logger('error', `[markout] ${pathname} ${formatRuntimeError(e)}`)
@@ -335,12 +377,14 @@ export function markout(props: MarkoutProps) {
    */
   let saidNoNotFound = false;
 
-  async function serveNotFound(req: Request, res: Response) {
+  async function serveNotFound(req: Request, res: Response, nonce?: string) {
     const pathname = notFoundPage();
     const report = (msg: string) => {
       !saidNoNotFound && logger('error', `[markout] ${msg}`);
     };
-    const html = pathname ? await renderErrorPage(pathname, req, report) : undefined;
+    const html = pathname
+      ? await renderErrorPage(pathname, req, report, nonce)
+      : undefined;
     if (html === undefined) {
       if (pathname && !saidNoNotFound) {
         logger('warn', `[markout] not-found page "${pathname}" could not be served`);
@@ -352,7 +396,7 @@ export function markout(props: MarkoutProps) {
     res.status(404).header('Content-Type', 'text/html;charset=UTF-8');
     // in dev the 404 page reloads like any other, which is what a mistyped
     // link wants: fixing the page it was pointing at brings it up here
-    res.send(reloader ? withReloadScript(html, reloader.script()) : html);
+    res.send(reloader ? withReloadScript(html, reloader.script(nonce)) : html);
   }
 
   // This path is answered here, before the filesystem is consulted, so a real
@@ -399,6 +443,18 @@ export function markout(props: MarkoutProps) {
       return serveKitAsset(req, res, next, resolver);
     }
 
+    // Once this request is known to be for a page, and before anything can
+    // answer it: every path from here can end in markup, the not-found and
+    // error pages included, and in dev those carry the reload script -- so
+    // an error page is the response most likely to be the first one a
+    // policy rejects. Not minted for the runtime, a kit asset or the reload
+    // stream, none of which is a document and none of which has a script to
+    // stamp.
+    const nonce = mintNonce(csp, req, res);
+    if (nonce !== undefined) {
+      res.locals.markoutNonce = nonce;
+    }
+
     if (i < 0 && !req.path.endsWith('/') && (await isDirectory(req.path, resolver))) {
       res.redirect(301, `${req.path}/`);
       return;
@@ -406,7 +462,7 @@ export function markout(props: MarkoutProps) {
 
     const pathname = await resolvePath(req, i, resolver);
     if (!pathname) {
-      return serveNotFound(req, res);
+      return serveNotFound(req, res, nonce);
     }
 
     // A kit's pages belong to the site only where a page asked for them. The
@@ -414,7 +470,7 @@ export function markout(props: MarkoutProps) {
     // SITE publishes, not about where a pathname may land.
     const kit = resolver.rootFor(pathname).kit;
     if (kit && !(await allowedKits()).has(resolver.rootFor(pathname).prefix)) {
-      return serveNotFound(req, res);
+      return serveNotFound(req, res, nonce);
     }
 
     // a union rather than two calls, so that everything touching the
@@ -426,7 +482,11 @@ export function markout(props: MarkoutProps) {
       if (page.source.errors.length) {
         return { errors: page.source.errors };
       }
-      const runtimeErrors = await renderPage(page, { origin: originOf(req), globals });
+      const runtimeErrors = await renderPage(page, {
+        origin: originOf(req),
+        globals,
+        nonce,
+      });
       // serialized HERE, inside this page's turn rather than after it: the
       // document holds this request's data only until the next render
       // starts writing over it
@@ -438,7 +498,7 @@ export function markout(props: MarkoutProps) {
         served.errors.length === 1 &&
         served.errors[0].msg === `File not found "${pathname}"`
       ) {
-        return serveNotFound(req, res);
+        return serveNotFound(req, res, nonce);
       }
       // Always, whatever the mode. These say which file will not compile and
       // where -- which is a report for whoever can fix it, and used to be
@@ -450,7 +510,7 @@ export function markout(props: MarkoutProps) {
       // reloading matters MOST here: an error page is where someone is about
       // to fix the file, and without it that fix leaves the browser showing
       // the error until somebody presses refresh
-      return serveErrorPage(served.errors, res, dev, errorFile, reloader);
+      return serveErrorPage(served.errors, res, dev, errorFile, reloader, nonce);
     }
 
     // always logged, whatever the mode
@@ -458,13 +518,77 @@ export function markout(props: MarkoutProps) {
       logger('error', `[markout] ${pathname} ${formatRuntimeError(e)}`)
     );
     if (dev && served.runtimeErrors.length) {
-      return serveRuntimeErrorPage(served.runtimeErrors, res, reloader);
+      return serveRuntimeErrorPage(served.runtimeErrors, res, reloader, nonce);
     }
 
     res.header('Content-Type', 'text/html;charset=UTF-8');
     const html = '<!doctype html>\n' + served.html;
-    res.send(reloader ? withReloadScript(html, reloader.script()) : html);
+    res.send(reloader ? withReloadScript(html, reloader.script(nonce)) : html);
   }
+}
+
+/**
+ * This response's CSP nonce, or nothing when the caller did not ask for one.
+ *
+ * 16 bytes from `crypto.randomBytes`, which is 128 bits of unpredictability
+ * -- the property a nonce needs and the only one it needs. Base64 rather
+ * than hex to keep it short, and both are safe in a header and an attribute.
+ *
+ * A caller-supplied function is trusted with what it returns, including the
+ * decision to return nothing: an application whose policy is conditional --
+ * a nonce on its own pages and none on a proxied route -- expresses that by
+ * returning an empty string, and markout stamps nothing.
+ */
+function mintNonce(
+  csp: MarkoutProps['csp'],
+  req: Request,
+  res: Response
+): string | undefined {
+  if (!csp) {
+    return undefined;
+  }
+  if (typeof csp === 'function') {
+    return csp(req, res) || undefined;
+  }
+  // One already there wins. It has to: markout ANSWERS a page request, so
+  // nothing mounted after it runs, and a header naming a nonce therefore has
+  // to be written before this middleware is reached -- which means the nonce
+  // has to exist before it too. `cspNonce()` is that, and minting a second
+  // one here would leave the page carrying a token its own policy never
+  // heard of.
+  const existing = res.locals.markoutNonce;
+  if (typeof existing === 'string' && existing) {
+    return existing;
+  }
+  return randomBytes(16).toString('base64');
+}
+
+/**
+ * Mints this response's nonce early, for an application that writes its own
+ * Content-Security-Policy header.
+ *
+ * Mounted BEFORE `markout()`, which is the only order that can work: a page
+ * request ends at markout, so a header has to be set on the way in, and a
+ * header naming a nonce needs the nonce to exist by then. This puts it on
+ * `res.locals.markoutNonce`; `markout({ csp: true })` finds it there and
+ * stamps the same value on the scripts it injects.
+ *
+ *   app.use(cspNonce());
+ *   app.use((req, res, next) => {
+ *     res.setHeader('Content-Security-Policy',
+ *       `script-src 'nonce-${res.locals.markoutNonce}'`);
+ *     next();
+ *   });
+ *   app.use(markout({ docroot, csp: true }));
+ *
+ * An application already minting one -- helmet's `res.locals.cspNonce` --
+ * does not need this and should point `csp` at what it has instead.
+ */
+export function cspNonce(): RequestHandler {
+  return function (_req: Request, res: Response, next: NextFunction) {
+    res.locals.markoutNonce ??= randomBytes(16).toString('base64');
+    next();
+  };
 }
 
 /**
@@ -650,7 +774,8 @@ function serveErrorPage(
   res: Response,
   dev: boolean,
   errorFile?: string,
-  reloader?: Reloader
+  reloader?: Reloader,
+  nonce?: string
 ) {
   if (!dev) {
     if (errorFile) {
@@ -683,7 +808,7 @@ function serveErrorPage(
   p.push('</ul></body></html>');
   res.header('Content-Type', 'text/html;charset=UTF-8');
   const html = p.join('');
-  res.status(500).send(reloader ? withReloadScript(html, reloader.script()) : html);
+  res.status(500).send(reloader ? withReloadScript(html, reloader.script(nonce)) : html);
 }
 
 /**
@@ -697,7 +822,8 @@ function serveErrorPage(
 function serveRuntimeErrorPage(
   errors: RuntimeError[],
   res: Response,
-  reloader?: Reloader
+  reloader?: Reloader,
+  nonce?: string
 ) {
   const p = new Array<string>();
   p.push(`<!doctype html><html><head>
@@ -708,5 +834,5 @@ function serveRuntimeErrorPage(
   p.push('</ul></body></html>');
   res.header('Content-Type', 'text/html;charset=UTF-8');
   const html = p.join('');
-  res.status(500).send(reloader ? withReloadScript(html, reloader.script()) : html);
+  res.status(500).send(reloader ? withReloadScript(html, reloader.script(nonce)) : html);
 }

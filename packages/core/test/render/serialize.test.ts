@@ -152,6 +152,46 @@ describe('serialize: what cannot cross', () => {
   });
 });
 
+describe('serialize: the script boundary', () => {
+  // What makes the blob safe is that `<` cannot survive `quote`, so neither
+  // `</script` nor `<!--` can be spelled by anything a value carries. That
+  // is one property over the whole output, which is worth asserting as one.
+  const hostile = [
+    '</script><script>alert(1)</script>',
+    '<!-- <\/script',
+    /<!--x/u,
+    { '</script>': '<img onerror=alert(1)>' },
+    [new Map([['</script>', new Set(['<!--'])]])],
+    new URL('https://x.test/?q=%3C/script%3E<!--'),
+  ];
+
+  it.each(hostile)('emits no `<` at all for %s', value => {
+    expect(serialize(value)).not.toContain('<');
+  });
+
+  it.each(hostile)('still means what it said for %s', value => {
+    expect(roundTrip(value)).toStrictEqual(value);
+  });
+
+  it('sends a regex through the constructor rather than as a literal', () => {
+    // `/<!--x/u` written out raw meets `escapeScriptText` and comes back as
+    // `/<\\!--x/u`, and an identity escape is a syntax error under `u`: the
+    // whole blob would fail to parse and every value in it would be lost,
+    // not just this one. See stage7-generate's unwrapRegexLiterals for the
+    // same fix on the same bug in compiler-generated source
+    expect(serialize(/<!--x/u)).toBe('new RegExp("\\u003c!--x","u")');
+    const emitted = escapeScriptText(`window.S = ${serialize(/<!--x/u)};`);
+    const window: Record<string, unknown> = {};
+    // eslint-disable-next-line no-new-func
+    expect(() => new Function('window', emitted)(window)).not.toThrow();
+    expect(window.S).toStrictEqual(/<!--x/u);
+  });
+
+  it('round-trips an empty regex', () => {
+    expect(roundTrip(new RegExp(''))).toStrictEqual(new RegExp(''));
+  });
+});
+
 describe('escapeScriptText', () => {
   it('neutralizes a closing script tag in any case', () => {
     expect(escapeScriptText('"</script>"')).toBe('"<\\/script>"');

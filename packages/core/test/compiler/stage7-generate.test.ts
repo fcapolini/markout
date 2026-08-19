@@ -241,6 +241,41 @@ describe('stage7-generate bootstrap scripts', () => {
     expect(text).not.toMatch(/<\/script>/i);
     expect(text).toContain('<\\/script>');
   });
+
+  // The escaper works on finished source and cannot tell a string from a
+  // regex. Its `<!--` rewrite is harmless in the first and a syntax error in
+  // the second under `u`/`v`, where identity escapes were removed -- and the
+  // blast radius is the whole page: the props script does not parse, so
+  // nothing binds, nothing updates, and no error is raised anywhere. So the
+  // pattern is moved into a string before the escaper ever sees it.
+  it('keeps the props script parseable when an expression holds a unicode regex', async () => {
+    const p = compilePage('<html :hit=${/<!--x/u.test("a")}></html>');
+    const [propsScript] = bodyScripts(p);
+    const text = (propsScript.childNodes[0] as any).textContent as string;
+
+    expect(text).toContain('new RegExp(');
+    expect(text).not.toContain('/<');
+    // the whole point: it runs
+    // eslint-disable-next-line no-new-func
+    expect(() => new Function('window', text)({})).not.toThrow();
+    // and still says what the author wrote
+    const window: any = {};
+    // eslint-disable-next-line no-new-func
+    new Function('window', text)(window);
+    const scope = window.__MARKOUT_PROPS;
+    const hit = scope.values['hit'] ?? scope.children[0]?.values['hit'];
+    expect(hit.exp.call({})).toBe(false);
+    expect(hit.exp.call({}) === /<!--x/u.test('a')).toBe(true);
+  });
+
+  it('leaves a regex without the character alone', async () => {
+    const p = compilePage('<html :hit=${/ab+/gi.test("abb")}></html>');
+    const [propsScript] = bodyScripts(p);
+    const text = (propsScript.childNodes[0] as any).textContent as string;
+
+    expect(text).toContain('/ab+/gi');
+    expect(text).not.toContain('new RegExp(');
+  });
 });
 
 describe('stage7-generate full pipeline: dependency codegen', () => {

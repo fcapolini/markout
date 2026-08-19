@@ -18,6 +18,7 @@
 // the middleware itself, and what a page request may be answered with
 export {
   CLIENT_CODE_REQ,
+  cspNonce,
   markout,
   resolvePath,
   type ErrorPages,
