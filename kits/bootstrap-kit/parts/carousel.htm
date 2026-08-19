@@ -59,8 +59,8 @@
              alt=${slide.alt ?? ''}>
         <div class="carousel-caption d-none d-md-block"
              :if=${captions && (slide.title || slide.text)}>
-          <h5 :for-data=${slide.title}>${slide.title}</h5>
-          <p :for-data=${slide.text}>${slide.text}</p>
+          <h5 :if=${slide.title}>${slide.title}</h5>
+          <p :if=${slide.text}>${slide.text}</p>
         </div>
       </div>
     </div>

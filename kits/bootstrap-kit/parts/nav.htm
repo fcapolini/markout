@@ -46,7 +46,7 @@
         role=${toggle ? 'presentation' : null}>
       <button class="nav-link"
               type="button"
-              :for-data=${toggle}
+              :if=${toggle}
               :class-active=${item.active}
               :attr-disabled=${item.disabled}
               data-bs-toggle=${toggle}
@@ -55,7 +55,7 @@
               aria-selected=${item.active ? 'true' : 'false'}>${item.name}</button>
 
       <a class="nav-link"
-         :if=${!toggle}
+         :else
          :class-active=${item.active}
          :class-disabled=${item.disabled}
          href=${item.link ?? null}

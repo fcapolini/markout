@@ -7,11 +7,16 @@
     `role="alert"` so it is announced, and the `fade show` + close button
     combination that a dismissible one needs to animate out.
 
-    `:heading` and the dismiss button are optional REGIONS. Markout has no
-    `:if` yet, so an optional region is a `:for-each` over a one-or-zero
-    element list — the documented way to say "render this only when". It
-    works everywhere except around a `<:slot>`, which is why the alert's body
-    is the slot and its heading is a parameter.
+    `:heading` and the dismiss button are optional REGIONS, and both are
+    `:if`: there is something to decide, not something to show. Truthiness
+    is what is wanted of a heading — `:heading=""` is a heading nobody
+    asked for, and `:for-data`'s `!= null` would have rendered the empty
+    `<h4>` around it.
+
+    The body is a `<:slot>` and the heading a parameter because that is
+    what each of them is — markup in one case, text in the other. It used
+    to be forced as well: an optional region was a `:for-each` over a
+    one-or-zero list, and a `<:slot>` cannot sit inside one of those.
   -->
   <:define tag="bs-alert:div"
            role="alert"
@@ -31,7 +36,7 @@
            :class-show=${dismissible}
   >
     <h4 class="alert-heading"
-        :for-data=${heading}>${heading}</h4>
+        :if=${heading}>${heading}</h4>
 
     <:slot />
 

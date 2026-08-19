@@ -46,7 +46,7 @@
            :class-table-responsive=${responsive}
   >
     <table class=${_class}>
-      <caption :for-data=${caption}>${caption}</caption>
+      <caption :if=${caption}>${caption}</caption>
 
       <thead class=${headVariant ? `table-${headVariant}` : null}>
         <tr>
