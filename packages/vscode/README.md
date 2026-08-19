@@ -41,7 +41,8 @@ HTML extension keep working exactly as they did.
 - **Completion** of names in scope: `body.` offers what is in `body`, a bare
   `${` offers everything visible from there, `<x-` offers the tags every
   imported kit defines, and `:` inside such a tag offers the parameters that
-  one takes.
+  one takes. The values every scope supplies — `$id`, `$parent`, `$host`,
+  `$value`, `$set`, `$dom` — come last, after what the page declares.
 - **Hover, rename and find-references** across the pages and fragments a
   name actually reaches.
 - **Syntax highlighting** for `${…}`, `:`-attributes, `<:…>` directives and

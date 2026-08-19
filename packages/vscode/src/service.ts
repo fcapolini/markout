@@ -335,9 +335,18 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
             isIncomplete: false,
             items: found.map((item, i) => ({
               label: item.name,
-              // Field for a value, Module for a scope: the distinction the
-              // language makes, in the vocabulary an editor already draws
-              kind: item.kind === 'value' ? 5 : 9,
+              // the distinction the language makes, in the vocabulary an
+              // editor already draws: Field for a value, Module for a scope,
+              // Function for a system value that is called and Property for
+              // one that is read
+              kind:
+                item.kind === 'value'
+                  ? 5
+                  : item.kind === 'scope'
+                    ? 9
+                    : item.call
+                      ? 3
+                      : 10,
               detail: item.detail,
               // `visibleFrom` answers nearest-first, and a list sorted
               // alphabetically would bury the values of the scope actually

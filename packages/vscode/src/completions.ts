@@ -18,7 +18,9 @@ import { compilePage } from './pages';
 
 export interface Completion {
   name: string;
-  kind: 'value' | 'scope';
+  kind: 'value' | 'scope' | 'system';
+  /** a system value that is called rather than read, e.g. `$set` */
+  call?: boolean;
   /** where it was declared, for the detail line */
   detail?: string;
 }
@@ -162,6 +164,15 @@ function blanked(text: string, from: number, to: number): string {
 }
 
 function describe(visible: Visible): Completion {
+  if (visible.kind === 'system') {
+    // its own detail, since there is no declaration anywhere to read one off
+    return {
+      name: visible.name,
+      kind: 'system',
+      call: visible.call,
+      detail: visible.detail,
+    };
+  }
   if (visible.kind === 'scope') {
     const tag = visible.scope?.e?.tagName?.toLowerCase();
     return { name: visible.name, kind: 'scope', detail: tag ? `<${tag}>` : 'scope' };

@@ -297,7 +297,7 @@ export function visibleFrom(from: Value, path: string[] = []): Visible[] {
       }
     }
   }
-  return found;
+  return [...found, ...SYSTEM_VALUES];
 }
 
 /**
@@ -340,10 +340,59 @@ export interface Reference {
 /** a name that resolves, and what it resolves to */
 export interface Visible {
   name: string;
-  kind: 'value' | 'scope';
+  kind: 'value' | 'scope' | 'system';
   value?: Value;
   scope?: Scope;
+  /** for a system value, which has no declaration to read one off */
+  detail?: string;
+  /** a system value that is called rather than read */
+  call?: boolean;
 }
+
+/**
+ * What every scope supplies, offered last.
+ *
+ * These were left out of the list for a long time on the grounds that they
+ * are "the runtime's own bookkeeping, which nobody writes by hand", and that
+ * stopped being true some way back: the bootstrap kit and the demo site write
+ * `$id`, `$host` and `$dom` forty-seven times between them, building HTML ids
+ * and asking what they are inside. `$set` settled it -- a function whose
+ * whole reason for existing is that it is the non-obvious spelling for a
+ * guarded write, which is exactly the thing an author needs prompting for.
+ *
+ * Last in the list, because they are rarer than what the page declares and
+ * `visibleFrom` answers nearest-first.
+ */
+const SYSTEM_VALUES: Visible[] = [
+  { name: RT_ID_VALUE_KEY, kind: 'system', detail: "this scope's id, unique in the page" },
+  {
+    name: RT_PARENT_VALUE_KEY,
+    kind: 'system',
+    detail: 'the enclosing scope -- where this markup was written',
+  },
+  {
+    name: RT_HOST_VALUE_KEY,
+    kind: 'system',
+    detail: 'the custom-tag instance this markup is inside, if any',
+  },
+  {
+    name: RT_VALUE_FN_KEY,
+    kind: 'system',
+    call: true,
+    detail: '$value("name") -- looks a value up by name',
+  },
+  {
+    name: RT_SET_FN_KEY,
+    kind: 'system',
+    call: true,
+    detail: '$set("name", value) -- assigns, and answers whether it landed',
+  },
+  {
+    name: RT_DOM_VALUE_KEY,
+    kind: 'system',
+    detail: "this scope's own element; browser-only",
+  },
+];
 
 /** what a reference resolves to: a value, or a scope that has a name */
 export type Declaration = { value: Value; scope?: undefined } | { scope: Scope; value?: undefined };
