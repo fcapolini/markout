@@ -4,7 +4,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { Server } from '../../src/server';
 import { Compiler } from '@markout-dev/core';
 import { renderPage } from '@markout-dev/core';
@@ -137,5 +137,74 @@ describe('the middleware page cache', () => {
     );
     expect(after).toContain('two');
     expect(after).not.toContain('>one<');
+  });
+});
+
+/**
+ * What a cold page costs when several visitors want it at once.
+ *
+ * The cache memoizes a compiled page, and the miss and the store used to sit
+ * on opposite sides of the compile -- so every request that arrived while one
+ * was in flight found an empty cache and started another. Ten at once were
+ * ten compiles of the same file, nine of them rendered on a copy that was
+ * then dropped. Not a correctness bug, which is why nothing caught it: it is
+ * a page arriving late for a reason no log mentions.
+ */
+describe('several requests for a page nobody has compiled yet', () => {
+  let dir: string;
+  let app: Application;
+  let server: Server;
+  let compiles: MockInstance;
+
+  beforeAll(async () => {
+    dir = tmp('markout-herd-', {
+      'p.html': '<html :n=${1}><body>${n}</body></html>',
+      'q.html': '<html :n=${2}><body>${n}</body></html>',
+    });
+    server = new Server({ docroot: dir, mute: true });
+    app = await server.create();
+    // the fixture was written a moment before the watcher started, and
+    // FSEvents delivers when it gets round to it -- so an event about the
+    // setup can still arrive, empty the cache, and turn a count of one into
+    // two. Waited out once here rather than tolerated in every assertion,
+    // since the count IS the claim these tests make
+    await new Promise(r => setTimeout(r, 400));
+    compiles = vi.spyOn(Compiler.prototype, 'compile');
+  });
+
+  afterAll(async () => {
+    compiles.mockRestore();
+    fs.existsSync(dir) && fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('compiles it once, and serves every one of them', async () => {
+    compiles.mockClear();
+    const answers = await Promise.all(
+      Array.from({ length: 10 }, () => request(app).get('/p.html'))
+    );
+    expect(compiles.mock.calls.filter(c => c[0] === '/p.html')).toHaveLength(1);
+    expect(answers.map(r => r.status)).toStrictEqual(Array(10).fill(200));
+    // and every one of them was rendered from the page that compile produced,
+    // rather than from a private copy: they share the document, so they share
+    // the queue that keeps two renders from being inside it at once
+    expect(new Set(answers.map(r => r.text)).size).toBe(1);
+  });
+
+  it('does not keep a compile that threw', async () => {
+    // A page that fails to COMPILE is not this case: it resolves, carrying
+    // its errors, and is cached like any other -- which is right, since the
+    // watcher clears it the moment the author saves. This is the other kind,
+    // where the compile itself blew up: a half-written file, an exhausted
+    // descriptor limit, a bug in a stage. The entry is installed before the
+    // compile is awaited, so without taking it back a rejection would answer
+    // for that page until something in the docroot moved, which such a
+    // failure need not involve.
+    compiles.mockClear();
+    compiles.mockRejectedValueOnce(new Error('too many open files'));
+    expect((await request(app).get('/q.html')).status).toBe(500);
+    const after = await request(app).get('/q.html');
+    expect(after.status).toBe(200);
+    expect(after.text).toContain('2');
+    expect(compiles.mock.calls.filter(c => c[0] === '/q.html')).toHaveLength(2);
   });
 });
