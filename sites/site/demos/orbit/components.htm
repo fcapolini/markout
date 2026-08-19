@@ -178,22 +178,22 @@
 -->
 <:define tag="dash-panel:div"
 
-         // parameters
-         :extra=${null}       // extra classes for this instance
-         :heading=${''}
-         :note=${null}        // a line of explanation under the heading
-         :flush=${false}      // no body padding, for a table or a list
+  // parameters
+  :extra=${null}       // extra classes for this instance
+  :heading=${''}
+  :note=${null}        // a line of explanation under the heading
+  :flush=${false}      // no body padding, for a table or a list
 
-         // private
-         :_class=${['card h-100', extra].filter(s => s).join(' ')}
+  // private
+  :_class=${['card h-100', extra].filter(s => s).join(' ')}
 
-         class=${_class}
+  class=${_class}
 >
   <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
     <div>
       <span class="fw-semibold">${heading}</span>
       <span class="d-block small text-body-secondary"
-            :for-data=${note}>${note}</span>
+        :for-data=${note}>${note}</span>
     </div>
     <div class="d-flex align-items-center gap-2">
       <:slot name="tools" />
@@ -218,72 +218,72 @@
   inside foreign content as a template. Each shape is a computed string.
 -->
 <:define tag="dash-chart:div"
-         class="dash-chart ${extra ?? ''}"
+  class="dash-chart ${extra ?? ''}"
 
-         // parameters
-         :extra=${null}       // extra classes for this instance
-         :points=${[]}
-         :stroke=${'var(--dash-accent)'}
-         :fill=${true}
-         :tall=${false}
+  // parameters
+  :extra=${null}       // extra classes for this instance
+  :points=${[]}
+  :stroke=${'var(--dash-accent)'}
+  :fill=${true}
+  :tall=${false}
 
-         /*
-           private: the plot box, in the chart's own coordinates. A tall
-           chart is taller in its own units as well as in CSS, so the
-           stroke and the marker keep their proportions either way.
+  /*
+    private: the plot box, in the chart's own coordinates. A tall
+    chart is taller in its own units as well as in CSS, so the
+    stroke and the marker keep their proportions either way.
 
-           The band the readings actually cover, not zero to peak: a
-           series that only moves between 99.4 and 100 is still a shape.
-         */
-         :_h=${tall ? 90 : 30}
-         :_top=${2}
-         :_low=${points.length ? Math.min(...points) : 0}
-         :_high=${points.length ? Math.max(...points) : 1}
-         :_range=${Math.max(_high - _low, Math.abs(_high) / 1000, 1e-6)}
-         :_xy=${points.map((v, i) => [
-           points.length < 2 ? 0 : (i / (points.length - 1)) * 100,
-           _top + (1 - (v - _low) / _range) * (_h - _top * 2),
-         ])}
-         :_line=${_xy.map(p => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join(' ')}
-         :_area=${`0,${_h} ${_line} 100,${_h}`}
-         :_last=${_xy.length ? _xy[_xy.length - 1] : [0, 0]}
+    The band the readings actually cover, not zero to peak: a
+    series that only moves between 99.4 and 100 is still a shape.
+  */
+  :_h=${tall ? 90 : 30}
+  :_top=${2}
+  :_low=${points.length ? Math.min(...points) : 0}
+  :_high=${points.length ? Math.max(...points) : 1}
+  :_range=${Math.max(_high - _low, Math.abs(_high) / 1000, 1e-6)}
+  :_xy=${points.map((v, i) => [
+    points.length < 2 ? 0 : (i / (points.length - 1)) * 100,
+    _top + (1 - (v - _low) / _range) * (_h - _top * 2),
+  ])}
+  :_line=${_xy.map(p => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join(' ')}
+  :_area=${`0,${_h} ${_line} 100,${_h}`}
+  :_last=${_xy.length ? _xy[_xy.length - 1] : [0, 0]}
 
-         /*
-           The marker is drawn as STROKE rather than as a shape. The box
-           is stretched to fill its element (`preserveAspectRatio="none"`)
-           and x and y are stretched by different amounts, so a <circle>
-           comes out as an ellipse — wider the wider the chart. A
-           zero-length path with a round cap is a dot whose size comes
-           from `stroke-width`, and `vector-effect="non-scaling-stroke"`
-           keeps that in device pixels, so it stays round at any size.
-         */
-         :_dot=${`M ${_last[0].toFixed(2)} ${_last[1].toFixed(2)}` +
-                 ` L ${_last[0].toFixed(2)} ${_last[1].toFixed(2)}`}
+  /*
+    The marker is drawn as STROKE rather than as a shape. The box
+    is stretched to fill its element (`preserveAspectRatio="none"`)
+    and x and y are stretched by different amounts, so a <circle>
+    comes out as an ellipse — wider the wider the chart. A
+    zero-length path with a round cap is a dot whose size comes
+    from `stroke-width`, and `vector-effect="non-scaling-stroke"`
+    keeps that in device pixels, so it stays round at any size.
+  */
+  :_dot=${`M ${_last[0].toFixed(2)} ${_last[1].toFixed(2)}` +
+          ` L ${_last[0].toFixed(2)} ${_last[1].toFixed(2)}`}
 >
   <svg viewBox="0 0 100 ${_h}"
-       preserveAspectRatio="none"
-       style="height: ${tall ? '11rem' : '2.5rem'}"
-       role="img"
-       aria-label="Trend of the last ${points.length} readings">
+    preserveAspectRatio="none"
+    style="height: ${tall ? '11rem' : '2.5rem'}"
+    role="img"
+    aria-label="Trend of the last ${points.length} readings">
     <polyline points=${_area}
-              fill=${stroke}
-              fill-opacity=${fill ? '0.12' : '0'}
-              stroke="none" />
+      fill=${stroke}
+      fill-opacity=${fill ? '0.12' : '0'}
+      stroke="none" />
 
     <polyline points=${_line}
-              fill="none"
-              stroke=${stroke}
-              stroke-width="2"
-              stroke-linejoin="round"
-              stroke-linecap="round"
-              vector-effect="non-scaling-stroke" />
+      fill="none"
+      stroke=${stroke}
+      stroke-width="2"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+      vector-effect="non-scaling-stroke" />
 
     <path d=${_dot}
-          fill="none"
-          stroke=${stroke}
-          stroke-width="5"
-          stroke-linecap="round"
-          vector-effect="non-scaling-stroke" />
+      fill="none"
+      stroke=${stroke}
+      stroke-width="5"
+      stroke-linecap="round"
+      vector-effect="non-scaling-stroke" />
   </svg>
 </:define>
 
@@ -293,31 +293,32 @@
   twice.
 -->
 <:define tag="dash-stat:div"
-         class="card dash-stat h-100 ${extra ?? ''}"
+  class="card dash-stat h-100 ${extra ?? ''}"
 
-         // parameters
-         :extra=${null}       // extra classes for this instance
-         :caption=${''}
-         :figure=${''}
-         :unit=${null}
-         :delta=${null}       // a number: the change, in percent
-         :trend=${[]}
-         :tone=${null}        // overrides the sign-derived colour
+  // parameters
+  :extra=${null}       // extra classes for this instance
+  :caption=${''}
+  :figure=${''}
+  :unit=${null}
+  :delta=${null}       // a number: the change, in percent
+  :trend=${[]}
+  :tone=${null}        // overrides the sign-derived colour
 
-         // private
-         :_tone=${tone ?? (delta == null ? 'secondary' : delta >= 0 ? 'success' : 'danger')}
-         :_arrow=${delta == null ? '' : delta >= 0 ? '▲' : '▼'}
+  // private
+  :_tone=${tone ?? (delta == null ? 'secondary' : delta >= 0 ? 'success' : 'danger')}
+  :_arrow=${delta == null ? '' : delta >= 0 ? '▲' : '▼'}
 >
   <div class="card-body">
     <div class="d-flex justify-content-between align-items-start gap-2">
       <div class="text-body-secondary small text-uppercase">${caption}</div>
       <bs-badge :variant=${_tone}
-                :pill
-                :for-data=${delta}>${_arrow} ${Math.abs(delta).toFixed(1)}%</bs-badge>
+        :pill
+        :for-data=${delta}>${_arrow} ${Math.abs(delta).toFixed(1)}%</bs-badge>
     </div>
 
-    <div class="dash-figure mt-1">${figure}<span class="fs-6 fw-normal text-body-secondary"
-                                                 :for-data=${unit}> ${unit}</span></div>
+    <div class="dash-figure mt-1">${figure}<span
+        class="fs-6 fw-normal text-body-secondary"
+        :for-data=${unit}> ${unit}</span></div>
 
     <div class="mt-2">
       <dash-chart :points=${trend} />
@@ -335,19 +336,19 @@
   written in <body> agree on what "degraded" looks like.
 -->
 <:define tag="dash-dot:span"
-         class="d-inline-flex align-items-center gap-2 ${extra ?? ''}"
+  class="d-inline-flex align-items-center gap-2 ${extra ?? ''}"
 
-         // parameters
-         :extra=${null}       // extra classes for this instance
-         :state=${'ok'}
-         :quiet=${false}      // the dot alone, without the word
+  // parameters
+  :extra=${null}       // extra classes for this instance
+  :state=${'ok'}
+  :quiet=${false}      // the dot alone, without the word
 
-         // private
-         :_tone=${theme.tone(state)}
+  // private
+  :_tone=${theme.tone(state)}
 >
   <span class="dash-dot bg-${_tone}"></span>
   <span :if=${!quiet}
-        class="text-capitalize">${state}</span>
+    class="text-capitalize">${state}</span>
 </:define>
 
 </lib>

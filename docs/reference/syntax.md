@@ -438,6 +438,47 @@ rather than `:first-child`, and `:nth-of-type` rather than `:nth-child`. See
 | `<:slot name="x" />` | A named slot. |
 | `:slot="x"` | On a usage site's child: which slot it fills. Unaddressed content fills the unnamed one. A literal, not an expression. |
 
+### How a fragment is indented
+
+Two conventions, and the file extension picks between them.
+
+A page (`.html`) is indented like HTML: attributes that wrap line up under
+the first one. It should look to whoever opens it like the page it is, and
+that is worth more than tidiness — this language is an extension in adoption
+cost, and a page that looks like unfamiliar code costs exactly what the
+framing is trying to save.
+
+A fragment (`.htm`) is indented like code: attributes sit one step in from
+their tag, and the closing `>` goes back at the tag's own indent.
+
+```html
+<:define tag="bs-alert:div"
+  role="alert"
+
+  // parameters
+  :variant=${'primary'}
+  :dismissible=${false}
+
+  class=${_class}
+  :class-fade=${dismissible}
+>
+```
+
+This is what a fragment already is. A `<:define>` header is a parameter
+list, its body holds arrow functions and template literals, and the closing
+`>` on its own line was already a block delimiter — only the column the
+attributes sat in disagreed.
+
+Aligning has two costs a fragment feels and a page mostly doesn't. The
+column is derived from the tag's name, so renaming a tag re-indents every
+attribute under it and a one-word change lands in `git blame` as a rewrite.
+And the column moves, so how deep an attribute sits — and therefore whether
+a line is short enough to keep — depends on how long the tag happens to be,
+which is why two adjacent components in the same file used to break
+differently.
+
+Nothing enforces this; there is no formatter in the repo for either.
+
 ### `<:logic>` — a scope with no element
 
 Everything else that declares values is markup that happens to carry them.
@@ -650,8 +691,8 @@ from, and what am I part of.
 
 ```html
 <:define tag="my-item:li"
-         // the list I was slotted into, whichever one that is
-         :_group=${$host ? $host.$id : null}>
+  // the list I was slotted into, whichever one that is
+  :_group=${$host ? $host.$id : null}>
 ```
 
 `$parent` is lexical, so for slotted markup it is the call site — which is

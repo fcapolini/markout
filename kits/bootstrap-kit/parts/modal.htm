@@ -19,82 +19,82 @@
     amount of markup expresses them, and a handler is what runs them.
   -->
   <:define tag="bs-modal:div"
-           class="modal fade ${extra ?? ''}"
-           tabindex="-1"
+    class="modal fade ${extra ?? ''}"
+    tabindex="-1"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :name=${null}
-           :title=${''}
-           :size=${null}          // 'sm' | 'lg' | 'xl'
-           :centered=${false}
-           :scrollable=${false}
-           :fullscreen=${null}    // true | 'sm-down' | 'md-down' | ...
-           :staticBackdrop=${false}
-           :open=${false}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :name=${null}
+    :title=${''}
+    :size=${null}          // 'sm' | 'lg' | 'xl'
+    :centered=${false}
+    :scrollable=${false}
+    :fullscreen=${null}    // true | 'sm-down' | 'md-down' | ...
+    :staticBackdrop=${false}
+    :open=${false}
 
-           // private
-           :_labelId=${`bs-modal-title-${$id}`}
-           :_dialogClass=${[
-             'modal-dialog',
-             size ? `modal-${size}` : '',
-             centered ? 'modal-dialog-centered' : '',
-             scrollable ? 'modal-dialog-scrollable' : '',
-             fullscreen === true ? 'modal-fullscreen' : '',
-             typeof fullscreen === 'string' ? `modal-fullscreen-${fullscreen}` : '',
-           ].filter(s => s).join(' ')}
+    // private
+    :_labelId=${`bs-modal-title-${$id}`}
+    :_dialogClass=${[
+      'modal-dialog',
+      size ? `modal-${size}` : '',
+      centered ? 'modal-dialog-centered' : '',
+      scrollable ? 'modal-dialog-scrollable' : '',
+      fullscreen === true ? 'modal-fullscreen' : '',
+      typeof fullscreen === 'string' ? `modal-fullscreen-${fullscreen}` : '',
+    ].filter(s => s).join(' ')}
 
-           id=${name}
-           aria-labelledby=${_labelId}
-           aria-hidden="true"
-           data-bs-backdrop=${staticBackdrop ? 'static' : null}
-           data-bs-keyboard=${staticBackdrop ? 'false' : null}
+    id=${name}
+    aria-labelledby=${_labelId}
+    aria-hidden="true"
+    data-bs-backdrop=${staticBackdrop ? 'static' : null}
+    data-bs-keyboard=${staticBackdrop ? 'false' : null}
 
-           /*
-             `globalThis` rather than a bare `bootstrap`: the standard
-             library is on the scope chain, a page's own libraries are not,
-             and going through `globalThis` is what keeps "this line needs a
-             browser" visible in the line
-           */
-           :handle-open=${(v) => {
-             // only while this markup is in the page: an `:if`/`:for-data` region
-             // can take it out with `open` still true, and Bootstrap asked
-             // to show a detached element walks into its own internals
-             if (!$dom.isConnected) return;
-             const modal = globalThis.bootstrap.Modal.getOrCreateInstance($dom);
-             v ? modal.show() : modal.hide();
-           }}
-           /*
-             Bootstrap's plugins own DOM outside this element -- a backdrop,
-             a popper, a body class -- so an element removed without a
-             dispose() leaves it behind. `:will-detach` rather than
-             `:will-dispose`: an `:if`/`:for-data` region takes its markup out of
-             the page without its scope going anywhere, and the leak is the
-             same either way
-             Bootstrap's plugins own DOM and page state outside this
-             element -- a backdrop, a scroll lock on <body> -- and
-             `dispose()` releases the plugin without undoing any of it for
-             one that is still open. So the element is put back the way it
-             was found, which is what a page removing an open modal
-             would otherwise be left needing to do by hand.
+    /*
+      `globalThis` rather than a bare `bootstrap`: the standard
+      library is on the scope chain, a page's own libraries are not,
+      and going through `globalThis` is what keeps "this line needs a
+      browser" visible in the line
+    */
+    :handle-open=${(v) => {
+      // only while this markup is in the page: an `:if`/`:for-data` region
+      // can take it out with `open` still true, and Bootstrap asked
+      // to show a detached element walks into its own internals
+      if (!$dom.isConnected) return;
+      const modal = globalThis.bootstrap.Modal.getOrCreateInstance($dom);
+      v ? modal.show() : modal.hide();
+    }}
+    /*
+      Bootstrap's plugins own DOM outside this element -- a backdrop,
+      a popper, a body class -- so an element removed without a
+      dispose() leaves it behind. `:will-detach` rather than
+      `:will-dispose`: an `:if`/`:for-data` region takes its markup out of
+      the page without its scope going anywhere, and the leak is the
+      same either way
+      Bootstrap's plugins own DOM and page state outside this
+      element -- a backdrop, a scroll lock on <body> -- and
+      `dispose()` releases the plugin without undoing any of it for
+      one that is still open. So the element is put back the way it
+      was found, which is what a page removing an open modal
+      would otherwise be left needing to do by hand.
 
-             `:will-detach` rather than `:will-dispose`: an `:if`/`:for-data`
-             region takes its markup out of the page without its scope going
-             anywhere, and the leak is identical either way
-           */
-           :will-detach=${() => {
-             const doc = globalThis.document;
-             globalThis.bootstrap.Modal.getInstance($dom)?.dispose();
-             $dom.style.display = '';
-             $dom.classList.remove('show');
-             // only once nothing else is holding the page open
-             if (doc.querySelector('.modal.show')) return;
-             doc.body.classList.remove('modal-open');
-             doc.body.style.overflow = '';
-             doc.body.style.paddingRight = '';
-           }}
-           :on-hidden.bs.modal=${() => open = false}
-           :on-shown.bs.modal=${() => open = true}
+      `:will-detach` rather than `:will-dispose`: an `:if`/`:for-data`
+      region takes its markup out of the page without its scope going
+      anywhere, and the leak is identical either way
+    */
+    :will-detach=${() => {
+      const doc = globalThis.document;
+      globalThis.bootstrap.Modal.getInstance($dom)?.dispose();
+      $dom.style.display = '';
+      $dom.classList.remove('show');
+      // only once nothing else is holding the page open
+      if (doc.querySelector('.modal.show')) return;
+      doc.body.classList.remove('modal-open');
+      doc.body.style.overflow = '';
+      doc.body.style.paddingRight = '';
+    }}
+    :on-hidden.bs.modal=${() => open = false}
+    :on-shown.bs.modal=${() => open = true}
   >
     <div class=${_dialogClass}>
       <div class="modal-content">

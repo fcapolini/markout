@@ -380,9 +380,9 @@ one who can act on them.
   </style>
 
   <:define tag="theme-switcher:button"
-           :class-theme-switcher
-           :on-click=${() => head.light = !head.light}>
-      Switch theme
+    :class-theme-switcher
+    :on-click=${() => head.light = !head.light}>
+    Switch theme
   </:define>
 </lib>
 ```

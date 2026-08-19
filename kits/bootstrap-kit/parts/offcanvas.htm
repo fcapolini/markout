@@ -10,72 +10,72 @@
       <bs-offcanvas :name="menu" :title="Menu">…</bs-offcanvas>
   -->
   <:define tag="bs-offcanvas:div"
-           class="offcanvas"
-           tabindex="-1"
+    class="offcanvas"
+    tabindex="-1"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :name=${null}
-           :title=${''}
-           :placement=${'start'}   // 'start' | 'end' | 'top' | 'bottom'
-           :backdrop=${true}
-           :scroll=${false}
-           :responsive=${null}     // 'lg' — an offcanvas below this breakpoint only
-           :open=${false}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :name=${null}
+    :title=${''}
+    :placement=${'start'}   // 'start' | 'end' | 'top' | 'bottom'
+    :backdrop=${true}
+    :scroll=${false}
+    :responsive=${null}     // 'lg' — an offcanvas below this breakpoint only
+    :open=${false}
 
-           // private
-           :_labelId=${`bs-offcanvas-title-${$id}`}
-           :_class=${[
-             responsive ? `offcanvas-${responsive}` : 'offcanvas',
-             `offcanvas-${placement}`,
-             extra,
-           ].join(' ')}
+    // private
+    :_labelId=${`bs-offcanvas-title-${$id}`}
+    :_class=${[
+      responsive ? `offcanvas-${responsive}` : 'offcanvas',
+      `offcanvas-${placement}`,
+      extra,
+    ].join(' ')}
 
-           class=${_class}
-           id=${name}
-           aria-labelledby=${_labelId}
-           data-bs-backdrop=${backdrop ? null : 'false'}
-           data-bs-scroll=${scroll ? 'true' : null}
+    class=${_class}
+    id=${name}
+    aria-labelledby=${_labelId}
+    data-bs-backdrop=${backdrop ? null : 'false'}
+    data-bs-scroll=${scroll ? 'true' : null}
 
-           :handle-open=${(v) => {
-             // only while this markup is in the page: an `:if`/`:for-data` region
-             // can take it out with `open` still true, and Bootstrap asked
-             // to show a detached element walks into its own internals
-             if (!$dom.isConnected) return;
-             const panel = globalThis.bootstrap.Offcanvas.getOrCreateInstance($dom);
-             v ? panel.show() : panel.hide();
-           }}
-           /*
-             Bootstrap's plugins own DOM outside this element -- a backdrop,
-             a popper, a body class -- so an element removed without a
-             dispose() leaves it behind. `:will-detach` rather than
-             `:will-dispose`: an `:if`/`:for-data` region takes its markup out of
-             the page without its scope going anywhere, and the leak is the
-             same either way
-             Bootstrap's plugins own DOM and page state outside this
-             element -- a backdrop, a scroll lock on <body> -- and
-             `dispose()` releases the plugin without undoing any of it for
-             one that is still open. So the element is put back the way it
-             was found, which is what a page removing an open offcanvas
-             would otherwise be left needing to do by hand.
+    :handle-open=${(v) => {
+      // only while this markup is in the page: an `:if`/`:for-data` region
+      // can take it out with `open` still true, and Bootstrap asked
+      // to show a detached element walks into its own internals
+      if (!$dom.isConnected) return;
+      const panel = globalThis.bootstrap.Offcanvas.getOrCreateInstance($dom);
+      v ? panel.show() : panel.hide();
+    }}
+    /*
+      Bootstrap's plugins own DOM outside this element -- a backdrop,
+      a popper, a body class -- so an element removed without a
+      dispose() leaves it behind. `:will-detach` rather than
+      `:will-dispose`: an `:if`/`:for-data` region takes its markup out of
+      the page without its scope going anywhere, and the leak is the
+      same either way
+      Bootstrap's plugins own DOM and page state outside this
+      element -- a backdrop, a scroll lock on <body> -- and
+      `dispose()` releases the plugin without undoing any of it for
+      one that is still open. So the element is put back the way it
+      was found, which is what a page removing an open offcanvas
+      would otherwise be left needing to do by hand.
 
-             `:will-detach` rather than `:will-dispose`: an `:if`/`:for-data`
-             region takes its markup out of the page without its scope going
-             anywhere, and the leak is identical either way
-           */
-           :will-detach=${() => {
-             const doc = globalThis.document;
-             globalThis.bootstrap.Offcanvas.getInstance($dom)?.dispose();
-             $dom.style.display = '';
-             $dom.classList.remove('show');
-             // only once nothing else is holding the page open
-             if (doc.querySelector('.offcanvas.show')) return;
-             doc.body.classList.remove('offcanvas-open');
-             doc.body.style.overflow = '';
-             doc.body.style.paddingRight = '';
-           }}
-           :on-hidden.bs.offcanvas=${() => open = false}
-           :on-shown.bs.offcanvas=${() => open = true}
+      `:will-detach` rather than `:will-dispose`: an `:if`/`:for-data`
+      region takes its markup out of the page without its scope going
+      anywhere, and the leak is identical either way
+    */
+    :will-detach=${() => {
+      const doc = globalThis.document;
+      globalThis.bootstrap.Offcanvas.getInstance($dom)?.dispose();
+      $dom.style.display = '';
+      $dom.classList.remove('show');
+      // only once nothing else is holding the page open
+      if (doc.querySelector('.offcanvas.show')) return;
+      doc.body.classList.remove('offcanvas-open');
+      doc.body.style.overflow = '';
+      doc.body.style.paddingRight = '';
+    }}
+    :on-hidden.bs.offcanvas=${() => open = false}
+    :on-shown.bs.offcanvas=${() => open = true}
   >
     <div class="offcanvas-header">
       <h5 class="offcanvas-title" id=${_labelId}>${title}</h5>

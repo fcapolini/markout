@@ -8,65 +8,65 @@
       <bs-select :label="Size" :options=${['S', 'M', 'L']} />
   -->
   <:define tag="bs-select:div"
-           class="mb-3 ${extra ?? ''}"
+    class="mb-3 ${extra ?? ''}"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :label=${null}
-           :name=${null}
-           :options=${[]}
-           :value=${null}
-           :placeholder=${null}
-           :help=${null}
-           :size=${null}          // 'sm' | 'lg'
-           :multiple=${false}
-           :disabled=${false}
-           :required=${false}
-           :floating=${false}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :label=${null}
+    :name=${null}
+    :options=${[]}
+    :value=${null}
+    :placeholder=${null}
+    :help=${null}
+    :size=${null}          // 'sm' | 'lg'
+    :multiple=${false}
+    :disabled=${false}
+    :required=${false}
+    :floating=${false}
 
-           // private
-           :_id=${`bs-select-${$id}`}
-           :_helpId=${`bs-select-help-${$id}`}
-           :_class=${['form-select', size ? `form-select-${size}` : '']
-                     .filter(s => s).join(' ')}
-           :_options=${options.map(o =>
-             typeof o === 'object' && o !== null
-               ? { name: o.name, value: o.value ?? o.name, disabled: !!o.disabled }
-               : { name: o, value: o, disabled: false })}
+    // private
+    :_id=${`bs-select-${$id}`}
+    :_helpId=${`bs-select-help-${$id}`}
+    :_class=${['form-select', size ? `form-select-${size}` : '']
+              .filter(s => s).join(' ')}
+    :_options=${options.map(o =>
+      typeof o === 'object' && o !== null
+        ? { name: o.name, value: o.value ?? o.name, disabled: !!o.disabled }
+        : { name: o, value: o, disabled: false })}
   >
     <label class="form-label"
-           for=${_id}
-           :if=${!(floating || !label)}>${label}</label>
+      for=${_id}
+      :if=${!(floating || !label)}>${label}</label>
 
     <div :class-form-floating=${floating}>
       <select class=${_class}
-              id=${_id}
-              name=${name}
-              aria-label=${label || null}
-              aria-describedby=${help ? _helpId : null}
-              :attr-multiple=${multiple}
-              :attr-disabled=${disabled}
-              :attr-required=${required}
-              :on-change=${ev => value = ev.target.value}>
+        id=${_id}
+        name=${name}
+        aria-label=${label || null}
+        aria-describedby=${help ? _helpId : null}
+        :attr-multiple=${multiple}
+        :attr-disabled=${disabled}
+        :attr-required=${required}
+        :on-change=${ev => value = ev.target.value}>
 
         <option value=""
-                :if=${placeholder}
-                :attr-selected=${value == null}>${placeholder}</option>
+          :if=${placeholder}
+          :attr-selected=${value == null}>${placeholder}</option>
 
         <option :for-each=${_options}
-                :for-as="option"
-                value=${option.value}
-                :attr-disabled=${option.disabled}
-                :attr-selected=${option.value === value}>${option.name}</option>
+          :for-as="option"
+          value=${option.value}
+          :attr-disabled=${option.disabled}
+          :attr-selected=${option.value === value}>${option.name}</option>
       </select>
 
       <label for=${_id}
-             :if=${floating}>${label}</label>
+        :if=${floating}>${label}</label>
     </div>
 
     <div class="form-text"
-         id=${_helpId}
-         :if=${help}>${help}</div>
+      id=${_helpId}
+      :if=${help}>${help}</div>
   </:define>
 
 </lib>

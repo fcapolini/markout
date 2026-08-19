@@ -26,30 +26,30 @@
     of its own to hang off; wrap the trigger, not the page around it.
   -->
   <:define tag="bs-tooltip:span"
-           class="d-inline-block ${extra ?? ''}"
+    class="d-inline-block ${extra ?? ''}"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :title=${''}
-           :placement=${'top'}
-           :html=${false}
-           :trigger=${'hover focus'}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :title=${''}
+    :placement=${'top'}
+    :html=${false}
+    :trigger=${'hover focus'}
 
-           // private
-           :_build=${() => {
-             const bs = globalThis.bootstrap;
-             bs.Tooltip.getInstance($dom)?.dispose();
-             new bs.Tooltip($dom, {
-               title: title,
-               placement: placement,
-               html: html,
-               trigger: trigger,
-             });
-           }}
+    // private
+    :_build=${() => {
+      const bs = globalThis.bootstrap;
+      bs.Tooltip.getInstance($dom)?.dispose();
+      new bs.Tooltip($dom, {
+        title: title,
+        placement: placement,
+        html: html,
+        trigger: trigger,
+      });
+    }}
 
-           :did-attach=${() => _build()}
-           :handle-title=${() => _build()}
-           :will-detach=${() => globalThis.bootstrap.Tooltip.getInstance($dom)?.dispose()}
+    :did-attach=${() => _build()}
+    :handle-title=${() => _build()}
+    :will-detach=${() => globalThis.bootstrap.Tooltip.getInstance($dom)?.dispose()}
   >
     <:slot />
   </:define>

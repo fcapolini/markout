@@ -7,40 +7,40 @@
   -->
   <:define tag="bs-image:img"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :src=${null}
-           :alt=${''}
-           :fluid=${true}
-           :thumbnail=${false}
-           :rounded=${false}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :src=${null}
+    :alt=${''}
+    :fluid=${true}
+    :thumbnail=${false}
+    :rounded=${false}
 
-           class=${extra}
-           src=${src}
-           alt=${alt}
-           :class-img-fluid=${fluid}
-           :class-img-thumbnail=${thumbnail}
-           :class-rounded=${rounded}
+    class=${extra}
+    src=${src}
+    alt=${alt}
+    :class-img-fluid=${fluid}
+    :class-img-thumbnail=${thumbnail}
+    :class-rounded=${rounded}
   />
 
   <!--- An image with its caption, as one thing. -->
   <:define tag="bs-figure:figure"
-           class="figure ${extra ?? ''}"
+    class="figure ${extra ?? ''}"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :src=${null}
-           :alt=${''}
-           :caption=${null}
-           :align=${null}      // 'center' | 'end'
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :src=${null}
+    :alt=${''}
+    :caption=${null}
+    :align=${null}      // 'center' | 'end'
   >
     <img class="figure-img img-fluid rounded"
-         src=${src}
-         alt=${alt}>
+      src=${src}
+      alt=${alt}>
     <figcaption class="figure-caption"
-                :class-text-center=${align === 'center'}
-                :class-text-end=${align === 'end'}
-                :if=${caption}>${caption}</figcaption>
+      :class-text-center=${align === 'center'}
+      :class-text-end=${align === 'end'}
+      :if=${caption}>${caption}</figcaption>
   </:define>
 
 </lib>

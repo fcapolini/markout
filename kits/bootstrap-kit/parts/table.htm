@@ -15,35 +15,35 @@
   -->
   <:define tag="bs-table:div"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :columns=${[]}
-           :rows=${[]}
-           :caption=${null}
-           :striped=${false}
-           :hover=${false}
-           :bordered=${false}
-           :borderless=${false}
-           :small=${false}
-           :variant=${null}
-           :headVariant=${null}
-           :align=${null}          // 'middle' | 'bottom'
-           :responsive=${false}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :columns=${[]}
+    :rows=${[]}
+    :caption=${null}
+    :striped=${false}
+    :hover=${false}
+    :bordered=${false}
+    :borderless=${false}
+    :small=${false}
+    :variant=${null}
+    :headVariant=${null}
+    :align=${null}          // 'middle' | 'bottom'
+    :responsive=${false}
 
-           // private
-           :_class=${[
-             'table',
-             striped ? 'table-striped' : '',
-             hover ? 'table-hover' : '',
-             bordered ? 'table-bordered' : '',
-             borderless ? 'table-borderless' : '',
-             small ? 'table-sm' : '',
-             variant ? `table-${variant}` : '',
-             align ? `align-${align}` : '',
-           ].filter(s => s).join(' ')}
+    // private
+    :_class=${[
+      'table',
+      striped ? 'table-striped' : '',
+      hover ? 'table-hover' : '',
+      bordered ? 'table-bordered' : '',
+      borderless ? 'table-borderless' : '',
+      small ? 'table-sm' : '',
+      variant ? `table-${variant}` : '',
+      align ? `align-${align}` : '',
+    ].filter(s => s).join(' ')}
 
-           class=${extra}
-           :class-table-responsive=${responsive}
+    class=${extra}
+    :class-table-responsive=${responsive}
   >
     <table class=${_class}>
       <caption :if=${caption}>${caption}</caption>
@@ -51,17 +51,17 @@
       <thead class=${headVariant ? `table-${headVariant}` : null}>
         <tr>
           <th scope="col"
-              :for-each=${columns}
-              :for-as="column"
-              class=${column.class ?? null}>${column.name ?? column.key}</th>
+            :for-each=${columns}
+            :for-as="column"
+            class=${column.class ?? null}>${column.name ?? column.key}</th>
         </tr>
       </thead>
 
       <tbody>
         <tr :for-each=${rows} :for-as="row" class=${row.class ?? null}>
           <td :for-each=${columns}
-              :for-as="column"
-              class=${column.class ?? null}>${row[column.key]}</td>
+            :for-as="column"
+            class=${column.class ?? null}>${row[column.key]}</td>
         </tr>
       </tbody>
     </table>

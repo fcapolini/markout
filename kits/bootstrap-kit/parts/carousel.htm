@@ -10,55 +10,55 @@
     is worth a component at all.
   -->
   <:define tag="bs-carousel:div"
-           class="carousel slide ${extra ?? ''}"
+    class="carousel slide ${extra ?? ''}"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :slides=${[]}
-           :controls=${true}
-           :indicators=${true}
-           :captions=${true}
-           :fade=${false}
-           :ride=${true}
-           :interval=${5000}
-           :dark=${false}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :slides=${[]}
+    :controls=${true}
+    :indicators=${true}
+    :captions=${true}
+    :fade=${false}
+    :ride=${true}
+    :interval=${5000}
+    :dark=${false}
 
-           // private
-           :_id=${`bs-carousel-${$id}`}
-           :_selector=${`#bs-carousel-${$id}`}
-           /*
-             the position is needed three times per slide and `:for-each`
-             binds the item, not its index, so it is carried on the item
-           */
-           :_slides=${slides.map((slide, i) => ({ ...slide, index: i }))}
+    // private
+    :_id=${`bs-carousel-${$id}`}
+    :_selector=${`#bs-carousel-${$id}`}
+    /*
+      the position is needed three times per slide and `:for-each`
+      binds the item, not its index, so it is carried on the item
+    */
+    :_slides=${slides.map((slide, i) => ({ ...slide, index: i }))}
 
-           id=${_id}
-           :class-carousel-fade=${fade}
-           data-bs-ride=${ride ? 'carousel' : null}
-           data-bs-interval=${interval}
-           data-bs-theme=${dark ? 'dark' : null}
+    id=${_id}
+    :class-carousel-fade=${fade}
+    data-bs-ride=${ride ? 'carousel' : null}
+    data-bs-interval=${interval}
+    data-bs-theme=${dark ? 'dark' : null}
   >
     <div class="carousel-indicators" :if=${indicators}>
       <button type="button"
-              :for-each=${_slides}
-              :for-as="slide"
-              data-bs-target=${_selector}
-              data-bs-slide-to=${slide.index}
-              :class-active=${slide.index === 0}
-              aria-current=${slide.index === 0 ? 'true' : null}
-              aria-label="Slide ${slide.index + 1}"></button>
+        :for-each=${_slides}
+        :for-as="slide"
+        data-bs-target=${_selector}
+        data-bs-slide-to=${slide.index}
+        :class-active=${slide.index === 0}
+        aria-current=${slide.index === 0 ? 'true' : null}
+        aria-label="Slide ${slide.index + 1}"></button>
     </div>
 
     <div class="carousel-inner">
       <div class="carousel-item"
-           :for-each=${_slides}
-           :for-as="slide"
-           :class-active=${slide.index === 0}>
+        :for-each=${_slides}
+        :for-as="slide"
+        :class-active=${slide.index === 0}>
         <img class="d-block w-100"
-             src=${slide.image}
-             alt=${slide.alt ?? ''}>
+          src=${slide.image}
+          alt=${slide.alt ?? ''}>
         <div class="carousel-caption d-none d-md-block"
-             :if=${captions && (slide.title || slide.text)}>
+          :if=${captions && (slide.title || slide.text)}>
           <h5 :if=${slide.title}>${slide.title}</h5>
           <p :if=${slide.text}>${slide.text}</p>
         </div>
@@ -66,19 +66,19 @@
     </div>
 
     <button class="carousel-control-prev"
-            type="button"
-            :if=${controls}
-            data-bs-target=${_selector}
-            data-bs-slide="prev">
+      type="button"
+      :if=${controls}
+      data-bs-target=${_selector}
+      data-bs-slide="prev">
       <span class="carousel-control-prev-icon" aria-hidden="true"></span>
       <span class="visually-hidden">Previous</span>
     </button>
 
     <button class="carousel-control-next"
-            type="button"
-            :if=${controls}
-            data-bs-target=${_selector}
-            data-bs-slide="next">
+      type="button"
+      :if=${controls}
+      data-bs-target=${_selector}
+      data-bs-slide="next">
       <span class="carousel-control-next-icon" aria-hidden="true"></span>
       <span class="visually-hidden">Next</span>
     </button>

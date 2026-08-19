@@ -8,25 +8,25 @@
   -->
   <:define tag="bs-placeholder:span"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :cols=${6}
-           :size=${null}         // 'xs' | 'sm' | 'lg'
-           :variant=${null}
-           :animation=${'glow'}  // 'glow' | 'wave' | null
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :cols=${6}
+    :size=${null}         // 'xs' | 'sm' | 'lg'
+    :variant=${null}
+    :animation=${'glow'}  // 'glow' | 'wave' | null
 
-           // private
-           :_class=${[animation ? `placeholder-${animation}` : '', extra]
-                     .filter(s => s).join(' ') || null}
-           :_barClass=${[
-             'placeholder',
-             `col-${cols}`,
-             size ? `placeholder-${size}` : '',
-             variant ? `bg-${variant}` : '',
-           ].filter(s => s).join(' ')}
+    // private
+    :_class=${[animation ? `placeholder-${animation}` : '', extra]
+              .filter(s => s).join(' ') || null}
+    :_barClass=${[
+      'placeholder',
+      `col-${cols}`,
+      size ? `placeholder-${size}` : '',
+      variant ? `bg-${variant}` : '',
+    ].filter(s => s).join(' ')}
 
-           class=${_class}
-           aria-hidden="true"
+    class=${_class}
+    aria-hidden="true"
   >
     <span class=${_barClass}></span>
   </:define>

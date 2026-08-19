@@ -11,56 +11,56 @@
   -->
   <:define tag="bs-nav:ul"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :items=${[
-             { name: 'Active', link: '#', active: true },
-             { name: 'Link', link: '#' },
-             { name: 'Disabled', link: '#', disabled: true },
-           ]}
-           :variant=${null}      // 'tabs' | 'pills' | 'underline'
-           :fill=${false}
-           :justified=${false}
-           :vertical=${false}
-           :align=${'start'}     // 'start' | 'center' | 'end'
-           :toggle=${null}       // 'tab' | 'pill' — for tabbed panes
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :items=${[
+      { name: 'Active', link: '#', active: true },
+      { name: 'Link', link: '#' },
+      { name: 'Disabled', link: '#', disabled: true },
+    ]}
+    :variant=${null}      // 'tabs' | 'pills' | 'underline'
+    :fill=${false}
+    :justified=${false}
+    :vertical=${false}
+    :align=${'start'}     // 'start' | 'center' | 'end'
+    :toggle=${null}       // 'tab' | 'pill' — for tabbed panes
 
-           // private
-           :_class=${[
-             'nav',
-             variant ? `nav-${variant}` : '',
-             fill ? 'nav-fill' : '',
-             justified ? 'nav-justified' : '',
-             vertical ? 'flex-column' : '',
-             align === 'center' ? 'justify-content-center' : '',
-             align === 'end' ? 'justify-content-end' : '',
-             extra,
-           ].filter(s => s).join(' ')}
+    // private
+    :_class=${[
+      'nav',
+      variant ? `nav-${variant}` : '',
+      fill ? 'nav-fill' : '',
+      justified ? 'nav-justified' : '',
+      vertical ? 'flex-column' : '',
+      align === 'center' ? 'justify-content-center' : '',
+      align === 'end' ? 'justify-content-end' : '',
+      extra,
+    ].filter(s => s).join(' ')}
 
-           class=${_class}
-           role=${toggle ? 'tablist' : null}
+    class=${_class}
+    role=${toggle ? 'tablist' : null}
   >
     <li class="nav-item"
-        :for-each=${items}
-        :for-as="item"
-        role=${toggle ? 'presentation' : null}>
+      :for-each=${items}
+      :for-as="item"
+      role=${toggle ? 'presentation' : null}>
       <button class="nav-link"
-              type="button"
-              :if=${toggle}
-              :class-active=${item.active}
-              :attr-disabled=${item.disabled}
-              data-bs-toggle=${toggle}
-              data-bs-target=${item.target}
-              role="tab"
-              aria-selected=${item.active ? 'true' : 'false'}>${item.name}</button>
+        type="button"
+        :if=${toggle}
+        :class-active=${item.active}
+        :attr-disabled=${item.disabled}
+        data-bs-toggle=${toggle}
+        data-bs-target=${item.target}
+        role="tab"
+        aria-selected=${item.active ? 'true' : 'false'}>${item.name}</button>
 
       <a class="nav-link"
-         :else
-         :class-active=${item.active}
-         :class-disabled=${item.disabled}
-         href=${item.link ?? null}
-         aria-current=${item.active ? 'page' : null}
-         aria-disabled=${item.disabled ? 'true' : null}>${item.name}</a>
+        :else
+        :class-active=${item.active}
+        :class-disabled=${item.disabled}
+        href=${item.link ?? null}
+        aria-current=${item.active ? 'page' : null}
+        aria-disabled=${item.disabled ? 'true' : null}>${item.name}</a>
     </li>
   </:define>
 
@@ -70,18 +70,18 @@
   </:define>
 
   <:define tag="bs-tab-pane:div"
-           class="tab-pane fade ${extra ?? ''}"
-           role="tabpanel"
+    class="tab-pane fade ${extra ?? ''}"
+    role="tabpanel"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :name=${null}
-           :active=${false}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :name=${null}
+    :active=${false}
 
-           id=${name}
-           :class-show=${active}
-           :class-active=${active}
-           tabindex="0"
+    id=${name}
+    :class-show=${active}
+    :class-active=${active}
+    tabindex="0"
   >
     <:slot />
   </:define>

@@ -13,34 +13,34 @@
   -->
   <:define tag="bs-card:div"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :title=${null}
-           :subtitle=${null}
-           :header=${null}
-           :footer=${null}
-           :image=${null}
-           :imageAlt=${''}
-           :imageBottom=${false}
-           :variant=${null}       // colours the whole card, e.g. 'primary'
-           :border=${null}        // colours only the border
-           :align=${null}         // 'center' | 'end'
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :title=${null}
+    :subtitle=${null}
+    :header=${null}
+    :footer=${null}
+    :image=${null}
+    :imageAlt=${''}
+    :imageBottom=${false}
+    :variant=${null}       // colours the whole card, e.g. 'primary'
+    :border=${null}        // colours only the border
+    :align=${null}         // 'center' | 'end'
 
-           // private
-           :_class=${[
-             'card',
-             variant ? `text-bg-${variant}` : '',
-             border ? `border-${border}` : '',
-             align ? `text-${align}` : '',
-             extra,
-           ].filter(s => s).join(' ')}
+    // private
+    :_class=${[
+      'card',
+      variant ? `text-bg-${variant}` : '',
+      border ? `border-${border}` : '',
+      align ? `text-${align}` : '',
+      extra,
+    ].filter(s => s).join(' ')}
 
-           class=${_class}
+    class=${_class}
   >
     <img class="card-img-top"
-         :if=${image && !imageBottom}
-         src=${image}
-         alt=${imageAlt}>
+      :if=${image && !imageBottom}
+      src=${image}
+      alt=${imageAlt}>
 
     <!---
       A named slot inside an optional region: the header appears only when
@@ -50,25 +50,25 @@
       to leave the fallback's binding pointing at markup that was gone.
     -->
     <div class="card-header"
-         :if=${header}><:slot name="header">${header}</:slot></div>
+      :if=${header}><:slot name="header">${header}</:slot></div>
 
     <div class="card-body">
       <h5 class="card-title"
-          :if=${title}>${title}</h5>
+        :if=${title}>${title}</h5>
 
       <h6 class="card-subtitle mb-2 text-body-secondary"
-          :if=${subtitle}>${subtitle}</h6>
+        :if=${subtitle}>${subtitle}</h6>
 
       <:slot />
     </div>
 
     <div class="card-footer text-body-secondary"
-         :if=${footer}>${footer}</div>
+      :if=${footer}>${footer}</div>
 
     <img class="card-img-bottom"
-         :if=${image && imageBottom}
-         src=${image}
-         alt=${imageAlt}>
+      :if=${image && imageBottom}
+      src=${image}
+      alt=${imageAlt}>
   </:define>
 
   <!---
@@ -77,19 +77,19 @@
   -->
   <:define tag="bs-card-group:div"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :cols=${3}
-           :gap=${4}
-           :attached=${false}     // a seamless strip instead of separate cards
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :cols=${3}
+    :gap=${4}
+    :attached=${false}     // a seamless strip instead of separate cards
 
-           // private
-           :_class=${attached
-             ? 'card-group'
-             : `row row-cols-1 row-cols-md-${cols} g-${gap}`}
-           :_groupClass=${extra ? `${_class} ${extra}` : _class}
+    // private
+    :_class=${attached
+      ? 'card-group'
+      : `row row-cols-1 row-cols-md-${cols} g-${gap}`}
+    :_groupClass=${extra ? `${_class} ${extra}` : _class}
 
-           class=${_groupClass}
+    class=${_groupClass}
   >
     <:slot />
   </:define>

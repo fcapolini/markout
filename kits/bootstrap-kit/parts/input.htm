@@ -24,54 +24,54 @@
     layouts are two regions rather than one with a class toggled on it.
   -->
   <:define tag="bs-input:div"
-           class="mb-3 ${extra ?? ''}"
+    class="mb-3 ${extra ?? ''}"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :label=${null}
-           :type=${'text'}
-           :name=${null}
-           :value=${''}
-           :placeholder=${''}
-           :help=${null}
-           :size=${null}            // 'sm' | 'lg'
-           :disabled=${false}
-           :readonly=${false}
-           :required=${false}
-           :floating=${false}
-           :check=${(v) => true}
-           :message=${'Please check this value.'}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :label=${null}
+    :type=${'text'}
+    :name=${null}
+    :value=${''}
+    :placeholder=${''}
+    :help=${null}
+    :size=${null}            // 'sm' | 'lg'
+    :disabled=${false}
+    :readonly=${false}
+    :required=${false}
+    :floating=${false}
+    :check=${(v) => true}
+    :message=${'Please check this value.'}
 
-           // private
-           :_id=${`bs-input-${$id}`}
-           :_helpId=${`bs-input-help-${$id}`}
-           :_empty=${value === '' || value == null}
-           :_invalid=${_empty ? required : !check(value)}
-           :_class=${['form-control', size ? `form-control-${size}` : '']
-                     .filter(s => s).join(' ')}
+    // private
+    :_id=${`bs-input-${$id}`}
+    :_helpId=${`bs-input-help-${$id}`}
+    :_empty=${value === '' || value == null}
+    :_invalid=${_empty ? required : !check(value)}
+    :_class=${['form-control', size ? `form-control-${size}` : '']
+              .filter(s => s).join(' ')}
   >
     <!--- plain layout: label, control, feedback -->
     <div :if=${!floating}>
       <label class="form-label"
-             for=${_id}
-             :if=${label}>${label}</label>
+        for=${_id}
+        :if=${label}>${label}</label>
 
       <input class=${_class}
-             id=${_id}
-             type=${type}
-             name=${name}
-             value=${value}
-             placeholder=${placeholder}
-             aria-describedby=${help ? _helpId : null}
-             :class-is-invalid=${_invalid}
-             :attr-disabled=${disabled}
-             :attr-readonly=${readonly}
-             :attr-required=${required}
-             :on-input=${ev => value = ev.target.value}>
+        id=${_id}
+        type=${type}
+        name=${name}
+        value=${value}
+        placeholder=${placeholder}
+        aria-describedby=${help ? _helpId : null}
+        :class-is-invalid=${_invalid}
+        :attr-disabled=${disabled}
+        :attr-readonly=${readonly}
+        :attr-required=${required}
+        :on-input=${ev => value = ev.target.value}>
 
       <div class="form-text"
-           id=${_helpId}
-           :if=${help}>${help}</div>
+        id=${_helpId}
+        :if=${help}>${help}</div>
 
       <div class="invalid-feedback">${message}</div>
     </div>
@@ -79,16 +79,16 @@
     <!--- floating layout: control, then label -->
     <div class="form-floating" :else>
       <input class=${_class}
-             id=${_id}
-             type=${type}
-             name=${name}
-             value=${value}
-             placeholder=${placeholder || label || ' '}
-             :class-is-invalid=${_invalid}
-             :attr-disabled=${disabled}
-             :attr-readonly=${readonly}
-             :attr-required=${required}
-             :on-input=${ev => value = ev.target.value}>
+        id=${_id}
+        type=${type}
+        name=${name}
+        value=${value}
+        placeholder=${placeholder || label || ' '}
+        :class-is-invalid=${_invalid}
+        :attr-disabled=${disabled}
+        :attr-readonly=${readonly}
+        :attr-required=${required}
+        :on-input=${ev => value = ev.target.value}>
 
       <label for=${_id}>${label}</label>
 
@@ -102,47 +102,47 @@
     `rows`, and a type that isn't one of HTML's would be a small lie.
   -->
   <:define tag="bs-textarea:div"
-           class="mb-3 ${extra ?? ''}"
+    class="mb-3 ${extra ?? ''}"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :label=${null}
-           :name=${null}
-           :value=${''}
-           :placeholder=${''}
-           :rows=${3}
-           :help=${null}
-           :disabled=${false}
-           :readonly=${false}
-           :required=${false}
-           :check=${(v) => true}
-           :message=${'Please check this value.'}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :label=${null}
+    :name=${null}
+    :value=${''}
+    :placeholder=${''}
+    :rows=${3}
+    :help=${null}
+    :disabled=${false}
+    :readonly=${false}
+    :required=${false}
+    :check=${(v) => true}
+    :message=${'Please check this value.'}
 
-           // private
-           :_id=${`bs-textarea-${$id}`}
-           :_helpId=${`bs-textarea-help-${$id}`}
-           :_empty=${value === '' || value == null}
-           :_invalid=${_empty ? required : !check(value)}
+    // private
+    :_id=${`bs-textarea-${$id}`}
+    :_helpId=${`bs-textarea-help-${$id}`}
+    :_empty=${value === '' || value == null}
+    :_invalid=${_empty ? required : !check(value)}
   >
     <label class="form-label"
-           for=${_id}
-           :if=${label}>${label}</label>
+      for=${_id}
+      :if=${label}>${label}</label>
 
     <textarea class="form-control"
-              id=${_id}
-              name=${name}
-              rows=${rows}
-              placeholder=${placeholder}
-              aria-describedby=${help ? _helpId : null}
-              :class-is-invalid=${_invalid}
-              :attr-disabled=${disabled}
-              :attr-readonly=${readonly}
-              :attr-required=${required}
-              :on-input=${ev => value = ev.target.value}>${value}</textarea>
+      id=${_id}
+      name=${name}
+      rows=${rows}
+      placeholder=${placeholder}
+      aria-describedby=${help ? _helpId : null}
+      :class-is-invalid=${_invalid}
+      :attr-disabled=${disabled}
+      :attr-readonly=${readonly}
+      :attr-required=${required}
+      :on-input=${ev => value = ev.target.value}>${value}</textarea>
 
     <div class="form-text"
-         id=${_helpId}
-         :if=${help}>${help}</div>
+      id=${_helpId}
+      :if=${help}>${help}</div>
 
     <div class="invalid-feedback">${message}</div>
   </:define>
@@ -154,25 +154,25 @@
   -->
   <:define tag="bs-input-group:div"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :prefix=${null}
-           :suffix=${null}
-           :size=${null}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :prefix=${null}
+    :suffix=${null}
+    :size=${null}
 
-           // private
-           :_class=${['input-group', size ? `input-group-${size}` : '', extra]
-                     .filter(s => s).join(' ')}
+    // private
+    :_class=${['input-group', size ? `input-group-${size}` : '', extra]
+              .filter(s => s).join(' ')}
 
-           class=${_class}
+    class=${_class}
   >
     <span class="input-group-text"
-          :if=${prefix}>${prefix}</span>
+      :if=${prefix}>${prefix}</span>
 
     <:slot />
 
     <span class="input-group-text"
-          :if=${suffix}>${suffix}</span>
+      :if=${suffix}>${suffix}</span>
   </:define>
 
 </lib>

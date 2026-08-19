@@ -39,8 +39,8 @@ root state, not like opaque text includes.
   </style>
 
   <:define tag="theme-switcher:button"
-           :class-theme-switcher
-           :on-click=${() => head.light = !head.light}>
+    :class-theme-switcher
+    :on-click=${() => head.light = !head.light}>
     Switch theme
   </:define>
 </lib>
