@@ -76,7 +76,15 @@ read off every cross-directory import in `packages/cli/src/`:
 | compiler | [src/compiler/](../../packages/core/src/compiler/) | `@markout-dev/core` |
 | render | `render.ts`, `serialize.ts`, `runtime-bundle.ts` | `@markout-dev/core` |
 | http | `middleware.ts`, `livereload.ts`, `watcher.ts`, `logger.ts` | `@markout-dev/express` |
-| cli | `cli.ts`, `server/index.ts`, `build.ts`, `exit-hook.ts` | `markout` |
+| cli | `cli.ts`, `defaults.ts`, `index.ts`, `server/index.ts`, `build.ts`, `exit-hook.ts` | `@markout-dev/cli` |
+
+The CLI package gained an importable surface after the split: `index.ts` is
+its curated barrel, and `main`/`exports` in its package.json point at it, so
+`Server` and `build` are available to a program that wants a server without
+the command line. `defaults.ts` exists only because of that — `cli.ts` ends in
+`void main()`, which is what makes it a bin, so a barrel re-exporting the two
+default names from there would have parsed `process.argv` the moment somebody
+imported `Server`.
 
 Nothing in the tree points upward through that table, and there are no
 cycles — verified before the plan was written, and asserted ever since: first

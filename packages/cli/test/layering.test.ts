@@ -28,6 +28,8 @@ const LAYERS: { name: string; pkg: string; members: string[] }[] = [
     pkg: '@markout-dev/cli',
     members: [
       'cli.ts',
+      'defaults.ts',
+      'index.ts',
       'server/build.ts',
       'server/exit-hook.ts',
       'server/index.ts',

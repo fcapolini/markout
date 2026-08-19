@@ -259,6 +259,48 @@ sits beside them, and denying dot-paths is common server hardening. The cost of
 the plain name is that a docroot file at that path is shadowed when serving,
 which `markout()` warns about at startup.
 
+### Serving from your own program
+
+The CLI is a thin wrapper over a `Server` class, and most of what an
+application needs from a server is a prop on it rather than a reason to build
+its own:
+
+```ts
+import { Server } from '@markout-dev/cli';
+
+await new Server({
+  docroot: `${__dirname}/site`,
+  port: 3000,
+  hostname: '127.0.0.1',
+  compress: true,
+  trustProxy: true,          // behind a proxy: what `$origin` is built from
+  globals: { db },           // what a `:server-` value may reach
+  routes: {
+    '/api': myApiRouter,     // the application's own handlers, mounted FIRST
+  },
+}).start();
+```
+
+`routes` is the one that matters most. A page is an extensionless path and so
+is most of an API, so the two have to be mounted in the right order — the
+application's own routes first, then Markout, then the static files. Passing
+them as a prop is what keeps that order the responsibility of the code that
+knows it. `init(app, props)` is the same position with the app itself, for
+anything that is not a mount, and it may be async so a database opens before
+the first request is answered.
+
+`create()` returns the configured app without listening on anything, which is
+what a test wants: drive it with supertest and no port is ever bound.
+
+`@markout-dev/express` is still there for an application that already has a
+server, or wants a page-not-found page of its own — Markout answers a missing
+page itself rather than passing it on, which is what makes an extensionless
+path a page request in the first place:
+
+```ts
+app.use(markout({ docroot }));
+```
+
 ## Integrated reactivity example
 
 ```html
