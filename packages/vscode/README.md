@@ -46,6 +46,45 @@ HTML extension keep working exactly as they did.
   name actually reaches.
 - **Syntax highlighting** for `${…}`, `:`-attributes, `<:…>` directives and
   the `//` and `/* … */` comments a tag may carry between its attributes.
+- **Formatting** that re-indents a wrapped attribute list — and, on these
+  files, only markout can. See below.
+
+## Formatting
+
+Format Document indents the lines an attribute list wraps onto, and nothing
+else. It does not decide where a list should wrap, and it never moves
+content: whitespace between two elements is text in this language, so a
+formatter that reaches past the `>` changes what the page says rather than
+how it looks.
+
+Which shape a file gets comes from its extension.
+
+| | |
+| --- | --- |
+| `.html` | Indented like HTML — attributes line up under the first one. A page should read like the page it is. |
+| `.htm` | Indented like code — attributes one step in from their tag, the closing `>` back at the tag's own column. A fragment is a module: a `<:define>` header is a parameter list, and its body holds arrow functions and comments. |
+
+The extension takes formatting off VS Code's HTML service for these files,
+which is not a preference. An HTML formatter reads the raw text, so the `>`
+in `:_class=${['a'].filter(s => s)}` ends the tag for it — it closes the tag
+there and every attribute after it becomes text. `// parameters` in a
+definition's attribute list comes back as two attributes. That is a
+different document, not a differently indented one.
+
+**The built-in HTML extension is separate, and still offers to format these
+files.** If you have `editor.formatOnSave` on, point HTML at this one:
+
+```json
+"[html]": { "editor.defaultFormatter": "fcapolini.markout-vscode" }
+```
+
+Not set for you, because these are `html` documents on purpose and this
+extension does not displace anything you have not asked it to.
+
+A file indented with tabs is left alone: the page shape aligns to a column
+derived from the tag's name, which no number of tabs can express, and
+formatting one of the two shapes while quietly skipping the other would be
+worse than doing nothing.
 
 ## When it speaks up
 

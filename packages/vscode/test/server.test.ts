@@ -234,6 +234,33 @@ async function definitionAt(name: string, text: string, at: string) {
   })) as { targetUri: string }[] | null;
 }
 
+/** format a file the way the Format Document command does, and apply the result */
+async function formatted(name: string, text: string) {
+  const uri = `file://${path.join(docroot, name)}`;
+  notify('textDocument/didOpen', {
+    textDocument: { uri, languageId: 'html', version: 1, text },
+  });
+  const edits = (await request('textDocument/formatting', {
+    textDocument: { uri },
+    options: { tabSize: 2, insertSpaces: true },
+  })) as { range: any; newText: string }[] | null;
+  // applied by offset, back to front. Volar collapses whatever the services
+  // returned into ONE edit replacing the whole document, so an applier that
+  // assumes a per-line edit writes the new page into the first line and
+  // leaves the old one under it
+  const lines = text.split('\n');
+  const starts = [0];
+  for (let i = 0; i < lines.length - 1; i++) {
+    starts.push(starts[i] + lines[i].length + 1);
+  }
+  const at = (p: { line: number; character: number }) => starts[p.line] + p.character;
+  let out = text;
+  for (const edit of [...(edits ?? [])].sort((a, b) => at(b.range.start) - at(a.range.start))) {
+    out = out.slice(0, at(edit.range.start)) + edit.newText + out.slice(at(edit.range.end));
+  }
+  return out;
+}
+
 /** the links the editor would offer, which is what ctrl-click follows */
 async function documentLinksFor(name: string, text: string) {
   const uri = `file://${path.join(docroot, name)}`;
@@ -331,6 +358,51 @@ describe('the server, over stdio', () => {
     // one tree per PROVIDER rather than merging them, so a second one is not
     // a better outline, it is two of the same -- which is what a page showed.
     expect(capabilities.documentSymbolProvider).toBeFalsy();
+  });
+
+  it('takes formatting off HTML\'s own service, which gets it wrong', async () => {
+    // not a preference between two formatters. HTML's reads the raw text, so
+    // the `>` in an arrow function ends the tag for it -- see the next case
+    // for what that does to a file. Ours answers instead
+    expect(capabilities.documentFormattingProvider).toBe(true);
+  });
+
+  it('indents a fragment without believing an arrow function ends the tag', async () => {
+    const out = await formatted(
+      'part.htm',
+      [
+        '<lib>',
+        '  <:define tag="bs-x:div"',
+        "           :_class=${['a', extra].filter(s => s).join(' ')}",
+        '           :on-click=${() => open = !open}',
+        '  >',
+        '    <p>text</p>',
+        '  </:define>',
+        '</lib>',
+      ].join('\n')
+    );
+    expect(out).toBe(
+      [
+        '<lib>',
+        '  <:define tag="bs-x:div"',
+        "    :_class=${['a', extra].filter(s => s).join(' ')}",
+        '    :on-click=${() => open = !open}',
+        '  >',
+        '    <p>text</p>',
+        '  </:define>',
+        '</lib>',
+      ].join('\n')
+    );
+  });
+
+  it('indents a page the other way, off the same file extension', async () => {
+    // one language to the editor, two conventions -- which is the reason this
+    // cannot be `html.format.wrapAttributes` in a setting
+    const out = await formatted(
+      'page.html',
+      ['<html><body>', '  <input value=${v}', '    :on-input=${e => v = e}>', '</body></html>'].join('\n')
+    );
+    expect(out).toContain('         :on-input=');
   });
 
   it('answers HTML\'s own questions too, through the embedded code', async () => {
