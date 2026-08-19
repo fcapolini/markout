@@ -151,7 +151,10 @@ function pageCache(
   /** anything else that goes stale when the docroot changes */
   alsoInvalidate: () => void = () => {}
 ) {
-  const entries = new Map<string, { page: Page; last: Promise<unknown> }>();
+  // the compile is memoized, not its result: the entry has to exist before
+  // the compile is awaited, or every request that arrives while one is in
+  // flight finds an empty cache and starts another
+  const entries = new Map<string, { page: Promise<Page>; last: Promise<unknown> }>();
   let watcher: TreeWatcher | undefined;
   try {
     // symlinked directories get watchers of their own; a recursive watch
@@ -178,13 +181,30 @@ function pageCache(
      * a document holding half of the other's data.
      */
     async use<T>(pathname: string, render: (page: Page) => Promise<T>): Promise<T> {
-      const hit = watcher && entries.get(pathname);
-      const page = hit ? hit.page : await compile(pathname);
       if (!watcher) {
-        return render(page);
+        return render(await compile(pathname));
       }
-      const entry = entries.get(pathname) ?? { page, last: Promise.resolve() };
-      entries.set(pathname, entry);
+      let entry = entries.get(pathname);
+      if (!entry) {
+        // recorded before anything is awaited, which is the whole point: the
+        // miss and the store used to sit on opposite sides of the compile, so
+        // a burst of requests for a cold page each looked, each found nothing,
+        // and each compiled a copy nobody but itself would ever render. Ten
+        // concurrent requests were ten compiles -- 2ms of waste on an ordinary
+        // page and most of a second on one that imports a kit
+        entry = { page: compile(pathname), last: Promise.resolve() };
+        entries.set(pathname, entry);
+        // A FAILED compile is not kept. Caching the rejection would be
+        // defensible while the file is broken -- the watcher clears it the
+        // moment the author saves -- but not every failure is the page's: a
+        // half-written file or an exhausted descriptor limit is a failure to
+        // retry, and this cache is emptied only by a change in the docroot,
+        // which such a failure need not involve
+        entry.page.catch(() => {
+          entries.get(pathname) === entry && entries.delete(pathname);
+        });
+      }
+      const page = await entry.page;
       const turn = entry.last.then(() => render(page), () => render(page));
       // the queue must survive a failed render, or one thrown error leaves
       // every later request for that page waiting on a promise nobody settles
