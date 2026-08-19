@@ -4,6 +4,7 @@ import path from "path";
 import request from "supertest";
 import { afterEach, describe, expect, it } from "vitest";
 import { Server } from "../../src/server";
+import { eventually } from "./eventually";
 
 /**
  * The two things a server shows when there is no page to show.
@@ -115,15 +116,20 @@ describe("not-found page", () => {
     const app = await server.create();
     expect((await request(app).get("/missing")).text).toBe("Not Found");
 
-    fs.writeFileSync(path.join(dir, "404.html"), "<html><body><h1>Now here</h1></body></html>");
-    // Polled rather than slept on. The watcher fires when the platform gets
-    // round to it, so any single wait is either flaky or slow -- and this
-    // test was the flaky one at half a second.
-    let text = "";
-    for (let i = 0; i < 60 && !text.includes("Now here"); i++) {
-      await new Promise(r => setTimeout(r, 50));
-      text = (await request(app).get("/missing")).text;
-    }
+    // Written on every attempt, not once and then waited on. Polling alone
+    // was the previous fix and it is the wrong shape: `fs.watch` is not armed
+    // the moment it returns, so a write in the window between creating the
+    // server and this line produces no event at all and no timeout can wait
+    // for one. See ./eventually.
+    const text = await eventually(
+      n =>
+        fs.writeFileSync(
+          path.join(dir, "404.html"),
+          `<html><body><h1>Now here</h1><!--${n}--></body></html>`
+        ),
+      async () => (await request(app).get("/missing")).text,
+      seen => seen.includes("Now here")
+    );
     expect(text).toContain("Now here");
   }, 10000);
 });
