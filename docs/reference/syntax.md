@@ -814,9 +814,12 @@ Available: `Array`, `BigInt`, `Boolean`, `Date`, `Error`, `Infinity`, `Intl`,
 `parseFloat`, `parseInt`, `queueMicrotask`, `setInterval`, `setTimeout`,
 `structuredClone`, `URL`, `undefined`, and `$origin`.
 
-The timers, `fetch` and `URL` are on the list for the same reason as the
-rest: they exist in both environments, and the places that call them — `:on-`
-and `:handle-` bodies — only run in one.
+The timers, `fetch` and `URL` look like browser things and are on the list
+for the same reason as everything else: Node has them too, and they mean the
+same thing there. That is the whole test. A name available in only one of the
+two environments would make a page that worked in the browser and failed on
+the server, or the reverse, and it would fail at the point of use rather than
+anywhere a reader would think to look.
 
 ### `$origin`
 
