@@ -1240,23 +1240,14 @@ function rehomeNestedScopes(
     const el = findByScopeId(stencil, child.id);
     if (!el) return child;
 
-    const copy = new Scope(page, undefined, el, child.name);
-    copy.id = child.id;
-    // recorded, not copied: what this copy needs from `child` may not have
-    // been worked out yet. An `:else` link is decided once every usage has
-    // been expanded, which is after this runs -- see linkElseChains
+    // the field-by-field copy lives on Scope, where a field added to the
+    // class cannot get past the compiler without being sorted into carried
+    // or not -- which is exactly how `elseOf` came to be dropped from here
+    const copy = child.copyForUsage(parent, el);
+    // recorded, because what a copy needs from `child` is not always known
+    // yet: an `:else` link is decided once every usage has been expanded,
+    // which is after this runs. See linkElseChains
     (page.rehomedScopes.get(child) ?? page.rehomedScopes.set(child, []).get(child)!).push(copy);
-    copy.parent = parent;
-    copy.lexicalParent = child.lexicalParent;
-    copy.slotted = child.slotted;
-    copy.usesTemplate = child.usesTemplate;
-    copy.attributes = child.attributes;
-    copy.callSiteValues = child.callSiteValues && new Set(child.callSiteValues);
-    // shared: a Value resolves against the scope it was WRITTEN in, which is
-    // still the definition's. Only the text, which is bound by position in
-    // markup this usage has changed, has to be rebuilt
-    copy.values = child.values;
-    copy.textCount = child.textCount;
     copy.children = rehomeNestedScopes(
       page,
       child.children.filter(c => !dropped(c)),

@@ -2,6 +2,60 @@ import { ServerElement } from '../../html/server-dom';
 import type { Page } from './Page';
 import type { Value } from './Value';
 
+/** what `copyForUsage` carries from the scope it copies */
+type Carried =
+  | 'id'
+  | 'name'
+  | 'values'
+  | 'textCount'
+  | 'usesTemplate'
+  | 'attributes'
+  | 'callSiteValues'
+  | 'slotted'
+  | 'lexicalParent';
+
+/**
+ * What it deliberately does not, each for its own reason.
+ *
+ * `page` and `parent` and `e` are what a copy is FOR -- it belongs to another
+ * parent and stands in front of another element. `children` and
+ * `slottedText` are filled by the caller, which is the only party that knows
+ * where the clone put the markup. `textValues` is rebuilt with them, since a
+ * text binding is bound by position in markup this usage has changed.
+ * `lexicalChildren` is built later, in stage4, from whatever the tree is by
+ * then. `detachedUsageSite` marks the one scope a usage leaves behind, which
+ * is never one of these. And `elseOf`/`elseNext` are decided after every
+ * usage has been expanded -- later than this runs -- so they reach the copies
+ * through page.rehomedScopes instead.
+ */
+type Fresh =
+  | 'page'
+  | 'parent'
+  | 'children'
+  | 'e'
+  | 'textValues'
+  | 'slottedText'
+  | 'lexicalChildren'
+  | 'detachedUsageSite'
+  | 'elseOf'
+  | 'elseNext';
+
+/** behaviour rather than state, so a copy inherits it */
+type Methods = 'copyForUsage' | 'lexical' | 'nameSite' | 'resolvesVia';
+
+/**
+ * Every field of Scope is sorted into exactly one of the three above.
+ *
+ * Adding one lands here and fails to compile until it is, which is the whole
+ * mechanism: the alternative is a copy silently missing it, and a scope
+ * missing a field is a valid object that goes wrong somewhere else entirely.
+ * The tuples are not decoration -- a bare `X extends never` distributes over
+ * a union and answers `never` rather than `false`.
+ */
+type Unaccounted = Exclude<keyof Scope, Carried | Fresh | Methods>;
+const accountedFor: [Unaccounted] extends [never] ? true : false = true;
+void accountedFor;
+
 export class Scope {
   page: Page;
   id: string;
@@ -72,6 +126,44 @@ export class Scope {
    * Built once, at the start of stage4.
    */
   lexicalChildren?: Scope[];
+
+  /**
+   * A copy of this scope, for one usage site's own stencil.
+   *
+   * A usage that fills a slot gets a clone of the definition's markup, and
+   * every scope whose element holds that slot has to come with it -- see
+   * stage1-load's rehomeNestedScopes, which is the only caller and which
+   * fills in the two things that depend on where the clone put the markup.
+   *
+   * The field-by-field sorting below is the point of having this here rather
+   * than at the call site. It used to be a list of assignments over there,
+   * and a field added to this class after it was written was simply not on
+   * that list -- so `elseOf` was dropped, every branch of an adaptive
+   * component came out unlinked, and an `:else` rendered alongside the
+   * branch it was an alternative to. Nothing said anything, because a copy
+   * that is missing a field is a perfectly good object.
+   *
+   * `accountedFor` below is what makes that impossible now: every key of
+   * this class has to appear in one of the three lists, so adding a field
+   * fails to compile until somebody decides which it is.
+   */
+  copyForUsage(parent: Scope, e: ServerElement): Scope {
+    const copy = new Scope(this.page, undefined, e, this.name);
+    // the same id, deliberately: the runtime finds a scope's DOM by it, and
+    // an `:else` link between two copies is written as one
+    copy.id = this.id;
+    copy.parent = parent;
+    // shared, not copied: a Value resolves against the scope it was WRITTEN
+    // in, which is still the definition's
+    copy.values = this.values;
+    copy.textCount = this.textCount;
+    copy.usesTemplate = this.usesTemplate;
+    copy.attributes = this.attributes;
+    copy.callSiteValues = this.callSiteValues && new Set(this.callSiteValues);
+    copy.slotted = this.slotted;
+    copy.lexicalParent = this.lexicalParent;
+    return copy;
+  }
 
   /** the scope this one's expressions resolve against */
   lexical(): Scope | undefined {
