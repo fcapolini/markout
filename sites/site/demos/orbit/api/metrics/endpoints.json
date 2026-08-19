@@ -1,0 +1,32 @@
+[
+  {
+    "path": "/v1/events",
+    "calls": 184200,
+    "share": 38,
+    "tone": "primary"
+  },
+  {
+    "path": "/v1/projects",
+    "calls": 96400,
+    "share": 20,
+    "tone": "info"
+  },
+  {
+    "path": "/v1/auth/token",
+    "calls": 72900,
+    "share": 15,
+    "tone": "success"
+  },
+  {
+    "path": "/v1/search",
+    "calls": 58100,
+    "share": 12,
+    "tone": "warning"
+  },
+  {
+    "path": "/v1/billing/usage",
+    "calls": 34700,
+    "share": 7,
+    "tone": "secondary"
+  }
+]

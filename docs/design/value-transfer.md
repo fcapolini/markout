@@ -368,18 +368,26 @@ outcome beats a result reconstructed from whatever happened to finish.
 
 ## Where it ends up
 
-Orbit, the Bootstrap kit's demo application, now reads its data from its own
-API instead of declaring it — ten `std-data` elements, one per endpoint,
-fetched while the page renders. Every filter, chart, table and detail panel
-is the same expression over the same array it always was. That is the whole
-argument in one page: the distance between "hardcoded data" and "a real
-service" is the line that fetches it, with no store, no loader, no effect and
-no request from the browser.
+Orbit, the Bootstrap kit's demo application, now reads its data instead of
+declaring it — ten `std-data` elements, one per source, fetched while the
+page renders. Every filter, chart, table and detail panel is the same
+expression over the same array it always was. That is the whole argument in
+one page: the distance between "hardcoded data" and "a real service" is the
+line that fetches it, with no store, no loader, no effect and no request from
+the browser.
 
-One of the ten cannot be asked for until another has answered — which
-incidents matter depends on which services are unwell — so the page also
-exercises the settle loop's chain following, through a component rather than
-by hand.
+What those ten read is a directory of JSON files, which is a claim about this
+design rather than a shortcut taken while writing the demo: a page whose data
+crosses in its markup does not need the server that produced it to be the one
+serving the page, or to be written in Node, or to exist at all. Orbit deploys
+to a static host, and swapping its files for a service is `:apiBase`.
+
+It used to have an API of its own, and the interesting thing lost with it was
+a chain — which incidents matter is decided by which services are unwell, so
+one source could not be asked for until another had answered. A file cannot
+answer that, so in Orbit the join is now an expression over two arrays. The
+chained version, and the settle loop's chain following through a component,
+moved to the demo that has a server: `sites/site/demos/desk/`.
 
 ## What the kit found
 

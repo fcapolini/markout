@@ -1,0 +1,62 @@
+[
+  {
+    "id": "edge",
+    "name": "edge-router",
+    "owner": "Platform",
+    "state": "ok",
+    "uptime": 99.98,
+    "latency": 42,
+    "rps": 8600,
+    "errors": 0.02
+  },
+  {
+    "id": "api",
+    "name": "public-api",
+    "owner": "Core",
+    "state": "ok",
+    "uptime": 99.95,
+    "latency": 118,
+    "rps": 5200,
+    "errors": 0.11
+  },
+  {
+    "id": "auth",
+    "name": "auth-service",
+    "owner": "Identity",
+    "state": "degraded",
+    "uptime": 99.41,
+    "latency": 340,
+    "rps": 1900,
+    "errors": 1.84
+  },
+  {
+    "id": "jobs",
+    "name": "job-runner",
+    "owner": "Platform",
+    "state": "ok",
+    "uptime": 99.99,
+    "latency": 12,
+    "rps": 640,
+    "errors": 0
+  },
+  {
+    "id": "search",
+    "name": "search-index",
+    "owner": "Data",
+    "state": "ok",
+    "uptime": 99.87,
+    "latency": 76,
+    "rps": 2400,
+    "errors": 0.19
+  },
+  {
+    "id": "billing",
+    "name": "billing",
+    "owner": "Revenue",
+    "state": "down",
+    "uptime": 97.2,
+    "latency": 0,
+    "rps": 0,
+    "errors": 100
+  }
+]

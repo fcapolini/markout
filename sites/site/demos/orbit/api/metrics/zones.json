@@ -1,0 +1,17 @@
+[
+  {
+    "name": "eu-west",
+    "share": 46,
+    "tone": "primary"
+  },
+  {
+    "name": "us-east",
+    "share": 34,
+    "tone": "info"
+  },
+  {
+    "name": "ap-south",
+    "share": 20,
+    "tone": "warning"
+  }
+]

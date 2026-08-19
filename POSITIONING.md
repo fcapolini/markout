@@ -142,7 +142,7 @@ cheatsheet](https://getbootstrap.com/docs/5.3/examples/cheatsheet/), one file
 per component, landed 2026-08-15. It ships two pages of its own — a showcase
 that puts every component on screen at once, and
 [Orbit](sites/site/demos/orbit.html), an operations console built out of them
-against an API of its own.
+over a directory of JSON files.
 
 For a while there were two, and the second one did real damage to the pitch:
 `demo/bootstrap-kit/` was five hand-written definitions predating the kit,
@@ -193,6 +193,14 @@ So the proof has to come from the two tiers above it, and now does:
   another — and server-rendered complete, because its `std-data` sources
   resolve while the page renders and the browser asks for nothing. It is also
   where the two kits meet, which is worth showing rather than asserting.
+  What those sources read is a directory of JSON files, on purpose: the
+  console has no back end, so nothing in the demo asks a reader to run Node
+  or to believe that a page's data has to come from it. Pointing `:apiBase`
+  at a service written in anything else is one attribute, which is the note
+  the demo carries — and [Desk](sites/site/demos/desk/index.html) is the same
+  architecture with that swap made, small and plain, for the three things a
+  file cannot do: answer a question, answer one that depends on another
+  answer, and be written to.
 
 ## One prefix: everything is `bs-`
 
