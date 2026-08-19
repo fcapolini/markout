@@ -207,6 +207,22 @@
     }
 
     /*
+      The outlined things that are ABOUT code — the section chips and the
+      kit card — take the same ink as an inline code span rather than
+      Bootstrap's pale primary tint, so the outline says what the chip's
+      label and `.rule-code` already say. `--bs-primary-text-emphasis` is
+      exactly what `.rule-code` colors its text with.
+
+      Redefining the token the utility resolves, as above: the utility reads
+      `var(--bs-primary-border-subtle)` off the element, and a value set on
+      that same element beats the one inherited from `:root` without having
+      to out-`!important` a declaration that is already `!important`.
+    */
+    .border-primary-subtle {
+      --bs-primary-border-subtle: color-mix(in srgb, var(--bs-primary-text-emphasis) 33%, transparent);
+    }
+
+    /*
       Headings sit a step above body text in dark mode. Large glyphs at the
       same ink read dimmer than paragraph text does — more of each stroke is
       interior, so less of it is the edge the eye uses to judge weight.
