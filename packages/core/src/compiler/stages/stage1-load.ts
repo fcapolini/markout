@@ -84,6 +84,7 @@ export function stage1load(page: Page) {
   page.main = load(page, page.global, page.source.doc.documentElement!, 'page');
   // expanding anything at all once a definition is based on another one
   // would work on a stencil that is about to be rewritten underneath it
+  checkSlotNames(page);
   rejectDerivedDefines(page) || expandCustomTagUsages(page);
   linkElseChains(page);
   checkLogicPlacement(page);
@@ -93,6 +94,61 @@ export function stage1load(page: Page) {
   // exactly the fallback a usage supplying nothing should get
   unwrapSlots(page.source.doc.documentElement!);
   return page;
+}
+
+/**
+ * One name, one slot, per definition.
+ *
+ * Only the first `<:slot>` of a name can ever be filled -- a usage's content
+ * goes to one place -- so a second one renders its fallback and nothing else,
+ * whatever the caller supplies. That was silent, and the shape it most often
+ * takes is worth naming in the error: two branches of an `:if`/`:else` each
+ * holding a `<:slot />`, written by someone who meant "whichever branch is
+ * showing". The content goes to the branch written first and disappears along
+ * with it, leaving markup that is simply empty and no clue as to why.
+ *
+ * The way to have both is a slot per branch under names of its own, which the
+ * error says, because it is not obvious from anything else.
+ *
+ * Descends into `<template>`s for the same reason findSlots does -- by this
+ * point both replication families have moved their markup into one, and a
+ * slot in there is still one of this definition's.
+ */
+function checkSlotNames(page: Page): void {
+  for (const [tag, stencil] of page.defineStencils) {
+    const seen = new Set<string>();
+    const walk = (e: ServerElement) => {
+      const children =
+        e.tagName === 'TEMPLATE'
+          ? [...(e as ServerTemplateElement).content.childNodes]
+          : [...e.childNodes];
+      for (const child of children) {
+        if (child.nodeType !== NodeType.ELEMENT) continue;
+        const el = child as ServerElement;
+        if (el.tagName !== SLOT_DIRECTIVE_TAG) {
+          walk(el);
+          continue;
+        }
+        const name = `${el.getAttribute(SLOT_NAME_ATTR) ?? DEFAULT_SLOT_NAME}`;
+        if (seen.has(name)) {
+          const which = name
+            ? `a second <:slot name="${name}">`
+            : 'a second unnamed <:slot>';
+          addError(
+            page,
+            `<${tag}> has ${which}. Only the first can be filled, so this one ` +
+              `would render its own content and never the caller's. Two ` +
+              `branches that each want the caller's markup need a slot each, ` +
+              `under names of their own`,
+            el.loc
+          );
+          continue;
+        }
+        seen.add(name);
+      }
+    };
+    walk(stencil);
+  }
 }
 
 /**
