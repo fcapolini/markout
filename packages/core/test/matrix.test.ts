@@ -204,6 +204,54 @@ const CONTAINERS = [
     }),
     count: 1,
   },
+  {
+    // a region that is showing is still a region: its markup arrived from a
+    // stencil rather than being in the page, which is a different path to
+    // the element every binding here has to find
+    name: 'inside a showing :if',
+    wrap: (m: string) => ({ head: '', body: `<i :if=${'${v}'}>${m}</i>` }),
+    count: 1,
+  },
+  {
+    name: 'inside a :for-data with something to show',
+    wrap: (m: string) => ({ head: '', body: `<i :for-data=${'${v}'}>${m}</i>` }),
+    count: 1,
+  },
+  {
+    // the branch that renders is the one with no condition of its own, so
+    // this also proves the chain decided rather than each branch answering
+    // for itself -- two probes here would mean both branches were showing
+    name: 'inside the :else of a chain',
+    wrap: (m: string) => ({
+      head: '',
+      body: `<i :if=${'${!v}'}><b data-probe="1">nope</b></i><i :else>${m}</i>`,
+    }),
+    count: 1,
+  },
+  {
+    // The three together, which is where they actually went wrong: a usage
+    // filling a slot copies the scopes around it, and the copies were losing
+    // the links that make a chain a chain -- so every branch answered for
+    // itself, an `:else` compiles its condition to `true`, and both showed.
+    //
+    // Both slots are filled deliberately. Only a branch whose slot this usage
+    // fills is copied, so filling one leaves the other holding its links and
+    // the chain limps along correctly by accident. And the taken branch has
+    // to be the FIRST: with the `:else` winning, a chain that never decided
+    // reaches the same answer and proves nothing. The decoy probe in the
+    // losing branch is what turns "both showed" into a count of two.
+    name: 'in a named slot inside a definition that branches',
+    wrap: (m: string) => ({
+      head:
+        '<:define tag="my-box:div" :v="SHADOW">' +
+        `<i :if=${'${v}'}><:slot name="on" /></i>` +
+        '<i :else><:slot name="off" /></i></:define>',
+      body:
+        `<my-box><span :slot="on">${m}</span>` +
+        '<b :slot="off" data-probe="1">nope</b></my-box>',
+    }),
+    count: 1,
+  },
 ];
 
 // ---------------------------------------------------------------------------
