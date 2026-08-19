@@ -1,11 +1,13 @@
 import * as estraverse from 'estraverse';
 import type { Node } from 'estree';
 import type { Page } from '../ir/Page';
+import type { ServerAttribute } from '../../html/server-dom';
 import {
   DID_VALUE_PREFIX,
   EVENT_VALUE_PREFIX,
   FOR_DATA_VALUE,
   FOR_EACH_VALUE,
+  IF_VALUE,
   HANDLE_VALUE_PREFIX,
   WILL_VALUE_PREFIX,
 } from '../ir/Page';
@@ -521,11 +523,86 @@ function resolveChain(segments: string[], value: Value, page: Page): ValueDepRef
       via.push(segments[i]);
       return { via, key: segments[i + 1] };
     }
+    if (!reachable(step.scope, value, page, segments, i)) {
+      return undefined;
+    }
     via.push(segments[i]);
     target = step.scope;
   }
 
   return validated(via, segments[segments.length - 1], target, value, page);
+}
+
+/**
+ * Whether a name reached by navigating INTO `into` is there to be read.
+ *
+ * It is not, when `into` sits inside a region -- `:for-each`, `:for-data`,
+ * `:if` and its branches -- that the reading expression is outside of. The
+ * reason is the guarantee that makes a region worth having: what is inside
+ * one is not built while it is a stencil, so those scopes do not exist, and
+ * a scope that does not exist has registered no name. The dependency has
+ * nothing to link to.
+ *
+ * That failed at LINK time and unreadably. `${panel.field.open}` compiled
+ * clean and the browser answered `Cannot read properties of undefined
+ * (reading '$value')`, which names nothing the author wrote -- and the
+ * runtime is entitled to read it as a markout bug rather than a page bug,
+ * since the compiler is supposed to guarantee every dependency resolves.
+ * This is the compiler keeping that promise.
+ *
+ * The walk is STRUCTURAL, and has to be: markup slotted into a component
+ * resolves its names at the call site but lives wherever the definition put
+ * it, which can be inside a region of the component's own. Its name is
+ * perfectly reachable and its scope still will not exist -- the one case a
+ * lexical walk would wave through.
+ *
+ * Two things stay reachable. A value ON a region host, since that scope
+ * exists whether or not it is showing -- which is how a region's own
+ * condition is read. And anything read from inside the same region, where
+ * everything is built together and stops existing together.
+ */
+function reachable(
+  into: Scope,
+  value: Value,
+  page: Page,
+  segments: string[],
+  at: number
+): boolean {
+  const from = resolvesFrom(value);
+  for (let host: Scope | undefined = into.parent; host; host = host.parent) {
+    const region = [FOR_EACH_VALUE, FOR_DATA_VALUE, IF_VALUE].find(k => host!.values.has(k));
+    if (!region) {
+      continue;
+    }
+    // inside it too, and so inside every region further out: nothing left
+    // between the two of them to come and go
+    for (let s: Scope | undefined = from; s; s = s.parent) {
+      if (s === host) {
+        return true;
+      }
+    }
+    const written = (host.values.get(region)!.node as ServerAttribute).name;
+    const why =
+      region === FOR_EACH_VALUE
+        ? `which renders it once per item, so the name means as many scopes ` +
+          `as there are items and none of them in particular`
+        : `which takes it away again, so the name is there only while the ` +
+          `region is showing -- not something anything outside it can hold on to`;
+    // named by the segment BEFORE this one: `at` is what we are navigating
+    // to, and there is always a previous segment, since at the first the
+    // host would be the scope this expression sits in and the walk above
+    // would have found it
+    addError(
+      page,
+      `Cannot read "${segments.slice(at).join('.')}" through ` +
+        `"${segments[at - 1]}": "${segments[at]}" is inside a "${written}" ` +
+        `region, ${why}. Declare what the outside needs to read outside the ` +
+        `region, and read it from within`,
+      value.node.loc
+    );
+    return false;
+  }
+  return true;
 }
 
 function validated(

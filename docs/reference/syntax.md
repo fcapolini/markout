@@ -423,6 +423,39 @@ one — so CSS written against a replicated list has to use `:first-of-type`
 rather than `:first-child`, and `:nth-of-type` rather than `:nth-child`. See
 [replication](../concepts/replication.md#the-stencil-is-a-real-element-and-css-can-see-it).
 
+### A name inside a region belongs to it
+
+A region is not built while it isn't showing — that is what "evaluates
+nothing" means — so the scopes inside one do not exist, and an `:aka`
+declared in there is not a name anything outside can read:
+
+```html
+<div :aka="panel" :if=${open}>
+  <input :aka="field" :text=${''}>
+</div>
+<p>${panel.field.text}</p>       <!-- compile error -->
+```
+
+Refused rather than left to fail when the page runs, which is where it used
+to land, with a message about `undefined` that named nothing the author had
+written. `:for-each` is refused for a second reason on top: it renders its
+body once per item, so the name means as many scopes as there are items.
+
+Two things still reach. A value **on** the region host — `${panel.open}` —
+since that scope exists whether or not it is showing, which is how a
+region's own condition is read. And anything read from **inside** the same
+region, where everything is built together and stops existing together.
+
+Where the outside genuinely needs the value, declare it outside the region
+and read it from within:
+
+```html
+<div :aka="ui" :text=${''}>
+  <div :if=${open}><input value=${ui.text} :on-input=${e => ui.text = e.target.value}></div>
+</div>
+<p>${ui.text}</p>
+```
+
 ## Modules and components
 
 | Syntax | Meaning |
