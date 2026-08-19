@@ -10,11 +10,17 @@
       <bs-card :title="Card title" :footer="2 days ago">
         <p class="card-text">Some quick example text.</p>
       </bs-card>
+
+    The body is the one region a caller cannot reach with `:extra`, which
+    goes on the card itself -- hence `:bodyExtra`, for the padding Bootstrap
+    leaves to a utility class: `p-0` for a table or a code surface that runs
+    to the edges, `p-4` for a card that is mostly one paragraph.
   -->
   <:define tag="bs-card:div"
 
     // parameters
     :extra=${null}      // extra classes for this instance
+    :bodyExtra=${null}  // extra classes for the body: `p-0`, `p-4`, `d-flex`
     :title=${null}
     :subtitle=${null}
     :header=${null}
@@ -52,7 +58,7 @@
     <div class="card-header"
       :if=${header}><:slot name="header">${header}</:slot></div>
 
-    <div class="card-body">
+    <div class=${bodyExtra ? `card-body ${bodyExtra}` : 'card-body'}>
       <h5 class="card-title"
         :if=${title}>${title}</h5>
 

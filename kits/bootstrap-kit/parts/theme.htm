@@ -10,14 +10,23 @@
     piece of this kit that cannot be reactive, because it has to happen
     before Markout exists.
 
-    From there `_theme` is an ordinary value: `:did-init` adopts whatever
-    that script decided, and `:handle-_theme` writes every later change back
-    out. Splitting the two is what keeps the handler honest — it used to
-    carry a flag so its first run could mean the opposite of every other one.
+    From there `_theme` is an ordinary value, and it starts as whatever that
+    script decided rather than as a literal: a served page knows nothing
+    about this visitor, so a default written here would be a guess that the
+    handler then wrote over the truth. In the browser the expression finds
+    the attribute already set; on the server there is no document and the
+    fallback stands, which is only ever what the markup is stamped with.
 
-    Both go through `globalThis`, because `document` and `localStorage` are
-    browser globals rather than standard library, and this kit would rather
-    say so at the point of use than pretend a server has them.
+    `:handle-_theme` writes every change out, and a handler runs once at
+    start as well as on every change — so it asks first. On that first run
+    the page already shows `v`, and there is nothing to do; leaving storage
+    alone there is what keeps a visitor who has never chosen following their
+    system rather than being pinned to whatever it said the first time.
+
+    Everything goes through `globalThis`, because `document` and
+    `localStorage` are browser globals rather than standard library, and this
+    kit would rather say so at the point of use than pretend a server has
+    them.
   -->
   <script>
     (() => {
@@ -38,7 +47,7 @@
     :size=${null}
 
     // private
-    :_theme=${'light'}
+    :_theme=${globalThis.document?.documentElement.getAttribute('data-bs-theme') ?? 'light'}
     :_class=${[
       'btn',
       `btn-${outline ? 'outline-' : ''}${variant}`,
@@ -49,17 +58,10 @@
     class=${_class}
     aria-label="Toggle colour mode"
 
-    /*
-      the served page carried a default that knows nothing about this
-      visitor; the pre-paint script already knows better
-    */
-    :did-init=${() => {
-      _theme = globalThis.document.documentElement
-        .getAttribute('data-bs-theme') || _theme;
-    }}
-
     :handle-_theme=${(v) => {
-      globalThis.document.documentElement.setAttribute('data-bs-theme', v);
+      const html = globalThis.document.documentElement;
+      if (html.getAttribute('data-bs-theme') === v) return;
+      html.setAttribute('data-bs-theme', v);
       globalThis.localStorage.setItem('bs-theme', v);
     }}
     :on-click=${() => _theme = _theme === 'dark' ? 'light' : 'dark'}

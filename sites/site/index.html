@@ -1,11 +1,17 @@
-<!doctype html>
-
 <html lang="en">
 
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1">
+  <!--
+    The kit first, then this page's own tags on top of it. Between them they
+    bring the charset, the viewport, Bootstrap's CSS and JS, and the script
+    that sets the colour mode before the first paint -- all of which this
+    page used to write out by hand, and none of which it has an opinion
+    about. `home.htm` imports the kit as well, since a definition has to see
+    the tags it is written with; a file is imported once per page however
+    many times it is named.
+  -->
+  <:import src="/npm/@markout-dev/bootstrap-kit/all.htm" />
+  <:import src="/parts/home.htm" />
 
   <!--
     Both are the SMALL variant of the logo, whose arrowheads are drawn to
@@ -21,54 +27,7 @@
   <meta name="description"
         content="Markout makes HTML modular, reactive and isomorphic. Start with an ordinary Bootstrap page and add application logic where it belongs: in the markup.">
 
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
-        rel="stylesheet">
-
-  <!-- Set the color mode before first paint, to avoid a flash. -->
-  <script>
-    (() => {
-      const stored = localStorage.getItem('markout-theme');
-      const theme = stored
-        || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-      document.documentElement.setAttribute('data-bs-theme', theme);
-    })();
-  </script>
-
   <style>
-    /*
-      Code samples stay dark in both color modes: the whole card carries
-      `data-bs-theme="dark"`, so its header, footer and border take the dark
-      palette too and the frame doesn't flip with the page. These tokens then
-      resolve to Bootstrap's own dark values, and the highlight colors below
-      only ever have to work against the one background. A `.card-body` paints
-      nothing by itself, hence setting the background here rather than relying
-      on the inherited attribute alone.
-
-      `--bs-dark-bg-subtle` (#1a1d20 in the dark palette) sits a step below
-      `--bs-body-bg`, so the code reads as an inset panel even where the card
-      or the section behind it is already dark.
-    */
-    .code-surface {
-      background-color: var(--bs-dark-bg-subtle);
-      color: var(--bs-body-color);
-    }
-
-    /*
-      In light mode a code card is a dark island on a bright page, and the eye
-      is adapted to the surround rather than to the card — so its chrome needs
-      to sit brighter than it does in dark mode, where the whole page is
-      already dark and matching ink reads as intended.
-
-      Redefining the tokens rather than `color` alone keeps Bootstrap's text
-      utilities working: `.text-body-secondary` resolves `--bs-secondary-color`
-      through an `!important` declaration that a plain `color` can't outrank.
-    */
-    html:not([data-bs-theme="dark"]) .card[data-bs-theme="dark"] > .card-header,
-    html:not([data-bs-theme="dark"]) .card[data-bs-theme="dark"] > .card-footer {
-      --bs-secondary-color: rgba(255, 255, 255, .75);
-      color: #fff;
-    }
-
     /*
       The padding lives on the scrolling element rather than on the card body
       around it, so the horizontal scrollbar spans the full width of the dark
@@ -247,13 +206,6 @@
     html[data-bs-theme="dark"] h6 {
       color: var(--bs-light);
     }
-
-    .step-number {
-      font-variant-numeric: tabular-nums;
-      /* Emphasis tokens stay legible against both the light and dark body. */
-      color: var(--bs-primary-text-emphasis);
-      opacity: .75;
-    }
   </style>
 </head>
 
@@ -261,89 +213,45 @@
 
   <!-- Navigation -->
 
-  <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom sticky-top">
-    <div class="container">
-      <!--
-        The mark before the name, inlined rather than linked: it is drawn in
-        `currentColor`, which only means anything to markup that is part of
-        this page -- an <img> would be a document of its own and take the
-        black a lone svg defaults to. It carries no name, so it adds nothing
-        to the link's own text, which is what says "Markout" to a reader who
-        isn't looking at it.
+  <!--
+    The mark before the name, inlined rather than linked: it is drawn in
+    `currentColor`, which only means anything to markup that is part of this
+    page -- an <img> would be a document of its own and take the black a
+    lone svg defaults to. It carries no name, so it adds nothing to the
+    link's own text, which is what says "Markout" to a reader who isn't
+    looking at it.
 
-        `as="span"` makes this a literal include, dropping the file in whole
-        and wrapping it. Without it the file is read as markup, which for a
-        fragment means its root attributes are merged into the tag doing the
-        including -- an svg's viewBox landing on this <a>, and no svg left.
-      -->
-      <a class="navbar-brand fw-semibold d-flex align-items-center gap-2"
-         href="#top">
-        <:include src="/logo-small-plain.svg" as="span" />
-        Markout
-      </a>
+    `as="span"` makes this a literal include, dropping the file in whole and
+    wrapping it. Without it the file is read as markup, which for a fragment
+    means its root attributes are merged into the tag doing the including --
+    an svg's viewBox landing on the brand link, and no svg left.
+  -->
+  <bs-navbar :sticky
+             :brand="#top"
+             :extra="border-bottom"
+             :expand="xl"
+             :items=${[
+               { name: 'Before / after', link: '#boilerplate' },
+               { name: 'Bootstrap Kit', link: '#kit' },
+               { name: 'Reactivity', link: '#reactive' },
+               { name: 'Design systems', link: '#design-system' },
+               { name: 'The language', link: '#language' },
+               { name: 'Compared', link: '#compared' },
+               { name: 'Editor', link: '#editor' },
+             ]}>
+    <span class="fw-semibold d-flex align-items-center gap-2">
+      <:include src="/logo-small-plain.svg" as="span" />
+      Markout
+    </span>
 
-      <button class="navbar-toggler"
-              type="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#navbarMain"
-              aria-controls="navbarMain"
-              aria-expanded="false"
-              aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
+    <bs-theme-toggle :slot="end"
+                     :size="sm" />
 
-      <div class="collapse navbar-collapse"
-           id="navbarMain">
-        <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
-          <li class="nav-item">
-            <a class="nav-link"
-               href="#boilerplate">Before / after</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link"
-               href="#kit">Bootstrap Kit</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link"
-               href="#reactive">Reactivity</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link"
-               href="#design-system">Design systems</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link"
-               href="#language">The language</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link"
-               href="#compared">Compared</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link"
-               href="#editor">Editor</a>
-          </li>
-
-          <li class="nav-item ms-lg-2">
-            <button class="btn btn-sm btn-outline-secondary"
-                    type="button"
-                    id="themeToggle"
-                    aria-label="Toggle color mode">
-              <span aria-hidden="true"
-                    id="themeToggleIcon">◐</span>
-            </button>
-          </li>
-
-          <li class="nav-item ms-lg-2">
-            <a href="https://github.com/fcapolini/markout"
-               class="btn btn-primary">
-              GitHub
-            </a>
-          </li>
-        </ul>
-      </div>
-    </div>
-  </nav>
+    <bs-link :slot="end"
+             :button
+             :variant="primary"
+             :href="https://github.com/fcapolini/markout">GitHub</bs-link>
+  </bs-navbar>
 
   <!-- Hero -->
 
@@ -353,9 +261,7 @@
       <div class="row align-items-center g-5">
 
         <div class="col-lg-7">
-          <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle mb-3">
-            Bootstrap + Markout
-          </span>
+          <page-eyebrow :extra="mb-3">Bootstrap + Markout</page-eyebrow>
 
           <h1 class="display-4 fw-bold lh-1 mb-4">
             Add application logic directly to your Bootstrap&nbsp;page.
@@ -373,39 +279,34 @@
           </p>
 
           <div class="d-flex flex-wrap gap-2">
-            <a href="#boilerplate"
-               class="btn btn-primary btn-lg">
-              See it on a real page
-            </a>
+            <bs-link :href="#boilerplate"
+                     :button
+                     :variant="primary"
+                     :size="lg">See it on a real page</bs-link>
 
-            <a href="#kit"
-               class="btn btn-outline-secondary btn-lg">
-              Explore the Bootstrap Kit
-            </a>
+            <bs-link :href="#kit"
+                     :button
+                     :variant="secondary"
+                     :outline
+                     :size="lg">Explore the Bootstrap Kit</bs-link>
           </div>
         </div>
 
         <div class="col-lg-5">
-          <div class="card shadow-sm overflow-hidden"
-               data-bs-theme="dark">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <span class="font-monospace small">index.html</span>
-              <span class="badge text-bg-secondary">HTML</span>
-            </div>
-
-            <div class="card-body p-0 code-surface">
+          <code-card :title="index.html"
+                     :label="HTML"
+                     :note>
 <pre class="mb-0"><code data-lang="html">&lt;button class="btn btn-primary"
         :count=${0}
         :on-click=${() =&gt; count++}&gt;
   Clicked ${count} time${count !== 1 ? 's' : ''}
 &lt;/button&gt;</code></pre>
-            </div>
-
-            <div class="card-footer text-body-secondary small">
+            <p :slot="note"
+               class="mb-0">
               A Bootstrap button that declares its own value and updates it.
               Nothing else on the page has to change.
-            </div>
-          </div>
+            </p>
+          </code-card>
         </div>
 
       </div>
@@ -435,53 +336,23 @@
       <div class="row justify-content-center">
         <div class="col-lg-10">
 
-          <ul class="nav nav-pills justify-content-center gap-2 mb-4"
-              id="boilerplateTabs"
-              role="tablist">
-            <li class="nav-item"
-                role="presentation">
-              <button class="nav-link active"
-                      id="plain-tab"
-                      data-bs-toggle="pill"
-                      data-bs-target="#plain"
-                      type="button"
-                      role="tab"
-                      aria-controls="plain"
-                      aria-selected="true">
-                Plain Bootstrap
-              </button>
-            </li>
-            <li class="nav-item"
-                role="presentation">
-              <button class="nav-link"
-                      id="kitted-tab"
-                      data-bs-toggle="pill"
-                      data-bs-target="#kitted"
-                      type="button"
-                      role="tab"
-                      aria-controls="kitted"
-                      aria-selected="false">
-                With the Bootstrap Kit
-              </button>
-            </li>
-          </ul>
+          <bs-nav :variant="pills"
+                  :align="center"
+                  :toggle="pill"
+                  :extra="gap-2 mb-4"
+                  :items=${[
+                    { name: 'Plain Bootstrap', target: '#plain', active: true },
+                    { name: 'With the Bootstrap Kit', target: '#kitted' },
+                  ]} />
 
-          <div class="tab-content">
+          <bs-tab-content>
 
-            <div class="tab-pane fade show active"
-                 id="plain"
-                 role="tabpanel"
-                 aria-labelledby="plain-tab"
-                 tabindex="0">
+            <bs-tab-pane :name="plain"
+                         :active>
 
-              <div class="card shadow-sm overflow-hidden"
-                   data-bs-theme="dark">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                  <span class="font-monospace small">index-plain.html</span>
-                  <!--- <span class="badge text-bg-secondary">28 lines</span> -->
-                </div>
-
-                <div class="card-body p-0 code-surface">
+              <code-card :title="index-plain.html"
+                         // :label="28 lines"
+                         :note>
 <pre class="mb-0"><code data-lang="html">&lt;head&gt;
   &lt;meta charset="utf-8"&gt;
   &lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;
@@ -510,32 +381,22 @@
       &lt;/div&gt;
     &lt;/div&gt;
   &lt;/nav&gt;</code></pre>
-                </div>
-
-                <div class="card-footer text-body-secondary small">
+                <p :slot="note"
+                   class="mb-0">
                   Two CDN URLs with their integrity hashes, a
                   <code class="rule-code">data-bs-target</code> matched by hand
                   to the collapse <code class="rule-code">id</code>, four ARIA
                   attributes, and one <code class="rule-code">&lt;li&gt;</code>
                   per link — repeated on every page of the site.
-                </div>
-              </div>
-            </div>
+                </p>
+              </code-card>
+            </bs-tab-pane>
 
-            <div class="tab-pane fade"
-                 id="kitted"
-                 role="tabpanel"
-                 aria-labelledby="kitted-tab"
-                 tabindex="0">
+            <bs-tab-pane :name="kitted">
 
-              <div class="card shadow-sm overflow-hidden"
-                   data-bs-theme="dark">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                  <span class="font-monospace small">index.html</span>
-                  <!--- <span class="badge text-bg-primary">12 lines</span> -->
-                </div>
-
-                <div class="card-body p-0 code-surface">
+              <code-card :title="index.html"
+                         // :label="12 lines"
+                         :note>
 <pre class="mb-0"><code data-lang="html">&lt;head&gt;
   &lt;:import src="/npm/@markout-dev/bootstrap-kit/all.htm" /&gt;
   &lt;title&gt;Northstar Studio&lt;/title&gt;
@@ -550,18 +411,17 @@
   ]}&gt;
     Northstar Studio
   &lt;/bs-navbar&gt;</code></pre>
-                </div>
-
-                <div class="card-footer text-body-secondary small">
+                <p :slot="note"
+                   class="mb-0">
                   The markup that was only ever mechanical becomes data. The
                   pinned version, the hashes, the toggler wiring and the
                   accessibility attributes are written once and can't drift
                   from page to page.
-                </div>
-              </div>
-            </div>
+                </p>
+              </code-card>
+            </bs-tab-pane>
 
-          </div>
+          </bs-tab-content>
 
           <p class="text-center text-body-secondary mt-4 mb-0">
             Everything below the navbar is untouched. You lift out what is
@@ -584,9 +444,7 @@
       <div class="row align-items-center g-5">
 
         <div class="col-lg-6">
-          <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle mb-3">
-            Bootstrap Kit
-          </span>
+          <page-eyebrow :extra="mb-3">Bootstrap Kit</page-eyebrow>
 
           <h2 class="display-6 fw-bold mb-3">
             Components that are just HTML fragments
@@ -610,30 +468,29 @@
             beyond the markup itself.
           </p>
 
-          <div class="card bg-body-tertiary mt-4">
-            <div class="card-body p-4">
-              <p class="mb-0">
-                Every component is a <code class="rule-code">bs-</code> tag
-                carrying Bootstrap's own concepts. Reach for one the way you'd
-                reach for the markup it replaces — and when it does more than
-                the plain version, the fragment that says so is a click away.
-              </p>
-            </div>
-          </div>
+          <bs-card :extra="bg-body-tertiary mt-4"
+                   :bodyExtra="p-4">
+            <p class="mb-0">
+              Every component is a <code class="rule-code">bs-</code> tag
+              carrying Bootstrap's own concepts. Reach for one the way you'd
+              reach for the markup it replaces — and when it does more than
+              the plain version, the fragment that says so is a click away.
+            </p>
+          </bs-card>
 
           <div class="d-flex flex-wrap gap-2 mt-4">
-            <a href="/demos/kitchen-sink.html"
-               class="btn btn-primary">
-              See every component
-            </a>
-            <a href="/demos/"
-               class="btn btn-outline-secondary">
-              Browse the demos
-            </a>
-            <a href="https://github.com/fcapolini/markout/tree/main/kits/bootstrap-kit"
-               class="btn btn-link">
-              Read the kit source
-            </a>
+            <bs-link :href="/demos/kitchen-sink.html"
+                     :button
+                     :variant="primary">See every component</bs-link>
+
+            <bs-link :href="/demos/"
+                     :button
+                     :variant="secondary"
+                     :outline>Browse the demos</bs-link>
+
+            <bs-link :href="https://github.com/fcapolini/markout/tree/main/kits/bootstrap-kit"
+                     :button
+                     :variant="link">Read the kit source</bs-link>
           </div>
         </div>
 
@@ -676,15 +533,14 @@
             work in the before/after above.
           </p>
 
-          <div class="card h-100 border-primary-subtle bg-body-tertiary">
-            <div class="card-body">
-              <span class="fw-semibold">…and the next one you write</span>
-              <p class="text-body-secondary small mb-0 mt-2">
-                Adding a component means writing a fragment and giving it a
-                name — not registering a class or learning an extension API.
-              </p>
-            </div>
-          </div>
+          <bs-card :extra="h-100 bg-body-tertiary"
+                   :border="primary-subtle">
+            <span class="fw-semibold">…and the next one you write</span>
+            <p class="text-body-secondary small mb-0 mt-2">
+              Adding a component means writing a fragment and giving it a
+              name — not registering a class or learning an extension API.
+            </p>
+          </bs-card>
 
         </div>
 
@@ -695,14 +551,9 @@
       <div class="row justify-content-center mt-5 pt-lg-3">
         <div class="col-lg-10">
 
-          <div class="card shadow-sm overflow-hidden"
-               data-bs-theme="dark">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <span class="font-monospace small">bootstrap-kit/parts/button.htm</span>
-              <span class="badge text-bg-secondary">the whole component</span>
-            </div>
-
-            <div class="card-body p-0 code-surface">
+          <code-card :title="bootstrap-kit/parts/button.htm"
+                     :label="the whole component"
+                     :note>
 <pre class="mb-0"><code data-lang="html">&lt;:define tag="bs-button:a"
 
          // parameters
@@ -717,17 +568,16 @@
 &gt;
   &lt;:slot /&gt;
 &lt;/:define&gt;</code></pre>
-            </div>
-
-            <div class="card-footer text-body-secondary small">
+            <p :slot="note"
+               class="mb-0">
               <code class="rule-code">bs-button:a</code> means "a tag named
               <code class="rule-code">bs-button</code>, rendered as an
               <code class="rule-code">&lt;a&gt;</code>".
               <code class="rule-code">:attr-href</code> controls whether the
               attribute is there at all, rather than what its value is — two
               intents, two spellings.
-            </div>
-          </div>
+            </p>
+          </code-card>
 
         </div>
       </div>
@@ -763,14 +613,11 @@
       <div class="row g-4 align-items-start">
 
         <div class="col-lg-6">
-          <div class="card shadow-sm overflow-hidden h-100"
-               data-bs-theme="dark">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <span class="font-monospace small">bootstrap-kit/parts/input.htm</span>
-              <span class="badge text-bg-primary">the component</span>
-            </div>
-
-            <div class="card-body p-0 code-surface">
+          <code-card :title="bootstrap-kit/parts/input.htm"
+                     :label="the component"
+                     :variant="primary"
+                     :extra="h-100"
+                     :note>
 <pre class="mb-0"><code data-lang="html">&lt;:define tag="bs-input:div"
          class="mb-3"
 
@@ -795,24 +642,19 @@
 
   &lt;div class="invalid-feedback"&gt;${message}&lt;/div&gt;
 &lt;/:define&gt;</code></pre>
-            </div>
-
-            <div class="card-footer text-body-secondary small">
+            <p :slot="note"
+               class="mb-0">
               The validity rule arrives as a parameter, so the component holds
               the wiring and the caller holds the policy.
-            </div>
-          </div>
+            </p>
+          </code-card>
         </div>
 
         <div class="col-lg-6">
-          <div class="card shadow-sm overflow-hidden h-100"
-               data-bs-theme="dark">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <span class="font-monospace small">index.html</span>
-              <span class="badge text-bg-secondary">using it</span>
-            </div>
-
-            <div class="card-body p-0 code-surface">
+          <code-card :title="index.html"
+                     :label="using it"
+                     :extra="h-100"
+                     :note>
 <pre class="mb-0"><code data-lang="html">&lt;form&gt;
   &lt;bs-input :label="Email address"
             :type="email"
@@ -827,14 +669,13 @@
 
   &lt;button class="btn btn-primary"&gt;Create account&lt;/button&gt;
 &lt;/form&gt;</code></pre>
-            </div>
-
-            <div class="card-footer text-body-secondary small">
+            <p :slot="note"
+               class="mb-0">
               Each <code class="rule-code">&lt;bs-input&gt;</code> keeps its own
               value and its own validity. Nothing is registered, and nothing is
               shared between them.
-            </div>
-          </div>
+            </p>
+          </code-card>
         </div>
 
       </div>
@@ -900,13 +741,9 @@
       <div class="row g-4 align-items-start justify-content-center">
 
         <div class="col-lg-6">
-          <div class="card shadow-sm overflow-hidden h-100"
-               data-bs-theme="dark">
-            <div class="card-header">
-              <span class="font-monospace small">a chain of branches</span>
-            </div>
-
-            <div class="card-body p-0 code-surface">
+          <code-card :title="a chain of branches"
+                     :extra="h-100"
+                     :note>
 <pre class="mb-0"><code data-lang="html">&lt;bs-spinner :if=${loading} /&gt;
 
 &lt;bs-alert :else-if=${error}
@@ -917,15 +754,14 @@
 &lt;bs-table :else
           :columns=${columns}
           :rows=${rows} /&gt;</code></pre>
-            </div>
-
-            <div class="card-footer text-body-secondary small">
+            <p :slot="note"
+               class="mb-0">
               The first branch whose condition holds is the one that renders.
               Two separate <code class="rule-code">:if</code>s cannot do that:
               the branch that has to give up its place is the one whose own
               condition did not change.
-            </div>
-          </div>
+            </p>
+          </code-card>
         </div>
 
         <div class="col-lg-5">
@@ -985,14 +821,11 @@
       <div class="row g-4 align-items-start">
 
         <div class="col-lg-7">
-          <div class="card shadow-sm overflow-hidden h-100"
-               data-bs-theme="dark">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <span class="font-monospace small">app-kit.htm</span>
-              <span class="badge text-bg-primary">your kit</span>
-            </div>
-
-            <div class="card-body p-0 code-surface">
+          <code-card :title="app-kit.htm"
+                     :label="your kit"
+                     :variant="primary"
+                     :extra="h-100"
+                     :note>
 <pre class="mb-0"><code data-lang="html">&lt;lib ::bsBtnRadius="2rem"
      ::appAccent="#6f42c1"&gt;
 
@@ -1014,25 +847,19 @@
   &lt;/:define&gt;
 
 &lt;/lib&gt;</code></pre>
-            </div>
-
-            <div class="card-footer text-body-secondary small">
+            <p :slot="note"
+               class="mb-0">
               Three things at once: a value the Bootstrap kit already reads,
               a stylesheet of your own, and a component that pins a decision
               your app makes everywhere.
-            </div>
-          </div>
+            </p>
+          </code-card>
         </div>
 
         <div class="col-lg-5">
-          <div class="card shadow-sm overflow-hidden mb-4"
-               data-bs-theme="dark">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <span class="font-monospace small">index.html</span>
-              <span class="badge text-bg-secondary">every page</span>
-            </div>
-
-            <div class="card-body p-0 code-surface">
+          <code-card :title="index.html"
+                     :label="every page"
+                     :extra="mb-4">
 <pre class="mb-0"><code data-lang="html">&lt;head&gt;
   &lt;:import src="/app-kit.htm" /&gt;
 &lt;/head&gt;
@@ -1041,8 +868,7 @@
   &lt;app-email /&gt;
   &lt;bs-button :variant="primary"&gt;Save&lt;/bs-button&gt;
 &lt;/body&gt;</code></pre>
-            </div>
-          </div>
+          </code-card>
 
           <h3 class="h5">Values reach the CSS</h3>
           <p class="text-body-secondary">
@@ -1076,15 +902,15 @@
 
       <div class="row justify-content-center mt-4">
         <div class="col-lg-10">
-          <div class="card bg-body-tertiary">
-            <div class="card-body p-4 text-center">
-              <p class="mb-0">
-                Shared tokens, shared components, one place to change them —
-                and nothing to install, compile, or keep in sync. The whole
-                system is a file your team can read in a minute.
-              </p>
-            </div>
-          </div>
+          <bs-card :extra="bg-body-tertiary"
+                   :align="center"
+                   :bodyExtra="p-4">
+            <p class="mb-0">
+              Shared tokens, shared components, one place to change them —
+              and nothing to install, compile, or keep in sync. The whole
+              system is a file your team can read in a minute.
+            </p>
+          </bs-card>
         </div>
       </div>
 
@@ -1113,81 +939,69 @@
       <div class="row g-4">
 
         <div class="col-md-6">
-          <div class="d-flex gap-3">
-            <span class="fs-4 fw-bold step-number">01</span>
-            <div>
-              <h3 class="h5">HTML is the syntax</h3>
-              <p class="text-body-secondary mb-0">
-                Anything without a <code class="rule-code">${…}</code> or a
-                <code class="rule-code">:</code> is plain markup, and stays
-                plain markup.
-              </p>
-            </div>
-          </div>
+          <page-step :n="01"
+                     :heading="HTML is the syntax">
+            <p class="text-body-secondary mb-0">
+              Anything without a <code class="rule-code">${…}</code> or a
+              <code class="rule-code">:</code> is plain markup, and stays
+              plain markup.
+            </p>
+          </page-step>
         </div>
 
         <div class="col-md-6">
-          <div class="d-flex gap-3">
-            <span class="fs-4 fw-bold step-number">02</span>
-            <div>
-              <h3 class="h5">One expression syntax</h3>
-              <p class="text-body-secondary mb-0">
-                <code class="rule-code">${…}</code> is plain JavaScript, in
-                text, attributes and CSS alike. Whatever holds one is reactive.
-              </p>
-            </div>
-          </div>
+          <page-step :n="02"
+                     :heading="One expression syntax">
+            <p class="text-body-secondary mb-0">
+              <code class="rule-code">${…}</code> is plain JavaScript, in
+              text, attributes and CSS alike. Whatever holds one is reactive.
+            </p>
+          </page-step>
         </div>
 
         <div class="col-md-6">
-          <div class="d-flex gap-3">
-            <span class="fs-4 fw-bold step-number">03</span>
-            <div>
-              <h3 class="h5">One prefix for everything else</h3>
-              <p class="text-body-secondary mb-0">
-                <code class="rule-code">:</code> names what HTML has no name
-                for, always as <code class="rule-code">:family-name</code> —
-                <code class="rule-code">:class-</code>,
-                <code class="rule-code">:attr-</code>,
-                <code class="rule-code">:on-</code>,
-                <code class="rule-code">:for-</code>.
-              </p>
-            </div>
-          </div>
+          <page-step :n="03"
+                     :heading="One prefix for everything else">
+            <p class="text-body-secondary mb-0">
+              <code class="rule-code">:</code> names what HTML has no name
+              for, always as <code class="rule-code">:family-name</code> —
+              <code class="rule-code">:class-</code>,
+              <code class="rule-code">:attr-</code>,
+              <code class="rule-code">:on-</code>,
+              <code class="rule-code">:for-</code>.
+            </p>
+          </page-step>
         </div>
 
         <div class="col-md-6">
-          <div class="d-flex gap-3">
-            <span class="fs-4 fw-bold step-number">04</span>
-            <div>
-              <h3 class="h5">Scopes nest lexically</h3>
-              <p class="text-body-secondary mb-0">
-                A value is visible to every descendant, with no separate
-                wiring. An expression resolves where it was written — which is
-                what lets a component move without changing meaning.
-              </p>
-            </div>
-          </div>
+          <page-step :n="04"
+                     :heading="Scopes nest lexically">
+            <p class="text-body-secondary mb-0">
+              A value is visible to every descendant, with no separate
+              wiring. An expression resolves where it was written — which is
+              what lets a component move without changing meaning.
+            </p>
+          </page-step>
         </div>
 
       </div>
 
       <div class="row justify-content-center mt-5">
         <div class="col-lg-9">
-          <div class="card bg-body-tertiary">
-            <div class="card-body p-4 text-center">
-              <p class="mb-3">
-                No rule above has a convenient exception. A shortcut that saves
-                a few characters at the call site but makes every future reader
-                remember a special case isn't a simplification — it's deferred
-                complexity.
-              </p>
-              <a href="https://github.com/fcapolini/markout/blob/main/docs/reference/syntax.md"
-                 class="btn btn-outline-primary">
-                The full syntax, on one page
-              </a>
-            </div>
-          </div>
+          <bs-card :extra="bg-body-tertiary"
+                   :align="center"
+                   :bodyExtra="p-4">
+            <p class="mb-3">
+              No rule above has a convenient exception. A shortcut that saves
+              a few characters at the call site but makes every future reader
+              remember a special case isn't a simplification — it's deferred
+              complexity.
+            </p>
+            <bs-link :href="https://github.com/fcapolini/markout/blob/main/docs/reference/syntax.md"
+                     :button
+                     :variant="primary"
+                     :outline>The full syntax, on one page</bs-link>
+          </bs-card>
         </div>
       </div>
 
@@ -1203,9 +1017,8 @@
       <div class="row align-items-center g-5">
 
         <div class="col-lg-6">
-          <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle mb-3">
-            Isomorphic by design
-          </span>
+          <page-eyebrow :variant="success"
+                        :extra="mb-3">Isomorphic by design</page-eyebrow>
 
           <h2 class="display-6 fw-bold mb-3">
             The same page runs on the server and in the browser
@@ -1228,41 +1041,40 @@
         </div>
 
         <div class="col-lg-6">
-          <div class="card shadow-sm">
-            <div class="card-body p-4">
+          <bs-card :extra="shadow-sm"
+                   :bodyExtra="p-4">
 
-              <div class="border rounded p-3 text-center fw-semibold mb-3">
-                index.html
-                <div class="text-body-secondary small fw-normal mt-1">
-                  one file, one scope tree
-                </div>
+            <div class="border rounded p-3 text-center fw-semibold mb-3">
+              index.html
+              <div class="text-body-secondary small fw-normal mt-1">
+                one file, one scope tree
               </div>
-
-              <div class="text-center text-body-secondary mb-3"
-                   aria-hidden="true">↓</div>
-
-              <div class="row g-3 text-center">
-                <div class="col-6">
-                  <div class="border rounded p-3 h-100">
-                    <div class="fw-semibold">Server</div>
-                    <div class="text-body-secondary small mt-1">
-                      renders HTML
-                    </div>
-                  </div>
-                </div>
-
-                <div class="col-6">
-                  <div class="border rounded p-3 h-100">
-                    <div class="fw-semibold">Browser</div>
-                    <div class="text-body-secondary small mt-1">
-                      makes it reactive
-                    </div>
-                  </div>
-                </div>
-              </div>
-
             </div>
-          </div>
+
+            <div class="text-center text-body-secondary mb-3"
+                 aria-hidden="true">↓</div>
+
+            <div class="row g-3 text-center">
+              <div class="col-6">
+                <div class="border rounded p-3 h-100">
+                  <div class="fw-semibold">Server</div>
+                  <div class="text-body-secondary small mt-1">
+                    renders HTML
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-6">
+                <div class="border rounded p-3 h-100">
+                  <div class="fw-semibold">Browser</div>
+                  <div class="text-body-secondary small mt-1">
+                    makes it reactive
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </bs-card>
         </div>
 
       </div>
@@ -1300,16 +1112,16 @@
 
       <div class="row justify-content-center mt-4">
         <div class="col-lg-9">
-          <div class="card bg-body-tertiary">
-            <div class="card-body p-4 text-center">
-              <p class="mb-0">
-                Markout around Bootstrap, Tailwind or Shoelace keeps both
-                choices open: change how the page is put together without
-                touching the components, or change the components without
-                touching&nbsp;the&nbsp;logic.
-              </p>
-            </div>
-          </div>
+          <bs-card :extra="bg-body-tertiary"
+                   :align="center"
+                   :bodyExtra="p-4">
+            <p class="mb-0">
+              Markout around Bootstrap, Tailwind or Shoelace keeps both
+              choices open: change how the page is put together without
+              touching the components, or change the components without
+              touching&nbsp;the&nbsp;logic.
+            </p>
+          </bs-card>
         </div>
       </div>
 
@@ -1453,7 +1265,8 @@
             </table>
           </div>
 
-          <div class="alert alert-secondary mt-4 mb-0">
+          <bs-alert :variant="secondary"
+                    :extra="mt-4 mb-0">
             <strong class="d-block mb-1">And the honest costs.</strong>
             Alpine is mature, and its ecosystem, community and documentation
             are far larger than Markout's. It also asks for strictly less to
@@ -1463,7 +1276,7 @@
             problem — server-driven UI — and composes fine with either.
             Markout's claim is narrower: one source that is modular, reactive,
             and renders in both places.
-          </div>
+          </bs-alert>
 
         </div>
       </div>
@@ -1566,69 +1379,56 @@
           <div class="row g-3 text-start mb-5">
 
             <div class="col-12">
-              <div class="card shadow-sm overflow-hidden"
-                   data-bs-theme="dark">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                  <span class="small">Install</span>
-                  <span class="badge text-bg-secondary">shell</span>
-                </div>
-
-                <div class="card-body p-0 code-surface">
+              <code-card :title="Install"
+                         :mono=${false}
+                         :label="shell">
 <pre class="mb-0"><code data-lang="sh">npm install @markout-dev/bootstrap-kit</code></pre>
-                </div>
-              </div>
+              </code-card>
             </div>
 
             <div class="col-md-6">
-              <div class="card shadow-sm overflow-hidden h-100"
-                   data-bs-theme="dark">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                  <span class="small">Serve a directory</span>
-                  <span class="badge text-bg-secondary">shell</span>
-                </div>
-
-                <div class="card-body p-0 code-surface">
+              <code-card :title="Serve a directory"
+                         :mono=${false}
+                         :label="shell"
+                         :extra="h-100"
+                         :note>
 <pre class="mb-0"><code data-lang="sh">markout ./my-site</code></pre>
-                </div>
-
-                <div class="card-footer text-body-secondary small">
+                <p :slot="note"
+                   class="mb-0">
                   Any folder of HTML files, compiled on request. No build step,
                   no bundler, no watcher to leave running.
-                </div>
-              </div>
+                </p>
+              </code-card>
             </div>
 
             <div class="col-md-6">
-              <div class="card shadow-sm overflow-hidden h-100"
-                   data-bs-theme="dark">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                  <span class="small">Work on it</span>
-                  <span class="badge text-bg-secondary">shell</span>
-                </div>
-
-                <div class="card-body p-0 code-surface">
+              <code-card :title="Work on it"
+                         :mono=${false}
+                         :label="shell"
+                         :extra="h-100"
+                         :note>
 <pre class="mb-0"><code data-lang="sh">markout ./my-site --dev</code></pre>
-                </div>
-
-                <div class="card-footer text-body-secondary small">
+                <p :slot="note"
+                   class="mb-0">
                   Dev mode auto-reloads the browser and puts expression errors
                   in the page itself, instead of only logging them server-side.
-                </div>
-              </div>
+                </p>
+              </code-card>
             </div>
 
           </div>
 
           <div class="d-flex justify-content-center flex-wrap gap-2">
-            <a href="https://github.com/fcapolini/markout"
-               class="btn btn-primary btn-lg">
-              View on GitHub
-            </a>
+            <bs-link :href="https://github.com/fcapolini/markout"
+                     :button
+                     :variant="primary"
+                     :size="lg">View on GitHub</bs-link>
 
-            <a href="https://github.com/fcapolini/markout/blob/main/docs/reference/syntax.md"
-               class="btn btn-outline-light btn-lg">
-              Read the syntax reference
-            </a>
+            <bs-link :href="https://github.com/fcapolini/markout/blob/main/docs/reference/syntax.md"
+                     :button
+                     :variant="light"
+                     :outline
+                     :size="lg">Read the syntax reference</bs-link>
           </div>
 
         </div>
@@ -1662,8 +1462,6 @@
 
     </div>
   </footer>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 
   <!--
     Markout-aware highlighting, applied at load time so that the samples above
@@ -1808,29 +1606,6 @@
       document.querySelectorAll('code[data-lang]').forEach((el) => {
         el.innerHTML = (el.dataset.lang === 'sh' ? sh : html)(el.textContent);
       });
-    })();
-  </script>
-
-  <script>
-    (() => {
-      const root = document.documentElement;
-      const button = document.getElementById('themeToggle');
-      const icon = document.getElementById('themeToggleIcon');
-
-      const paint = () => {
-        icon.textContent =
-          root.getAttribute('data-bs-theme') === 'dark' ? '☀' : '☾';
-      };
-
-      button.addEventListener('click', () => {
-        const next =
-          root.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
-        root.setAttribute('data-bs-theme', next);
-        localStorage.setItem('markout-theme', next);
-        paint();
-      });
-
-      paint();
     })();
   </script>
 

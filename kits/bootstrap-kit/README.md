@@ -283,7 +283,7 @@ commented.
 | `bs-button-group` | `label` `size` `vertical` |
 | `bs-button-toolbar` | `label` `gap` |
 | `bs-close` | `label` `dismiss` `disabled` |
-| `bs-card` | `title` `subtitle` `header` `footer` `image` `imageAlt` `imageBottom` `variant` `border` `align` |
+| `bs-card` | `title` `subtitle` `header` `footer` `image` `imageAlt` `imageBottom` `variant` `border` `align` `bodyExtra` |
 | `bs-card-group` | `cols` `gap` `attached` |
 | `bs-carousel` | `slides` `controls` `indicators` `captions` `fade` `ride` `interval` `dark` |
 | `bs-collapse` | `name` `open` `horizontal` |

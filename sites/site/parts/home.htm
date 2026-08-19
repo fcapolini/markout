@@ -1,0 +1,154 @@
+<!---
+  The homepage's own tags, on top of the ones the Bootstrap kit supplies.
+
+  Three shapes this page repeats, which is all a page-level kit ever is: the
+  file they live in is the only thing separating them from the `bs-` tags
+  they are written with. The page says as much a few sections down, and this
+  is it being true.
+-->
+<lib>
+  <:import src="/npm/@markout-dev/bootstrap-kit/all.htm" />
+
+  <style>
+    /*
+      Code samples stay dark in both color modes: the whole card carries
+      `data-bs-theme="dark"`, so its header, footer and border take the dark
+      palette too and the frame doesn't flip with the page. These tokens then
+      resolve to Bootstrap's own dark values, and the highlight colours the
+      page paints on top only ever have to work against the one background. A
+      `.card-body` paints nothing by itself, hence setting the background here
+      rather than relying on the inherited attribute alone.
+
+      `--bs-dark-bg-subtle` (#1a1d20 in the dark palette) sits a step below
+      `--bs-body-bg`, so the code reads as an inset panel even where the card
+      or the section behind it is already dark.
+    */
+    .code-surface {
+      background-color: var(--bs-dark-bg-subtle);
+      color: var(--bs-body-color);
+    }
+
+    /*
+      In light mode a code card is a dark island on a bright page, and the eye
+      is adapted to the surround rather than to the card — so its chrome needs
+      to sit brighter than it does in dark mode, where the whole page is
+      already dark and matching ink reads as intended.
+
+      Redefining the tokens rather than `color` alone keeps Bootstrap's text
+      utilities working: `.text-body-secondary` resolves `--bs-secondary-color`
+      through an `!important` declaration that a plain `color` can't outrank.
+    */
+    html:not([data-bs-theme="dark"]) .card[data-bs-theme="dark"] > .card-header,
+    html:not([data-bs-theme="dark"]) .card[data-bs-theme="dark"] > .card-footer {
+      --bs-secondary-color: rgba(255, 255, 255, .75);
+      color: #fff;
+    }
+  </style>
+
+  <!---
+    A code sample, in the dark card every one of them on this page sits in.
+
+    Built from Bootstrap's card classes rather than by wrapping `bs-card`,
+    for the language reason Orbit's `dash-panel` gives: a `<:slot>` has to
+    sit in the definition's own markup, not inside another component's
+    slotted content. The body would need it in both places at once -- the
+    sample slots in here, and the padding a code surface does without is a
+    class `bs-card`'s body has no parameter for.
+
+    The sample itself stays at the call site, inside its own `<code>`: the
+    parser skips what is in one, and that is the only reason a page about
+    Markout can show Markout source instead of running it. This definition
+    cannot hold that `<code>` for its callers -- slotted markup is parsed
+    where it was written, so the skip has to be written there too.
+
+    `:note` says a card has the line of explanation under its sample; the
+    line itself is markup, because it is prose and several of them name a
+    class or a tag, so it arrives through the `note` slot rather than as an
+    attribute.
+  -->
+  <:define tag="code-card:div"
+    data-bs-theme="dark"
+
+    // parameters
+    :extra=${null}       // extra classes for this instance
+    :title=${''}         // what the header says: a file name, or a heading
+    :mono=${true}        // a file name is monospaced, a heading is not
+    :label=${null}       // the badge beside it
+    :variant=${'secondary'}
+    :note=${false}       // is there a line of explanation under the sample?
+
+    // private
+    :_class=${['card shadow-sm overflow-hidden', extra].filter(s => s).join(' ')}
+
+    class=${_class}
+  >
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span class="small"
+        :class-font-monospace=${mono}>${title}</span>
+
+      <bs-badge :variant=${variant}
+        :if=${label}>${label}</bs-badge>
+    </div>
+
+    <div class="card-body p-0 code-surface"><:slot /></div>
+
+    <div class="card-footer text-body-secondary small"
+      :if=${note}><:slot name="note" /></div>
+  </:define>
+
+  <!---
+    The chip over a section heading. Bootstrap's subtle triplet names the
+    same colour three times over and then again on the border, which is four
+    chances to write one of them differently; here it is said once.
+  -->
+  <:define tag="page-eyebrow:span"
+
+    // parameters
+    :extra=${null}       // extra classes for this instance
+    :variant=${'primary'}
+
+    // private
+    :_class=${[
+      'badge',
+      `bg-${variant}-subtle`,
+      `text-${variant}-emphasis`,
+      `border border-${variant}-subtle`,
+      extra,
+    ].filter(s => s).join(' ')}
+
+    class=${_class}
+  >
+    <:slot />
+  </:define>
+
+  <style>
+    .step-number {
+      font-variant-numeric: tabular-nums;
+      /* Emphasis tokens stay legible against both the light and dark body. */
+      color: var(--bs-primary-text-emphasis);
+      opacity: .75;
+    }
+  </style>
+
+  <!---
+    One of the numbered rules in "the whole language is a handful of rules".
+    The number is written rather than counted: the rules are prose, not a
+    list this page holds as data, and a rule that moved would take its number
+    with it either way.
+  -->
+  <:define tag="page-step:div"
+    class="d-flex gap-3"
+
+    // parameters
+    :n=${''}
+    :heading=${''}
+  >
+    <span class="fs-4 fw-bold step-number">${n}</span>
+
+    <div>
+      <h3 class="h5">${heading}</h3>
+      <:slot />
+    </div>
+  </:define>
+
+</lib>
