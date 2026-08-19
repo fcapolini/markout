@@ -15,7 +15,7 @@
   ![CodeQL](https://github.com/fcapolini/markout/actions/workflows/codeql.yml/badge.svg?branch=main&event=push)
 ](https://github.com/fcapolini/markout/actions/workflows/codeql.yml)
 
-HTML-first reactive web framework, aiming at presenting developers with the
+Markout is an HTML-first reactive language aiming at presenting developers with the
 equivalent of a natively modular and reactive HTML. It is isomorphic: the same
 scope/value model runs on the server and in the browser, so SSR comes for
 free.
