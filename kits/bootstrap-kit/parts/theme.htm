@@ -29,40 +29,40 @@
   </script>
 
   <:define tag="bs-theme-toggle:button"
-           type="button"
+    type="button"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :variant=${'secondary'}
-           :outline=${true}
-           :size=${null}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :variant=${'secondary'}
+    :outline=${true}
+    :size=${null}
 
-           // private
-           :_theme=${'light'}
-           :_class=${[
-             'btn',
-             `btn-${outline ? 'outline-' : ''}${variant}`,
-             size ? `btn-${size}` : '',
-             extra,
-           ].filter(s => s).join(' ')}
+    // private
+    :_theme=${'light'}
+    :_class=${[
+      'btn',
+      `btn-${outline ? 'outline-' : ''}${variant}`,
+      size ? `btn-${size}` : '',
+      extra,
+    ].filter(s => s).join(' ')}
 
-           class=${_class}
-           aria-label="Toggle colour mode"
+    class=${_class}
+    aria-label="Toggle colour mode"
 
-           /*
-             the served page carried a default that knows nothing about this
-             visitor; the pre-paint script already knows better
-           */
-           :did-init=${() => {
-             _theme = globalThis.document.documentElement
-               .getAttribute('data-bs-theme') || _theme;
-           }}
+    /*
+      the served page carried a default that knows nothing about this
+      visitor; the pre-paint script already knows better
+    */
+    :did-init=${() => {
+      _theme = globalThis.document.documentElement
+        .getAttribute('data-bs-theme') || _theme;
+    }}
 
-           :handle-_theme=${(v) => {
-             globalThis.document.documentElement.setAttribute('data-bs-theme', v);
-             globalThis.localStorage.setItem('bs-theme', v);
-           }}
-           :on-click=${() => _theme = _theme === 'dark' ? 'light' : 'dark'}
+    :handle-_theme=${(v) => {
+      globalThis.document.documentElement.setAttribute('data-bs-theme', v);
+      globalThis.localStorage.setItem('bs-theme', v);
+    }}
+    :on-click=${() => _theme = _theme === 'dark' ? 'light' : 'dark'}
   >${_theme === 'dark' ? '☀' : '☾'}</:define>
 
 </lib>

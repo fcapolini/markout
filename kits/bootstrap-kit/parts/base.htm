@@ -38,14 +38,14 @@
 >
   <meta charset="utf-8">
   <meta name="viewport"
-        content="width=device-width, initial-scale=1">
+    content="width=device-width, initial-scale=1">
 
   <!--- `crossorigin` follows the hash: it is what makes one checkable, and
        means nothing on a same-origin file -->
   <link href=${bsCssUrl}
-        rel="stylesheet"
-        integrity=${bsCssIntegrity}
-        crossorigin=${bsCssIntegrity ? 'anonymous' : null}>
+    rel="stylesheet"
+    integrity=${bsCssIntegrity}
+    crossorigin=${bsCssIntegrity ? 'anonymous' : null}>
 
   <!---
     Deliberately not `async`. The components that need Bootstrap's JS
@@ -55,8 +55,8 @@
     by then. Everything driven by `data-bs-*` alone would be fine either way.
   -->
   <script src=${bsJsUrl}
-          integrity=${bsJsIntegrity}
-          crossorigin=${bsJsIntegrity ? 'anonymous' : null}></script>
+    integrity=${bsJsIntegrity}
+    crossorigin=${bsJsIntegrity ? 'anonymous' : null}></script>
 
   <style>
     :root {

@@ -13,45 +13,45 @@
   -->
   <:define tag="bs-list-group:div"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :items=${[
-             { name: 'An item', active: true },
-             { name: 'A second item' },
-             { name: 'A disabled item', disabled: true },
-           ]}
-           :flush=${false}
-           :horizontal=${false}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :items=${[
+      { name: 'An item', active: true },
+      { name: 'A second item' },
+      { name: 'A disabled item', disabled: true },
+    ]}
+    :flush=${false}
+    :horizontal=${false}
 
-           // private
-           :_class=${[
-             'list-group',
-             flush ? 'list-group-flush' : '',
-             horizontal ? 'list-group-horizontal' : '',
-             extra,
-           ].filter(s => s).join(' ')}
+    // private
+    :_class=${[
+      'list-group',
+      flush ? 'list-group-flush' : '',
+      horizontal ? 'list-group-horizontal' : '',
+      extra,
+    ].filter(s => s).join(' ')}
 
-           class=${_class}
+    class=${_class}
   >
     <a :for-each=${items}
-       :for-as="item"
-       class="list-group-item d-flex justify-content-between align-items-center"
-       :class-list-group-item-action=${!!item.link}
-       :class-active=${item.active}
-       :class-disabled=${item.disabled}
-       href=${item.link ?? null}
-       aria-current=${item.active ? 'true' : null}
-       aria-disabled=${item.disabled ? 'true' : null}>
+      :for-as="item"
+      class="list-group-item d-flex justify-content-between align-items-center"
+      :class-list-group-item-action=${!!item.link}
+      :class-active=${item.active}
+      :class-disabled=${item.disabled}
+      href=${item.link ?? null}
+      aria-current=${item.active ? 'true' : null}
+      aria-disabled=${item.disabled ? 'true' : null}>
 
       <span>
         <span :class-fw-bold=${!!item.text}>${item.name}</span>
         <span class="d-block small opacity-75"
-              :if=${item.text}>${item.text}</span>
+          :if=${item.text}>${item.text}</span>
       </span>
 
       <bs-badge :variant=${item.badge?.variant ?? 'secondary'}
-                :pill
-                :if=${item.badge}>${item.badge?.name ?? item.badge}</bs-badge>
+        :pill
+        :if=${item.badge}>${item.badge?.name ?? item.badge}</bs-badge>
     </a>
   </:define>
 

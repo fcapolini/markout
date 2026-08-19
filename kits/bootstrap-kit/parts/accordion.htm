@@ -25,53 +25,53 @@
     collide and nothing has to be named.
   -->
   <:define tag="bs-accordion:div"
-           class="accordion ${extra ?? ''}"
+    class="accordion ${extra ?? ''}"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :exclusive=${true}  // one open panel at a time
-           :flush=${false}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :exclusive=${true}  // one open panel at a time
+    :flush=${false}
 
-           /*
-             private: the id the items point at. Owned here rather than
-             rebuilt there, so the two can't drift apart
-           */
-           :_id=${`bs-accordion-${$id}`}
+    /*
+      private: the id the items point at. Owned here rather than
+      rebuilt there, so the two can't drift apart
+    */
+    :_id=${`bs-accordion-${$id}`}
 
-           id=${_id}
-           :class-accordion-flush=${flush}
+    id=${_id}
+    :class-accordion-flush=${flush}
   >
     <:slot />
   </:define>
 
   <:define tag="bs-accordion-item:div"
-           class="accordion-item ${extra ?? ''}"
+    class="accordion-item ${extra ?? ''}"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :title=${''}
-           :open=${false}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :title=${''}
+    :open=${false}
 
-           // private: the accordion this item was slotted into, if any
-           :_parent=${$host && $host.exclusive ? $host._id : null}
-           :_id=${`bs-accordion-item-${$id}`}
-           :_headingId=${`bs-accordion-heading-${$id}`}
+    // private: the accordion this item was slotted into, if any
+    :_parent=${$host && $host.exclusive ? $host._id : null}
+    :_id=${`bs-accordion-item-${$id}`}
+    :_headingId=${`bs-accordion-heading-${$id}`}
   >
     <h2 class="accordion-header" id=${_headingId}>
       <button class="accordion-button"
-              type="button"
-              :class-collapsed=${!open}
-              data-bs-toggle="collapse"
-              data-bs-target="#${_id}"
-              aria-expanded=${open ? 'true' : 'false'}
-              aria-controls=${_id}>${title}</button>
+        type="button"
+        :class-collapsed=${!open}
+        data-bs-toggle="collapse"
+        data-bs-target="#${_id}"
+        aria-expanded=${open ? 'true' : 'false'}
+        aria-controls=${_id}>${title}</button>
     </h2>
 
     <div class="accordion-collapse collapse"
-         id=${_id}
-         :class-show=${open}
-         aria-labelledby=${_headingId}
-         data-bs-parent=${_parent ? `#${_parent}` : null}>
+      id=${_id}
+      :class-show=${open}
+      aria-labelledby=${_headingId}
+      data-bs-parent=${_parent ? `#${_parent}` : null}>
       <div class="accordion-body">
         <:slot />
       </div>

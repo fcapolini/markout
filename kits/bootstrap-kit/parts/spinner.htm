@@ -7,24 +7,24 @@
     is the reason this is a component rather than a class.
   -->
   <:define tag="bs-spinner:div"
-           role="status"
+    role="status"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :variant=${null}
-           :type=${'border'}    // 'border' | 'grow'
-           :small=${false}
-           :label=${'Loading…'}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :variant=${null}
+    :type=${'border'}    // 'border' | 'grow'
+    :small=${false}
+    :label=${'Loading…'}
 
-           // private
-           :_class=${[
-             `spinner-${type}`,
-             small ? `spinner-${type}-sm` : '',
-             variant ? `text-${variant}` : '',
-             extra,
-           ].filter(s => s).join(' ')}
+    // private
+    :_class=${[
+      `spinner-${type}`,
+      small ? `spinner-${type}-sm` : '',
+      variant ? `text-${variant}` : '',
+      extra,
+    ].filter(s => s).join(' ')}
 
-           class=${_class}
+    class=${_class}
   >
     <span class="visually-hidden">${label}</span>
   </:define>

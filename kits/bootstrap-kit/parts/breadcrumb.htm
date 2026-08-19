@@ -11,31 +11,31 @@
     either way, since an anchor without an `href` renders as plain text.
   -->
   <:define tag="bs-breadcrumb:nav"
-           aria-label="breadcrumb"
-           class=${extra}
+    aria-label="breadcrumb"
+    class=${extra}
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :items=${[
-             { name: 'Home', link: '#' },
-             { name: 'Library', link: '#' },
-             { name: 'Data' },
-           ]}
-           :divider=${null}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :items=${[
+      { name: 'Home', link: '#' },
+      { name: 'Library', link: '#' },
+      { name: 'Data' },
+    ]}
+    :divider=${null}
 
-           /*
-             Bootstrap reads the separator from a CSS custom property, and
-             `:style-` writes ordinary CSS properties — so this one goes
-             through the plain `style` attribute.
-           */
-           style=${divider ? `--bs-breadcrumb-divider: '${divider}'` : null}
+    /*
+      Bootstrap reads the separator from a CSS custom property, and
+      `:style-` writes ordinary CSS properties — so this one goes
+      through the plain `style` attribute.
+    */
+    style=${divider ? `--bs-breadcrumb-divider: '${divider}'` : null}
   >
     <ol class="breadcrumb mb-0">
       <li class="breadcrumb-item"
-          :for-each=${items}
-          :for-as="item"
-          :class-active=${!item.link}
-          aria-current=${item.link ? null : 'page'}>
+        :for-each=${items}
+        :for-as="item"
+        :class-active=${!item.link}
+        aria-current=${item.link ? null : 'page'}>
         <a href=${item.link ?? null}>${item.name}</a>
       </li>
     </ol>

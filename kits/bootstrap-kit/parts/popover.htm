@@ -10,32 +10,32 @@
     part that usually changes; both are read when it runs.
   -->
   <:define tag="bs-popover:span"
-           class="d-inline-block ${extra ?? ''}"
+    class="d-inline-block ${extra ?? ''}"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :title=${''}
-           :content=${''}
-           :placement=${'right'}
-           :trigger=${'click'}
-           :html=${false}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :title=${''}
+    :content=${''}
+    :placement=${'right'}
+    :trigger=${'click'}
+    :html=${false}
 
-           // private
-           :_build=${() => {
-             const bs = globalThis.bootstrap;
-             bs.Popover.getInstance($dom)?.dispose();
-             new bs.Popover($dom, {
-               title: title,
-               content: content,
-               placement: placement,
-               trigger: trigger,
-               html: html,
-             });
-           }}
+    // private
+    :_build=${() => {
+      const bs = globalThis.bootstrap;
+      bs.Popover.getInstance($dom)?.dispose();
+      new bs.Popover($dom, {
+        title: title,
+        content: content,
+        placement: placement,
+        trigger: trigger,
+        html: html,
+      });
+    }}
 
-           :did-attach=${() => _build()}
-           :handle-content=${() => _build()}
-           :will-detach=${() => globalThis.bootstrap.Popover.getInstance($dom)?.dispose()}
+    :did-attach=${() => _build()}
+    :handle-content=${() => _build()}
+    :will-detach=${() => globalThis.bootstrap.Popover.getInstance($dom)?.dispose()}
   >
     <:slot />
   </:define>

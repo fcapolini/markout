@@ -14,52 +14,52 @@
     got closed.
   -->
   <:define tag="bs-toast:div"
-           class="toast"
-           role="alert"
-           aria-live="assertive"
-           aria-atomic="true"
+    class="toast"
+    role="alert"
+    aria-live="assertive"
+    aria-atomic="true"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :title=${null}
-           :time=${null}
-           :variant=${null}
-           :open=${false}
-           :autohide=${true}
-           :delay=${5000}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :title=${null}
+    :time=${null}
+    :variant=${null}
+    :open=${false}
+    :autohide=${true}
+    :delay=${5000}
 
-           // private
-           :_class=${['toast', variant ? `text-bg-${variant} border-0` : '', extra]
-                     .filter(s => s).join(' ')}
+    // private
+    :_class=${['toast', variant ? `text-bg-${variant} border-0` : '', extra]
+              .filter(s => s).join(' ')}
 
-           class=${_class}
-           data-bs-autohide=${autohide ? null : 'false'}
-           data-bs-delay=${delay}
+    class=${_class}
+    data-bs-autohide=${autohide ? null : 'false'}
+    data-bs-delay=${delay}
 
-           :handle-open=${(v) => {
-             // only while this markup is in the page: an `:if`/`:for-data` region
-             // can take it out with `open` still true, and Bootstrap asked
-             // to show a detached element walks into its own internals
-             if (!$dom.isConnected) return;
-             const toast = globalThis.bootstrap.Toast.getOrCreateInstance($dom);
-             v ? toast.show() : toast.hide();
-           }}
-           /*
-             Bootstrap's plugins own DOM outside this element -- a backdrop,
-             a popper, a body class -- so an element removed without a
-             dispose() leaves it behind. `:will-detach` rather than
-             `:will-dispose`: an `:if`/`:for-data` region takes its markup out of
-             the page without its scope going anywhere, and the leak is the
-             same either way
-           */
-           :will-detach=${() => globalThis.bootstrap.Toast.getInstance($dom)?.dispose()}
-           :on-hidden.bs.toast=${() => open = false}
+    :handle-open=${(v) => {
+      // only while this markup is in the page: an `:if`/`:for-data` region
+      // can take it out with `open` still true, and Bootstrap asked
+      // to show a detached element walks into its own internals
+      if (!$dom.isConnected) return;
+      const toast = globalThis.bootstrap.Toast.getOrCreateInstance($dom);
+      v ? toast.show() : toast.hide();
+    }}
+    /*
+      Bootstrap's plugins own DOM outside this element -- a backdrop,
+      a popper, a body class -- so an element removed without a
+      dispose() leaves it behind. `:will-detach` rather than
+      `:will-dispose`: an `:if`/`:for-data` region takes its markup out of
+      the page without its scope going anywhere, and the leak is the
+      same either way
+    */
+    :will-detach=${() => globalThis.bootstrap.Toast.getInstance($dom)?.dispose()}
+    :on-hidden.bs.toast=${() => open = false}
   >
     <!--- with a title, Bootstrap's header form: the close button lives in it -->
     <div class="toast-header" :if=${title}>
       <strong class="me-auto">${title}</strong>
       <small class="text-body-secondary"
-             :if=${time}>${time}</small>
+        :if=${time}>${time}</small>
       <bs-close :dismiss="toast" :label="Close notification" />
     </div>
 
@@ -80,9 +80,9 @@
       </div>
 
       <bs-close :dismiss="toast"
-                :label="Close notification"
-                :extra="me-2 m-auto"
-                :if=${!title} />
+        :label="Close notification"
+        :extra="me-2 m-auto"
+        :if=${!title} />
     </div>
   </:define>
 
@@ -92,22 +92,22 @@
   -->
   <:define tag="bs-toast-container:div"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :placement=${'bottom-end'}   // 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end' | 'top-center'
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :placement=${'bottom-end'}   // 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end' | 'top-center'
 
-           // private
-           :_class=${[
-             'toast-container position-fixed p-3',
-             placement.startsWith('top') ? 'top-0' : 'bottom-0',
-             placement.endsWith('start') ? 'start-0' : '',
-             placement.endsWith('end') ? 'end-0' : '',
-             placement.endsWith('center') ? 'start-50 translate-middle-x' : '',
-             extra,
-           ].filter(s => s).join(' ')}
+    // private
+    :_class=${[
+      'toast-container position-fixed p-3',
+      placement.startsWith('top') ? 'top-0' : 'bottom-0',
+      placement.endsWith('start') ? 'start-0' : '',
+      placement.endsWith('end') ? 'end-0' : '',
+      placement.endsWith('center') ? 'start-50 translate-middle-x' : '',
+      extra,
+    ].filter(s => s).join(' ')}
 
-           class=${_class}
-           style="z-index: 1090"
+    class=${_class}
+    style="z-index: 1090"
   >
     <:slot />
   </:define>

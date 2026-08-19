@@ -19,34 +19,34 @@
   -->
   <:define tag="bs-button:button"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :variant=${'primary'}
-           :outline=${false}
-           :size=${null}
-           :active=${false}
-           :disabled=${false}
-           :type=${'button'}
-           :toggle=${null}
-           :target=${null}
-           :dismiss=${null}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :variant=${'primary'}
+    :outline=${false}
+    :size=${null}
+    :active=${false}
+    :disabled=${false}
+    :type=${'button'}
+    :toggle=${null}
+    :target=${null}
+    :dismiss=${null}
 
-           // private
-           :_class=${[
-             'btn',
-             variant ? `btn-${outline ? 'outline-' : ''}${variant}` : '',
-             size ? `btn-${size}` : '',
-             extra,
-           ].filter(s => s).join(' ')}
+    // private
+    :_class=${[
+      'btn',
+      variant ? `btn-${outline ? 'outline-' : ''}${variant}` : '',
+      size ? `btn-${size}` : '',
+      extra,
+    ].filter(s => s).join(' ')}
 
-           class=${_class}
-           type=${type}
-           :class-active=${active}
-           :attr-disabled=${disabled}
-           aria-pressed=${active ? 'true' : null}
-           data-bs-toggle=${toggle}
-           data-bs-target=${target}
-           data-bs-dismiss=${dismiss}
+    class=${_class}
+    type=${type}
+    :class-active=${active}
+    :attr-disabled=${disabled}
+    aria-pressed=${active ? 'true' : null}
+    data-bs-toggle=${toggle}
+    data-bs-target=${target}
+    data-bs-dismiss=${dismiss}
   >
     <:slot />
   </:define>
@@ -58,35 +58,35 @@
   -->
   <:define tag="bs-link:a"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :href=${'#'}
-           :variant=${null}
-           :outline=${false}
-           :size=${null}
-           :active=${false}
-           :disabled=${false}
-           :button=${false}
-           :toggle=${null}
-           :target=${null}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :href=${'#'}
+    :variant=${null}
+    :outline=${false}
+    :size=${null}
+    :active=${false}
+    :disabled=${false}
+    :button=${false}
+    :toggle=${null}
+    :target=${null}
 
-           // private
-           :_class=${[
-             button ? 'btn' : '',
-             button && variant ? `btn-${outline ? 'outline-' : ''}${variant}` : '',
-             button && size ? `btn-${size}` : '',
-             !button && variant ? `link-${variant}` : '',
-             extra,
-           ].filter(s => s).join(' ') || null}
+    // private
+    :_class=${[
+      button ? 'btn' : '',
+      button && variant ? `btn-${outline ? 'outline-' : ''}${variant}` : '',
+      button && size ? `btn-${size}` : '',
+      !button && variant ? `link-${variant}` : '',
+      extra,
+    ].filter(s => s).join(' ') || null}
 
-           class=${_class}
-           href=${href}
-           role=${button ? 'button' : null}
-           :class-active=${active}
-           :class-disabled=${disabled}
-           aria-disabled=${disabled ? 'true' : null}
-           data-bs-toggle=${toggle}
-           data-bs-target=${target}
+    class=${_class}
+    href=${href}
+    role=${button ? 'button' : null}
+    :class-active=${active}
+    :class-disabled=${disabled}
+    aria-disabled=${disabled ? 'true' : null}
+    data-bs-toggle=${toggle}
+    data-bs-target=${target}
   >
     <:slot />
   </:define>
@@ -98,22 +98,22 @@
   -->
   <:define tag="bs-button-group:div"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :label=${'Button group'}
-           :size=${null}
-           :vertical=${false}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :label=${'Button group'}
+    :size=${null}
+    :vertical=${false}
 
-           // private
-           :_class=${[
-             vertical ? 'btn-group-vertical' : 'btn-group',
-             size ? `btn-group-${size}` : '',
-             extra,
-           ].filter(s => s).join(' ')}
+    // private
+    :_class=${[
+      vertical ? 'btn-group-vertical' : 'btn-group',
+      size ? `btn-group-${size}` : '',
+      extra,
+    ].filter(s => s).join(' ')}
 
-           class=${_class}
-           role="group"
-           aria-label=${label}
+    class=${_class}
+    role="group"
+    aria-label=${label}
   >
     <:slot />
   </:define>
@@ -123,18 +123,18 @@
     buttons inside one, and this is the wrapper that says so.
   -->
   <:define tag="bs-button-toolbar:div"
-           class="btn-toolbar ${extra ?? ''}"
-           role="toolbar"
+    class="btn-toolbar ${extra ?? ''}"
+    role="toolbar"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :label=${'Toolbar'}
-           :gap=${2}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :label=${'Toolbar'}
+    :gap=${2}
 
-           aria-label=${label}
-           :class-gap-1=${gap === 1}
-           :class-gap-2=${gap === 2}
-           :class-gap-3=${gap === 3}
+    aria-label=${label}
+    :class-gap-1=${gap === 1}
+    :class-gap-2=${gap === 2}
+    :class-gap-3=${gap === 3}
   >
     <:slot />
   </:define>
@@ -145,18 +145,18 @@
     off when writing it by hand.
   -->
   <:define tag="bs-close:button"
-           type="button"
-           class="btn-close ${extra ?? ''}"
+    type="button"
+    class="btn-close ${extra ?? ''}"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :label=${'Close'}
-           :dismiss=${null}
-           :disabled=${false}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :label=${'Close'}
+    :dismiss=${null}
+    :disabled=${false}
 
-           aria-label=${label}
-           :attr-disabled=${disabled}
-           data-bs-dismiss=${dismiss}
+    aria-label=${label}
+    :attr-disabled=${disabled}
+    data-bs-dismiss=${dismiss}
   />
 
 </lib>

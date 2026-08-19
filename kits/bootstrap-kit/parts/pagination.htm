@@ -18,54 +18,54 @@
   -->
   <:define tag="bs-pagination:nav"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :current=${1}
-           :pages=${5}
-           :size=${null}          // 'sm' | 'lg'
-           :align=${'start'}      // 'start' | 'center' | 'end'
-           :prev=${'«'}
-           :next=${'»'}
-           :link=${(n) => null}
-           :select=${(n) => {}}
-           :label=${'Page navigation'}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :current=${1}
+    :pages=${5}
+    :size=${null}          // 'sm' | 'lg'
+    :align=${'start'}      // 'start' | 'center' | 'end'
+    :prev=${'«'}
+    :next=${'»'}
+    :link=${(n) => null}
+    :select=${(n) => {}}
+    :label=${'Page navigation'}
 
-           // private
-           :_class=${[
-             'pagination mb-0',
-             size ? `pagination-${size}` : '',
-             align === 'center' ? 'justify-content-center' : '',
-             align === 'end' ? 'justify-content-end' : '',
-           ].filter(s => s).join(' ')}
-           :_numbers=${Array.from({ length: pages }, (_, i) => i + 1)}
+    // private
+    :_class=${[
+      'pagination mb-0',
+      size ? `pagination-${size}` : '',
+      align === 'center' ? 'justify-content-center' : '',
+      align === 'end' ? 'justify-content-end' : '',
+    ].filter(s => s).join(' ')}
+    :_numbers=${Array.from({ length: pages }, (_, i) => i + 1)}
 
-           class=${extra}
-           aria-label=${label}
+    class=${extra}
+    aria-label=${label}
   >
     <ul class=${_class}>
       <li class="page-item" :class-disabled=${current <= 1}>
         <a class="page-link"
-           href=${link(current - 1)}
-           aria-label="Previous"
-           :on-click=${() => current > 1 && select(current - 1)}>${prev}</a>
+          href=${link(current - 1)}
+          aria-label="Previous"
+          :on-click=${() => current > 1 && select(current - 1)}>${prev}</a>
       </li>
 
       <li class="page-item"
-          :for-each=${_numbers}
-          :for-as="n"
-          :for-key=${n}
-          :class-active=${n === current}
-          aria-current=${n === current ? 'page' : null}>
+        :for-each=${_numbers}
+        :for-as="n"
+        :for-key=${n}
+        :class-active=${n === current}
+        aria-current=${n === current ? 'page' : null}>
         <a class="page-link"
-           href=${link(n)}
-           :on-click=${() => select(n)}>${n}</a>
+          href=${link(n)}
+          :on-click=${() => select(n)}>${n}</a>
       </li>
 
       <li class="page-item" :class-disabled=${current >= pages}>
         <a class="page-link"
-           href=${link(current + 1)}
-           aria-label="Next"
-           :on-click=${() => current < pages && select(current + 1)}>${next}</a>
+          href=${link(current + 1)}
+          aria-label="Next"
+          :on-click=${() => current < pages && select(current + 1)}>${next}</a>
       </li>
     </ul>
   </:define>

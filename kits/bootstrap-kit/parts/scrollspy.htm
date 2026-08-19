@@ -11,21 +11,21 @@
   -->
   <:define tag="bs-scrollspy:div"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :target=${null}
-           :offset=${0}
-           :smooth=${false}
-           :height=${null}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :target=${null}
+    :offset=${0}
+    :smooth=${false}
+    :height=${null}
 
-           class=${extra}
-           data-bs-spy="scroll"
-           data-bs-target=${target}
-           data-bs-root-margin="${offset}px 0px -40%"
-           data-bs-smooth-scroll=${smooth ? 'true' : null}
-           tabindex="0"
-           :style-height=${height ? `${height}px` : null}
-           :style-overflow-y=${height ? 'auto' : null}
+    class=${extra}
+    data-bs-spy="scroll"
+    data-bs-target=${target}
+    data-bs-root-margin="${offset}px 0px -40%"
+    data-bs-smooth-scroll=${smooth ? 'true' : null}
+    tabindex="0"
+    :style-height=${height ? `${height}px` : null}
+    :style-overflow-y=${height ? 'auto' : null}
   >
     <:slot />
   </:define>

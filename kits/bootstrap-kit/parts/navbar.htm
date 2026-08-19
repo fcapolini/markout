@@ -16,45 +16,45 @@
   -->
   <:define tag="bs-navbar:nav"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :items=${[
-             { name: 'Home', link: '#', active: true },
-             { name: 'Features', link: '#' },
-             { name: 'Pricing', link: '#' },
-           ]}
-           :brand=${'#'}
-           :expand=${'lg'}
-           :container=${'container'}   // 'container' | 'container-fluid' | ...
-           :sticky=${false}
-           :fixed=${false}
-           :theme=${null}              // 'light' | 'dark' — independent of the page
-           :bg=${'body-tertiary'}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :items=${[
+      { name: 'Home', link: '#', active: true },
+      { name: 'Features', link: '#' },
+      { name: 'Pricing', link: '#' },
+    ]}
+    :brand=${'#'}
+    :expand=${'lg'}
+    :container=${'container'}   // 'container' | 'container-fluid' | ...
+    :sticky=${false}
+    :fixed=${false}
+    :theme=${null}              // 'light' | 'dark' — independent of the page
+    :bg=${'body-tertiary'}
 
-           // private
-           :_id=${`bs-navbar-${$id}`}
-           :_class=${[
-             'navbar',
-             expand ? `navbar-expand-${expand}` : '',
-             bg ? `bg-${bg}` : '',
-             extra,
-           ].filter(s => s).join(' ')}
+    // private
+    :_id=${`bs-navbar-${$id}`}
+    :_class=${[
+      'navbar',
+      expand ? `navbar-expand-${expand}` : '',
+      bg ? `bg-${bg}` : '',
+      extra,
+    ].filter(s => s).join(' ')}
 
-           class=${_class}
-           :class-sticky-top=${sticky}
-           :class-fixed-top=${fixed}
-           data-bs-theme=${theme}
+    class=${_class}
+    :class-sticky-top=${sticky}
+    :class-fixed-top=${fixed}
+    data-bs-theme=${theme}
   >
     <div class=${container}>
       <a class="navbar-brand" href=${brand}><:slot /></a>
 
       <button class="navbar-toggler"
-              type="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#${_id}"
-              aria-controls=${_id}
-              aria-expanded="false"
-              aria-label="Toggle navigation">
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#${_id}"
+        aria-controls=${_id}
+        aria-expanded="false"
+        aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
 
@@ -62,13 +62,13 @@
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           <li class="nav-item" :for-each=${items} :for-as="item">
             <a class="nav-link"
-               :class-active=${item.active}
-               :class-disabled=${item.disabled}
-               :class-btn=${item.button}
-               :class-btn-primary=${item.button}
-               href=${item.link ?? null}
-               aria-current=${item.active ? 'page' : null}
-               aria-disabled=${item.disabled ? 'true' : null}>${item.name}</a>
+              :class-active=${item.active}
+              :class-disabled=${item.disabled}
+              :class-btn=${item.button}
+              :class-btn-primary=${item.button}
+              href=${item.link ?? null}
+              aria-current=${item.active ? 'page' : null}
+              aria-disabled=${item.disabled ? 'true' : null}>${item.name}</a>
           </li>
         </ul>
 

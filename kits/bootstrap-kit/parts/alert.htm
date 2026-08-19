@@ -19,30 +19,30 @@
     one-or-zero list, and a `<:slot>` cannot sit inside one of those.
   -->
   <:define tag="bs-alert:div"
-           role="alert"
+    role="alert"
 
-           // parameters
-           :extra=${null}      // extra classes for this instance
-           :variant=${'primary'}
-           :heading=${null}
-           :dismissible=${false}
+    // parameters
+    :extra=${null}      // extra classes for this instance
+    :variant=${'primary'}
+    :heading=${null}
+    :dismissible=${false}
 
-           // private
-           :_class=${['alert', `alert-${variant}`, extra].filter(s => s).join(' ')}
+    // private
+    :_class=${['alert', `alert-${variant}`, extra].filter(s => s).join(' ')}
 
-           class=${_class}
-           :class-alert-dismissible=${dismissible}
-           :class-fade=${dismissible}
-           :class-show=${dismissible}
+    class=${_class}
+    :class-alert-dismissible=${dismissible}
+    :class-fade=${dismissible}
+    :class-show=${dismissible}
   >
     <h4 class="alert-heading"
-        :if=${heading}>${heading}</h4>
+      :if=${heading}>${heading}</h4>
 
     <:slot />
 
     <bs-close :dismiss="alert"
-              :label="Close alert"
-              :if=${dismissible} />
+      :label="Close alert"
+      :if=${dismissible} />
   </:define>
 
 </lib>
