@@ -119,6 +119,24 @@ export class CoreContext {
    * `set()` discarding an expression, which drops that value's own edges.
    */
   graphVersion = 0;
+  /**
+   * Values holding a dependency that may not exist -- see
+   * CoreValueProps.maybeDeps.
+   *
+   * Kept as a set rather than found by walking, because what has to happen
+   * when a region toggles is bounded by how many references reach into one,
+   * and a page has few of those and a great many scopes.
+   */
+  maybes = new Set<CoreValue>();
+  /**
+   * The name values of scopes that live inside a region -- see
+   * CoreScope.regionName.
+   *
+   * Kept here for the same reason as `maybes`: what has to be re-asked when a
+   * region toggles is bounded by how many names reach into one, and the walk
+   * that would find them is the whole tree.
+   */
+  regionNames = new Set<CoreValue>();
 
   constructor(props: CoreContextProps) {
     this.props = props;
@@ -146,6 +164,33 @@ export class CoreContext {
       this.applyPending();
     }
     return this;
+  }
+
+  /**
+   * Re-resolve every dependency that reaches into a region, because one has
+   * just appeared or gone.
+   *
+   * The edge into a region cannot be made before its scopes exist, and has to
+   * be dropped again when they stop existing. Without the second half a
+   * reader keeps whatever it last saw while the region was up -- which is
+   * worse than the error this feature replaced, being both wrong and silent.
+   *
+   * Called from the toggle rather than from a refresh: `refresh(scope)` walks
+   * the subtree it is given, and the values that need this are OUTSIDE the
+   * region, which is the one place that walk does not reach.
+   */
+  relinkMaybes() {
+    if (!this.maybes.size && !this.regionNames.size) {
+      return;
+    }
+    // the graph really has changed shape, and a depth memoized against the
+    // old one would order the drain by edges that are no longer there
+    this.graphVersion++;
+    // names first: a reader is about to evaluate `panel.field?.x`, and what
+    // `field` answers has to be current before it does
+    this.regionNames.forEach(value => value.relink());
+    this.maybes.forEach(value => value.relink());
+    this.applyPending();
   }
 
   /**

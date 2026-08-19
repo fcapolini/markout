@@ -14,6 +14,15 @@ import type { Scope } from './Scope';
 export interface ValueDepRef {
   via?: string[];
   key: string;
+  /**
+   * This reference walks into a region -- `:if`, `:else`, `:for-data` -- so
+   * the scope it names exists only while that region is showing.
+   *
+   * The one dependency the runtime is allowed to find nothing for, and only
+   * because the page said `?.` at the crossing. See stage4's `reachable`,
+   * and CoreValueProps.maybeDeps for what the other side does with it.
+   */
+  maybe?: boolean;
 }
 
 export class Value {

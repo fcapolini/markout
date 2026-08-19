@@ -438,7 +438,15 @@ function collectDeps(
       // the chain is consumed whole; descending into it again would re-match
       // its own prefixes as separate (wrong) dependencies
       this.skip();
-      const dep = resolveChain(segments, value, page);
+      // whether this chain is being WRITTEN, which changes what can be said
+      // about a region: a read into one is guarded with `?.`, and there is no
+      // such spelling for an assignment target
+      const owners = this.parents();
+      const owner = owners[owners.length - 1] as Node | undefined;
+      const writing =
+        (owner?.type === 'AssignmentExpression' && owner.left === (node as never)) ||
+        (owner?.type === 'UpdateExpression' && owner.argument === (node as never));
+      const dep = resolveChain(segments, value, page, writing);
       dep && deps.set(depKey(dep), dep);
     },
   });
@@ -477,14 +485,26 @@ export function chainDep(
   return segments ? resolveChain(segments, value, page) : undefined;
 }
 
-function chainSegments(node: Node): string[] | undefined {
-  const segments: string[] = [];
+/**
+ * One step of a reference chain, and whether the page wrote `?.` to get here.
+ *
+ * The flag belongs to the step that READS the previous one -- `a.b?.c` marks
+ * `c`, because what may be missing is `b`. That is JavaScript's own reading of
+ * it, and it is the shape `reachable` asks about at a region boundary.
+ */
+interface Segment {
+  name: string;
+  optional: boolean;
+}
+
+function chainSegments(node: Node): Segment[] | undefined {
+  const segments: Segment[] = [];
   let n: Node = node;
   while (n.type === 'MemberExpression') {
     if (n.computed || n.property.type !== 'Identifier') {
       return undefined;
     }
-    segments.unshift(n.property.name);
+    segments.unshift({ name: n.property.name, optional: !!n.optional });
     n = n.object as Node;
   }
   return n.type === 'ThisExpression' && segments.length ? segments : undefined;
@@ -495,9 +515,18 @@ function chainSegments(node: Node): string[] | undefined {
  * previous one landed in, and return the dependency it denotes. Reports a
  * compile error (and returns undefined) if it doesn't resolve.
  */
-function resolveChain(segments: string[], value: Value, page: Page): ValueDepRef | undefined {
+function resolveChain(
+  segments: Segment[],
+  value: Value,
+  page: Page,
+  writing = false
+): ValueDepRef | undefined {
   const via: string[] = [];
   let target: Scope = resolvesFrom(value);
+  // set once the walk steps into a region: everything from there on may be
+  // absent, so the dependency the chain ends in is one the runtime is told to
+  // tolerate finding nothing for
+  let maybe = false;
 
   // every segment but the last is a candidate navigation; the last is always
   // a key, so that `this.foo` on a named scope depends on the scope-valued
@@ -505,69 +534,80 @@ function resolveChain(segments: string[], value: Value, page: Page): ValueDepRef
   for (let i = 0; i < segments.length - 1; i++) {
     // past the first segment the chain is already inside a named scope, so
     // the lookup is "in there" rather than "from here"
-    const step = navigate(target, segments[i], i > 0);
+    const step = navigate(target, segments[i].name, i > 0);
     if (!step.isNavigation) {
       // an ordinary value: it's the dependency, and the remaining segments
       // are plain property access on whatever it holds at runtime
-      return validated(via, segments[i], target, value, page);
+      return validated(via, segments[i].name, target, value, page, maybe);
     }
     if (!step.scope) {
       if (!step.dynamic) {
-        addError(page, `Unknown reference: "${segments.join('.')}"`, value.node.loc);
+        addError(
+          page,
+          `Unknown reference: "${segments.map(s => s.name).join('.')}"`,
+          value.node.loc
+        );
         return undefined;
       }
       // navigable, but to somewhere only the usage decides. The hop is
       // recorded -- `this.$host.$value(key)` resolves fine at runtime, so
       // what it reads still propagates -- and anything past it is plain
       // property access on whatever turns up
-      via.push(segments[i]);
-      return { via, key: segments[i + 1] };
+      via.push(segments[i].name);
+      return { via, key: segments[i + 1].name, ...(maybe ? { maybe } : {}) };
     }
-    if (!reachable(step.scope, value, page, segments, i)) {
+    const crossing = reachable(step.scope, value, page, segments, i, writing);
+    if (crossing === 'refused') {
       return undefined;
     }
-    via.push(segments[i]);
+    maybe ||= crossing === 'guarded';
+    via.push(segments[i].name);
     target = step.scope;
   }
 
-  return validated(via, segments[segments.length - 1], target, value, page);
+  return validated(via, segments[segments.length - 1].name, target, value, page, maybe);
 }
 
 /**
- * Whether a name reached by navigating INTO `into` is there to be read.
+ * What it takes to read a name reached by navigating INTO `into`.
  *
- * It is not, when `into` sits inside a region -- `:for-each`, `:for-data`,
- * `:if` and its branches -- that the reading expression is outside of. The
- * reason is the guarantee that makes a region worth having: what is inside
- * one is not built while it is a stencil, so those scopes do not exist, and
- * a scope that does not exist has registered no name. The dependency has
- * nothing to link to.
+ * A region -- `:if`, `:else`, `:for-data` -- is not built while it is a
+ * stencil, so the scopes inside one do not exist and have registered no name.
+ * A reference into one is therefore a reference to something that may not be
+ * there, which is a thing JavaScript already has a spelling for: the page
+ * writes `?.` at the crossing, and reads `undefined` while the region is
+ * away.
  *
- * That failed at LINK time and unreadably. `${panel.field.open}` compiled
+ * Required rather than merely allowed. Without it the reference compiled
  * clean and the browser answered `Cannot read properties of undefined
- * (reading '$value')`, which names nothing the author wrote -- and the
- * runtime is entitled to read it as a markout bug rather than a page bug,
- * since the compiler is supposed to guarantee every dependency resolves.
- * This is the compiler keeping that promise.
+ * (reading '$value')` -- which names nothing the author wrote, and which the
+ * runtime is entitled to read as a markout bug, since the compiler is meant
+ * to guarantee every dependency resolves. `?.` is the page saying it knows.
+ *
+ * `:for-each` is refused outright, and not for want of a spelling: `?.` says
+ * "this may be absent", and a loop's trouble is that the name means as many
+ * scopes as there are items. Zero-or-one is what optional chaining answers,
+ * so it is offered exactly where the arity is zero-or-one.
  *
  * The walk is STRUCTURAL, and has to be: markup slotted into a component
- * resolves its names at the call site but lives wherever the definition put
+ * resolves its names at the call site but LIVES wherever the definition put
  * it, which can be inside a region of the component's own. Its name is
  * perfectly reachable and its scope still will not exist -- the one case a
  * lexical walk would wave through.
  *
- * Two things stay reachable. A value ON a region host, since that scope
- * exists whether or not it is showing -- which is how a region's own
- * condition is read. And anything read from inside the same region, where
- * everything is built together and stops existing together.
+ * Two things need no guard. A value ON a region host, since that scope exists
+ * whether or not it is showing -- which is how a region's own condition is
+ * read. And anything read from inside the same region, where everything is
+ * built together and stops existing together.
  */
 function reachable(
   into: Scope,
   value: Value,
   page: Page,
-  segments: string[],
-  at: number
-): boolean {
+  segments: Segment[],
+  at: number,
+  writing: boolean
+): 'plain' | 'guarded' | 'refused' {
   const from = resolvesFrom(value);
   for (let host: Scope | undefined = into.parent; host; host = host.parent) {
     const region = [FOR_EACH_VALUE, FOR_DATA_VALUE, IF_VALUE].find(k => host!.values.has(k));
@@ -578,31 +618,60 @@ function reachable(
     // between the two of them to come and go
     for (let s: Scope | undefined = from; s; s = s.parent) {
       if (s === host) {
-        return true;
+        return 'plain';
       }
     }
     const written = (host.values.get(region)!.node as ServerAttribute).name;
-    const why =
-      region === FOR_EACH_VALUE
-        ? `which renders it once per item, so the name means as many scopes ` +
-          `as there are items and none of them in particular`
-        : `which takes it away again, so the name is there only while the ` +
-          `region is showing -- not something anything outside it can hold on to`;
     // named by the segment BEFORE this one: `at` is what we are navigating
-    // to, and there is always a previous segment, since at the first the
-    // host would be the scope this expression sits in and the walk above
-    // would have found it
+    // to, and there is always a previous segment, since at the first the host
+    // would be the scope this expression sits in and the walk above would
+    // have found it
+    const path = segments.slice(at).map(s => s.name).join('.');
+    const through = segments[at - 1].name;
+    if (region === FOR_EACH_VALUE) {
+      addError(
+        page,
+        `Cannot read "${path}" through "${through}": "${segments[at].name}" is ` +
+          `inside a "${written}", which renders it once per item -- so the name ` +
+          `means as many scopes as there are items and none of them in ` +
+          `particular. Declare what the outside needs to read outside the loop`,
+        value.node.loc
+      );
+      return 'refused';
+    }
+    // the crossing is the read OF the segment that lands inside, which is the
+    // access the next segment makes
+    if (!writing && segments[at + 1]?.optional) {
+      return 'guarded';
+    }
+    if (writing) {
+      // `a?.b = c` is not JavaScript, so there is no guarded form to point at
+      // -- and there should not be: a write that lands nowhere when the
+      // region is away is a silent no-op, which is the shape being got rid of
+      addError(
+        page,
+        `Cannot write "${path}" through "${through}": "${segments[at].name}" is ` +
+          `inside a "${written}", so it is there only while that region is ` +
+          `showing -- and unlike a read, a write has no way to say "if it is ` +
+          `there". Declare what the outside changes outside the region, and ` +
+          `read it from within`,
+        value.node.loc
+      );
+      return 'refused';
+    }
     addError(
       page,
-      `Cannot read "${segments.slice(at).join('.')}" through ` +
-        `"${segments[at - 1]}": "${segments[at]}" is inside a "${written}" ` +
-        `region, ${why}. Declare what the outside needs to read outside the ` +
-        `region, and read it from within`,
+      `"${segments[at].name}" is inside a "${written}", so it is there only ` +
+        `while that region is showing. Read it as ` +
+        `"${segments.slice(0, at + 1).map(s => s.name).join('.')}?.` +
+        `${segments.slice(at + 1).map(s => s.name).join('.')}", which is ` +
+        `undefined while the region is away -- or declare what the outside ` +
+        `needs to read outside the region`,
       value.node.loc
     );
-    return false;
+    return 'refused';
   }
-  return true;
+  return 'plain';
 }
 
 function validated(
@@ -610,7 +679,8 @@ function validated(
   key: string,
   target: Scope,
   value: Value,
-  page: Page
+  page: Page,
+  maybe = false
 ): ValueDepRef | undefined {
   // the runtime supplies these on every scope; there's nothing to declare
   if (
@@ -651,7 +721,8 @@ function validated(
       return undefined;
     }
   }
-  return via.length ? { via, key } : { key };
+  const found = via.length ? { via, key } : { key };
+  return maybe ? { ...found, maybe } : found;
 }
 
 /**
@@ -739,13 +810,13 @@ function dynamicScopeAccess(node: Node, scope: Scope): string | undefined {
   }
   let target: Scope = scope;
   for (const segment of segments) {
-    const step = navigate(target, segment);
+    const step = navigate(target, segment.name);
     if (!step.isNavigation || !step.scope) {
       return undefined;
     }
     target = step.scope;
   }
-  return segments.join('.');
+  return segments.map(s => s.name).join('.');
 }
 
 // walks up from `scope` (inclusive) looking for an ancestor with a named

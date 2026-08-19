@@ -9,6 +9,17 @@ export interface CoreValueProps<T> {
   exp?: () => T;
   deps?: ValueDep[];
   /**
+   * Dependencies the runtime is allowed to find nothing for.
+   *
+   * The one exception to the compiler contract's rule that every dep resolves
+   * (see RUNTIME.md). A reference that walks into a region -- `:if`, `:else`,
+   * `:for-data` -- names a scope that does not exist while that region is
+   * away, and the page said so by writing `?.` at the crossing. Absent, the
+   * edge is simply not made; `CoreContext.relinkMaybes` makes it when the
+   * region comes back, and takes it away again when it goes.
+   */
+  maybeDeps?: ValueDep[];
+  /**
    * This value belongs to a custom-tag instance but was written at the usage
    * site, so it evaluates against the scope containing that site rather than
    * against the instance -- an expression resolves where it was written. It
@@ -105,6 +116,22 @@ export class CoreValue<T = any> {
   }
 
   link() {
+    // may resolve to nothing, and that is not an error: the region it reaches
+    // into is away. Registered either way, so relinkMaybes can come back to it
+    if (this.props.maybeDeps?.length) {
+      this.scope.ctx.maybes.add(this);
+      this.props.maybeDeps.forEach(dep => {
+        try {
+          const o = dep.apply(this.scope.proxy);
+          if (o) {
+            o.dst.add(this);
+            this.src.add(o);
+          }
+        } catch (err) {
+          this.scope.ctx.onError('link', err, this);
+        }
+      });
+    }
     this.props.deps?.forEach(dep => {
       try {
         const o = dep.apply(this.scope.proxy);
@@ -121,6 +148,22 @@ export class CoreValue<T = any> {
         this.scope.ctx.onError('link', err, this);
       }
     });
+  }
+
+  /**
+   * Resolve this value's dependencies again, because what they name has come
+   * or gone.
+   *
+   * Only ever called for a value with `maybeDeps`, and only when a region has
+   * toggled: the edge into it cannot be made before the scopes exist, and has
+   * to be dropped again when they stop existing -- otherwise a reader keeps
+   * whatever it last saw, which is the stale-and-silent failure this whole
+   * feature exists to avoid.
+   */
+  relink() {
+    this.unlink();
+    this.link();
+    this.exp && this.update();
   }
 
   unlink() {

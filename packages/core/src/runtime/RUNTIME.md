@@ -209,6 +209,14 @@ execution. Concretely, the compiler is responsible for:
   chain (own scope, ancestors, or a named scope's own values), reporting a
   compile error otherwise — the runtime never has to tolerate a `deps`
   entry pointing at nothing;
+- emitting the one class of reference that *can* point at nothing as
+  `maybeDeps` rather than `deps`. A reference that walks into a region —
+  `:if`, `:else`, `:for-data` — names a scope that exists only while that
+  region is showing, and the page had to write `?.` at the crossing to be
+  allowed it at all. `link()` makes those edges when it can and leaves them
+  unmade when it cannot, and `CoreContext.relinkMaybes()` revisits them
+  whenever a region toggles. The rule above is unchanged for everything in
+  `deps`: an entry there resolving to nothing is still a compiler bug;
 - resolving a reference chain (`outer.inner.count`, `$parent.$parent.n`)
   one segment at a time, each against the scope the previous segment landed
   in — the same walk `lookup()` performs — and stopping at the first
@@ -265,7 +273,9 @@ The phases separate three genuinely different things that used to share one
   it were current.
 - **`link`** — a `dep` resolved to nothing. The compiler contract above says
   this can't happen, so reaching it means the *compiler* is broken, not the
-  page. Reported unconditionally.
+  page. Reported unconditionally. A `maybeDep` resolving to nothing is the
+  documented exception and is not reported: it means the region it reaches
+  into is away, which is what the page's `?.` said it was ready for.
 - **`callback`**, **`propagate`**, **`refresh`** — internal phases. Each
   callback in `applyPending()` is guarded individually, so one failing observer
   can't cost the rest of the batch their notification, and the batch is drained

@@ -232,10 +232,17 @@ function generateValueProps(
     // wanted outcome rather than a lost fallback
     return objectExpression([property('serverOnly', literal(true))]);
   }
+  // split, because the two halves make different promises to the runtime:
+  // an ordinary dependency must resolve, and one that walks into a region
+  // is allowed not to while that region is away. See CoreValueProps.maybeDeps
+  const maybes = value.deps.filter(d => d.maybe);
   const props = [
     property('exp', functionExpression(generateExpBody(value))),
-    property('deps', arrayExpression(value.deps.map(makeDep))),
+    property('deps', arrayExpression(value.deps.filter(d => !d.maybe).map(makeDep))),
   ];
+  if (maybes.length) {
+    props.push(property('maybeDeps', arrayExpression(maybes.map(makeMaybeDep))));
+  }
   // written at a custom-tag usage site: evaluated against the scope the tag
   // was written in, not against the instance (see CoreScope.newValue)
   callSite && props.push(property('callSite', literal(true)));
@@ -291,6 +298,28 @@ function makeDep(dep: ValueDepRef): Expression {
       )
     )
   );
+}
+
+/**
+ * The same, for a reference that walked into a region: optional at every step.
+ *
+ * `function () { return this?.a?.b?.$value("key"); }` -- so a scope that is
+ * not there while its region is away answers `undefined` rather than throwing
+ * on the way to it. The page wrote `?.` to be allowed this; the codegen is
+ * that `?.`, applied to the navigation the author never sees.
+ */
+function makeMaybeDep(dep: ValueDepRef): Expression {
+  let scope: Expression = { type: 'ThisExpression' } as unknown as Expression;
+  for (const segment of dep.via ?? []) {
+    scope = {
+      type: 'MemberExpression',
+      object: scope,
+      property: identifier(segment),
+      computed: false,
+      optional: true,
+    } as unknown as Expression;
+  }
+  return functionExpression(optionalCall(scope, dep.key));
 }
 
 /** `<scope>?.$value("key")` */
