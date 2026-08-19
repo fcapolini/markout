@@ -320,7 +320,7 @@ the browser can make up for it. `markout build` therefore **fails** on one that
 throws, rather than shipping a page permanently missing what it was for. A value
 that reads nothing of the request is fine there, and its answer is baked into
 the markup. See
-[rendering](../concepts/rendering.md#what-ahead-of-time-compilation-cannot-carry).
+[rendering](../concepts/isomorphism.md#what-ahead-of-time-compilation-cannot-carry).
 
 `:server-` marks declared values only. It is an error on `:attr-`, `:class-`,
 `:style-`, `:prop-` (which re-derive for free once the value they read is
@@ -421,7 +421,7 @@ The host element becomes an inert `<template>` and every visible item is a
 clone of it. That `<template>` is still an element in the DOM, and the first
 one — so CSS written against a replicated list has to use `:first-of-type`
 rather than `:first-child`, and `:nth-of-type` rather than `:nth-child`. See
-[replication](../concepts/replication.md#the-stencil-is-a-real-element-and-css-can-see-it).
+[replication](../concepts/directives.md#the-stencil-is-a-real-element-and-css-can-see-it).
 
 ### A name inside a region is read with `?.`
 

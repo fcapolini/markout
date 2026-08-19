@@ -388,7 +388,7 @@ render pass runs at build time, so the markup is in the file — a page's static
 content does not flash in after JavaScript loads. What it cannot carry is only
 what a request would have supplied: a `:server-` value has no result, and a
 datasource has to be marked `:client` so the browser fetches it on arrival.
-[Rendering](docs/concepts/rendering.md#two-ways-to-deliver-a-page) has the
+[Isomorphism](docs/concepts/isomorphism.md#two-ways-to-deliver-a-page) has the
 details.
 
 `markout build` below is what produces the second kind. It is what lets the

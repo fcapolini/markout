@@ -106,7 +106,7 @@ export interface BuildResult {
  *
  * The same render that the middleware runs per request, run once per page at
  * build time instead -- so the output carries its markup rather than waiting
- * for the browser to produce it. See docs/concepts/rendering.md.
+ * for the browser to produce it. See docs/concepts/isomorphism.md.
  *
  * What it cannot carry is what a request would have supplied, and a
  * `:server-` value is where that shows: there is no request here, so no

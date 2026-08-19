@@ -69,7 +69,7 @@ This is the DOM's own, it is never modelled, and trying to would be a
 mistake — it changes on every keystroke and means nothing to the page.
 
 What it needs is not to be *destroyed*, which is what
-[`:for-key`](replication.md#for-key) is for: a keyed list moves a row rather
+[`:for-key`](directives.md#for-key) is for: a keyed list moves a row rather
 than rebuilding it, so whatever the element was holding survives the move.
 
 ## The first two are a decision, not a category

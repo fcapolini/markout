@@ -221,7 +221,7 @@ describe('docs/reference/syntax.md', () => {
   });
 });
 
-describe('docs/concepts/scopes.md', () => {
+describe('docs/concepts/scope.md', () => {
   it('renders the $id anchoring example', async () => {
     const result = await render(
       '<html><head><:define tag="bs-nav:nav" :_id=${$id}>' +
@@ -241,7 +241,7 @@ describe('docs/concepts/scopes.md', () => {
   });
 });
 
-describe('docs/concepts/modules-and-components.md', () => {
+describe('docs/concepts/kits.md', () => {
   const CARD =
     '<:define tag="my-card:div" class="card" :title="Untitled">' +
     '<h5>${title}</h5></:define>';
@@ -322,7 +322,7 @@ describe('docs/concepts/modules-and-components.md', () => {
   });
 });
 
-describe('docs/concepts/state.md', () => {
+describe('docs/concepts/data.md', () => {
   it('renders the durable-app-state example', async () => {
     // the point of the snippet is that typing folds the note back into
     // `tracks` rather than leaving it in the element, so the assertion is on
@@ -357,7 +357,7 @@ describe('docs/concepts/state.md', () => {
   });
 });
 
-describe('docs/concepts/replication.md', () => {
+describe('docs/concepts/directives.md', () => {
   it('renders the :for-key example', async () => {
     const result = await render(
       '<html :rows=${[{ id: "a", label: "One" }, { id: "b", label: "Two" }]}>' +
