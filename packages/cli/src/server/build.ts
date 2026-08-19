@@ -38,6 +38,27 @@ export interface BuildProps {
    * caller that has already scanned, or a test that wants neither.
    */
   kits?: Kit[];
+  /**
+   * The origin these pages are being built FOR, as `$origin`.
+   *
+   * A build has no request, so by default a page has no origin -- and a
+   * `:server-` fetch of `/data.json` is then not an address at all, which
+   * `std-data` refuses rather than renders blank. That refusal is right when
+   * nothing can answer, and wrong when something can: a docroot whose data
+   * sits in it as files (Orbit's `demos/orbit/api/`) is fetchable the moment
+   * anything is serving that directory.
+   *
+   * So this is supplied rather than guessed. Point it at a server for the
+   * same docroot -- `markout <docroot>` in another terminal is one -- and
+   * relative sources resolve exactly as they do when served, which is what
+   * makes such a page buildable at all.
+   *
+   * Not the deploy host, though it may be the same thing: what this affects
+   * is where the BUILD fetches from. A page that renders `$origin` into its
+   * markup will carry whatever is passed here, which is a reason to pass the
+   * address the pages are going to live at when both are available.
+   */
+  origin?: string;
 }
 
 export interface BuildResult {
@@ -89,9 +110,10 @@ export interface BuildResult {
  *
  * What it cannot carry is what a request would have supplied, and a
  * `:server-` value is where that shows: there is no request here, so no
- * `$origin` and none of the host's globals. Such a value failing FAILS the
- * build (see BuildResult.serverErrors) rather than being reported and shipped,
- * because it crosses to the browser frozen and nothing re-runs it.
+ * `$origin` unless one is passed (see BuildProps.origin) and none of the
+ * host's globals. Such a value failing FAILS the build (see
+ * BuildResult.serverErrors) rather than being reported and shipped, because
+ * it crosses to the browser frozen and nothing re-runs it.
  *
  * Deliberately not a compile-time refusal of `:server-` values as such. Two
  * reasons: one that reads nothing of the request works perfectly well here and
@@ -183,7 +205,7 @@ export async function build(props: BuildProps): Promise<BuildResult> {
       page.errors.forEach(error => result.errors.push({ pathname, error }));
       continue;
     }
-    const errors = await renderPage(page);
+    const errors = await renderPage(page, { origin: props.origin });
     const fatal = errors.filter(e => e.serverOnly);
     fatal.forEach(error => result.serverErrors.push({ pathname, error }));
     errors

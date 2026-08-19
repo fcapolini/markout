@@ -84,7 +84,18 @@ async function main() {
       (value: string, previous: string[]) => previous.concat(value),
       [] as string[]
     )
-    .action(async (pathname: string | undefined, outdir: string | undefined, options: { page: string[] }) => {
+    // What `$origin` is while the pages are built, and so what a page's own
+    // `/data.json` resolves against. A build has no request to take one from,
+    // and a page whose data is files in its docroot is perfectly buildable as
+    // soon as anything is serving them -- `markout <docroot>` in another
+    // terminal will do. Without this such a page cannot be built at all: its
+    // datasources refuse a relative url with nothing to resolve it against.
+    .option(
+      '-o, --origin <url>',
+      'the origin the pages are built for, e.g. http://127.0.0.1:3000; ' +
+        'relative `:server-` fetches resolve against it'
+    )
+    .action(async (pathname: string | undefined, outdir: string | undefined, options: { page: string[]; origin?: string }) => {
       const docroot = path.resolve(process.cwd(), pathname ?? DEFAULT_DOCROOT);
       // beside the docroot rather than inside it: `build` refuses an output
       // directory under the docroot, because the next run would compile its
@@ -92,9 +103,25 @@ async function main() {
       const target = outdir
         ? path.resolve(process.cwd(), outdir)
         : path.join(path.dirname(docroot), DEFAULT_OUTDIR);
+      let origin: string | undefined;
+      if (options.origin) {
+        // refused here rather than inside every render: a typo would
+        // otherwise surface once per datasource, as a fetch failure that
+        // names the datasource instead of the flag
+        try {
+          origin = new URL(options.origin).origin;
+        } catch {
+          console.error(
+            `markout: --origin "${options.origin}" is not an absolute URL ` +
+              `(it needs a scheme, e.g. http://127.0.0.1:3000)`
+          );
+          process.exitCode = 1;
+          return;
+        }
+      }
       try {
         report(
-          await build({ docroot, outdir: target, pages: options.page }),
+          await build({ docroot, outdir: target, pages: options.page, origin }),
           options.page.length > 0
         );
       } catch (err) {

@@ -48,8 +48,9 @@ page looks for the runtime at a different path than a served one.
 ### What ahead-of-time compilation cannot carry
 
 The render still happens — that is what puts the markup in the file — but there
-is no request behind it, so no `$origin` and none of the host's globals. Where
-that shows is a `:server-` value, and the rule is short:
+is no request behind it, so no `$origin` (unless `markout build --origin` says
+what it is, below) and none of the host's globals. Where that shows is a
+`:server-` value, and the rule is short:
 
 > **A `:server-` value that fails fails the build.**
 
@@ -75,7 +76,23 @@ For a datasource that means:
 | `:url` | `served` (default) | `:client` |
 | --- | --- | --- |
 | relative (`/api/rows`) | **fails the build** — nothing to resolve it against, and it says so | fetched by the browser on arrival |
+| relative, with `--origin` | resolved against it and fetched while building | fetched by the browser on arrival |
 | absolute (`https://…`) | fetched while building, answer baked into the page | fetched by the browser on arrival |
+
+`markout build --origin <url>` is the middle row: it supplies the `$origin`
+there is no request to take one from. It is what a docroot carrying its own
+data wants — Orbit, the largest demo in the repository, reads a directory of
+JSON files that sit beside its pages, so anything serving that directory makes
+the whole console buildable:
+
+```sh
+npx markout ./site                                   # in one terminal
+npx markout build ./site ./dist -o http://127.0.0.1:3000
+```
+
+What ships is the answer rather than the question, which is the point: the
+built pages carry their rows, and the data files travel along with them for
+whatever asks again later.
 
 ## Dynamic text and DOM markers
 

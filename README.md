@@ -218,6 +218,20 @@ build and says to mark it `:client` — after which the browser fetches it on
 arrival. An *absolute* `:url` still fetches while building and bakes the answer
 into the page, which is static site generation and worth having.
 
+`--origin` is the third way out, and the one for a docroot whose data sits in
+it as files:
+
+```sh
+npx markout ./site                                   # in one terminal
+npx markout build ./site ./dist -o http://127.0.0.1:3000
+```
+
+It says what `$origin` is while the pages are built, so a relative `:url`
+resolves exactly as it does when served. Any server for the same directory will
+do — the one above, or the host the pages are being deployed to. This is what
+lets a page fetch its own data and still be a static deployment: the fetching
+happens once, here, and what ships is the answer.
+
 `-p`/`--page` restricts the build to one page, and can be given more than once.
 A leading slash and the `.html` extension are both optional:
 

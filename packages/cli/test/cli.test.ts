@@ -2,6 +2,7 @@ import { execFile, spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
 import net, { type AddressInfo } from 'node:net';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -465,6 +466,68 @@ describe('CLI build', () => {
       await expect(readFile(path.join(outdir, 'needs-server.html'), 'utf8')).rejects.toThrow();
       // the pages that are deliverable still are
       await expect(readFile(path.join(outdir, 'fine.html'), 'utf8')).resolves.toContain('fine');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('resolves a page-relative fetch against --origin', async () => {
+    // The case this exists for: a docroot whose data sits in it as files. A
+    // build has no request to take an origin from, so `/data.json` is not an
+    // address at all -- and the moment anything is serving that directory it
+    // is one again. Here that is six lines of `node:http`; for a real docroot
+    // it is `markout <docroot>` in another terminal, or the host the pages
+    // are being deployed to.
+    const { docroot, outdir, cleanup } = await dirs();
+    const served = createServer((req, res) => {
+      readFile(path.join(docroot, `${req.url}`.slice(1)), 'utf8').then(
+        body => res.writeHead(200, { 'content-type': 'application/json' }).end(body),
+        () => res.writeHead(404).end()
+      );
+    });
+    await new Promise<void>(resolve => served.listen(0, '127.0.0.1', resolve));
+    const origin = `http://127.0.0.1:${(served.address() as AddressInfo).port}`;
+    try {
+      await writeFile(path.join(docroot, 'data.json'), '{"who":"a file in the docroot"}');
+      // what `std-data` does, written out: a relative url means nothing on
+      // its own, so it is resolved against the page's own origin
+      await writeFile(
+        path.join(docroot, 'index.html'),
+        '<html :server-data=${fetch(new URL("/data.json", $origin))' +
+          '.then(r => r.json())}><body>${data?.who ?? "-"}</body></html>'
+      );
+
+      const result = await run([docroot, outdir, '--origin', origin]);
+
+      expect(result.code).toBe(0);
+      // in the FILE, which is the whole mode: the answer was fetched once
+      // while the page was built and nothing asks again
+      await expect(readFile(path.join(outdir, 'index.html'), 'utf8')).resolves.toContain(
+        'a file in the docroot'
+      );
+
+      // and without it the same page cannot be built at all, rather than
+      // being written with a hole where its data was
+      const alone = await run([docroot, outdir]);
+      expect(alone.code).toBe(1);
+    } finally {
+      await new Promise<void>(resolve => served.close(() => resolve()));
+      await cleanup();
+    }
+  });
+
+  it('refuses an --origin that is not an absolute URL', async () => {
+    // said once, about the flag, rather than once per datasource as a fetch
+    // failure naming something the author did not write
+    const { docroot, outdir, cleanup } = await dirs();
+    try {
+      await writeFile(path.join(docroot, 'index.html'), '<html><body>x</body></html>');
+
+      const result = await run([docroot, outdir, '--origin', '127.0.0.1:3000']);
+
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain('not an absolute URL');
+      expect(existsSync(path.join(outdir, 'index.html'))).toBe(false);
     } finally {
       await cleanup();
     }
