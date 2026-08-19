@@ -1,0 +1,40 @@
+# What Dependabot does here, and why a file rather than the setting.
+#
+# Grouped SECURITY updates are already on through the repository settings --
+# that is where the `production-dependencies` / `development-dependencies`
+# group names on past branches came from. Those only ever open a PR once an
+# advisory exists. This file adds ordinary VERSION updates, which is the half
+# that keeps a dependency from being years behind by the time an advisory
+# lands, and it adds the ecosystem the setting does not cover at all: the
+# actions in .github/workflows, which run with a token and are as much a
+# supply chain as anything in node_modules.
+#
+# Grouped and weekly on purpose. A separate PR per package on a tree of five
+# hundred is a review queue nobody reads, and an unread PR is worth less than
+# no PR: it is the reading that catches a package that has changed hands.
+version: 2
+updates:
+  - package-ecosystem: npm
+    # the workspace root: one lockfile covers every package here
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      production:
+        dependency-type: production
+        update-types: [minor, patch]
+      development:
+        dependency-type: development
+        update-types: [minor, patch]
+    # majors arrive on their own, since they are the ones with something to
+    # read: grouping them hides the one breaking change among nine harmless
+    # bumps
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']

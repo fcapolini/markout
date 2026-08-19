@@ -17,5 +17,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
+      # `ci`, not `install`: it installs the lockfile exactly and fails if
+      # package.json has moved away from it. `npm install` is allowed to
+      # resolve within ranges and rewrite the lockfile, so every green
+      # build was against whatever npm happened to resolve that morning
+      # rather than against what is committed.
+      - run: npm ci --no-audit --no-fund
       - run: npm test
