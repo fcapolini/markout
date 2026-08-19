@@ -37,7 +37,7 @@
            data-bs-delay=${delay}
 
            :handle-open=${(v) => {
-             // only while this markup is in the page: a `:for-data` region
+             // only while this markup is in the page: an `:if`/`:for-data` region
              // can take it out with `open` still true, and Bootstrap asked
              // to show a detached element walks into its own internals
              if (!$dom.isConnected) return;
@@ -48,22 +48,41 @@
              Bootstrap's plugins own DOM outside this element -- a backdrop,
              a popper, a body class -- so an element removed without a
              dispose() leaves it behind. `:will-detach` rather than
-             `:will-dispose`: a `:for-data` region takes its markup out of
+             `:will-dispose`: an `:if`/`:for-data` region takes its markup out of
              the page without its scope going anywhere, and the leak is the
              same either way
            */
            :will-detach=${() => globalThis.bootstrap.Toast.getInstance($dom)?.dispose()}
            :on-hidden.bs.toast=${() => open = false}
   >
-    <div class="toast-header" :for-data=${title}>
+    <!--- with a title, Bootstrap's header form: the close button lives in it -->
+    <div class="toast-header" :if=${title}>
       <strong class="me-auto">${title}</strong>
       <small class="text-body-secondary"
-             :for-data=${time}>${time}</small>
-      <bs-close :dismiss="toast" />
+             :if=${time}>${time}</small>
+      <bs-close :dismiss="toast" :label="Close notification" />
     </div>
 
-    <div class="toast-body">
-      <:slot />
+    <!---
+      Without one, Bootstrap's flex form, because a toast that cannot be
+      dismissed is a real outcome here: `:autohide=${false}` and no title
+      used to leave no close button anywhere on it.
+
+      The wrapper is what carries `d-flex`, not the toast: `.d-flex` is
+      `display: flex !important`, which would beat Bootstrap's own
+      `.toast:not(.show) { display: none }` and leave the toast on screen
+      for good. The class goes on rather than off so a titled toast keeps
+      the plain block body it has always had.
+    -->
+    <div class=${title ? null : 'd-flex'}>
+      <div class="toast-body">
+        <:slot />
+      </div>
+
+      <bs-close :dismiss="toast"
+                :label="Close notification"
+                :extra="me-2 m-auto"
+                :if=${!title} />
     </div>
   </:define>
 

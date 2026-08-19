@@ -57,7 +57,7 @@
              browser" visible in the line
            */
            :handle-open=${(v) => {
-             // only while this markup is in the page: a `:for-data` region
+             // only while this markup is in the page: an `:if`/`:for-data` region
              // can take it out with `open` still true, and Bootstrap asked
              // to show a detached element walks into its own internals
              if (!$dom.isConnected) return;
@@ -68,7 +68,7 @@
              Bootstrap's plugins own DOM outside this element -- a backdrop,
              a popper, a body class -- so an element removed without a
              dispose() leaves it behind. `:will-detach` rather than
-             `:will-dispose`: a `:for-data` region takes its markup out of
+             `:will-dispose`: an `:if`/`:for-data` region takes its markup out of
              the page without its scope going anywhere, and the leak is the
              same either way
              Bootstrap's plugins own DOM and page state outside this
@@ -78,7 +78,7 @@
              was found, which is what a page removing an open modal
              would otherwise be left needing to do by hand.
 
-             `:will-detach` rather than `:will-dispose`: a `:for-data`
+             `:will-detach` rather than `:will-dispose`: an `:if`/`:for-data`
              region takes its markup out of the page without its scope going
              anywhere, and the leak is identical either way
            */

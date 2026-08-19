@@ -49,7 +49,7 @@
 
     <div class="form-text"
          id=${_helpId}
-         :for-data=${help}>${help}</div>
+         :if=${help}>${help}</div>
   </:define>
 
   <!---
@@ -88,7 +88,7 @@
     -->
     <div class="form-label fs-6"
          id=${_legendId}
-         :for-data=${legend}>${legend}</div>
+         :if=${legend}>${legend}</div>
 
     <div class="form-check"
          :for-each=${_options}
@@ -126,13 +126,28 @@
            // private
            :_id=${`bs-range-${$id}`}
   >
-    <label class="form-label d-flex justify-content-between"
-           for=${_id}
-           :for-data=${label}>
-      <span>${label}</span>
+    <!---
+      The label row, which either half can be alone in: `:showValue` with no
+      `:label` used to render nothing at all, since the row was gated on the
+      label.
+
+      A row rather than a `<label>` wrapping both, so the readout stays out
+      of the accessible name -- a label whose text is "50" is worse than no
+      label, and the range input announces its own value anyway. The
+      readout keeps its place at the right when it is the only thing here --
+      by swapping the justification rather than adding to it, since
+      Bootstrap emits `justify-content-end` before `justify-content-between`
+      and the two together leave `between` winning.
+    -->
+    <div class="form-label d-flex"
+         :class-justify-content-between=${label}
+         :class-justify-content-end=${!label}
+         :if=${label || showValue}>
+      <label for=${_id}
+             :if=${label}>${label}</label>
       <span class="text-body-secondary"
             :if=${showValue}>${value}</span>
-    </label>
+    </div>
 
     <input class="form-range"
            id=${_id}

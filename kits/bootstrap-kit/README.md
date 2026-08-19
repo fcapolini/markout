@@ -147,21 +147,38 @@ That holds however deeply the component sits: a `bs-toast :aka="saved"`
 written inside a `bs-toast-container` is still named where you wrote it, so
 `saved.open = true` reaches it from anywhere on the page.
 
-**Optional regions are `:for-data`.** A region that exists only when a value
-does is written `:for-data=${header}`, and its body may read that value as
-`data`. Nothing in there evaluates while the value is absent, which is what
-makes `${data.name}` safe to write.
-
-A condition is `:if`, which asks the question JavaScript asks:
+**Optional regions are `:if`.** A region that exists only when a parameter
+was given is written `:if=${header}`, and nothing inside it evaluates while
+the condition is false — which is what makes `${user.name}` safe to write in
+one. It asks the question JavaScript asks, so an unset parameter and an
+empty string both count as absent:
 
 ```html
 <bs-close :if=${dismissible} />
 <span :if=${!split}>${label}</span>
 ```
 
+`:else-if` and `:else` continue it, on the element immediately after. The
+kit uses them where a component chooses between renderings rather than
+merely omitting one — `bs-nav` between a tab button and a plain link:
+
+```html
+<button class="nav-link" :if=${toggle} ...>${item.name}</button>
+<a class="nav-link" :else ...>${item.name}</a>
+```
+
+and `bs-dropdown` between the three things an item can be:
+
+```html
+<hr class="dropdown-divider" :if=${item.divider}>
+<h6 class="dropdown-header" :else-if=${item.header}>${item.header}</h6>
+<a class="dropdown-item" :else ...>${item.name}</a>
+```
+
 `:for-data` is for the other case — there is something to show, and the body
 wants it. It is `!= null` rather than truthy, so `0` and `''` stay data, and
-it binds the item.
+it binds the item as `data`. The kit has no use for it: every optional region
+here renders a parameter it already has a name for.
 
 Optional parts of a component are parameters, and a named slot where markup
 belongs — `bs-card`'s header is both: `:header` sets the text, and a

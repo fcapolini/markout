@@ -46,12 +46,12 @@
       <span>
         <span :class-fw-bold=${!!item.text}>${item.name}</span>
         <span class="d-block small opacity-75"
-              :for-data=${item.text}>${item.text}</span>
+              :if=${item.text}>${item.text}</span>
       </span>
 
       <bs-badge :variant=${item.badge?.variant ?? 'secondary'}
                 :pill
-                :for-data=${item.badge}>${item.badge?.name ?? item.badge}</bs-badge>
+                :if=${item.badge}>${item.badge?.name ?? item.badge}</bs-badge>
     </a>
   </:define>
 

@@ -11,7 +11,7 @@
     live through:
 
     - `:did-attach` builds it, every time the element enters the page — so
-      one inside a `:for-data` region that comes back has a working tooltip
+      one inside an `:if`/`:for-data` region that comes back has a working tooltip
       rather than the memory of one.
     - `:will-detach` disposes it before the element leaves. Bootstrap parks
       the popper on `<body>`, so without this, hiding the region leaves a

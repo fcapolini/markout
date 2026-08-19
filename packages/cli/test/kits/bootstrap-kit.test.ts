@@ -140,6 +140,93 @@ describe('every part stands on its own', () => {
   });
 });
 
+/**
+ * The cases a component only reaches when a parameter is LEFT OUT.
+ *
+ * Both of these were silently broken for as long as they existed, and for
+ * the same reason: a region held two things and was gated on one of them, so
+ * omitting that one took the other with it. The showcase passes every
+ * parameter, which is exactly why it never showed either.
+ */
+describe('components with a parameter left out', () => {
+  let docroot: string;
+
+  beforeAll(() => {
+    docroot = fs.mkdtempSync(path.join(os.tmpdir(), 'markout-kit-min-'));
+    fs.cpSync(KIT_DIR, path.join(docroot, 'bootstrap-kit'), { recursive: true });
+  });
+
+  afterAll(() => fs.rmSync(docroot, { recursive: true, force: true }));
+
+  async function render(body: string) {
+    const file = `min-${Math.abs(hash(body))}.html`;
+    fs.writeFileSync(
+      path.join(docroot, file),
+      `<html><head><:import src="/bootstrap-kit/all.htm" /><title>t</title></head>` +
+        `<body>${body}</body></html>`
+    );
+    const { errors, runtime, markup } = await compile(docroot, `/${file}`);
+    expect(errors).toStrictEqual([]);
+    expect(runtime).toStrictEqual([]);
+    // the served <body> alone, without the props script: every class name
+    // this asserts on also appears in there, as the expression that would
+    // produce it, so the whole document is the wrong thing to search
+    const shown = live(markup);
+    return shown
+      .slice(shown.indexOf('<body'), shown.indexOf('<script>window'))
+      .replace(/ data-markout="[^"]*"/g, '');
+  }
+
+  it('a toast with no title can still be closed', async () => {
+    // `:autohide=${false}` and no `:title` is a toast that stays until it is
+    // dismissed, and the close button used to live only in the header
+    const out = await render(
+      '<bs-toast :autohide=${false}>headerless</bs-toast>'
+    );
+    expect(out).not.toContain('toast-header');
+    expect(out).toMatch(/<div class="d-flex">/);
+    expect(out).toMatch(/class="btn-close me-2 m-auto"[^>]*data-bs-dismiss="toast"/);
+  });
+
+  it('a titled toast keeps the header, and only one close button', async () => {
+    const out = await render('<bs-toast :title="Saved">titled</bs-toast>');
+    expect(out).toContain('toast-header');
+    expect(out).not.toContain('d-flex');
+    expect(out.match(/btn-close/g)).toHaveLength(1);
+  });
+
+  it('a range shows its value with no label to hang it on', async () => {
+    const out = await render('<bs-range :showValue=${true} />');
+    expect(out).toContain('<span class="text-body-secondary">50</span>');
+    // pushed to the right the way it sits beside a label, which needs the
+    // justification SWAPPED: Bootstrap emits `justify-content-end` before
+    // `justify-content-between`, so the two together leave `between` winning
+    expect(out).toContain('justify-content-end');
+    expect(out).not.toContain('justify-content-between');
+    // and no <label>, whose accessible name would have been "50"
+    expect(out).not.toContain('<label');
+  });
+
+  it('a range with a label keeps the pair apart', async () => {
+    const out = await render('<bs-range :label="Size" :showValue=${true} />');
+    expect(out).toContain('justify-content-between');
+    expect(out).not.toContain('justify-content-end');
+    expect(out).toMatch(/<label for="[^"]*">Size<\/label>/);
+  });
+
+  it('a range with neither renders no row at all', async () => {
+    const out = await render('<bs-range />');
+    expect(out).not.toContain('form-label');
+  });
+});
+
+/** a stable filename per case, so a rerun overwrites rather than accumulates */
+function hash(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+  return h;
+}
+
 describe('the showcase', () => {
   let result: Awaited<ReturnType<typeof compile>>;
 
