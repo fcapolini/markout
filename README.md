@@ -15,18 +15,47 @@
   ![CodeQL](https://github.com/fcapolini/markout/actions/workflows/codeql.yml/badge.svg?branch=main&event=push)
 ](https://github.com/fcapolini/markout/actions/workflows/codeql.yml)
 
-Markout is an HTML-first reactive language aiming at presenting developers with the
-equivalent of a natively modular and reactive HTML. It is isomorphic: the same
-scope/value model runs on the server and in the browser, so SSR comes for
-free.
+Markout is an HTML extension that adds **modularity**, **reactivity** and
+**isomorphism** to plain HTML. It is not an application framework.
+
+The page stays HTML. Anything without a `${...}` or a `:` is plain markup and
+stays plain markup, so adopting Markout means adding an attribute to a page
+you already have — and you can stop at any point. What it buys is the two
+things a static page cannot do for itself: recurring markup becomes a tag you
+name once, and the page keeps itself in step with its own data.
 
 Markout is the presentation layer, and only that. The DOM is the view, your
-application's data is the model, and markout is the logic between them:
+application's data is the model, and Markout is the logic between them:
 deriving what is shown from what is true, and folding what a user does back
-into data. In the vocabulary of model-view-presenter it is the presenter —
-written declaratively rather than as imperative view-pushing. Today the model
-is whatever values a page declares; [datasources](docs/concepts/state.md) are
-designed to be its home and are not built yet.
+into data. In the vocabulary of model-view-presenter it is the presenter,
+written declaratively rather than as imperative view-pushing. A page's model
+is whatever values it declares, plus whatever a datasource fetches —
+`std-data` in the [standard kit](kits/std-kit/), which is a component rather
+than a language feature, on the principle that framework-shaped things belong
+in kits.
+
+## Reactivity, in the page itself
+
+```html
+<html :count=${0} :light=${true}>
+  <head>
+    <style>
+      body {
+        color: ${light ? 'black' : 'white'};
+        background-color: ${light ? 'white' : 'black'};
+      }
+    </style>
+  </head>
+  <body>
+    <button :on-click=${() => count++}>
+      Clicked ${count} time${count !== 1 ? 's' : ''}
+    </button>
+    <button :on-click=${() => light = !light}>
+      Switch theme
+    </button>
+  </body>
+</html>
+```
 
 ## Design philosophy
 
@@ -41,8 +70,14 @@ reactive web development. The whole language is a handful of rules:
   further marking.
 - `:` names what HTML has no name for, always in the same `:family-name`
   shape: `:class-`, `:style-`, `:attr-`, `:prop-`, `:on-`, `:did-`/`:will-`,
-  `:for-`, `:slot` — plus `:name=${...}` to declare a value and `:aka` to
-  name a scope.
+  `:for-`, `:handle-`, `:server-`, `:slot` — plus `:name=${...}` to declare a
+  value, `::name` to declare one the compiler works out and drops, and `:aka`
+  to name a scope.
+- A few directives take a reserved word rather than a prefix — `:if`,
+  `:else-if`, `:else` — and can, because a value has to be something an
+  expression can say: `${if}` does not parse, so no page could ever have
+  declared one by that name. A word you could not have used is a word a
+  directive can take with no prefix and no possibility of collision.
 - Scopes nest lexically, like variables: a value is visible to every
   descendant with no separate wiring — no `provide`/`inject`, no `Context`.
 - An expression resolves where it was *written*. A custom tag's body sees
@@ -69,6 +104,267 @@ requires every future reader to remember a special case isn't a
 simplification, it's deferred, compounding complexity: better to always
 type a couple more characters than to hide behavior that depends on
 context.
+
+## Source level modularity
+
+```html
+<!-- lib.htm -->
+<lib :light=${true}>
+
+  <style>
+    body {
+      color: ${light ? 'black' : 'white'};
+      background-color: ${light ? 'white' : 'black'};
+    }
+
+    .theme-switcher {
+      font-size: bold;
+    }
+  </style>
+
+  <:define tag="theme-switcher:button"
+    :class-theme-switcher
+    :on-click=${() => head.light = !head.light}>
+    Switch theme
+  </:define>
+</lib>
+```
+
+```html
+<html>
+  <head>
+    <:import src="lib.htm" />
+  </head>
+  <body>
+    <theme-switcher />
+  </body>
+</html>
+```
+
+NOTE: root level attributes in imported fragments (`*.htm` files) are applied to `<:import>`'s container tag unless they are already defined there: this allows defaults and override.
+
+NOTE: `<html>`, `<head>`, and `<body>` always have their own scopes and by default they are named `page`, `head`, and `body` respectively: that's why, combined with NOTE above, `head.light = !head.light` works
+
+NOTE: `:class-` prefixes "class attributes", which dynamically add/remove a CSS class name depending on their value (if a value is unspecified as in this example, it's taken as `true`)
+
+NOTE: `<:import>` is only allowed in page `<head>` (or recursively in imported fragments), so imported fragments can rely on their root attributes being available as `head` scope values
+
+## Componentization
+
+Reactivity aside, `<:define>` alone is enough to turn recurring markup into
+a tag: no build step, no component base class, no separate file format —
+a fragment of HTML, given a name.
+
+[`demos/bootstrap/index.html`](sites/site/demos/bootstrap/index.html) and
+[`demos/bootstrap/index-plain.html`](sites/site/demos/bootstrap/index-plain.html) render
+the same page, and almost all of the difference between them is in the first
+35 lines. Plain Bootstrap needs 5 lines of `<head>` boilerplate (charset,
+viewport, CDN links with their integrity hashes) and 22 lines of navbar
+(nested `nav > div > ul > li > a`, a toggler button, `data-bs-target` matched
+by hand to the collapse `id`, four ARIA attributes). With a kit of Markout
+fragments, the same thing is:
+
+```html
+<head>
+  <:import src="/npm/@markout-dev/bootstrap-kit/all.htm" />
+  <title>Northstar Studio | Product Design for Growing Teams</title>
+</head>
+
+<body>
+  <bs-navbar :items=${[
+    { name: 'Services', link: '#services' },
+    { name: 'Our work', link: '#work' },
+    { name: 'Insights', link: '#insights' },
+    { name: 'Start a project', link: '#contact', button: true },
+  ]}>
+    Northstar Studio
+  </bs-navbar>
+```
+
+The markup that was only ever mechanical becomes data. The pinned Bootstrap
+version, the integrity hashes, the toggler/collapse `id` wiring and the
+accessibility attributes are written once in
+[`@markout-dev/bootstrap-kit`](kits/bootstrap-kit/) and can't drift from page to
+page. The kit is an installed package here, which is what `/npm/` in the
+import says — see [npm kits](docs/design/npm-kits.md); a kit vendored into
+the docroot is imported by its path instead.
+
+NOTE: the kit itself is plain HTML too — see
+[`parts/navbar.htm`](kits/bootstrap-kit/parts/navbar.htm), where the `<li>` is
+the original Bootstrap one with `:for-each=${items}` and a few
+`:class-x=${...}` attributes added; there's no component API to learn
+beyond the rules above
+
+NOTE: the toggler/collapse wiring is built from `$id`, so each `<bs-navbar>`
+gets ids of its own — the reason a component carrying internal `id`/`aria-*`
+references can be used more than once on a page at all
+
+NOTE: fragments compose — `all.htm` imports `parts/base.htm` and
+`parts/navbar.htm`, so a page can pull in the whole kit or just the parts it
+needs
+
+NOTE: since a custom tag is just a tag, the rest of the page stays plain
+HTML: you lift out what is boilerplate and leave your content alone, rather
+than rewriting the page into a template language
+
+## Conditionals
+
+```html
+<html :n=${0}>
+  <body>
+    <p :if=${n === 0}>nothing yet</p>
+    <p :else-if=${n === 1}>one thing</p>
+    <p :else>${n} things</p>
+  </body>
+</html>
+```
+
+`:if` is plain truthiness, so `${count}` and `${name}` mean what they look
+like. `:else-if` and `:else` continue it, on the element immediately after —
+the chain shows the first branch whose condition holds and no other, which
+two `:if`s cannot do, since the branch that has to give up its position is
+the one whose own condition did not change.
+
+Nothing inside a branch that isn't showing is evaluated, which is what makes
+`${user.name}` safe to write in one. And the element is parked in a
+`<template>` rather than rebuilt, so a scroll position, a focused input or a
+playing video survives a round trip.
+
+## Replication
+
+```html
+<html>
+  <body>
+    <ul :for-each=${[[1, 2, 3], [4, 5]]}>
+      <li :for-each=${data}>
+        Item ${data}
+      </li>
+    </ul>
+  </body>
+</html>
+```
+
+NOTE: `:for-` prefixes anything related to replication/optional data, a
+shared namespace for `:for-each`/`:for-as`/`:for-key`/`:for-data`
+
+NOTE: by default the bound value is named `data` (`:for-as` can change that)
+
+NOTE: `:for-each` treats `null`/`undefined` as zero elements (nothing is
+rendered) and otherwise expects an iterable; it never guesses at a scalar
+meaning "one", since that would make its meaning depend on the incidental
+shape of the value rather than being one fixed rule
+
+## Optional rendering
+
+```html
+<html :user=${undefined}>
+  <body>
+    <p :for-data=${user}>Welcome, ${data.name}</p>
+  </body>
+</html>
+```
+
+`:for-data=${expr}` renders its tag once if `expr` is neither `null` nor
+`undefined`, and not at all otherwise — the same `data`/`:for-as` binding as
+`:for-each`, but for an optional single item rather than a list.
+
+It is the same arity as `:if` asked a different question, and the difference
+is the point. `:for-data` is `!= null`, so `0` and `''` are data — right for
+an item, wrong for a condition — and it binds what it found. Use `:for-data`
+when there is something to show, and `:if` when there is something to decide.
+
+That is also why `:for-each` doesn't quietly accept a non-iterable and render
+it once: two intents, two attributes, rather than one inferring which you
+meant from the shape of the value.
+
+The body doesn't evaluate while there is nothing to show, which is the point
+rather than an optimisation — `${data.name}` above has to be safe to write.
+And the element itself is moved rather than rebuilt, so whatever the DOM was
+holding survives a round trip.
+
+## A value's whole life on one element
+
+```html
+<html>
+  <body>
+    <:logic :aka="timer"
+      :count=${0}
+      :_timer=${null}
+      :did-init=${() => _timer = setInterval(() => count++, 100)}
+      :will-dispose=${() => clearInterval(_timer)} />
+    <div>Ticks ${timer.count}</div>
+  </body>
+</html>
+```
+
+`:did-init` and `:will-dispose` are the two ends of a scope's life, and the
+pair is what lets a value that needs starting and stopping say so where it is
+declared rather than in a lifecycle method somewhere else.
+
+NOTE: `<:logic>` is a scope with no element of its own. State that belongs to
+the page rather than to anything on it had to invent a `<span>` to live on
+before this existed — and that `<span>` is then real: in the document, in the
+accessibility tree, and in the way of `:first-child`
+
+NOTE: `:_timer` is private by convention, not by rule — a leading underscore
+is how the kits mark a value that is the component's own business
+
+NOTE: the other two moments are `:did-attach` and `:will-detach`, which fire
+as markup enters and leaves the page rather than as the scope is built and
+destroyed — the pair a region that comes and goes needs
+
+## If you're already reaching for Alpine or htmx
+
+These are the tools a page usually picks up when it needs behavior, so here
+is the honest comparison rather than one that flatters us.
+
+| | Alpine.js | htmx | Markout |
+| --- | --- | --- | --- |
+| Behavior written in HTML attributes | yes | yes | yes |
+| What it needs to run | a `<script>` tag | a `<script>` tag | Node serving the page, or a build step |
+| Mistakes caught before the page loads | no, silent at runtime | n/a | yes, with a file and a line |
+| Content present in the served HTML | no, `x-cloak` hides the gap | yes, the server wrote it | yes, in both delivery modes |
+| Same source renders on the server | no, client only | server owns the HTML | yes |
+| Reusable components in markup | `x-data` + `<template>` | server-side partials | `<:define>` + `<:slot>` |
+| Parametric CSS | inline styles, or CSS variables set inline | whatever the server renders | `${...}` inside `<style>` |
+| Interaction without a server round-trip | yes | no, by design | yes |
+
+And the costs, which are real: Alpine's ecosystem, community and
+documentation are far larger, and it is a mature project. It also asks for
+strictly less to get started — one `<script>` tag, on any host, behind any
+backend — where Markout wants Node in the request path or a build step. htmx
+is solving a different problem, server-driven UI, and composes fine with
+either.
+
+The row that is worth the trade, if any is: a mistake in an Alpine attribute
+is silent until someone loads the page and notices. Here it is a compile
+error naming the file and the line, in the terminal or in the editor.
+
+## Two decisions, not one
+
+This is the argument for why you are on a CSS framework in the first place,
+rather than an argument about what to use for logic. Choosing a framework
+today usually settles a second question at the same time: which UI components
+you get to use. Ant Design and MUI mean React,
+Vuetify means Vue, PrimeNG means Angular. Teams routinely adopt a framework
+they have no particular opinion about because the component library they
+need exists only there — and from then on neither decision can be revisited
+without the other.
+
+Those are separable concerns. A CSS framework is a markup convention; a web
+component library is a set of custom elements. Neither needs a framework at
+all. What they need is a way to pass values in, set properties that aren't
+strings, and listen to events — which is what `:attr-x`, `:prop-x` and
+`:on-x` are. (It's also why React needed wrapper packages to consume custom
+elements for most of its life.)
+
+So Markout wrapped around Bootstrap, Tailwind or Shoelace keeps both choices
+open: change how the page is put together without touching the components,
+or change the components without touching the logic.
+
+NOTE: the honest cost — the framework-neutral component ecosystem is
+smaller and shallower than React's. Decoupling buys freedom at the price of
+reach, and that trade is only worth it if the components you need exist
 
 ## Two ways to deliver a page
 
@@ -339,232 +635,17 @@ it is a bare 500, or that file. The listing naming the file, line and column is
 dev's, and the errors go to the log in **both** modes, since the operator is the
 one who can act on them.
 
-## Integrated reactivity example
+## Editor support
 
-```html
-<html :count=${0} :light=${true}>
-  <head>
-    <style>
-      body {
-        color: ${light ? 'black' : 'white'};
-        background-color: ${light ? 'white' : 'black'};
-      }
-    </style>
-  </head>
-  <body>
-    <button :on-click=${() => count++}>
-      Clicked ${count} time${count !== 1 ? 's' : ''}
-    </button>
-    <button :on-click=${() => light = !light}>
-      Switch theme
-    </button>
-  </body>
-</html>
-```
+[`markout-vscode`](packages/vscode/) puts the compiler in the editor: the
+same diagnostics the CLI reports, on the right line, without saving — for
+every page in the workspace, not only the ones that are open. With go to
+definition on a name, a custom tag or an `<:import>` path; completion of
+what is in scope, the tags a kit defines and the parameters one takes;
+hover, rename and find-references across the pages and fragments a name
+actually reaches; and formatting that knows a `>` inside `${...}` does not
+end a tag.
 
-## Source level modularity
+The compiler is bundled, so it works on a project that has installed
+nothing.
 
-```html
-<!-- lib.htm -->
-<lib :light=${true}>
-
-  <style>
-    body {
-      color: ${light ? 'black' : 'white'};
-      background-color: ${light ? 'white' : 'black'};
-    }
-
-    .theme-switcher {
-      font-size: bold;
-    }
-  </style>
-
-  <:define tag="theme-switcher:button"
-    :class-theme-switcher
-    :on-click=${() => head.light = !head.light}>
-    Switch theme
-  </:define>
-</lib>
-```
-
-```html
-<html>
-  <head>
-    <:import src="lib.htm" />
-  </head>
-  <body>
-    <theme-switcher />
-  </body>
-</html>
-```
-
-NOTE: root level attributes in imported fragments (`*.htm` files) are applied to `<:import>`'s container tag unless they are already defined there: this allows defaults and override.
-
-NOTE: `<html>`, `<head>`, and `<body>` always have their own scopes and by default they are named `page`, `head`, and `body` respectively: that's why, combined with NOTE above, `head.light = !head.light` works
-
-NOTE: `:class-` prefixes "class attributes", which dynamically add/remove a CSS class name depending on their value (if a value is unspecified as in this example, it's taken as `true`)
-
-NOTE: `<:import>` is only allowed in page `<head>` (or recursively in imported fragments), so imported fragments can rely on their root attributes being available as `head` scope values
-
-## Componentization
-
-Reactivity aside, `<:define>` alone is enough to turn recurring markup into
-a tag: no build step, no component base class, no separate file format —
-a fragment of HTML, given a name.
-
-[`demos/bootstrap/index.html`](sites/site/demos/bootstrap/index.html) and
-[`demos/bootstrap/index-plain.html`](sites/site/demos/bootstrap/index-plain.html) render
-the same page, and almost all of the difference between them is in the first
-35 lines. Plain Bootstrap needs 5 lines of `<head>` boilerplate (charset,
-viewport, CDN links with their integrity hashes) and 22 lines of navbar
-(nested `nav > div > ul > li > a`, a toggler button, `data-bs-target` matched
-by hand to the collapse `id`, four ARIA attributes). With a kit of Markout
-fragments, the same thing is:
-
-```html
-<head>
-  <:import src="/npm/@markout-dev/bootstrap-kit/all.htm" />
-  <title>Northstar Studio | Product Design for Growing Teams</title>
-</head>
-
-<body>
-  <bs-navbar :items=${[
-    { name: 'Services', link: '#services' },
-    { name: 'Our work', link: '#work' },
-    { name: 'Insights', link: '#insights' },
-    { name: 'Start a project', link: '#contact', button: true },
-  ]}>
-    Northstar Studio
-  </bs-navbar>
-```
-
-The markup that was only ever mechanical becomes data. The pinned Bootstrap
-version, the integrity hashes, the toggler/collapse `id` wiring and the
-accessibility attributes are written once in
-[`@markout-dev/bootstrap-kit`](kits/bootstrap-kit/) and can't drift from page to
-page. The kit is an installed package here, which is what `/npm/` in the
-import says — see [npm kits](docs/design/npm-kits.md); a kit vendored into
-the docroot is imported by its path instead.
-
-NOTE: the kit itself is plain HTML too — see
-[`parts/navbar.htm`](kits/bootstrap-kit/parts/navbar.htm), where the `<li>` is
-the original Bootstrap one with `:for-each=${items}` and a few
-`:class-x=${...}` attributes added; there's no component API to learn
-beyond the rules above
-
-NOTE: the toggler/collapse wiring is built from `$id`, so each `<bs-navbar>`
-gets ids of its own — the reason a component carrying internal `id`/`aria-*`
-references can be used more than once on a page at all
-
-NOTE: fragments compose — `all.htm` imports `parts/base.htm` and
-`parts/navbar.htm`, so a page can pull in the whole kit or just the parts it
-needs
-
-NOTE: since a custom tag is just a tag, the rest of the page stays plain
-HTML: you lift out what is boilerplate and leave your content alone, rather
-than rewriting the page into a template language
-
-## Two decisions, not one
-
-Choosing a framework today usually settles a second question at the same
-time: which UI components you get to use. Ant Design and MUI mean React,
-Vuetify means Vue, PrimeNG means Angular. Teams routinely adopt a framework
-they have no particular opinion about because the component library they
-need exists only there — and from then on neither decision can be revisited
-without the other.
-
-Those are separable concerns. A CSS framework is a markup convention; a web
-component library is a set of custom elements. Neither needs a framework at
-all. What they need is a way to pass values in, set properties that aren't
-strings, and listen to events — which is what `:attr-x`, `:prop-x` and
-`:on-x` are. (It's also why React needed wrapper packages to consume custom
-elements for most of its life.)
-
-So Markout wrapped around Bootstrap, Tailwind or Shoelace keeps both choices
-open: change how the page is put together without touching the components,
-or change the components without touching the logic.
-
-NOTE: the honest cost — the framework-neutral component ecosystem is
-smaller and shallower than React's. Decoupling buys freedom at the price of
-reach, and that trade is only worth it if the components you need exist
-
-## Replication
-
-```html
-<html>
-  <body>
-    <ul :for-each=${[[1, 2, 3], [4, 5]]}>
-      <li :for-each=${data}>
-        Item ${data}
-      </li>
-    </ul>
-  </body>
-</html>
-```
-
-NOTE: `:for-` prefixes anything related to replication/optional data, a
-shared namespace for `:for-each`/`:for-as`/`:for-key`/`:for-data`
-
-NOTE: by default the bound value is named `data` (`:for-as` can change that)
-
-NOTE: `:for-each` treats `null`/`undefined` as zero elements (nothing is
-rendered) and otherwise expects an iterable; it never guesses at a scalar
-meaning "one", since that would make its meaning depend on the incidental
-shape of the value rather than being one fixed rule
-
-## Optional rendering
-
-```html
-<html :user=${undefined}>
-  <body>
-    <p :for-data=${user}>Welcome, ${data.name}</p>
-  </body>
-</html>
-```
-
-`:for-data=${expr}` renders its tag once if `expr` is neither `null` nor
-`undefined`, and not at all otherwise — the same `data`/`:for-as` binding as
-`:for-each`, but for an optional single item rather than a list.
-
-That is also why `:for-each` doesn't quietly accept a non-iterable and render
-it once: two intents, two attributes, rather than one inferring which you
-meant from the shape of the value.
-
-The body doesn't evaluate while there is nothing to show, which is the point
-rather than an optimisation — `${data.name}` above has to be safe to write.
-And the element itself is moved rather than rebuilt, so whatever the DOM was
-holding survives a round trip.
-
-## Data-binding
-
-```html
-<html>
-  <body>
-    <script
-      :aka="timer"
-      :count=${0}
-      :did-init=${() => {
-        _timer = setInterval(() => {
-          count++;
-        }, 100);
-      }}
-      :will-dispose=${() => {
-        _timer && clearInterval(_timer);
-        _timer = null;
-      }}
-      :_timer=${null}
-    />
-    <div>Ticks ${timer.count}</div>
-  </body>
-</html>
-```
-
-> **`:did-init` and `:will-dispose` are designed but not implemented.** This
-> example compiles and renders `Ticks 0`, and then never ticks: the two
-> callbacks are parsed, validated and compiled into the page, and nothing
-> calls them. It is here for the shape — a value's whole life expressed on
-> the element that owns it, with `:_timer` private to that scope — which is
-> what the pair are for once the runtime side exists. `:on-` handlers are
-> the working way to run code today. They are the last unimplemented pair in
-> the reference, and they fail the quiet way: accepted, compiled, and never
-> called.

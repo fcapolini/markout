@@ -861,15 +861,15 @@
             </div>
 
             <div class="card-body p-0 code-surface">
-<pre class="mb-0"><code data-lang="html">&lt;lib :k_bsBtnRadius="2rem"
-     :k_appAccent="#6f42c1"&gt;
+<pre class="mb-0"><code data-lang="html">&lt;lib ::bsBtnRadius="2rem"
+     ::appAccent="#6f42c1"&gt;
 
   &lt;:import src="/npm/@markout-dev/bootstrap-kit/all.htm" /&gt;
 
   &lt;style&gt;
     .btn-primary {
-      background-color: ${k_appAccent};
-      border-color: ${k_appAccent};
+      background-color: ${appAccent};
+      border-color: ${appAccent};
     }
   &lt;/style&gt;
 
@@ -916,26 +916,27 @@
           <p class="text-body-secondary">
             <code class="rule-code">${…}</code> works in a stylesheet exactly
             as it does in markup, so a value like
-            <code class="rule-code">k_appAccent</code> is a design token without
+            <code class="rule-code">appAccent</code> is a design token without
             anything being a design token — no build step, no preprocessor,
             no custom property indirection unless you want one.
           </p>
 
           <h3 class="h5">Defaults, then overrides</h3>
           <p class="text-body-secondary">
-            <code class="rule-code">k_bsBtnRadius</code> belongs to the Bootstrap
+            <code class="rule-code">bsBtnRadius</code> belongs to the Bootstrap
             kit, which declares its own default. Naming it again here replaces
             it for every page that imports your kit — and you never forked the
             component that reads it.
           </p>
 
           <h3 class="h5">
-            <code class="rule-code">k_</code> means constant
+            <code class="rule-code">::</code> means constant
           </h3>
           <p class="text-body-secondary mb-0">
-            A token that never changes shouldn't cost anything to watch. The
-            prefix marks a value as fixed at compile time, so it reads as one
-            at every use site rather than only where it was declared.
+            A token that never changes shouldn't cost anything to watch.
+            Doubling the prefix marks a value as fixed at compile time: it is
+            worked out once while the page is built and substituted into every
+            reader, so nothing of it reaches the browser at all.
           </p>
         </div>
 
