@@ -5,7 +5,12 @@ import fs from "fs";
 import http from "http";
 import https from "https";
 import exitHook from './exit-hook';
-import { defaultLogger, markout, type MarkoutLogger } from "@markout-dev/express";
+import {
+  defaultLogger,
+  markout,
+  type ErrorPages,
+  type MarkoutLogger,
+} from "@markout-dev/express";
 import process from "process";
 import { AddressInfo } from "net";
 
@@ -72,6 +77,12 @@ export interface ServerProps {
   compress?: boolean;
   /** objects pages may reach from a `:server-` value; see MarkoutProps */
   globals?: { [name: string]: unknown };
+  /**
+   * What a visitor gets instead of a bare status line: a not-found page of
+   * the site's own, and a page for a docroot that will not compile. See
+   * ErrorPages -- a docroot holding a `404.html` needs neither set.
+   */
+  errorPages?: ErrorPages;
   /**
    * The body size `express.json()` and `express.urlencoded()` will accept.
    * Express defaults to `'100kb'`, which is generous for a form and small

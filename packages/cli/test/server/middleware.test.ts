@@ -138,12 +138,13 @@ describe("Middleware", () => {
     expect(res.headers['content-type']).toContain('text/html');
   });
 
-  // Test compilation errors
+  // Test compilation errors. This server is not in dev mode, so the listing
+  // naming the source file and the line is deliberately NOT in the response
+  // -- see the error-pages suite for both halves of that.
   it("should return 500 for files with compilation errors", async () => {
     const res = await request(app).get("/error.html");
     expect(res.status).toBe(500);
-    expect(res.headers['content-type']).toContain('text/html');
-    expect(res.text).toContain("Page Error");
+    expect(res.text).not.toContain("Page Error");
   });
 
   // Test with uppercase extension handling
