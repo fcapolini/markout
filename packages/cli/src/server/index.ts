@@ -1,4 +1,5 @@
 import compression from "compression";
+import rateLimit from "express-rate-limit";
 import express, { Application, RequestHandler } from "express";
 import path from "path";
 import fs from "fs";
@@ -34,6 +35,30 @@ import { AddressInfo } from "net";
  * own handlers, mounted where they belong, with markout still assembled by
  * the code that knows the order.
  */
+/**
+ * How many page requests one address may make, and over what window.
+ */
+export interface TrafficLimit {
+  /** the window, in milliseconds */
+  windowMs: number;
+  /** how many page requests one address may make within it */
+  maxRequests: number;
+}
+
+/**
+ * What `pageLimit: true` means: 300 pages a minute from one address.
+ *
+ * Generous on purpose. A person clicking through a site manages perhaps one
+ * page a second at their fastest, so this is well clear of anything a
+ * visitor does and still a bound on what a script can make the renderer do.
+ * A site whose traffic legitimately looks like a script -- an office behind
+ * one NAT address, a monitor -- should raise it rather than run near it.
+ */
+export const DEFAULT_PAGE_LIMIT: TrafficLimit = {
+  windowMs: 60_000,
+  maxRequests: 300,
+};
+
 export interface ServerProps {
   docroot: string;
   port?: number;
@@ -73,7 +98,17 @@ export interface ServerProps {
   mute?: boolean;
   /** surface runtime expression errors in the page; see MarkoutProps */
   dev?: boolean;
-  /** gzip/deflate responses for clients that accept them */
+  /**
+   * gzip/deflate responses for clients that accept them.
+   *
+   * Worth checking before turning on, because the typical deployment does
+   * not want it: anything behind nginx, Caddy, a CDN or a managed platform
+   * is being compressed there already, and doing it twice buys nothing --
+   * the proxy compresses what it receives regardless, so the only effect of
+   * the second pass is its cost. This earns its place when the visitor's
+   * connection ends HERE, which is the direct-to-Node case and local
+   * development of what a page weighs.
+   */
   compress?: boolean;
   /** objects pages may reach from a `:server-` value; see MarkoutProps */
   globals?: { [name: string]: unknown };
@@ -83,6 +118,26 @@ export interface ServerProps {
    * ErrorPages -- a docroot holding a `404.html` needs neither set.
    */
   errorPages?: ErrorPages;
+  /**
+   * A cap on how often one address may ask for a PAGE: `true` for
+   * DEFAULT_PAGE_LIMIT, an object to say it yourself, absent for none.
+   *
+   * Pages only, and mounted after `routes` and `init`, so neither the
+   * application's own handlers nor the static layer are counted. Both
+   * exclusions are the point rather than an economy: one page view pulls a
+   * stylesheet, a script and a dozen images, so a budget shared with them
+   * would be spent by ordinary browsing -- while a page is the request that
+   * costs a render, which is the thing being protected.
+   *
+   * Off unless asked for, and the reason is `trustProxy`. A limiter keyed on
+   * the wrong address is worse than none: behind a proxy that has not been
+   * declared, every visitor arrives wearing the proxy's IP and shares one
+   * budget, so the site rate-limits itself as a whole and does it silently.
+   * Turning this on is one word; having it on by default would make that
+   * failure the out-of-the-box behaviour of every deployment that forgot the
+   * other prop. When it IS on and that mistake is detected, it is logged.
+   */
+  pageLimit?: boolean | TrafficLimit;
   /**
    * The body size `express.json()` and `express.urlencoded()` will accept.
    * Express defaults to `'100kb'`, which is generous for a form and small
@@ -136,6 +191,19 @@ export interface ServerProps {
   fallback?: (app: Application, props: ServerProps) => void | Promise<void>;
 }
 
+/**
+ * Whether a path is one the pages answer -- markout's own rule, which is
+ * that a page is an extensionless path or a `.html` one.
+ *
+ * Spelled the same way here as in the middleware, deliberately: the two
+ * disagreeing would mean a request that costs a render and is not counted,
+ * or an image that is.
+ */
+function isPageRequest(pathname: string): boolean {
+  const i = pathname.lastIndexOf('.');
+  return i < 0 || pathname.substring(i).toLowerCase() === '.html';
+}
+
 export class Server {
   private props: ServerProps;
   private logger: MarkoutLogger;
@@ -187,6 +255,45 @@ export class Server {
       app.use(mountPath, ...(Array.isArray(handler) ? handler : [handler]));
     }
     await config.init?.(app, config);
+
+    // --------------------------------------------------------- the page limit
+    //
+    // Here rather than at the top: everything above has already answered, so
+    // the application's own routes are outside the budget and only what is
+    // about to be RENDERED is inside it.
+    const limit =
+      config.pageLimit === true ? DEFAULT_PAGE_LIMIT : config.pageLimit || undefined;
+    if (limit) {
+      let saidUntrustedProxy = false;
+      app.use(
+        rateLimit({
+          windowMs: limit.windowMs,
+          limit: limit.maxRequests,
+          standardHeaders: true,
+          legacyHeaders: false,
+          skip: req => {
+            // Said from in here because it is the first request through a
+            // proxy that reveals it, not anything visible at startup. A
+            // limiter counting every visitor as one is the failure that
+            // looks exactly like success -- the numbers go up, the headers
+            // are there, and the whole site shares one budget.
+            if (
+              !saidUntrustedProxy &&
+              !app.get('trust proxy') &&
+              req.headers['x-forwarded-for']
+            ) {
+              saidUntrustedProxy = true;
+              this.logger(
+                'warn',
+                '[server] pageLimit is counting every visitor as one address: ' +
+                  'the request came through a proxy and trustProxy is not set'
+              );
+            }
+            return !isPageRequest(req.path);
+          },
+        })
+      );
+    }
 
     // ------------------------------------------------------------- the pages
     app.use(markout({ ...config, logger: this.logger }));
@@ -252,6 +359,13 @@ export class Server {
     this.logger('info', `[server] docroot ${config.docroot}`);
     config.dev && this.logger('info', '[server] dev mode: runtime errors will be shown in the page');
     config.compress && this.logger('info', '[server] compression enabled');
+    const limit =
+      config.pageLimit === true ? DEFAULT_PAGE_LIMIT : config.pageLimit || undefined;
+    limit &&
+      this.logger(
+        'info',
+        `[server] page limit ${limit.maxRequests} per ${limit.windowMs}ms per address`
+      );
     const mounts = Object.keys(config.routes ?? {});
     mounts.length && this.logger('info', `[server] application routes at ${mounts.join(', ')}`);
     const scheme = config.ssl ? 'https' : 'http';

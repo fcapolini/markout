@@ -272,8 +272,8 @@ await new Server({
   docroot: `${__dirname}/site`,
   port: 3000,
   hostname: '127.0.0.1',
-  compress: true,
   trustProxy: true,          // behind a proxy: what `$origin` is built from
+  pageLimit: true,           // 300 pages a minute per address
   globals: { db },           // what a `:server-` value may reach
   routes: {
     '/api': myApiRouter,     // the application's own handlers, mounted FIRST
@@ -291,6 +291,21 @@ the first request is answered.
 
 `create()` returns the configured app without listening on anything, which is
 what a test wants: drive it with supertest and no port is ever bound.
+
+`pageLimit` caps how often one address may ask for a **page** — not for the
+application's routes, and not for static files, since one page view pulls a
+stylesheet, a script and a dozen images and a shared budget would be spent by
+ordinary browsing. A page is the request that costs a render, which is the
+thing worth protecting. It is off unless asked for, because a limiter keyed on
+the wrong address is worse than none: behind an undeclared proxy every visitor
+arrives wearing the proxy's IP and the site rate-limits itself as a whole. Set
+`trustProxy` with it — if you don't, and a proxy is there, it says so.
+
+`compress` is the one to think twice about. Anything behind nginx, Caddy, a CDN
+or a managed platform is being compressed there already, and compressing twice
+buys nothing — the proxy compresses what it receives regardless, so the second
+pass is pure cost. It earns its place when the visitor's connection ends at
+this server, and for seeing locally what a page really weighs.
 
 `@markout-dev/express` is still there for an application that already has a
 server of its own:
