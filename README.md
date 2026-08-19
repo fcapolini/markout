@@ -1,4 +1,4 @@
-<img src="assets/logo.svg" alt="" width="80" align="left">
+<img src="assets/logo-readme.svg" alt="" width="80" align="left">
 
 # Markout
 
