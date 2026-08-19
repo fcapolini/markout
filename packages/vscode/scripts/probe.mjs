@@ -52,6 +52,9 @@ const CASES = [
   ['tags.html', '$parent', '${$parent.appName}'],
   ['tags.html', 'appName through $parent', '$parent.appName', '.appName'],
   ['tags.html', 'intro (an :aka scope)', '${intro.title}'],
+  // the standard kit: never imported by the page, and still a file to open
+  ['data.html', 'std-data (a tag nothing imported)', '<std-data'],
+  ['data.html', ':url (its parameter, in the kit)', ':url="/people.json"', ':url'],
 ];
 
 /** `<file> <line>:<col>`, both 1-based, as an editor shows them */

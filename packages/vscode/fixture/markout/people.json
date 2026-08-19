@@ -1,0 +1,8 @@
+{
+  "title": "Three people",
+  "rows": [
+    { "id": 1, "name": "Ada Lovelace", "role": "Analyst" },
+    { "id": 2, "name": "Grace Hopper", "role": "Compiler" },
+    { "id": 3, "name": "Barbara Liskov", "role": "Substitution" }
+  ]
+}
