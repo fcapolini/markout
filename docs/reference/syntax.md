@@ -581,6 +581,41 @@ a `<div class="box">` with different defaults. Where that extra element
 matters — a `position: sticky` child can only stick within its parent's
 box — the region has to stay where it is.
 
+### One name, one slot
+
+A usage's content goes to one place, so a name may be slotted once per
+definition. A second `<:slot>` of the same name could never be filled — it
+would render whatever it holds itself, and never the caller's markup — so it
+is a compile error rather than a silent first-wins.
+
+It is worth knowing because of the shape that invites it. A component that
+renders one of two ways wants the caller's content in whichever is showing,
+and a slot in each branch is the obvious way to ask:
+
+```html
+<:define tag="my-box:div">
+  <div class="wide" :if=${wide}><:slot /></div>     <!-- error: two unnamed slots -->
+  <div class="narrow" :else><:slot /></div>
+</:define>
+```
+
+Give each branch a slot of its own instead, and the component adapts —
+each branch takes its own markup from the call site, and switching swaps
+the markup along with the wrapper:
+
+```html
+<:define tag="my-box:div">
+  <div class="wide" :if=${wide}><:slot name="wide" /></div>
+  <div class="narrow" :else><:slot name="narrow" /></div>
+</:define>
+
+<my-box><b :slot="wide">…</b><i :slot="narrow">…</i></my-box>
+```
+
+Where the two branches want the *same* markup, the way to have it is one
+slot and a wrapper whose class is conditional, rather than two branches —
+which is what the Bootstrap kit's toast does between its two layouts.
+
 ### `:aka` and `:slot` are literals
 
 Both name something while the page is being compiled — a scope's name is
