@@ -1,4 +1,5 @@
 import { Application } from 'express';
+import { eventually } from './eventually';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -122,9 +123,18 @@ describe('the middleware page cache', () => {
     // why invalidation is blunt: the page itself did not change, and
     // working out which pages saw which file is the part worth skipping
     expect((await request(app).get('/p.html')).text).toContain('one');
-    fs.writeFileSync(path.join(dir, 'lib.htm'), '<lib><:define tag="my-bit:i">two</:define></lib>');
-    await new Promise(r => setTimeout(r, 400));
-    const after = (await request(app).get('/p.html')).text;
+    // rewritten per attempt rather than written once and slept on, for the
+    // reason ./eventually gives: a single write can land before the watcher
+    // is armed, and then there is no event to wait for however long the sleep
+    const after = await eventually(
+      n =>
+        fs.writeFileSync(
+          path.join(dir, 'lib.htm'),
+          `<lib><:define tag="my-bit:i">two</:define><!--${n}--></lib>`
+        ),
+      async () => (await request(app).get('/p.html')).text,
+      seen => seen.includes('two')
+    );
     expect(after).toContain('two');
     expect(after).not.toContain('>one<');
   });
