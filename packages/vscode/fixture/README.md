@@ -1,7 +1,7 @@
 # Extension fixture
 
-The folder the Extension Development Host opens when you press F5. Four pages,
-each there to show one thing.
+The folder the Extension Development Host opens when you press F5. A handful
+of pages, each there to show one thing.
 
 Note what is *not* here: a `package.json`, a config file, an install of any
 kind. The extension finds the docroot because the folder is called `markout`,
@@ -41,10 +41,26 @@ navigates, and `$host`, which deliberately does not: that is whichever
 instance encloses this one, a property of each usage rather than of the
 definition.
 
+**`markout/data.html`** — `<std-data>`, from a kit this page never imports.
+The standard kit ships with the compiler and is spliced into every page, so
+there is nothing here to install and nothing to write. Then ctrl-click the
+tag: it opens `@markout-dev/std-kit/parts/data.htm` in `node_modules`, which
+is the point of having done it as a real kit rather than as something the
+compiler conjures — the definition is a file, and you can read it. `:url`
+goes to the same place, and typing `<std-` or a `:` inside the tag offers
+what the kit defines. `people.json` beside it is what the page fetches if you
+ever serve this folder.
+
 **`markout/scopes.html`** — four names on one line, each a different
 question. `body` is a named *scope* and goes to the `<body>` tag; `items` is
 a value *inside* it, reached by navigating there first; `item` is the loop
 alias and goes to the `:for-as` beside it. `page` and `head` are there too.
+
+**`markout/bootstrap-kit/`** — a kit *vendored into the docroot*, which is
+why `kitchen-sink.html` imports `/bootstrap-kit/all.htm` and not `/npm/…`.
+It also shadows the installed copy of the same kit on purpose: two kits
+claiming one root is refused rather than resolved, since preferring either
+would hide the other.
 
 ## The Problems panel
 

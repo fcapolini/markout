@@ -1,0 +1,36 @@
+<!doctype html>
+
+<!---
+  The standard kit, which this page never imports.
+
+  `<std-data>` comes from `@markout-dev/std-kit` -- data sources and the
+  outside world, written with the language rather than built into it -- and
+  every page gets it, the way every page gets `<video>`. Nothing in this file
+  asks for it, and there is nothing to install: it arrives with the compiler.
+
+  Which is why the interesting thing to try here is ctrl-click. It is a real
+  kit, auto-imported rather than conjured by the compiler, so its definition
+  is a file you can open and read.
+-->
+
+<html lang="en">
+
+<head>
+  <title>Data, with nothing imported</title>
+</head>
+
+<body>
+  <std-data :aka="people" :url="/people.json" />
+
+  <h1>${people.data?.title ?? 'Loading…'}</h1>
+
+  <p :for-data=${people.error}>Could not load: ${data}</p>
+
+  <ul :for-data=${people.data} :for-as="payload">
+    <li :for-each=${payload.rows} :for-as="person">
+      ${person.name} — ${person.role}
+    </li>
+  </ul>
+</body>
+
+</html>
