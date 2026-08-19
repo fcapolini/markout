@@ -53,6 +53,10 @@ function waitFor(pred: () => boolean, ms: number): Promise<boolean> {
 /**
  * Keep making the change until the watcher reports it.
  *
+ * The fact this rests on is recorded in docs/design/platform-notes.md, which
+ * is where to look before hardening a watcher test somewhere else -- this one
+ * has been rediscovered once already.
+ *
  * Writing once and waiting is what a first version did, and it failed about
  * half the time under a loaded suite. Not because notification is slow --
  * though it is not prompt either -- but because `fs.watch` is not armed the

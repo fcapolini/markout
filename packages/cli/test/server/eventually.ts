@@ -12,7 +12,10 @@
  *
  * Measured rather than reasoned about: packages/express/test/watcher.test.ts
  * establishes it against the watcher itself, and carries the same loop for
- * the same reason.
+ * the same reason. Written down once, away from both, in
+ * docs/design/platform-notes.md -- this cost a debugging session twice,
+ * because a comment reaches the line it sits on and not the next person
+ * writing the same bug in another package.
  *
  * The change is handed the attempt number so it can vary what it writes.
  * Identical bytes are a weaker event than different ones, and a platform that
