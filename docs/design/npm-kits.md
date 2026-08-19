@@ -57,6 +57,48 @@ the middleware, and a copy step in `build`. That is publishing.
 They share a resolver — package name to directory on disk — and nothing
 else. So they get one spelling each.
 
+## The standard kit is implicit
+
+`@markout-dev/std-kit` is the one kit a page does not import. It is the
+system parts of a page — data sources, the outside world — written with the
+language rather than built into it, which makes it *part of* the language;
+and a part of the language you have to import is ceremony HTML asks for
+nowhere else. `@markout-dev/core` depends on it, and the preprocessor
+splices `<:import>` for it into the head of every page it compiles.
+
+Three rules keep that a convenience rather than a claim on the namespace:
+
+- **It goes in first**, ahead of anything the page wrote. `page.customTags`
+  is filled in document order, so a page's own `<:define tag="std-data">`, or
+  a kit imported after it, silently wins the name back. Nothing implicit can
+  take a name away from an author.
+- **The explicit import still works.** `<:import>` is once-only *by resolved
+  pathname*, so a page that says it out loud gets it once, not twice. Pages
+  written before this are unaffected.
+- **Absent is absent.** The splice happens only when the kit is actually
+  mounted, so a docroot without it compiles exactly as it did, with no error
+  and no mention.
+
+The decision lives in the **compiler**, not in the preprocessor. Which
+package is special is a question about the language; the preprocessor
+processes HTML, and knowing the name of a kit is not its business. So it
+takes `autoImports`, a list of pathnames to splice into a page's head, and
+asks nothing about them; the compiler is what puts the standard kit on that
+list, when — and only when — the mount table it was handed has it.
+
+It is spliced through the kit's **mounted root** (`/std-kit/all.htm`), not
+through `/npm/@markout-dev/std-kit/all.htm`. Both land on the same pathname —
+which is what lets the once-rule dedupe them — but the mount table is the one
+this compiler was handed and has already validated, while `/npm/` resolves a
+second way, by walking `node_modules` up from the docroot. A host that
+arranged the tree differently would fail on the second and not the first, and
+did: the kit suites mount the real kits into a temp docroot with no
+`node_modules` under it at all.
+
+Measured, on a trivial page: 0.2ms to compile without it, 1.3ms with. Nothing
+reaches the output, because treeshaking drops what the page never mentions —
+a page that ignores the kit ships exactly what it shipped before.
+
 ## The contract
 
 > **`<:import src="/npm/<package>/<file>" />` loads a fragment from an

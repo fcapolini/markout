@@ -14,6 +14,7 @@ export const GROUP_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'GROUP';
 
 export const MAX_NESTING = 100;
 
+
 /**
  * How a file's text is obtained, given its absolute path.
  *
@@ -51,10 +52,27 @@ export class Preprocessor {
   /** see ReadFile: the disk unless a caller has something better */
   protected readFile: ReadFile;
 
-  constructor(docroot: string, kits?: Kit[], readFile?: ReadFile) {
+  /**
+   * Pathnames every page is handed, ahead of what its author wrote.
+   *
+   * What they MEAN is not this layer's business. Something above decides
+   * that a page should be given a file it never named -- the standard kit is
+   * the case, see the compiler -- and this splices `<:import>` for it,
+   * exactly as though the page had written one. A fragment gets none: it has
+   * no head to put an import in, and takes what the page importing it has.
+   */
+  protected autoImports: string[];
+
+  constructor(
+    docroot: string,
+    kits?: Kit[],
+    readFile?: ReadFile,
+    autoImports: string[] = []
+  ) {
     this.resolver = new Resolver(docroot, kits);
     this.docroot = this.resolver.docroot.dir;
     this.readFile = readFile ?? readFromDisk;
+    this.autoImports = autoImports;
   }
 
   async load(fname: string): Promise<Source> {
@@ -139,11 +157,44 @@ export class Preprocessor {
     }
     removeTripleComments(source.doc.documentElement!);
 
+    if (nesting === 0) {
+      this.addAutoImports(source.doc);
+    }
     await this.processIncludes(source.doc, dir, main, nesting);
     if (main.errors.length) {
       source.errors.push(...main.errors);
     }
     return source;
+  }
+
+  /**
+   * Put the auto imports at the top of a page's `<head>`, in order.
+   *
+   * Synthesized nodes rather than text prepended to the source: every
+   * location in this file has already been measured against what the author
+   * actually wrote, and inserting a line of anything would move all of them.
+   *
+   * First, so that whatever the page says next has the last word -- a page
+   * defining a name an implicit import also defines takes it back, because
+   * everything downstream reads document order. And by ordinary `<:import>`,
+   * so the once-only rule applies: a page that imports the same file
+   * explicitly gets it once, not twice.
+   */
+  protected addAutoImports(doc: dom.ServerDocument) {
+    const head = doc.head;
+    if (!head || !this.autoImports.length) {
+      return;
+    }
+    // the page's own first position, so an error about a file the page never
+    // named points at the page that got it rather than at nothing
+    const loc = head.loc;
+    for (const src of [...this.autoImports].reverse()) {
+      const e = new dom.ServerElement(doc, IMPORT_DIRECTIVE_TAG, loc);
+      e.setAttribute(INCLUDE_SRC_ATTR, src);
+      e.parentElement = head;
+      (e as dom.ServerNode).parentNode = head;
+      head.childNodes.unshift(e);
+    }
   }
 
   protected async loadText(
