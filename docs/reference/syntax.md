@@ -490,10 +490,9 @@ where everything is built together and stops existing together.
 Two conventions, and the file extension picks between them.
 
 A page (`.html`) is indented like HTML: attributes that wrap line up under
-the first one. It should look to whoever opens it like the page it is, and
-that is worth more than tidiness — this language is an extension in adoption
-cost, and a page that looks like unfamiliar code costs exactly what the
-framing is trying to save.
+the first one. Someone opening it should see the page they already had, with
+some attributes added — which is what adopting markout is supposed to feel
+like, and it is worth more than the tidiness the other shape buys.
 
 A fragment (`.htm`) is indented like code: attributes sit one step in from
 their tag, and the closing `>` goes back at the tag's own indent.
@@ -524,7 +523,11 @@ a line is short enough to keep — depends on how long the tag happens to be,
 which is why two adjacent components in the same file used to break
 differently.
 
-Nothing enforces this; there is no formatter in the repo for either.
+The [VS Code extension](../../packages/vscode/) formats to this — both
+shapes, chosen by the file's extension — so it is something to run rather
+than something to remember. It only ever changes indentation, and only inside
+an open tag: where an attribute list *wraps* is a judgment about how a
+component reads, and stays yours.
 
 ### `<:logic>` — a scope with no element
 
