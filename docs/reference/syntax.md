@@ -688,7 +688,9 @@ asking for an address at all, so something has to say where the page is:
 It is spelled with a `$` because it is the runtime's rather than
 JavaScript's, and that also means a page cannot declare a value over it —
 `$` is reserved in a declared name. Where there is no server, it is
-`undefined`.
+`undefined` — except in a build told what to be relative to, since
+`markout build --origin <url>` is exactly the answer to "where is this page
+going to be".
 
 Nothing else about the request is offered, and that is deliberate. Headers,
 cookies and the method have no browser counterpart, so a page reading one
