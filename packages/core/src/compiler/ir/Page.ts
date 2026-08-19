@@ -220,6 +220,17 @@ export class Page {
    */
   usageInstances: Map<Scope, Scope>;
   /**
+   * A definition's scope against the per-usage copies made of it.
+   *
+   * A usage that fills a slot gets a stencil of its own, and every scope
+   * whose element holds that slot is copied to go with it (rehomeNestedScopes)
+   * -- so a definition's inner scope can be one object or twenty, and
+   * anything recorded against the one the loader built has to reach all of
+   * them. The copies keep the original's `id`, which is what lets a link
+   * between two of them go on being written as that id.
+   */
+  rehomedScopes: Map<Scope, Scope[]>;
+  /**
    * The `<template>`s wrapping a `:for-data` rather than a `:for-each`.
    *
    * Both arities are compiled into a stencil, but only one of them is
@@ -282,6 +293,7 @@ export class Page {
     this.slotTargets = new Map();
     this.elseChains = new Map();
     this.usageInstances = new Map();
+    this.rehomedScopes = new Map();
     this.optionalStencils = new Set();
     this.slottedInto = new Map();
     this.definitionScopes = new Set();

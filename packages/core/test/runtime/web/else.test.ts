@@ -35,7 +35,7 @@ function run(html: string) {
   page.errors.length || stage3qualify(page);
   page.errors.length || stage4resolve(page);
   const errors = page.errors.map(e => e.msg);
-  if (errors.length) return { errors, runtime: [], ctx: undefined, live: () => '' };
+  if (errors.length) return { errors, runtime: [], ctx: undefined, doc: undefined, live: () => '' };
   stage7generate(page);
   const runtime: RuntimeError[] = [];
   const ctx = new WebContext({
@@ -46,6 +46,7 @@ function run(html: string) {
   return {
     ctx,
     errors,
+    doc: page.source.doc,
     runtime: runtime.map(e => `${e.phase}: ${e.message}`),
     /** what is actually in the page: stencils and their contents removed */
     live: () => {
@@ -195,6 +196,34 @@ describe(':else-if / :else', () => {
     expect(r.live()).not.toContain('one');
   });
 
+  it('gives each branch of a definition a slot of its own', () => {
+    // what a component adapting its own shape looks like: two renderings of
+    // the same tag, each taking different markup from the call site. Both
+    // slots are filled at compile time and the branch that lost is parked
+    // with its content inside it, so switching swaps the markup as well as
+    // the wrapper.
+    //
+    // The bug this caught is worth stating: a usage that fills a slot gets a
+    // stencil of its own, and every scope holding that slot is COPIED to go
+    // with it. The copies missed the chain links -- so both branches were
+    // lone `:if`s, and an `:else` (whose condition compiles to `true`) showed
+    // whatever else was showing.
+    const r = run(
+      '<html :compact=${false}><body>' +
+        '<:define tag="my-card:div">' +
+        '<div class="full" :if=${!compact}><:slot name="full" /></div>' +
+        '<div class="mini" :else><:slot name="mini" /></div>' +
+        '</:define>' +
+        '<my-card><b :slot="full">FULL</b><i :slot="mini">MINI</i></my-card>' +
+        '</body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    expect(r.runtime).toStrictEqual([]);
+    expect(shown(r)).toStrictEqual(['div', 'div.full', 'b']);
+    r.ctx!.root.proxy['compact'] = true;
+    expect(shown(r)).toStrictEqual(['div', 'div.mini', 'i']);
+  });
+
   it('keeps two chains in one parent apart', () => {
     const r = run(
       '<html :a=${true} :b=${false}><body>' +
@@ -308,6 +337,28 @@ describe(':else-if / :else', () => {
       .toBeGreaterThan(0);
   });
 });
+
+/**
+ * The elements actually in the document, as `tag.class`.
+ *
+ * A walk rather than a regex over the markup, because these cases nest one
+ * `<template>` inside another and a non-greedy strip closes at the wrong one
+ * -- which reads as a branch being shown when it is parked.
+ */
+function shown(r: ReturnType<typeof run>): string[] {
+  const out: string[] = [];
+  const walk = (node: any) => {
+    for (const child of node?.childNodes ?? []) {
+      if (child.nodeType !== 1 || child.tagName === 'TEMPLATE') continue;
+      if (child.tagName === 'SCRIPT') continue;
+      const cls = child.getAttribute?.('class');
+      out.push(cls ? `${child.tagName.toLowerCase()}.${cls}` : child.tagName.toLowerCase());
+      walk(child);
+    }
+  };
+  walk((r.doc as any)?.body);
+  return out;
+}
 
 /** the generated props, for asserting on what the compiler did NOT emit */
 function page7(r: ReturnType<typeof run>): string {
