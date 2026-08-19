@@ -58,6 +58,20 @@ export interface CoreScopeProps {
   /** a custom-tag usage instance: the id of the <:define> scope/template it
    * instantiates its DOM from -- DOM-specific, so only WebScope acts on it */
   template?: string;
+  /**
+   * This scope is an `:else`/`:else-if`: the id of the branch before it in
+   * the chain, and (on every branch but the last) the one after.
+   *
+   * Ids rather than references, resolved among this scope's siblings, which
+   * is what makes a chain inside a `:for-each` work: a replica shares its
+   * host's child props verbatim, so every replica's branches carry the same
+   * ids and each finds its neighbour in its own copy.
+   *
+   * Absent on a lone `:if`, and that absence is load-bearing: it is how
+   * `ifCB` tells the ordinary case from a chain without looking further.
+   */
+  elseOf?: string;
+  elseNext?: string;
   /** plain attributes from a custom-tag usage site, applied to its stencil clone */
   attributes?: { [key: string]: string };
   /** markup written at a usage site and slotted into the instance: it lives
@@ -756,7 +770,61 @@ export class CoreScope {
    * this directive exists to remove.
    */
   static ifCB(that: CoreScope, v: any) {
-    CoreScope.toggle(that, !!v);
+    if (!that.props.elseOf && !that.props.elseNext) {
+      CoreScope.toggle(that, !!v);
+      return;
+    }
+    CoreScope.decideBranch(that);
+  }
+
+  /**
+   * Shows the first branch of a chain whose condition holds, and hides the
+   * rest.
+   *
+   * Re-decided in full from whichever branch's condition moved, rather than
+   * handed along the chain. The branches are not dependencies of one
+   * another -- an `:else` reads nothing, and an `:else-if` reads only its
+   * own condition -- so a change in the first would wake none of the
+   * others, and the branch that has to give up its position is exactly the
+   * one that did not change. Every condition stays linked while its branch
+   * is hidden (liveKeys keeps `if$`), which is what makes reading all of
+   * them here answer with this pass's values rather than the last pass's.
+   *
+   * Cheap enough to do every time: a chain is as long as the author wrote
+   * it, and each read is of a value already evaluated for this cycle.
+   */
+  private static decideBranch(that: CoreScope) {
+    const chain = that.branchChain();
+    const taken = chain.find((s) => !!s.values[RT_IF_VALUE]?.get());
+    // hidden before shown, so two alternatives are never in the page at
+    // once -- a CSS sibling rule, or a measurement taken from a lifecycle
+    // callback, would read that intermediate state as the real one
+    chain.forEach((s) => s !== taken && CoreScope.toggle(s, false));
+    taken && CoreScope.toggle(taken, true);
+  }
+
+  /**
+   * The whole `:if`/`:else-if`/`:else` chain this scope belongs to, in the
+   * order it was written.
+   *
+   * Walked from the links rather than read off `parent.children` in order,
+   * because document order is not something that array promises: a custom
+   * tag used as a branch is compiled into an instance appended when its
+   * usage is expanded, long after its plainer neighbours were loaded.
+   */
+  private branchChain(): CoreScope[] {
+    const siblings = this.parent?.children ?? [this];
+    const byId = (id?: string) =>
+      id ? siblings.find((s) => s.props.id === id) : undefined;
+    let head: CoreScope = this;
+    for (let prev = byId(head.props.elseOf); prev; prev = byId(head.props.elseOf)) {
+      head = prev;
+    }
+    const chain = [head];
+    for (let next = byId(head.props.elseNext); next; next = byId(next.props.elseNext)) {
+      chain.push(next);
+    }
+    return chain;
   }
 
   /** puts this scope's element back in the document; DOM-side, so a no-op here */

@@ -353,6 +353,38 @@ const CASES: Record<string, Case> = {
       expect(live()).not.toContain('<i>here</i>');
     },
   },
+  ':else-if=${expr}': {
+    works: async () => {
+      const p = await run(
+        '<html :n=${2}><body>' +
+          '<i :if=${n === 1}>one</i><i :else-if=${n === 2}>two</i>' +
+          '</body></html>'
+      );
+      const live = () => p.body().replace(/<template>[\s\S]*?<\/template>/g, '');
+      expect(live()).toContain('<i>two</i>');
+      expect(live()).not.toContain('<i>one</i>');
+      // the branch that gives up its position is the one whose own condition
+      // did not change, which is what makes this more than two `:if`s
+      p.ctx.root.proxy['n'] = 1;
+      expect(live()).toContain('<i>one</i>');
+      expect(live()).not.toContain('<i>two</i>');
+      // and nothing at all when neither holds: `:else-if` ends no chain
+      p.ctx.root.proxy['n'] = 3;
+      expect(live()).not.toContain('<i>');
+    },
+  },
+  ':else': {
+    works: async () => {
+      const p = await run(
+        '<html :on=${false}><body><i :if=${on}>yes</i><i :else>no</i></body></html>'
+      );
+      const live = () => p.body().replace(/<template>[\s\S]*?<\/template>/g, '');
+      expect(live()).toContain('<i>no</i>');
+      p.ctx.root.proxy['on'] = true;
+      expect(live()).toContain('<i>yes</i>');
+      expect(live()).not.toContain('<i>no</i>');
+    },
+  },
   ':for-each=${expr}': {
     works: async () => {
       const p = await run('<html><body><i :for-each=${["a", "b"]}>${data}</i></body></html>');
