@@ -50,11 +50,17 @@ scope, so siblings and descendants can refer to it like any other scoped value.
 
 ## System values
 
-Three names are supplied by the runtime on every scope:
+These names are supplied by the runtime on every scope:
 
-- `$value()` looks up a value by key inside a scope.
-- `$parent` exposes the parent scope.
 - `$id` is the scope's own identifier, unique within the page.
+- `$parent` is the enclosing scope — where this markup was *written*.
+- `$host` is the custom-tag instance this markup ended up *inside*, or
+  nothing outside any. The two differ only once slotting separates them.
+- `$value("name")` looks a value up by name.
+- `$set("name", v)` assigns to one, and answers whether it landed. It exists
+  for the write that `=` cannot express — see [reading into a
+  region](../reference/syntax.md#a-name-inside-a-region-is-read-with-).
+- `$dom` is the scope's own element, or nothing if it has none. Browser-only.
 
 User code should avoid declaring `$`-prefixed identifiers. The compiler treats
 those names as reserved because the runtime uses them as part of its internal
