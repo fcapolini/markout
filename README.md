@@ -1,4 +1,4 @@
-<img src="assets/logo.svg" alt="" width="88" align="right">
+<img src="assets/logo-shadowed.svg" alt="" width="88" align="left">
 
 # Markout
 
