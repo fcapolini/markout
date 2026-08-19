@@ -16,6 +16,9 @@ import type { Value, ValueDepRef } from '../ir/Value';
 
 const RT_PARENT_VALUE_KEY = '$parent';
 const RT_VALUE_FN_KEY = '$value';
+// `scope.$set('name', v)` -- see CoreScope's copy for why a write sometimes
+// has to be a call
+const RT_SET_FN_KEY = '$set';
 const RT_ID_VALUE_KEY = '$id';
 // the enclosing custom-tag instance, structurally -- see CoreScope's copy
 const RT_HOST_VALUE_KEY = '$host';
@@ -446,7 +449,13 @@ function collectDeps(
       const writing =
         (owner?.type === 'AssignmentExpression' && owner.left === (node as never)) ||
         (owner?.type === 'UpdateExpression' && owner.argument === (node as never));
-      const dep = resolveChain(segments, value, page, writing);
+      // `x.$set('name', v)`: the name is an argument rather than a segment,
+      // so it has to be picked out of the call to be checked at all -- and it
+      // has to be checked, or a typo would be a write that lands nowhere,
+      // which is the exact shape `$set` exists to make impossible
+      const call =
+        owner?.type === 'CallExpression' && owner.callee === (node as never) ? owner : undefined;
+      const dep = resolveChain(segments, value, page, writing, call);
       dep && deps.set(depKey(dep), dep);
     },
   });
@@ -519,7 +528,8 @@ function resolveChain(
   segments: Segment[],
   value: Value,
   page: Page,
-  writing = false
+  writing = false,
+  call?: Node
 ): ValueDepRef | undefined {
   const via: string[] = [];
   let target: Scope = resolvesFrom(value);
@@ -538,7 +548,7 @@ function resolveChain(
     if (!step.isNavigation) {
       // an ordinary value: it's the dependency, and the remaining segments
       // are plain property access on whatever it holds at runtime
-      return validated(via, segments[i].name, target, value, page, maybe);
+      return validated(via, segments[i].name, target, value, page, maybe, call);
     }
     if (!step.scope) {
       if (!step.dynamic) {
@@ -565,7 +575,15 @@ function resolveChain(
     target = step.scope;
   }
 
-  return validated(via, segments[segments.length - 1].name, target, value, page, maybe);
+  return validated(
+    via,
+    segments[segments.length - 1].name,
+    target,
+    value,
+    page,
+    maybe,
+    call
+  );
 }
 
 /**
@@ -645,28 +663,37 @@ function reachable(
       return 'guarded';
     }
     if (writing) {
-      // `a?.b = c` is not JavaScript, so there is no guarded form to point at
-      // -- and there should not be: a write that lands nowhere when the
-      // region is away is a silent no-op, which is the shape being got rid of
+      // `a?.b = c` is not JavaScript, so an assignment has no guarded form --
+      // but `a?.b(c)` is, which is the whole reason `$set` exists
+      const target = segments.slice(0, at + 1).map(s => s.name).join('.');
+      const rest = segments.slice(at + 1).map(s => s.name).join('.');
       addError(
         page,
-        `Cannot write "${path}" through "${through}": "${segments[at].name}" is ` +
-          `inside a "${written}", so it is there only while that region is ` +
-          `showing -- and unlike a read, a write has no way to say "if it is ` +
-          `there". Declare what the outside changes outside the region, and ` +
-          `read it from within`,
+        `Cannot assign to "${path}" through "${through}": ` +
+          `"${segments[at].name}" is inside a "${written}", so it is there ` +
+          `only while that region is showing, and "?." cannot go on the left ` +
+          `of an "=". Write it as "${target}?.${RT_SET_FN_KEY}('${rest}', ...)", ` +
+          `which does nothing while the region is away and answers whether it ` +
+          `did -- or declare what the outside changes outside the region`,
         value.node.loc
       );
       return 'refused';
     }
+    const guarded =
+      `${segments.slice(0, at + 1).map(s => s.name).join('.')}?.` +
+      `${segments.slice(at + 1).map(s => s.name).join('.')}`;
     addError(
       page,
       `"${segments[at].name}" is inside a "${written}", so it is there only ` +
-        `while that region is showing. Read it as ` +
-        `"${segments.slice(0, at + 1).map(s => s.name).join('.')}?.` +
-        `${segments.slice(at + 1).map(s => s.name).join('.')}", which is ` +
-        `undefined while the region is away -- or declare what the outside ` +
-        `needs to read outside the region`,
+        `while that region is showing. ` +
+        (segments[segments.length - 1].name === RT_SET_FN_KEY
+          ? // a `$set` is a write wearing a call, so "read it as" would be
+            // the wrong verb for the one thing this spelling exists to allow
+            `Call it as "${guarded}(...)", which does nothing while the ` +
+            `region is away and answers whether it did`
+          : `Read it as "${guarded}", which is undefined while the region is ` +
+            `away`) +
+        ` -- or declare what the outside needs outside the region`,
       value.node.loc
     );
     return 'refused';
@@ -680,8 +707,12 @@ function validated(
   target: Scope,
   value: Value,
   page: Page,
-  maybe = false
+  maybe = false,
+  call?: Node
 ): ValueDepRef | undefined {
+  if (key === RT_SET_FN_KEY) {
+    return setCall(target, value, page, call);
+  }
   // the runtime supplies these on every scope; there's nothing to declare
   if (
     key !== RT_PARENT_VALUE_KEY &&
@@ -735,6 +766,62 @@ function validated(
  * (Scope.nameSite), which is exactly the thing that is hard to see when the
  * scope in question is a tag someone else wrote.
  */
+/**
+ * `<scope>.$set('name', v)` -- checked, and never a dependency.
+ *
+ * Not a dependency because it is a write: subscribing a value to the thing it
+ * assigns would make it re-evaluate itself, and what a handler does is not
+ * what it reads.
+ *
+ * The name is checked because it is a string rather than a segment, and an
+ * unchecked one would be a write that lands nowhere -- which is precisely the
+ * failure `$set` was introduced to have a spelling for, so producing a new
+ * one would be an odd way to go about it. A name that isn't a literal cannot
+ * be checked, and is refused for the same reason a computed access on a scope
+ * is: the compiler cannot follow it, and the runtime failing quietly later is
+ * the thing being avoided.
+ */
+function setCall(
+  target: Scope,
+  value: Value,
+  page: Page,
+  call?: Node
+): ValueDepRef | undefined {
+  const args = call?.type === 'CallExpression' ? call.arguments : undefined;
+  if (!args) {
+    addError(
+      page,
+      `"${RT_SET_FN_KEY}" is a call: write "${RT_SET_FN_KEY}('name', value)"`,
+      value.node.loc
+    );
+    return undefined;
+  }
+  const first = args[0] as Node | undefined;
+  if (first?.type !== 'Literal' || typeof first.value !== 'string') {
+    addError(
+      page,
+      `"${RT_SET_FN_KEY}" needs the name as a literal, so the compiler can ` +
+        `check it: a name it cannot follow is a write that lands nowhere, ` +
+        `which is what "${RT_SET_FN_KEY}" is for saying`,
+      value.node.loc
+    );
+    return undefined;
+  }
+  if (args.length !== 2) {
+    addError(
+      page,
+      `"${RT_SET_FN_KEY}" takes the name and the value: ` +
+        `"${RT_SET_FN_KEY}('${first.value}', value)"`,
+      value.node.loc
+    );
+    return undefined;
+  }
+  if (!resolvesToKnownValue(target, first.value, true)) {
+    addError(page, `Unknown reference: "${first.value}"`, value.node.loc);
+  }
+  return undefined;
+}
+
 function unknownRef(page: Page, via: string[], key: string, from: Scope): string {
   const path = [...via, key].join('.');
   const where = via.length ? undefined : pathTo(page, key, from);

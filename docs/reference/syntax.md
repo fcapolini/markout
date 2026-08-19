@@ -444,10 +444,22 @@ that named nothing the author had written. With it, the reference reads
 `undefined` while the region is away and the real value while it is showing,
 and a change inside the region reaches the reader outside it.
 
-**A write cannot be guarded**, because `a?.b = c` isn't JavaScript — and
-shouldn't be, since a write that lands nowhere is a silent no-op. Assigning
-into a region is a compile error; declare what the outside changes outside
-the region, and read it from within.
+**A write needs `$set`**, because `a?.b = c` isn't JavaScript. `a?.b(c)` is,
+so a write spelled as a call inherits the guard:
+
+```html
+<button :on-click=${() => panel.field?.$set('text', '')}>clear</button>
+```
+
+It answers whether it landed — `true` when the write went through, and the
+whole expression is `undefined` when the region was away — so a caller that
+needs to know can ask, and one that doesn't can ignore it. Plain assignment
+into a region stays a compile error, since there is no way to write `?.` on
+the left of an `=`.
+
+The name has to be a literal, so the compiler can check it. A name it cannot
+follow would be a write that quietly lands nowhere, which is the thing `$set`
+exists to have a spelling for.
 
 **`:for-each` is refused outright**, guarded or not. `?.` says "this may be
 absent", and a loop's difficulty is different: the name means as many scopes
@@ -751,6 +763,7 @@ Available on every scope; not declared, and reserved from user code.
 | `$parent` | The enclosing scope — where this markup was WRITTEN. |
 | `$host` | The custom-tag instance this markup ended up INSIDE, or nothing outside any. |
 | `$value("key")` | Looks a value up by key. |
+| `$set("key", v)` | Assigns to a value by name, and answers whether it landed. For writing where `=` cannot go — see below. |
 | `$dom` | This scope's own element, or nothing if it has none. Browser-only. |
 
 ### `$parent` and `$host`

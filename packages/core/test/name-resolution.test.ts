@@ -198,18 +198,70 @@ describe('a name inside a region', () => {
     expect(r.errors[0]).toContain('":else"');
   });
 
-  it('refuses a WRITE, which has no guarded spelling at all', () => {
-    // `a?.b = c` is not JavaScript, and should not be: a write that lands
-    // nowhere while the region is away is a silent no-op, which is the shape
-    // this whole feature exists to get rid of
+  it('writes into it with $set, which a call can guard', () => {
+    // `a?.b = c` is not JavaScript and `a?.b(c)` is, so a write spelled as a
+    // call inherits the guard the read already has
+    const r = live(
+      '<html :on=${false} :msg=${"A"}><body>' +
+        REGION +
+        '<i>${panel.field?.text ?? "away"}</i>' +
+        '<:logic :aka="w" :write=${() => panel.field?.$set("text", "X")} />' +
+        '</body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    const write = () => r.ctx.root.proxy['body']['w'].write();
+
+    // away: the call does not happen, so the whole expression is undefined
+    expect(write()).toBe(undefined);
+    expect(r.read()).toBe('away');
+
+    r.ctx.root.proxy['on'] = true;
+    // there: it lands, and answers that it did
+    expect(write()).toBe(true);
+    expect(r.read()).toBe('X');
+    expect(r.runtime).toStrictEqual([]);
+  });
+
+  it('checks the name $set is given, since it is a string', () => {
+    // an unchecked name would be a write that quietly lands nowhere, which is
+    // the failure `$set` exists to have a spelling for
+    const r = run(
+      '<html :on=${true} :msg=${"A"}><body>' +
+        REGION +
+        '<:logic :write=${() => panel.field?.$set("txet", "X")} /></body></html>'
+    );
+    expect(r.errors).toStrictEqual(['Unknown reference: "txet"']);
+  });
+
+  it('refuses a name $set cannot be checked against', () => {
+    const r = run(
+      '<html :on=${true} :msg=${"A"} :k=${"text"}><body>' +
+        REGION +
+        '<:logic :write=${() => panel.field?.$set(k, "X")} /></body></html>'
+    );
+    expect(r.errors.join()).toMatch(/needs the name as a literal/);
+  });
+
+  it('tells an unguarded $set to become a guarded call, not a read', () => {
+    const r = run(
+      '<html :on=${true} :msg=${"A"}><body>' +
+        REGION +
+        '<:logic :write=${() => panel.field.$set("text", "X")} /></body></html>'
+    );
+    expect(r.errors.join()).toMatch(/Call it as "panel\.field\?\.\$set\(\.\.\.\)"/);
+    expect(r.errors.join()).toMatch(/answers whether it did/);
+  });
+
+  it('sends a plain assignment to $set, since "?." cannot go left of "="', () => {
     const r = run(
       '<html :on=${true} :msg=${"A"}><body>' +
         REGION +
         '<button :on-click=${() => panel.field.text = "X"}>b</button></body></html>'
     );
     expect(r.errors).toHaveLength(1);
-    expect(r.errors[0]).toMatch(/Cannot write "field\.text" through "panel"/);
-    expect(r.errors[0]).toMatch(/a write has no way to say "if it is there"/);
+    expect(r.errors[0]).toMatch(/Cannot assign to "field\.text" through "panel"/);
+    // and names the spelling that works, rather than only what does not
+    expect(r.errors[0]).toMatch(/Write it as "panel\.field\?\.\$set\('text', \.\.\.\)"/);
   });
 
   it('refuses a :for-each even when guarded', () => {

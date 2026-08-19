@@ -46,7 +46,8 @@ ships rather than after:
 | --- | --- | --- |
 | Two `<:slot>`s of one name | First wins; the caller's content went to the branch written first and vanished when the other showed | Compile error naming both, and the alternative (a slot per branch under its own name) |
 | A name inside an `:if`/`:for-data` region, read from outside | Compiled clean, then `Cannot read properties of undefined (reading '$value')` in the browser | `?.` required at the crossing; the name answers `undefined` while the region is away |
-| A write into a region | Would land nowhere while the region is away | Compile error — there is no guarded form of an assignment target |
+| A write into a region | Would land nowhere while the region is away | Plain assignment is a compile error naming `$set`, whose call form the `?.` can guard and which answers whether it landed |
+| A `$set` with a name the compiler cannot follow | A mistyped or computed name would write nowhere and say nothing | The name must be a literal, and is checked against the scope like any other reference |
 | A scope copied for a usage site's stencil | `copyForUsage` enumerated fields; `elseOf` was added later and dropped, so every branch of an adaptive component came out unlinked and an `:else` showed beside its own `:if` | Every key of `Scope` is sorted into carried / fresh / method, and adding one fails to typecheck |
 | Format Document on a markout file | VS Code's HTML formatter read `>` inside `${…}` as the end of a tag, turning every later attribute into text | The extension provides formatting and removes HTML's, for these files |
 | `:for-data` as a condition | `!= null`, so `''` rendered an empty styled wrapper | Not a language rule: the kit uses `:if`, and the docs say which asks which question |
