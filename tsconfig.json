@@ -1,8 +1,23 @@
-// Type-checks the workspace root's own `test/` directory, and nothing else.
+// The workspace root's own `test/` directory, plus a reference to every
+// package -- which together make `tsc -b` here mean what it looks like it
+// means.
 //
-// Each package type-checks itself (`npm run typecheck --workspaces`); this
-// config exists because the repository-wide suites at the root are inside no
-// package and would otherwise be checked by nobody. It emits nothing.
+// The `include` is the original reason this file exists: the repository-wide
+// suites at the root are inside no package and would otherwise be checked by
+// nobody. It emits nothing of its own.
+//
+// The `references` are the second reason, and were missing long enough to
+// mislead. Every package already references the ones it depends on, so the
+// graph was complete except at the top -- and `tsc -b` at the root therefore
+// built this project alone, checking `test/` and not one line of any
+// package. It reported success on a compiler that did not compile. Nothing
+// noticed, because each package's vitest config aliases `@markout-dev/*`
+// straight at the other's `src`: the suites run from source and never ask
+// whether a build would have worked.
+//
+// `npm run typecheck` remains the exhaustive one -- it reaches each package's
+// TESTS as well, which no reference here covers. This is the incremental one,
+// and it is now honest about what it checked.
 {
   "compilerOptions": {
     "target": "ES2022",
@@ -16,5 +31,16 @@
     "noEmit": true,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["test/**/*"]
+  "include": ["test/**/*"],
+  // `cli` alone would pull in `core` and `express`, and `vscode` its own
+  // `core` -- listed in full anyway, so that adding a package here is the
+  // obvious thing to do rather than a question about what is already implied.
+  // `sites/site` is deliberately not composite (see its own config) and so
+  // cannot be referenced; `npm run typecheck` is what checks it.
+  "references": [
+    { "path": "packages/core" },
+    { "path": "packages/express" },
+    { "path": "packages/cli" },
+    { "path": "packages/vscode" }
+  ]
 }

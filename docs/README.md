@@ -54,6 +54,10 @@ pages above — what was chosen, what was rejected, and why.
 - [Editor support, on Volar](design/editor-support.md) - moving the compiler's
   diagnostics into the editor, and why a markout page needs virtual code
   rather than a language server of its own.
+- [What the platform actually does](design/platform-notes.md) - facts about
+  Node, Bootstrap and Volar that each cost a debugging session to establish,
+  kept together because a comment reaches the line it sits on and not the next
+  package to hit the same thing.
 
 ## Mental model
 
