@@ -67,7 +67,14 @@
     <bs-theme-toggle :slot="end" :size="sm" />
   </bs-navbar>
 
-  <main class="container-xxl py-4">
+  <!--
+    `container`, which is what `bs-navbar` uses unless told otherwise: below
+    the xxl breakpoint `container-xxl` is the full width of the window, so
+    the index ran to the edge of the screen while the brand above it sat
+    inside a margin. They are the same 1320px at 1400 and up, so this only
+    ever gives width back.
+  -->
+  <main class="container py-4">
     <div class="row g-4">
 
       <!-- ================================================== index -->
@@ -606,7 +613,7 @@
   </main>
 
   <footer class="border-top py-4">
-    <div class="container-xxl small text-body-secondary">
+    <div class="container small text-body-secondary">
       Bootstrap 5.3 · <a href="https://getbootstrap.com/docs/5.3/examples/cheatsheet/">the
         cheatsheet this page follows</a>
     </div>
