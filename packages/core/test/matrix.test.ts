@@ -338,6 +338,74 @@ function check(binding: (typeof BINDINGS)[number], container: (typeof CONTAINERS
 
 // ---------------------------------------------------------------------------
 
+/**
+ * Wrappers that go AROUND a whole container, so the table crosses pairs of
+ * mechanisms rather than one at a time.
+ *
+ * The single-container table catches a binding whose DOM target one construct
+ * moved. What it cannot catch is two constructs disagreeing about the same
+ * markup -- and every silent bug this session turned up was exactly that
+ * shape: a chain inside a definition worked, a chain in slotted content
+ * worked, and the two together did not.
+ *
+ * These four are the mechanisms that relocate or replicate: a loop, a region,
+ * a branch, and a slot. Their tag names are their own (`wrap-`) so composing
+ * one around a container cannot collide with the tags that container
+ * declares, which is what lets this be generated rather than written out.
+ */
+const WRAPPERS = [
+  {
+    name: 'in a :for-each',
+    wrap: (head: string, body: string) => ({
+      head,
+      body: `<u :for-each=${'${[1, 2]}'}>${body}</u>`,
+    }),
+    count: 2,
+  },
+  {
+    name: 'in a showing :if',
+    wrap: (head: string, body: string) => ({
+      head,
+      body: `<u :if=${'${v}'}>${body}</u>`,
+    }),
+    count: 1,
+  },
+  {
+    name: 'in the :else of a chain',
+    wrap: (head: string, body: string) => ({
+      head,
+      body: `<u :if=${'${!v}'}>x</u><u :else>${body}</u>`,
+    }),
+    count: 1,
+  },
+  {
+    name: 'slotted into a component',
+    wrap: (head: string, body: string) => ({
+      head: `${head}<:define tag="wrap-box:div" :v="SHADOW"><:slot /></:define>`,
+      body: `<wrap-box>${body}</wrap-box>`,
+    }),
+    count: 1,
+  },
+];
+
+for (const wrapper of WRAPPERS) {
+  for (const container of CONTAINERS) {
+    describe(`binding ${container.name} ${wrapper.name}`, () => {
+      for (const binding of BINDINGS) {
+        it(`binds ${binding.name}`, () => {
+          const inner = container.wrap(binding.markup);
+          const { head, body } = wrapper.wrap(inner.head, inner.body);
+          check(binding, {
+            name: `${container.name} ${wrapper.name}`,
+            wrap: () => ({ head, body }),
+            count: container.count * wrapper.count,
+          });
+        });
+      }
+    });
+  }
+}
+
 for (const container of CONTAINERS) {
   describe(`binding ${container.name}`, () => {
     for (const binding of BINDINGS) {

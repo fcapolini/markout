@@ -54,6 +54,9 @@ pages above — what was chosen, what was rejected, and why.
 - [Editor support, on Volar](design/editor-support.md) - moving the compiler's
   diagnostics into the editor, and why a markout page needs virtual code
   rather than a language server of its own.
+- [Silent failures](design/silent-failures.md) - every way found so far for a
+  page to be wrong without saying so, what closed each one, and what is still
+  open. The compile-time-safety claim, audited rather than asserted.
 - [What the platform actually does](design/platform-notes.md) - facts about
   Node, Bootstrap and Volar that each cost a debugging session to establish,
   kept together because a comment reaches the line it sits on and not the next
