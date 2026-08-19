@@ -576,6 +576,28 @@ const CASES: Record<string, Case> = {
       expect(p.body()).toContain('<i>A</i>');
     },
   },
+  '$set("key", v)': {
+    works: async () => {
+      // the case it exists for: a write into a region, which plain assignment
+      // cannot express -- `a?.b = c` is not JavaScript, and `a?.b(c)` is
+      const p = await run(
+        '<html :on=${true} :out=${""}><body>' +
+          '<div :aka="panel" :if=${on}><span :aka="field" :text=${"A"}></span></div>' +
+          '<i>${panel.field?.text}</i>' +
+          '<:logic :aka="w" :write=${() => panel.field?.$set("text", "B")} />' +
+          '</body></html>'
+      );
+      const live = () => p.body().replace(/<template>[\s\S]*?<\/template>/g, '');
+      expect(live()).toContain('<i>A</i>');
+      // it landed, and says so
+      expect(p.ctx.root.proxy['body']['w'].write()).toBe(true);
+      expect(live()).toContain('<i>B</i>');
+      // and while the region is away it does nothing, which the `?.` makes
+      // the whole expression say
+      p.ctx.root.proxy['on'] = false;
+      expect(p.ctx.root.proxy['body']['w'].write()).toBe(undefined);
+    },
+  },
 };
 
 // ---------------------------------------------------------------------------

@@ -4,6 +4,24 @@ import { CoreValue, CoreValueProps, ValueExp } from './core-value';
 //TODO: make sure compiler rejects logic values with $ in name
 
 export const RT_VALUE_FN_KEY = '$value';
+/**
+ * `scope.$set('name', v)`: assign to a value by name, as a CALL.
+ *
+ * Assignment already works -- `panel.count = 1` -- and this exists for the
+ * one place it cannot go. A name inside a region is read with `?.`, because
+ * the scope is there only while the region is showing; a write has no such
+ * spelling, since `a?.b = c` is not JavaScript. But `a?.b(c)` is, so a write
+ * spelled as a call inherits the guard for free:
+ *
+ *     panel.field?.$set('text', v)
+ *
+ * It answers whether it landed, which is the other half of the objection to
+ * `a?.b = c`. With the `?.` the whole expression is `undefined` when the
+ * region is away and `true` when the write went through, so a caller that
+ * needs to know can ask -- and one that doesn't can ignore it, which is the
+ * common case.
+ */
+export const RT_SET_FN_KEY = '$set';
 export const RT_PARENT_VALUE_KEY = '$parent';
 /** this scope's own compiler-assigned id, e.g. `s4` (`s4-0` for a replica) */
 export const RT_ID_VALUE_KEY = '$id';
@@ -179,6 +197,16 @@ export class CoreScope {
       }
       this.values[RT_VALUE_FN_KEY] = this.newValue(RT_VALUE_FN_KEY, {
         val: (key: string) => this.lookup(key),
+      });
+      this.values[RT_SET_FN_KEY] = this.newValue(RT_SET_FN_KEY, {
+        // `lookup`, so it writes where a plain assignment would: the proxy's
+        // own set trap resolves the same way, and the two must not disagree
+        // about which scope holds the name
+        val: (key: string, value: unknown) => {
+          const found = this.lookup(key);
+          found?.set(value);
+          return !!found;
+        },
       });
       this.values[RT_PARENT_VALUE_KEY] = this.newValue(RT_PARENT_VALUE_KEY, {
         // a direct value, not `exp`/a callable: parent is already fixed by
