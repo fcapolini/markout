@@ -16,7 +16,13 @@
  */
 
 // the middleware itself, and what a page request may be answered with
-export { CLIENT_CODE_REQ, markout, resolvePath, type MarkoutProps } from './middleware';
+export {
+  CLIENT_CODE_REQ,
+  markout,
+  resolvePath,
+  type ErrorPages,
+  type MarkoutProps,
+} from './middleware';
 
 // what it reports, and to whom
 export { defaultLogger, type MarkoutLogger } from './logger';

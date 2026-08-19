@@ -26,6 +26,14 @@ export const CLIENT_CODE_REQ = DEFAULT_RUNTIME_SRC;
 /** see handleNonPageRequests, and build.ts's SERVABLE_DOTFILES */
 const WELL_KNOWN_PREFIX = '/.well-known/';
 
+/**
+ * The not-found page a docroot gets without asking. Deliberately the name
+ * every static host already looks for, so the page is not something markout
+ * invented a second convention for: a built docroot serves it because the
+ * host does, and a served one serves it because of this.
+ */
+const DEFAULT_NOT_FOUND = '/404.html';
+
 export interface MarkoutProps {
   docroot: string;
   /**
@@ -67,6 +75,52 @@ export interface MarkoutProps {
    * cannot disagree about whether a kit's resource exists. See docs/design/npm-kits.md.
    */
   kits?: Kit[];
+  /**
+   * What a visitor gets instead of a bare status line. See ErrorPages.
+   */
+  errorPages?: ErrorPages;
+}
+
+/**
+ * The two pages a server has to be able to show when there is no page.
+ *
+ * They are configured separately, and not out of symmetry: one of them is
+ * rendered while everything is working and the other exactly when something
+ * is not, which is what decides how each may be written.
+ */
+export interface ErrorPages {
+  /**
+   * The page for a request that resolved to nothing -- an ordinary markout
+   * page, given as a docroot-relative pathname, compiled and rendered like
+   * any other. That is what lets a site's 404 look like the site: it gets
+   * the same layout, the same kits and the same `:server-` values as
+   * everything else, because it IS one of the pages.
+   *
+   * Defaults to `/404.html` when the docroot has one, which is the name
+   * GitHub Pages, Netlify and S3 already look for -- so a docroot that
+   * carries a 404 page for its built form serves the same one here, with
+   * nothing configured. `false` turns that convention off and restores the
+   * bare status line.
+   *
+   * It applies where markout answers a PAGE request with 404. The refusals
+   * in handleNonPageRequests keep their status line: `/npm/...` and dot-paths
+   * are namespaces rather than places a visitor navigated to.
+   */
+  notFound?: string | false;
+  /**
+   * The page for a docroot that will not compile, as a path to a file of
+   * ready-made HTML -- absolute, or relative to the docroot.
+   *
+   * A file and not a markout page, because of when it is needed: rendering a
+   * page in order to report that a page could not be rendered is a loop
+   * looking for somewhere to happen, and this one has to work on exactly the
+   * occasions the compiler does not. Static HTML is the version with no way
+   * to fail.
+   *
+   * Absent, the visitor gets a bare 500. Either way the errors themselves go
+   * to the log, and outside dev mode they go nowhere else.
+   */
+  error?: string;
 }
 
 /**
@@ -171,17 +225,115 @@ export function markout(props: MarkoutProps) {
   // watcher fires, alongside the compiled pages it invalidates.
   let allowed: Promise<Set<string>> | undefined;
   const allowedKits = () => (allowed ??= allowedPageKits(docroot, resolver));
+  const errorPages = props.errorPages ?? {};
+  // Absolute or docroot-relative, resolved once. `path.resolve` is exactly
+  // the rule this wants: an absolute path stays put, anything else lands
+  // under the docroot.
+  const errorFile = errorPages.error
+    ? path.resolve(docroot, errorPages.error)
+    : undefined;
+
+  // Which page answers a request for one that is not there. Memoized rather
+  // than looked up per request, and forgotten when the watcher fires, so a
+  // `404.html` added while the server runs is found without a restart.
+  let notFoundPath: string | undefined;
+  let notFoundKnown = false;
+  function notFoundPage(): string | undefined {
+    if (errorPages.notFound === false) {
+      return undefined;
+    }
+    if (errorPages.notFound) {
+      return pagePath(errorPages.notFound);
+    }
+    if (!notFoundKnown) {
+      notFoundKnown = true;
+      notFoundPath = fs.existsSync(path.join(docroot, DEFAULT_NOT_FOUND))
+        ? DEFAULT_NOT_FOUND
+        : undefined;
+    }
+    return notFoundPath;
+  }
+
   const cache = pageCache(
     docroot,
     logger,
     pathname => compiler.compile(pathname),
     () => {
       allowed = undefined;
+      notFoundKnown = false;
       // the browser reloads exactly when the server stops believing what it
       // last served, rather than on a second opinion about what changed
       reloader?.notify();
     }
   );
+
+  /**
+   * One of the error pages, rendered -- or nothing, which is the caller's
+   * cue to fall back to a bare status line.
+   *
+   * Separate from the main path rather than sharing it, because the two want
+   * opposite things from a failure. A page that fails there is news; a page
+   * that fails HERE is already the consolation prize, and the one thing it
+   * must not do is raise its own error page and arrive back at this function.
+   */
+  async function renderErrorPage(
+    pathname: string,
+    req: Request,
+    /** where this page's own failures go; see serveNotFound */
+    report: (msg: string) => void
+  ): Promise<string | undefined> {
+    try {
+      return await cache.use<string | undefined>(pathname, async page => {
+        if (page.source.errors.length) {
+          page.source.errors.forEach(e => report(formatPageError(e, pathname)));
+          return undefined;
+        }
+        const runtimeErrors = await renderPage(page, {
+          origin: originOf(req),
+          globals,
+        });
+        runtimeErrors.forEach(e =>
+          logger('error', `[markout] ${pathname} ${formatRuntimeError(e)}`)
+        );
+        return '<!doctype html>\n' + page.source.doc.toString();
+      });
+    } catch (err) {
+      report(`${pathname} ${err}`);
+      return undefined;
+    }
+  }
+
+  /**
+   * Said once, however many requests arrive.
+   *
+   * A not-found page that cannot be served is one piece of news -- the
+   * configuration is wrong -- and it is discovered on the one kind of request
+   * anybody can generate without limit. Reported per request, a scanner
+   * walking a site for `.env` files would write the whole log, and the
+   * compile error behind it repeats identically every time because the
+   * failed compile is what the cache is holding.
+   */
+  let saidNoNotFound = false;
+
+  async function serveNotFound(req: Request, res: Response) {
+    const pathname = notFoundPage();
+    const report = (msg: string) => {
+      !saidNoNotFound && logger('error', `[markout] ${msg}`);
+    };
+    const html = pathname ? await renderErrorPage(pathname, req, report) : undefined;
+    if (html === undefined) {
+      if (pathname && !saidNoNotFound) {
+        logger('warn', `[markout] not-found page "${pathname}" could not be served`);
+        saidNoNotFound = true;
+      }
+      res.sendStatus(404);
+      return;
+    }
+    res.status(404).header('Content-Type', 'text/html;charset=UTF-8');
+    // in dev the 404 page reloads like any other, which is what a mistyped
+    // link wants: fixing the page it was pointing at brings it up here
+    res.send(reloader ? withReloadScript(html, reloader.script()) : html);
+  }
 
   // This path is answered here, before the filesystem is consulted, so a real
   // file of the same name is unreachable -- and silently so, which is the
@@ -202,6 +354,9 @@ export function markout(props: MarkoutProps) {
     );
   }
   reloader && logger('info', '[markout] dev mode: pages reload when the docroot changes');
+  const startupNotFound = notFoundPage();
+  startupNotFound && logger('info', `[markout] not-found page ${startupNotFound}`);
+  errorFile && logger('info', `[markout] error page ${errorFile}`);
 
   return async function (req: Request, res: Response, next: NextFunction) {
     const i = req.path.lastIndexOf('.');
@@ -231,8 +386,7 @@ export function markout(props: MarkoutProps) {
 
     const pathname = await resolvePath(req, i, resolver);
     if (!pathname) {
-      res.sendStatus(404);
-      return;
+      return serveNotFound(req, res);
     }
 
     // A kit's pages belong to the site only where a page asked for them. The
@@ -240,8 +394,7 @@ export function markout(props: MarkoutProps) {
     // SITE publishes, not about where a pathname may land.
     const kit = resolver.rootFor(pathname).kit;
     if (kit && !(await allowedKits()).has(resolver.rootFor(pathname).prefix)) {
-      res.sendStatus(404);
-      return;
+      return serveNotFound(req, res);
     }
 
     // a union rather than two calls, so that everything touching the
@@ -265,13 +418,19 @@ export function markout(props: MarkoutProps) {
         served.errors.length === 1 &&
         served.errors[0].msg === `File not found "${pathname}"`
       ) {
-        res.sendStatus(404);
-        return;
+        return serveNotFound(req, res);
       }
+      // Always, whatever the mode. These say which file will not compile and
+      // where -- which is a report for whoever can fix it, and used to be
+      // sent to the visitor and to nobody else. Outside dev this log is now
+      // the ONLY place it goes, so it cannot be the conditional one.
+      served.errors.forEach(e =>
+        logger('error', `[markout] ${formatPageError(e, pathname)}`)
+      );
       // reloading matters MOST here: an error page is where someone is about
       // to fix the file, and without it that fix leaves the browser showing
       // the error until somebody presses refresh
-      return serveErrorPage(served.errors, res, reloader);
+      return serveErrorPage(served.errors, res, dev, errorFile, reloader);
     }
 
     // always logged, whatever the mode
@@ -426,7 +585,69 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;');
 }
 
-function serveErrorPage(errors: PageError[], res: Response, reloader?: Reloader) {
+/**
+ * A configured page pathname in the shape the compiler takes: docroot
+ * relative, leading slash, `.html` when no extension was given. `404`,
+ * `/404` and `/404.html` are the same page, because all three are what
+ * somebody will write.
+ */
+function pagePath(pathname: string): string {
+  const s = pathname.startsWith('/') ? pathname : `/${pathname}`;
+  return path.extname(s) ? s : `${s}.html`;
+}
+
+/**
+ * One compile error, for the log, in the shape `build` already prints and
+ * editors and log scrapers already parse: `file:line:col: message`.
+ *
+ * The file is the error's OWN source rather than the page that was asked
+ * for. Usually they are the same; when they are not, the page was fine and
+ * something it imported was not, and the imported file is the one somebody
+ * has to open.
+ */
+function formatPageError(e: PageError, pathname: string): string {
+  const l = e.loc;
+  const where = l
+    ? `${l.source ?? pathname}:${l.start.line}:${l.start.column + 1}`
+    : pathname;
+  return `${where}: ${e.msg}`;
+}
+
+/**
+ * A docroot that will not compile, reported to whoever asked for the page.
+ *
+ * What is IN that report depends on the mode, and it did not use to. The
+ * detailed listing below names the source file and the line, which is the
+ * right answer for the person holding the editor and an odd thing to hand a
+ * stranger: outside dev mode a broken deployment was describing its own
+ * sources to anyone who asked, while the log -- the one place the operator
+ * would look -- said nothing at all. Both halves of that are fixed here and
+ * at the call site: the detail is dev's, the log is unconditional, and
+ * production gets the configured page or a bare status.
+ */
+function serveErrorPage(
+  errors: PageError[],
+  res: Response,
+  dev: boolean,
+  errorFile?: string,
+  reloader?: Reloader
+) {
+  if (!dev) {
+    if (errorFile) {
+      try {
+        // read before anything is written to the response, so that a file
+        // that has gone missing falls back cleanly instead of arriving as a
+        // 500 with an HTML content type and no HTML in it
+        const html = fs.readFileSync(errorFile, 'utf8');
+        res.status(500).header('Content-Type', 'text/html;charset=UTF-8').send(html);
+        return;
+      } catch {
+        // an unreadable error page is not a reason to fail differently
+      }
+    }
+    res.sendStatus(500);
+    return;
+  }
   const p = new Array<string>();
   p.push(`<!doctype html><html><head>
     <title>Page Error</title>

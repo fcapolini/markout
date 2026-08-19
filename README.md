@@ -293,13 +293,36 @@ the first request is answered.
 what a test wants: drive it with supertest and no port is ever bound.
 
 `@markout-dev/express` is still there for an application that already has a
-server, or wants a page-not-found page of its own — Markout answers a missing
-page itself rather than passing it on, which is what makes an extensionless
-path a page request in the first place:
+server of its own:
 
 ```ts
 app.use(markout({ docroot }));
 ```
+
+### Error pages
+
+Put a `404.html` in the docroot and it is what a request for a missing page
+gets. It is an ordinary page — compiled and rendered like the rest, so it
+carries the same layout, kits and `:server-` values — and it needs no
+configuration, because `404.html` is already the name GitHub Pages, Netlify and
+S3 look for. A built docroot and a served one show the same page.
+
+```ts
+errorPages: {
+  notFound: '/errors/gone.html',   // another page; `false` disables the convention
+  error: '500.html',               // ready-made HTML for a docroot that will not compile
+}
+```
+
+The two are configured separately because one of them is rendered while
+everything works and the other exactly when something does not. `error` is a
+*file*, served verbatim: rendering a page to report that a page could not be
+rendered is a loop looking for somewhere to happen.
+
+Outside dev mode a compile error tells the visitor nothing about your sources —
+it is a bare 500, or that file. The listing naming the file, line and column is
+dev's, and the errors go to the log in **both** modes, since the operator is the
+one who can act on them.
 
 ## Integrated reactivity example
 
