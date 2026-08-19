@@ -21,12 +21,30 @@ describe("pageLimit", () => {
     fs.writeFileSync(path.join(dir, "style.css"), "body { color: red }");
   });
 
+  /**
+   * One listening server per case, rather than one per REQUEST.
+   *
+   * `request(app)` with a bare app binds a fresh ephemeral port, answers, and
+   * closes it -- so a loop of thirty requests here was thirty servers, and
+   * this file alone opened something like a hundred per run. Handing supertest
+   * a server that is already listening makes it reuse the address instead.
+   *
+   * Worth doing on its own (it is a lot of churn for nothing), and it is also
+   * the leading suspect for the intermittent wrong-status failures recorded
+   * in TODO.md -- unproven, since they have never been reproduced on demand.
+   */
+  const listening: import('http').Server[] = [];
+  const serve = async (props: Partial<ServerProps>) => {
+    const app = await new Server({ docroot: dir, mute: true, ...props }).create();
+    const server = app.listen(0);
+    listening.push(server);
+    return server;
+  };
+
   afterAll(() => {
+    listening.forEach(server => server.close());
     fs.rmSync(dir, { recursive: true, force: true });
   });
-
-  const serve = (props: Partial<ServerProps>) =>
-    new Server({ docroot: dir, mute: true, ...props }).create();
 
   it("is off unless asked for", async () => {
     const app = await serve({});
