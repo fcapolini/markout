@@ -1,21 +1,12 @@
-# Rendering
+# Isomorphism
 
-Markout uses the same language model for server rendering and browser runtime.
-The compiler produces a runnable props object, the server can execute it once to
-render HTML, and the browser runtime can hydrate the same result.
+The same scope and value model runs on the server and in the browser, which is
+the whole of what "isomorphic" buys here: server-side rendering is not a
+second implementation to keep in step, it is the same runtime with a different
+DOM under it.
 
-## The pipeline
-
-The broad flow is:
-
-1. Parse HTML into the compiler's internal representation.
-2. Collect scopes, values, bindings, and dependencies.
-3. Generate a runtime-ready props object.
-4. On the server, execute that props object against the server DOM.
-5. In the browser, load the runtime bundle and hydrate the same tree.
-
-The important point is that the runtime is not a separate semantic model. The
-server and browser both execute the same scope/value logic.
+That is also what lets one page be delivered two ways, and the choice decides
+how much of it arrives already rendered rather than how it is written.
 
 ## Two ways to deliver a page
 
@@ -93,15 +84,6 @@ npx markout build ./site ./dist -o http://127.0.0.1:3000
 What ships is the answer rather than the question, which is the point: the
 built pages carry their rows, and the data files travel along with them for
 whatever asks again later.
-
-## Dynamic text and DOM markers
-
-The browser layer needs to find the DOM nodes for dynamic text values. The
-compiler therefore marks text positions with HTML comments, and the runtime uses
-those markers to map each `text$N` value back to the correct node.
-
-This is an implementation detail, but it explains why Markout can update text
-nodes without a second parse pass in the browser.
 
 ## SSR and hydration
 

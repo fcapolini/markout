@@ -37,7 +37,7 @@ async function main() {
     .enablePositionalOptions();
 
   // Ahead-of-time delivery: one build, then plain files on any host. See
-  // docs/concepts/rendering.md -- this is the mode for a project whose pages
+  // docs/concepts/isomorphism.md -- this is the mode for a project whose pages
   // are served by something that isn't Node.
   //
   // A subcommand rather than a flag on the default one, which is also what

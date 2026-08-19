@@ -1,8 +1,12 @@
 # Scopes
 
-Scopes are the basic structure behind Markout's reactivity model. A scope is a
-node in a tree that mirrors the DOM tree, but only for the elements that are
-actually active in the language.
+A scope is where values live, and scopes nest the way the markup nests — so a
+value is visible to every descendant with no separate wiring, and an
+expression means the same thing wherever the markup it is written in ends up.
+
+Which elements get one is the first thing to know: any element carrying a `:`
+attribute or an interpolated one, plus `<html>`, `<head>` and `<body>`, which
+always have their own (see [the page](page.md#default-scopes)).
 
 ## What a scope contains
 
@@ -19,17 +23,6 @@ That gives Markout lexical visibility:
 
 This is why Markout does not need a separate `provide`/`inject` system. The DOM
 tree already defines the scope chain.
-
-## Default scopes
-
-The root HTML elements have built-in names:
-
-- `<html>` is `page`
-- `<head>` is `head`
-- `<body>` is `body`
-
-That makes shared application state easy to place at the top level and read from
-any descendant.
 
 ## Named child scopes
 

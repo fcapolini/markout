@@ -1,30 +1,16 @@
-# Modules and Components
+# Kits
 
-Markout's module model is HTML-native. Instead of importing JavaScript modules
-to assemble a component tree, you import fragments and define reusable tags in
-the markup itself.
+A kit is a folder of `.htm` fragments, each giving a name to a piece of
+markup. The [bootstrap kit](../../kits/bootstrap-kit/) is the largest one
+here and the [standard kit](../../kits/std-kit/) the most telling: it holds
+the system parts of a page rather than a design system, which is what shows
+that the mechanism is "define tags" rather than "wrap a CSS framework".
 
-## `<:import>`
-
-`<:import>` splices a fragment into the page at compile time.
-
-```html
-<html>
-  <head>
-    <:import src="lib.htm" />
-  </head>
-</html>
-```
-
-The imported fragment can provide defaults on its root element. Those defaults
-are applied at the import site unless the import site already defines the same
-attribute.
-
-The same file is only imported once per page, even if multiple `<:import>`
-tags point to it.
-
-In other words, imported fragments behave like HTML modules with overridable
-root state, not like opaque text includes.
+They matter more than their size suggests. Anything framework-shaped belongs
+in a kit rather than in the language — a datasource, a theme switcher, a
+validating input — which is what lets the language stay the small thing it
+is. See [kits from npm packages](../design/npm-kits.md) for how an installed
+one is addressed.
 
 ## `<:define>`
 

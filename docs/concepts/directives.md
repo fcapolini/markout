@@ -1,6 +1,112 @@
-# Replication
+# Directives
 
-Replication repeats an element for data-driven lists.
+Everything HTML has no name for is written `:family-name`, and the families
+are the whole of it: what an attribute does, what an element listens to, when
+a scope's life begins and ends, and how many times a piece of markup renders.
+
+Two intents always get two spellings rather than one guessing from the shape
+of a value. `title=${v}` sets an attribute's value; `:attr-title=${v}` sets
+whether it is there at all. `:for-each` renders once per item; `:for-data`
+renders once if there is one. A shortcut that saves characters at the call
+site and costs every later reader a special case is not a simplification.
+
+A few directives take a reserved word instead of a prefix — `:if`, `:else-if`,
+`:else` — and can, because a value has to be something an expression can say.
+`${if}` does not parse, so no page could ever have declared one by that name,
+which makes it a namespace a directive can occupy with no possibility of
+collision.
+
+The [syntax reference](../reference/syntax.md) lists every one of them. This
+page is about the ones with something to explain.
+
+## Attributes
+
+A plain HTML attribute holding a `${...}` expression is reactive too. It needs
+no `:` prefix, because the attribute already has a name — the interpolation
+alone is what makes it live, exactly as in text and CSS:
+
+```html
+<a href=${'#' + section.id} aria-label=${'Go to ' + section.title}>...</a>
+```
+
+The attribute is written whenever the expression changes. A `null` or
+`undefined` result removes the attribute rather than writing the string
+`"null"`, which is what makes `title=${count > 0 ? 'yes' : null}` behave the
+way it reads.
+
+`class` and `style` follow the same rule and are *overwritten*, not merged. To
+change one class or one property without touching the rest, use `:class-x` and
+`:style-x` below.
+
+### Presence, not value
+
+Some attributes mean something by being *there at all*: HTML's `disabled`,
+`open`, `checked`, and most attributes on custom elements. For those, writing
+a value is wrong — `open=${false}` produces `open="false"`, and an attribute
+that is present reads as true whatever it says.
+
+`:attr-x` toggles presence, the way `:class-x` toggles a class:
+
+```html
+<sl-dialog :attr-open=${isOpen}>...</sl-dialog>
+<button :attr-disabled=${!canSubmit}>Send</button>
+<input :attr-required>
+```
+
+Truthy adds the attribute, falsy removes it, and a bare `:attr-x` means
+`true` — the same rule as a bare `:class-x`.
+
+Which of the two you want can't be told from the value, which is why you say
+rather than the compiler guessing: `aria-expanded="false"` is a real and
+required setting, so `aria-expanded=${...}` has to keep writing the string.
+
+### Properties
+
+An attribute can only carry a string. Custom elements often want an object,
+an array or a function instead — a Shoelace-style `<sl-select>` taking its
+options, say. `:prop-x` assigns the JS property directly:
+
+```html
+<sl-select :prop-options=${choices} :prop-maxLength=${3}>...</sl-select>
+```
+
+The name is written exactly as the property is spelled, `maxLength` and all.
+Quoting the value changes nothing: `:prop-options="${items}"` passes the
+array itself, because a lone expression keeps its type. Only combining it
+with literal text makes a string — see the [syntax
+reference](../reference/syntax.md#attribute-values-and-quoting).
+
+This one is **browser-only**, and unavoidably so: a property is state on an
+element instance, not part of the document, so there is nothing a served page
+could carry. Server rendering skips these bindings deliberately — it isn't
+treated as a failure — and they apply when the page runs. Prefer an attribute
+whenever the component mirrors one, and keep `:prop-` for what an attribute
+genuinely can't express, or the affected markup will visibly change on
+hydration.
+
+NOTE: a property set on a custom element *before* it upgrades can be shadowed
+by the class's own accessor and lost. Components built on Lit (Shoelace among
+them) handle this; hand-rolled ones often don't.
+
+## Special binding prefixes
+
+Some prefixes change how a value behaves at runtime:
+
+- `:attr-x` toggles whether an attribute is present.
+- `:prop-x` assigns an element property (browser-only).
+- `:class-x` toggles a CSS class.
+- `:style-x` writes a CSS property.
+- `:on-x` binds an event handler.
+- `:did-x` and `:will-x` bind lifecycle callbacks — two pairs, one for the
+  scope's own lifetime and one for its markup's presence in the page (see
+  the [syntax reference](../reference/syntax.md#lifecycle)).
+- `:handle-x` runs its arrow whenever value `x` changes. Sugar for an
+  expression that calls the arrow with `x`, so the dependency falls out of
+  the ordinary extraction and the runtime needs to know nothing about it.
+- `:server-x` marks an expression that runs while the page is rendered and
+  nowhere else; the browser is handed the result rather than the expression.
+
+These are still values. They just have side effects instead of being pure logic values.
 
 ## `:for-each`
 
@@ -115,7 +221,10 @@ defined, so a component whose body says `${data}` reads its own scope's
 value rather than the caller's item — and `:title=${title}` at the usage
 site still means the *caller's* `title`, never the definition's or itself.
 
-## A condition is not an arity
+## Conditionals
+
+A condition is not an arity, which is why it has a directive of its own
+rather than an idiom built out of the ones above.
 
 `:if=${expr}` renders the element when the expression is truthy. It is the
 directive to reach for when the question is "should this be here", and it

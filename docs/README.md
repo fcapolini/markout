@@ -8,7 +8,7 @@ powers both server rendering and browser hydration, so SSR comes for free.
 
 That model is also what lets one page be delivered two ways — rendered per
 request by Node, or compiled ahead of time into static assets for a host that
-runs something else. [Rendering](concepts/rendering.md#two-ways-to-deliver-a-page)
+runs something else. [Isomorphism](concepts/isomorphism.md#two-ways-to-deliver-a-page)
 covers both, and what the second one cannot carry.
 
 It is also deliberately not an application framework. Markout covers
@@ -26,16 +26,21 @@ calls that out explicitly.
 
 ## Start here
 
-- [Scopes](concepts/scopes.md) - how lexical visibility maps onto the DOM tree.
-- [Values](concepts/values.md) - reactive slots, expressions, and bindings.
-- [State](concepts/state.md) - what belongs in data, what belongs to the DOM,
-  and how long each needs to last.
-- [Modules and components](concepts/modules-and-components.md) - `<:import>`,
-  `<:define>`, and reusable custom tags.
-- [Replication](concepts/replication.md) - `:for-each`, aliases, clones, and
-  `:for-key` for lists whose DOM holds state of its own.
-- [Rendering](concepts/rendering.md) - how the compiler, server renderer, and
-  browser runtime fit together.
+- [The page](concepts/page.md) - what compiling an HTML file does to it, the
+  scopes it already has, and how a page is split across files.
+- [Scopes](concepts/scope.md) - where values live, and how lexical visibility
+  maps onto the DOM tree.
+- [Values](concepts/values.md) - reactive slots, expressions, and what happens
+  when one changes.
+- [Directives](concepts/directives.md) - the `:family-name` system: what an
+  attribute does, what an element listens to, and how many times markup
+  renders.
+- [Kits](concepts/kits.md) - `<:define>`, `<:slot>`, and why anything
+  framework-shaped belongs in a kit rather than in the language.
+- [Isomorphism](concepts/isomorphism.md) - one model on the server and in the
+  browser, and the two ways a page can be delivered.
+- [Data](concepts/data.md) - what belongs in values, how long each kind needs
+  to last, and where data from outside the page comes in.
 - [Syntax reference](reference/syntax.md) - the whole language on one page.
 - [Running a page](reference/cli.md) - the CLI, building ahead of time, the
   Express middleware for an application with its own routes, and the error
@@ -69,7 +74,7 @@ pages above — what was chosen, what was rejected, and why.
 
 Markout is the presentation layer: the DOM is the view, the application's
 data is the model, and markout is the logic between — the presenter, written
-declaratively. [State](concepts/state.md) says which of the three each piece
+declaratively. [Data](concepts/data.md) says which of the three each piece
 of a page belongs to.
 
 It stays intentionally small:
