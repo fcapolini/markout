@@ -83,7 +83,7 @@ describe('the standard kit', () => {
     });
     const page = await compile(docroot);
     expect(page.errors.map(e => e.msg)).toStrictEqual([]);
-    expect(page.customTags.get('std-data')?.e.tagName).toBe('SECTION');
+    expect(page.customTags.get('std-data')?.e?.tagName).toBe('SECTION');
   });
 
   it('still takes the import, and reads the kit once', async () => {
