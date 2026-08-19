@@ -479,8 +479,18 @@ describe('CLI build', () => {
     // it is `markout <docroot>` in another terminal, or the host the pages
     // are being deployed to.
     const { docroot, outdir, cleanup } = await dirs();
+    // A lookup rather than a path built out of `req.url`, which is both the
+    // safe shape and the stricter test: a request for anything but the file
+    // the page asks for is a 404, so a build resolving the url wrongly fails
+    // here instead of being quietly answered anyway.
+    const routes = new Map([['/data.json', path.join(docroot, 'data.json')]]);
     const served = createServer((req, res) => {
-      readFile(path.join(docroot, `${req.url}`.slice(1)), 'utf8').then(
+      const file = routes.get(`${req.url}`);
+      if (!file) {
+        res.writeHead(404).end();
+        return;
+      }
+      readFile(file, 'utf8').then(
         body => res.writeHead(200, { 'content-type': 'application/json' }).end(body),
         () => res.writeHead(404).end()
       );
