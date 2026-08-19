@@ -1,15 +1,19 @@
 /**
- * The site: the homepage, the demos, and Orbit's back end.
+ * The site: the homepage, the demos, and the one service among them.
  *
- * Not markout's own `Server` class but a plain Express app, because one of
- * the demos is a whole application. Orbit has an API of its own, and markout
- * is the middleware that renders its pages -- so this file is also the
- * worked example of the arrangement `@markout-dev/express` is for: the
+ * Not markout's own `Server` class but a plain Express app, because this is
+ * the worked example of the arrangement `@markout-dev/express` is for: the
  * application's own routes FIRST, then markout, then static files. That
  * order is a requirement rather than a preference; a path with no extension
  * is a page request, and markout answers it.
  *
  *     npm run dev
+ *
+ * Exactly one demo needs a route of its own -- the desk, whose whole subject
+ * is this arrangement. Orbit, much the larger of the two, needs none: its
+ * data is a directory of JSON files any static host would serve. Between
+ * them they are the two answers to "where does a page's data come from",
+ * and markout is the same in both.
  *
  * Exported as a factory as well as run directly, so the tests drive the same
  * routes a browser gets rather than a second copy of them.
@@ -17,45 +21,24 @@
 import compression from "compression";
 import express, { type Express } from 'express';
 import { markout } from '@markout-dev/express';
-import { openOperationsDb, type OperationsDb } from './orbit-db';
+import { deskApi } from './demos/desk/api';
 
 export interface SiteProps {
   docroot: string;
-  db?: OperationsDb;
   /** surface runtime expression errors in the page */
   dev?: boolean;
 }
 
 export function createSite(props: SiteProps): Express {
-  const db = props.db ?? openOperationsDb();
   const app = express();
   app.use(compression());
-  
-  // -------------------------------------------------------------- the API
+
+  // -------------------------------------------------------- the service
   //
-  // What any application has, and markout knows nothing about. Orbit's page
-  // reaches these through `std-data`, which fetches them WHILE THE PAGE
-  // RENDERS -- so the console arrives complete and the browser asks for
-  // nothing.
-  app.get('/api/services', async (_req, res) => res.json(await db.services.all()));
-  app.get('/api/deploys', async (_req, res) => res.json(await db.deploys.recent()));
-  app.get('/api/activity', async (_req, res) => res.json(await db.activity.feed()));
-  app.get('/api/todos', async (_req, res) => res.json(await db.todos.open()));
-
-  app.get('/api/metrics/:name', async (req, res) => {
-    const metrics = db.metrics as unknown as Record<string, () => Promise<unknown>>;
-    const read = metrics[req.params.name];
-    read ? res.json(await read()) : res.sendStatus(404);
-  });
-
-  // The one endpoint whose answer depends on another's: which incidents
-  // matter is decided by which services are unwell, so the page cannot ask
-  // for these until it has the first reply. In orbit.html that is two
-  // `std-data` elements and one expression joining them.
-  app.get('/api/incidents', async (req, res) => {
-    const ids = `${req.query.services ?? ''}`.split(',').filter(s => s);
-    res.json(await db.incidents.forServices(ids));
-  });
+  // One demo's own back end, mounted under the pages that read it. Markout
+  // knows nothing about it; it is here first because whoever answers first
+  // wins, and these paths are the application's.
+  app.use('/demos/desk/api', deskApi());
 
   // ------------------------------------------------------------ the pages
   app.use(markout({ docroot: props.docroot, dev: props.dev }));
@@ -78,6 +61,7 @@ if (require.main === module) {
     console.log(`demos          http://127.0.0.1:${port}/demos/`);
     console.log(`kitchen sink   http://127.0.0.1:${port}/demos/kitchen-sink.html`);
     console.log(`orbit          http://127.0.0.1:${port}/demos/orbit.html`);
+    console.log(`desk           http://127.0.0.1:${port}/demos/desk/`);
     console.log(
       dev
         ? 'mode           dev -- readable expressions, NOT representative of what a\n' +

@@ -15,25 +15,33 @@
   over a series, and a panel that is "loading" is a region whose value hasn't
   arrived yet.
 
-  And no client fetching. Orbit has an API of its own (`server.ts`), and the
-  `std-data` elements below call it WHILE THE PAGE RENDERS, so the console
-  arrives complete: every row you see is already in the HTML and the browser
-  asks for nothing. Nothing else here changed when the data stopped being a
+  And no client fetching. The `std-data` elements in `orbit/sources.htm`
+  fetch this page's data WHILE THE PAGE RENDERS, so the console arrives
+  complete: every row you see is already in the HTML and the browser asks
+  for nothing. Nothing else here changed when the data stopped being a
   literal, which is the point worth noticing -- the filters, charts and
   tables are the same expressions over the same arrays.
 
+  And no back end. What those sources fetch is a directory of JSON files, so
+  there is no application server under this console and nothing here is
+  written in Node: it deploys to anything that serves a directory. Swapping
+  those files for a real service is one attribute -- see `orbit/sources.htm`,
+  which is also where the note about doing that in Rails, Django or Go
+  lives. The demo next door is the one built the other way round, on a
+  server-side service of its own.
+
   The one deliberate exception is `forecast`, further down: it is still
   filled in after load, because a panel with a loading state is a thing worth
-  showing and server data no longer has one.
+  showing and served data no longer has one.
 
-  Three files, which is the shape an application takes rather than a
+  Four files, which is the shape an application takes rather than a
   convenience:
 
     orbit.html            its state, its logic, and what each region reads
     orbit/regions.htm     the regions themselves, as components
     orbit/components.htm  the small tags those are built from
     orbit/sources.htm     where its data comes from
-    server.ts             its API, with markout as middleware
+    orbit/api/*.json      the data itself
 
   A region is a component rather than an included chunk, and the difference
   is the parameter list: `<orbit-sidebar :requests=${app._requests} />`
@@ -41,8 +49,8 @@
   state goes. An include would splice markup that reaches in for whatever
   it likes, with nothing recording what it touched.
 
-  Serve it with `npm run dev:bootstrap-kit`, then open
-  http://localhost:3000/orbit.html
+  Serve it with `npm run dev` from the repository root, then open
+  http://localhost:3000/demos/orbit.html
 -->
 
 <!---
@@ -159,11 +167,12 @@
         /*
           ---------------------------------------------------------- data
 
-          Every array below comes from Orbit's API (see server.ts), fetched by
-          `std-data` WHILE THE PAGE RENDERS -- so the console arrives complete
-          and the browser asks for nothing. The sources themselves are the
-          elements at the top of the page; these are the names the rest of it
-          reads, and nothing past this block knows where they came from.
+          Every array below comes from a `std-data` source, fetched WHILE THE
+          PAGE RENDERS -- so the console arrives complete and the browser asks
+          for nothing. The sources themselves are the elements at the top of
+          the page (`orbit/sources.htm`); these are the names the rest of it
+          reads, and nothing past this block knows where they came from --
+          which is why static files and a real service look the same here.
         */
         :services=${servicesSrc.data ?? []}
         :deploys=${deploysSrc.data ?? []}
@@ -180,7 +189,15 @@
 
         :endpoints=${endpointsSrc.data ?? []}
         :zones=${zonesSrc.data ?? []}
-        :incidents=${incidentsSrc.data ?? []}
+        /*
+          A join, and the only value here that is more than a rename: which
+          incidents matter is decided by which services are unwell. Served
+          from an API that was a second query, asked only once `services` had
+          answered; over files it is one expression across two arrays that
+          arrived together, and the page cannot tell the difference.
+        */
+        :incidents=${(incidentsSrc.data ?? []).filter(i =>
+          i.services.some(id => services.some(s => s.id === id && s.state !== 'ok')))}
 
         :swatches=${['#6f42c1', '#0d6efd', '#20c997', '#fd7e14', '#d63384']}
 

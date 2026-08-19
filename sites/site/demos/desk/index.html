@@ -1,0 +1,332 @@
+<!doctype html>
+
+<!---
+  Desk — a support desk, and the demo about where a page's data comes from.
+
+  Orbit next door is the big one: a whole console, built out of a component
+  kit, over a directory of JSON files. It deliberately has no back end, which
+  makes it the answer for a reader who does not write Node — and leaves a
+  question it cannot answer, because a file can only give back what somebody
+  wrote in it beforehand.
+
+  This page is that question. It is small on purpose: one search box, one
+  list, one thread, one reply button. Everything interesting is in what
+  happens between them and `api.ts`, the Express router beside this file:
+
+    a query          `?q=` is a question about data the page does not have.
+                     The page puts what was typed into the URL, and a URL
+                     that changes is a datasource that refetches.
+
+    a chain          which thread to show is decided by which tickets
+                     matched, so the thread cannot be asked for until the
+                     list has answered. The render waits twice and still
+                     serves a finished page.
+
+    a write          `std-data` reads. Writing is an ordinary `fetch` in an
+                     `:on-click` handler, then `reload()`. Nothing in markout
+                     is involved, and nothing needs to be.
+
+    a secret         who is at the desk is fetched with `:client`, in the
+                     browser. A served value is written into the markup in
+                     plain text, so anything that should not be published
+                     must not be fetched while rendering.
+
+  What to do with it: view the source of what is served. The tickets and the
+  thread are in the HTML, fetched while this page rendered — no spinner, no
+  request from the browser, nothing to hydrate into place. The name in the
+  corner is not, because that one is `:client`.
+
+    npm run dev      then http://localhost:3000/demos/desk/
+
+  And the note Orbit carries applies here in reverse: `api.ts` is written in
+  Node because this repository is. A datasource asks for a URL. What answers
+  it can be Rails, Django, Go, a file, or a CDN — markout is the same page
+  either way, and these two demos are that claim with the back end swapped.
+-->
+<html lang="en" :apiBase="/demos/desk/api">
+
+<head>
+  <:import src="/npm/@markout-dev/std-kit/all.htm" />
+
+  <title>Desk — a Markout demo with a server</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description"
+        content="A small support desk: a served query, a chained source, a write, and one value the page deliberately does not publish.">
+
+  <style>
+    :root {
+      --line: #e3e5e9; --ink: #1c1f24; --dim: #667085; --bg: #f6f7f9;
+      --accent: #4f46e5; --open: #b42318; --waiting: #b54708; --closed: #067647;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--ink);
+      font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    header {
+      display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap;
+      padding: 1.25rem 1.5rem; background: #fff; border-bottom: 1px solid var(--line);
+    }
+    header h1 { font-size: 1.05rem; margin: 0; letter-spacing: -.01em; }
+    header .agent { margin-left: auto; color: var(--dim); font-size: .85rem; }
+    main {
+      display: grid; grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+      gap: 1.25rem; align-items: start; max-width: 66rem; margin: 1.25rem auto; padding: 0 1.5rem;
+    }
+    @media (max-width: 52rem) { main { grid-template-columns: minmax(0, 1fr); } }
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+    .search { padding: .75rem; border-bottom: 1px solid var(--line); }
+    .search input {
+      width: 100%; padding: .5rem .65rem; font: inherit;
+      border: 1px solid var(--line); border-radius: 7px; background: #fff;
+    }
+    .search input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+    .search p { margin: .5rem .15rem 0; color: var(--dim); font-size: .8rem; }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li + li { border-top: 1px solid var(--line); }
+    .ticket {
+      display: block; width: 100%; text-align: left; background: none; border: 0;
+      padding: .7rem .85rem; font: inherit; color: inherit; cursor: pointer;
+    }
+    .ticket:hover { background: #fafbfc; }
+    .ticket[aria-current="true"] { background: #f2f1fe; box-shadow: inset 3px 0 0 var(--accent); }
+    .ticket .subject { font-weight: 600; }
+    .ticket .meta { color: var(--dim); font-size: .8rem; display: flex; gap: .5rem; flex-wrap: wrap; }
+    .state { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; font-weight: 700; }
+    .state.open { color: var(--open); } .state.waiting { color: var(--waiting); }
+    .state.closed { color: var(--closed); }
+    .thread { padding: 1rem 1.15rem; }
+    .thread h2 { margin: 0 0 .15rem; font-size: 1.1rem; letter-spacing: -.01em; }
+    .thread .from { color: var(--dim); font-size: .85rem; margin: 0 0 1rem; }
+    .msg { padding: .7rem .85rem; border: 1px solid var(--line); border-radius: 9px; margin-bottom: .6rem; }
+    .msg.mine { background: #f7f7ff; border-color: #ddddfa; }
+    .msg .who { font-weight: 600; font-size: .85rem; }
+    .msg .when { color: var(--dim); font-size: .8rem; }
+    .msg p { margin: .3rem 0 0; }
+    textarea {
+      width: 100%; min-height: 5rem; padding: .6rem .7rem; font: inherit; resize: vertical;
+      border: 1px solid var(--line); border-radius: 8px;
+    }
+    .row { display: flex; align-items: center; gap: .7rem; margin-top: .5rem; }
+    button.send {
+      font: inherit; font-weight: 600; padding: .45rem 1rem; border: 0; border-radius: 7px;
+      background: var(--accent); color: #fff; cursor: pointer;
+    }
+    button.send[disabled] { opacity: .5; cursor: default; }
+    .dim { color: var(--dim); font-size: .85rem; }
+    .err { color: var(--open); font-size: .85rem; }
+    footer { max-width: 66rem; margin: 0 auto 3rem; padding: 0 1.5rem; }
+    footer p { color: var(--dim); font-size: .85rem; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }
+  </style>
+</head>
+
+<!---
+  Page state on <body>, so everything under it can read it by name — the
+  sources included, which is what puts what was typed into a URL.
+-->
+<body :typed=${''}        // what is in the box right now
+      :query=${''}        // what the list is actually filtered by
+      :chosen=${null}     // the ticket the reader picked, if they picked one
+      :draft=${''}
+      :sending=${false}
+      :sendError=${null}
+      :_debounce=${null}>
+
+  <!---
+    The sources, in the order the data flows: the list answers, `ui` decides
+    which thread that means, and the thread source asks for it. Written in
+    that order because it reads that way, not because it must be — a name
+    resolves where it is written, and these are siblings.
+  -->
+  <std-data :aka="listSrc"
+            :url=${apiBase + '/tickets?q=' + encodeURIComponent(query)} />
+
+  <:logic :aka="ui"
+          /*
+            Which thread is open: whatever was clicked, or the first ticket
+            that matched. A click writes `chosen`, and a search that no
+            longer contains it falls back to the top of the list — which is
+            one expression rather than an effect keeping two values in step.
+          */
+          :openId=${
+            (chosen && (listSrc.data ?? []).some(t => t.id === chosen))
+              ? chosen
+              : (listSrc.data?.[0]?.id ?? null)} />
+
+  <!---
+    The second link of the chain. An empty `:url` fetches nothing, which is
+    what "no ticket matched" has to mean here.
+  -->
+  <std-data :aka="threadSrc"
+            :url=${ui.openId ? apiBase + '/tickets/' + ui.openId : ''} />
+
+  <!---
+    `:client`, so the server renders nothing for it and the browser fetches
+    it on arrival. This is the one value on the page that must not be
+    published: a served value is written into the markup as plain text.
+  -->
+  <std-data :aka="meSrc" :client :url=${apiBase + '/me'} />
+
+  <!--- minutes into something a person reads -->
+  <:logic :aka="fmt"
+          :ago=${(m) => m < 1 ? 'just now'
+            : m < 60 ? `${Math.round(m)}m ago`
+            : m < 1440 ? `${Math.round(m / 60)}h ago`
+            : `${Math.round(m / 1440)}d ago`} />
+
+  <header>
+    <h1>Desk</h1>
+    <span class="dim">a Markout page with a service of its own</span>
+    <!---
+      Empty in the served HTML on purpose. If this said who you are before
+      the browser had asked, the answer would be in the source of the page.
+    -->
+    <span class="agent">${meSrc.data ? `signed in as ${meSrc.data.signedInAs}` : ''}</span>
+  </header>
+
+  <main>
+    <section class="card" aria-label="Tickets">
+      <div class="search">
+        <!---
+          `:on-input` writes what was typed; the URL takes it a moment later.
+          The delay is the only thing here that is a technique rather than a
+          value: without it every keystroke is a request, and the answers can
+          arrive out of order.
+        -->
+        <input type="search" placeholder="Search tickets…" aria-label="Search tickets"
+               value=${typed}
+               :on-input=${(ev) => {
+                 typed = ev.target.value;
+                 clearTimeout(_debounce);
+                 _debounce = setTimeout(() => { query = typed; }, 200);
+               }}>
+        <p>
+          ${listSrc.loading
+            ? 'Searching…'
+            : query
+            ? `${(listSrc.data ?? []).length} matching “${query}” — the server decided that`
+            : `${(listSrc.data ?? []).length} tickets, filtered by the server`}
+        </p>
+      </div>
+
+      <p class="dim" style="padding: .85rem" :if=${listSrc.error}>
+        The desk service did not answer: ${listSrc.error}
+      </p>
+
+      <ul>
+        <li :for-each=${listSrc.data ?? []} :for-as="ticket" :for-key=${ticket.id}>
+          <button class="ticket" type="button"
+                  :attr-aria-current=${ticket.id === ui.openId ? 'true' : null}
+                  :on-click=${() => { chosen = ticket.id; draft = ''; sendError = null; }}>
+            <span class="subject">${ticket.subject}</span>
+            <span class="meta">
+              <span class="state ${ticket.state}">${ticket.state}</span>
+              <span>${ticket.from}</span>
+              <span>${ticket.replies} message${ticket.replies === 1 ? '' : 's'}</span>
+              <span>${fmt.ago(ticket.ago)}</span>
+            </span>
+          </button>
+        </li>
+      </ul>
+
+      <p class="dim" style="padding: .85rem"
+         :if=${listSrc.data && !listSrc.data.length}>
+        Nothing matched “${query}”.
+      </p>
+    </section>
+
+    <section class="card thread" aria-label="Thread">
+      <!--- one ticket or none, which is exactly what `:for-data` is for -->
+      <div :for-data=${threadSrc.data} :for-as="ticket">
+        <h2>${ticket.subject}</h2>
+        <p class="from">
+          <span class="state ${ticket.state}">${ticket.state}</span>
+          · ${ticket.from} · opened ${fmt.ago(ticket.ago)}
+        </p>
+
+        <div :for-each=${ticket.messages} :for-as="msg"
+             class="msg" :class-mine=${msg.who === 'you'}>
+          <span class="who">${msg.who}</span>
+          <span class="when">· ${fmt.ago(msg.ago)}</span>
+          <p>${msg.text}</p>
+        </div>
+
+        <!---
+          The write. A POST and a `reload()`, in a handler — which is all a
+          mutation is: what it changes is the answer to a question this page
+          already knows how to ask, so nothing here has to update anything by
+          hand. Both sources are reloaded because both answers changed: the
+          thread has a new message, and the list's summary counted them.
+        -->
+        <!---
+          `:prop-value` as well as the content, and the pair is not
+          redundant: the content is what a textarea is SERVED with, and the
+          property is what it shows once a person has typed in it. Without
+          the second, clearing `draft` after a reply leaves the sent text
+          sitting in the box -- the element keeps its own edited value and
+          stops reading its children.
+        -->
+        <textarea aria-label="Write a reply" placeholder="Write a reply…"
+                  :attr-disabled=${sending}
+                  :prop-value=${draft}
+                  :on-input=${(ev) => { draft = ev.target.value; }}>${draft}</textarea>
+        <div class="row">
+          <button class="send" type="button"
+                  :attr-disabled=${sending || !draft.trim()}
+                  :on-click=${() => {
+                    sending = true;
+                    sendError = null;
+                    fetch(`${apiBase}/tickets/${ticket.id}/replies`, {
+                      method: 'POST',
+                      headers: { 'content-type': 'application/json' },
+                      body: JSON.stringify({ text: draft }),
+                    })
+                      .then((res) => {
+                        if (!res.ok) {
+                          return res.json()
+                            .catch(() => null)
+                            .then((body) => {
+                              sendError = body?.error ?? `${res.status} ${res.statusText}`;
+                            });
+                        }
+                        draft = '';
+                        threadSrc.reload();
+                        listSrc.reload();
+                      })
+                      .catch((err) => { sendError = `${err}`; })
+                      .then(() => { sending = false; });
+                  }}>
+            ${sending ? 'Sending…' : 'Reply'}
+          </button>
+          <span class="dim" :if=${!sendError}>
+            POSTed to the service, then <code>reload()</code> — no client state to update.
+          </span>
+          <span class="err" :if=${sendError}>${sendError}</span>
+        </div>
+      </div>
+
+      <p class="dim" :if=${!threadSrc.data}>
+        No thread to show. Pick a ticket, or search for one that exists.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      View source. The tickets and the thread are in the HTML — fetched by the
+      server from <code>demos/desk/api.ts</code> while this page rendered, so
+      the browser asked for nothing and there was nothing to hydrate. The name
+      in the corner is not there, because that source is
+      <code>:client</code>.
+    </p>
+    <p>
+      Its opposite number is <a href="/demos/orbit.html">Orbit</a>: the same
+      arrangement with the service replaced by a directory of JSON files, and
+      no back end at all.
+    </p>
+  </footer>
+
+</body>
+</html>

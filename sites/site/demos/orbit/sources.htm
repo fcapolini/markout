@@ -1,6 +1,24 @@
 <!---
-  Where Orbit's data comes from: one element per endpoint of its own API
-  (see ../server.ts), fetched by `std-data` while the page renders.
+  Where Orbit's data comes from: one element per source, fetched by
+  `std-data` while the page renders.
+
+  They are FILES -- `api/services.json` and the rest, sitting in the docroot
+  next to this fragment -- and that is deliberate. Orbit has no back end, so
+  there is no Node application under this console: it is pages and static
+  data, and any host that can serve a directory can serve it.
+
+  Which is also the note worth reading if you write your server side in
+  something else. A datasource asks for a URL and does something with the
+  answer; nothing here knows or cares what produced it. Point `:apiBase` at
+  Rails, Django, Go, PHP or a CDN and every element below is unchanged --
+  that swap is one attribute, and the test suite pins it:
+
+      <body :apiBase="https://api.example.com/v1">
+        <:include src="/demos/orbit/sources.htm" />
+
+  The `.json` extension is not decoration. A path with no extension is a
+  PAGE request and markout answers it, so a file pretending to be a route
+  would be shadowed by the page server sitting in front of it.
 
   `<:include>` rather than `<:import>`: these are instances, not definitions,
   and an instance is spliced exactly where it is named. That matters here --
@@ -10,38 +28,45 @@
 
   `:apiBase` on the root below is this fragment's one setting. A root
   element's attributes are copied onto whatever contains the `<:include>`,
-  unless that element already declares them -- so this is a default, and a
-  page pointing Orbit at a different host says so where it includes the file:
-
-      <body :apiBase="https://staging.example.test/api">
-        <:include src="/demos/orbit/sources.htm" />
-
-  Nothing here has to change for that, and nothing here is special for being
-  an application's file rather than a library's: it is the same mechanism the
-  Bootstrap kit's URL and theme tokens use.
+  unless that element already declares them -- so this is a default, and the
+  page above overrides it by saying so. Nothing here has to change for that,
+  and nothing here is special for being an application's file rather than a
+  library's: it is the same mechanism the Bootstrap kit's URL and theme
+  tokens use.
 -->
-<lib :apiBase="/api">
+<lib :apiBase="/demos/orbit/api">
 <!---
   They render nothing; where they are WRITTEN is where their names resolve,
   so they sit at the top of the page that reads them.
 
-  `incidentsSrc` is the interesting one: its URL is built out of another
-  source's answer, so it cannot even be asked for until `services` has
-  replied. The render waits for the first, then for the second, and still
-  serves a finished page — which one round of fetching could not do.
+  Every one of them is fetched WHILE THE PAGE RENDERS -- see
+  docs/design/value-transfer.md -- so the console arrives complete and the
+  browser asks for nothing. That is the property to check by viewing source
+  rather than taking on faith: every row, bar and figure is in the markup.
 -->
-<std-data :aka="servicesSrc"  :url=${apiBase + '/services'} />
-<std-data :aka="deploysSrc"   :url=${apiBase + '/deploys'} />
-<std-data :aka="activitySrc"  :url=${apiBase + '/activity'} />
-<std-data :aka="todosSrc"     :url=${apiBase + '/todos'} />
-<std-data :aka="trafficSrc"   :url=${apiBase + '/metrics/traffic'} />
-<std-data :aka="faultsSrc"    :url=${apiBase + '/metrics/faults'} />
-<std-data :aka="latenciesSrc" :url=${apiBase + '/metrics/latencies'} />
-<std-data :aka="endpointsSrc" :url=${apiBase + '/metrics/endpoints'} />
-<std-data :aka="zonesSrc"     :url=${apiBase + '/metrics/zones'} />
-<std-data :aka="incidentsSrc"
-          :url=${servicesSrc.data
-            ? apiBase + '/incidents?services='
-              + servicesSrc.data.filter(s => s.state !== 'ok').map(s => s.id).join(',')
-            : ''} />
+<std-data :aka="servicesSrc"  :url=${apiBase + '/services.json'} />
+<std-data :aka="deploysSrc"   :url=${apiBase + '/deploys.json'} />
+<std-data :aka="activitySrc"  :url=${apiBase + '/activity.json'} />
+<std-data :aka="todosSrc"     :url=${apiBase + '/todos.json'} />
+<std-data :aka="trafficSrc"   :url=${apiBase + '/metrics/traffic.json'} />
+<std-data :aka="faultsSrc"    :url=${apiBase + '/metrics/faults.json'} />
+<std-data :aka="latenciesSrc" :url=${apiBase + '/metrics/latencies.json'} />
+<std-data :aka="endpointsSrc" :url=${apiBase + '/metrics/endpoints.json'} />
+<std-data :aka="zonesSrc"     :url=${apiBase + '/metrics/zones.json'} />
+<!---
+  Every open incident, rather than the ones that matter here.
+
+  It used to be a query -- `/incidents?services=auth,billing`, asked only
+  after `services` had answered, so the render waited twice. A file cannot
+  answer a question that depends on another answer, and pretending otherwise
+  is what a static back end has no way to do honestly. So the JOIN moved to
+  where it costs nothing: `app.incidents` in orbit.html is an expression over
+  these two arrays, and a second round trip became a `.filter`.
+
+  Worth knowing which half of that is the demo and which is the lesson. The
+  join being an expression is markout; the query having to become one is the
+  price of having no server. The chained version lives in the demo that has
+  one.
+-->
+<std-data :aka="incidentsSrc" :url=${apiBase + '/incidents.json'} />
 </lib>

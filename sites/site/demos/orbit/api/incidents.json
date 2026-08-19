@@ -1,0 +1,18 @@
+[
+  {
+    "id": 418,
+    "services": ["billing"],
+    "title": "billing unreachable in eu-west",
+    "since": 44,
+    "tone": "danger",
+    "detail": "The billing service stopped answering health checks after the 77d0c31 rollout. Traffic is being held at the edge; no customer charges have been lost."
+  },
+  {
+    "id": 417,
+    "services": ["auth"],
+    "title": "auth-service latency above budget",
+    "since": 210,
+    "tone": "warning",
+    "detail": "Token issuance is running at roughly three times its usual latency since the connection pool was resized."
+  }
+]

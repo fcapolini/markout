@@ -6,7 +6,6 @@ import { chromium, type Browser } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Compiler, discoverKits } from '@markout-dev/core';
 import { renderPage } from '@markout-dev/core';
-import { openOperationsDb } from '../../../../sites/site/orbit-db';
 import { createSite } from '../../../../sites/site/server';
 
 /**
@@ -34,37 +33,37 @@ const STD_KIT_DIR = path.resolve(__dirname, '../../../../kits/std-kit');
 const PARTS_DIR = path.join(KIT_DIR, 'parts');
 
 /**
- * Orbit fetches its data from its own API while rendering, so compiling it
- * here means standing in for the server that answers.
+ * Orbit fetches its data while rendering, so compiling it here means
+ * standing in for whatever serves it.
+ *
+ * What that is now is the docroot itself: the console's data is a directory
+ * of JSON files under `demos/orbit/api/`, with no application server
+ * anywhere. So the stub is a static host in six lines -- it reads the file
+ * the URL names -- and the page is checked against the same bytes a visitor
+ * is served, without a socket.
  *
  * `fetch` is a global the runtime reads off `globalThis` when a context is
- * built, so replacing it is all it takes -- and what stands behind it is the
- * same database the real routes use, so this checks the page against the
- * data it is actually served, without a socket.
+ * built, so replacing it is all it takes.
  */
 const ORIGIN = 'http://orbit.test';
-const db = openOperationsDb();
-
-const ROUTES: { [path: string]: (params: URLSearchParams) => Promise<unknown> } = {
-  '/api/services': () => db.services.all(),
-  '/api/deploys': () => db.deploys.recent(),
-  '/api/activity': () => db.activity.feed(),
-  '/api/todos': () => db.todos.open(),
-  '/api/metrics/traffic': () => db.metrics.traffic(),
-  '/api/metrics/faults': () => db.metrics.faults(),
-  '/api/metrics/latencies': () => db.metrics.latencies(),
-  '/api/metrics/endpoints': () => db.metrics.endpoints(),
-  '/api/metrics/zones': () => db.metrics.zones(),
-  '/api/incidents': q =>
-    db.incidents.forServices((q.get('services') ?? '').split(',').filter(s => s)),
-};
+const realFetch = globalThis.fetch;
 
 beforeAll(() => {
-  vi.spyOn(globalThis, 'fetch').mockImplementation((async (input: string) => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation((async (input: string, init: RequestInit) => {
     const url = new URL(`${input}`);
-    const route = ROUTES[url.pathname];
-    return route
-      ? { ok: true, status: 200, statusText: 'OK', json: async () => route(url.searchParams) }
+    // the live-browser suite below runs a real server in this process, and
+    // its renders fetch their own data over loopback. Those are the one kind
+    // of request that must NOT be answered from here: what they are checking
+    // is that the whole stack serves them
+    if (url.hostname === '127.0.0.1' || url.hostname === 'localhost') {
+      return realFetch(input, init);
+    }
+    const file = path.normalize(path.join(SITE_ROOT, url.pathname));
+    return url.origin === ORIGIN && file.startsWith(SITE_ROOT) && fs.existsSync(file)
+      ? {
+          ok: true, status: 200, statusText: 'OK',
+          json: async () => JSON.parse(fs.readFileSync(file, 'utf8')),
+        }
       : { ok: false, status: 404, statusText: 'Not Found', json: async () => null };
   }) as unknown as typeof fetch);
 });
@@ -240,29 +239,32 @@ describe('the showcase', () => {
  * all and are exactly where a propagation bug shows up as stale content and
  * nothing else.
  */
-describe('the demo application: served from a database', () => {
-  // Orbit is the round trip end to end: its data is queried while rendering,
-  // arrives in the markup, and the queries themselves stay behind.
-  it('renders rows the database answered with', async () => {
+describe('the demo application: served from its data files', () => {
+  // Orbit is the round trip end to end: its data is fetched while rendering,
+  // arrives in the markup, and the fetching itself stays behind.
+  it('renders rows its data files answered with', async () => {
     const { markup } = await compile(SITE_ROOT, '/demos/orbit.html');
     expect(markup).toContain('edge-router');
     expect(markup).toContain('auth-service');
     expect(markup).toContain('d-2481');
   });
 
-  it('follows a chain where one answer decides the next question', async () => {
-    // `incidents` cannot be asked for until `services` has answered -- which
-    // incidents matter depends on which services are unwell -- so this text
-    // is in the page only if the render waited twice
+  it('joins two sources with an expression, not a second question', async () => {
+    // which incidents matter is decided by which services are unwell. A
+    // served API answered that with a query that could not be asked until
+    // `services` had replied; over files it is a `.filter` in orbit.html
+    // across two arrays that arrived together, and the page is the same
     const { markup } = await compile(SITE_ROOT, '/demos/orbit.html');
     expect(markup).toContain('billing unreachable in eu-west');
+    expect(markup).toContain('auth-service latency above budget');
   });
 
-  it('sends no trace of the queries', async () => {
+  it('leaves no source element behind', async () => {
+    // `std-data` is defined on `:logic`, so its instances are scopes and
+    // nothing more -- ten of them at the top of this page and not one tag in
+    // what is served
     const { markup } = await compile(SITE_ROOT, '/demos/orbit.html');
-    for (const trace of ['db.services', 'db.metrics', 'db.incidents', 'this.db', 'forServices']) {
-      expect(markup).not.toContain(trace);
-    }
+    expect(live(markup)).not.toContain('<std-data');
   });
 
   it('takes its API base from the fragment, and lets a page move it', async () => {
@@ -292,21 +294,24 @@ describe('the demo application: served from a database', () => {
     const { errors } = await compile(docroot, '/moved.html');
     expect(errors).toStrictEqual([]);
     const asked = calls.calls.slice(before).map(c => `${c[0]}`);
-    expect(asked).toContain('https://elsewhere.test/v2/services');
+    expect(asked).toContain('https://elsewhere.test/v2/services.json');
     expect(asked.every(u => u.startsWith('https://elsewhere.test/v2/'))).toBe(true);
     fs.rmSync(docroot, { recursive: true, force: true });
   });
 
-  it('asks its API for everything, and only while rendering', async () => {
+  it('asks for every file, once, and only while rendering', async () => {
     // one request per source and not one more -- in particular the browser
     // is left with nothing to fetch, which is the whole claim
     const calls = (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock;
     const before = calls.calls.length;
     await compile(SITE_ROOT, '/demos/orbit.html');
-    const asked = calls.calls.slice(before).map(c => new URL(`${c[0]}`).pathname);
-    expect(asked).toContain('/api/services');
-    expect(asked).toContain('/api/incidents');
-    expect(new Set(asked).size).toBe(asked.length);
+    const asked = calls.calls.slice(before).map(c => new URL(`${c[0]}`));
+    const paths = asked.map(u => u.pathname);
+    expect(paths).toContain('/demos/orbit/api/services.json');
+    expect(paths).toContain('/demos/orbit/api/incidents.json');
+    expect(new Set(paths).size).toBe(paths.length);
+    // and nothing it asks for is a question a file cannot be
+    expect(asked.every(u => !u.search)).toBe(true);
   });
 });
 
@@ -587,8 +592,8 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     }
     fs.writeFileSync(path.join(docroot, 'orbit.html'), offline);
 
-    // the kit's OWN app, so the browser drives the same API routes the dev
-    // server serves rather than a second copy of them
+    // the site's OWN app, so the browser is served by the same stack the dev
+    // server runs rather than a second copy of it
     server = createSite({ docroot }).listen(0);
     await new Promise<void>(resolve => server.once('listening', () => resolve()));
     port = (server.address() as import('net').AddressInfo).port;
@@ -703,29 +708,32 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
    * content that is one step behind and nothing else, which is why these
    * assertions compare what is on screen rather than counting calls.
    */
-  describe('the demo application: served from a database', () => {
-  // Orbit is the round trip end to end: its data is queried while rendering,
-  // arrives in the markup, and the queries themselves stay behind.
-  it('renders rows the database answered with', async () => {
+  describe('the demo application: served from its data files', () => {
+  // Orbit is the round trip end to end: its data is fetched while rendering,
+  // arrives in the markup, and the fetching itself stays behind.
+  it('renders rows its data files answered with', async () => {
     const { markup } = await compile(SITE_ROOT, '/demos/orbit.html');
     expect(markup).toContain('edge-router');
     expect(markup).toContain('auth-service');
     expect(markup).toContain('d-2481');
   });
 
-  it('follows a chain where one answer decides the next question', async () => {
-    // `incidents` cannot be asked for until `services` has answered -- which
-    // incidents matter depends on which services are unwell -- so this text
-    // is in the page only if the render waited twice
+  it('joins two sources with an expression, not a second question', async () => {
+    // which incidents matter is decided by which services are unwell. A
+    // served API answered that with a query that could not be asked until
+    // `services` had replied; over files it is a `.filter` in orbit.html
+    // across two arrays that arrived together, and the page is the same
     const { markup } = await compile(SITE_ROOT, '/demos/orbit.html');
     expect(markup).toContain('billing unreachable in eu-west');
+    expect(markup).toContain('auth-service latency above budget');
   });
 
-  it('sends no trace of the queries', async () => {
+  it('leaves no source element behind', async () => {
+    // `std-data` is defined on `:logic`, so its instances are scopes and
+    // nothing more -- ten of them at the top of this page and not one tag in
+    // what is served
     const { markup } = await compile(SITE_ROOT, '/demos/orbit.html');
-    for (const trace of ['db.services', 'db.metrics', 'db.incidents', 'this.db', 'forServices']) {
-      expect(markup).not.toContain(trace);
-    }
+    expect(live(markup)).not.toContain('<std-data');
   });
 
   it('takes its API base from the fragment, and lets a page move it', async () => {
@@ -755,21 +763,24 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     const { errors } = await compile(docroot, '/moved.html');
     expect(errors).toStrictEqual([]);
     const asked = calls.calls.slice(before).map(c => `${c[0]}`);
-    expect(asked).toContain('https://elsewhere.test/v2/services');
+    expect(asked).toContain('https://elsewhere.test/v2/services.json');
     expect(asked.every(u => u.startsWith('https://elsewhere.test/v2/'))).toBe(true);
     fs.rmSync(docroot, { recursive: true, force: true });
   });
 
-  it('asks its API for everything, and only while rendering', async () => {
+  it('asks for every file, once, and only while rendering', async () => {
     // one request per source and not one more -- in particular the browser
     // is left with nothing to fetch, which is the whole claim
     const calls = (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock;
     const before = calls.calls.length;
     await compile(SITE_ROOT, '/demos/orbit.html');
-    const asked = calls.calls.slice(before).map(c => new URL(`${c[0]}`).pathname);
-    expect(asked).toContain('/api/services');
-    expect(asked).toContain('/api/incidents');
-    expect(new Set(asked).size).toBe(asked.length);
+    const asked = calls.calls.slice(before).map(c => new URL(`${c[0]}`));
+    const paths = asked.map(u => u.pathname);
+    expect(paths).toContain('/demos/orbit/api/services.json');
+    expect(paths).toContain('/demos/orbit/api/incidents.json');
+    expect(new Set(paths).size).toBe(paths.length);
+    // and nothing it asks for is a question a file cannot be
+    expect(asked.every(u => !u.search)).toBe(true);
   });
 });
 

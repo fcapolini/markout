@@ -1,0 +1,38 @@
+[
+  {
+    "who": "grace",
+    "what": "restarted auth-service in production",
+    "ago": 8,
+    "kind": "warning"
+  },
+  {
+    "who": "ada",
+    "what": "shipped public-api 9f3c1ab",
+    "ago": 12,
+    "kind": "success"
+  },
+  {
+    "who": "orbit",
+    "what": "auto-scaled edge-router to 14 nodes",
+    "ago": 27,
+    "kind": "secondary"
+  },
+  {
+    "who": "lynn",
+    "what": "opened incident #418 — billing unreachable",
+    "ago": 44,
+    "kind": "danger"
+  },
+  {
+    "who": "karen",
+    "what": "reindexed search-index (2.1M documents)",
+    "ago": 96,
+    "kind": "info"
+  },
+  {
+    "who": "barbara",
+    "what": "merged \"cache edge responses\" into main",
+    "ago": 180,
+    "kind": "secondary"
+  }
+]
