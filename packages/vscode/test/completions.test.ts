@@ -29,6 +29,13 @@ function write(rel: string, text: string) {
   return full;
 }
 
+/** the whole completion, for the cases that care about more than the name */
+async function offeredFull(text: string, at: string) {
+  const filePath = write('index.html', text);
+  const offset = text.indexOf(at) + at.length;
+  return findCompletions({ docroot, pathname: '/index.html', text, offset, filePath });
+}
+
 /** the names offered where `at` appears in the text, with the cursor after it */
 async function offered(text: string, at: string) {
   const filePath = write('index.html', text);
@@ -193,5 +200,57 @@ describe('repairing the expression under the cursor', () => {
       '<p>${body.'
     );
     expect(names).toStrictEqual([]);
+  });
+});
+
+/**
+ * The values every scope supplies, which used to be offered nowhere.
+ *
+ * They were filtered out of `visibleFrom` as "the runtime's own bookkeeping,
+ * which nobody writes by hand" -- true when the list was `$value` alone, and
+ * false for a long time before anybody noticed: the kit and the demo site
+ * write `$id`, `$host` and `$dom` forty-seven times between them. `$set`
+ * settled it, being a function whose whole point is that it is the
+ * non-obvious spelling for a guarded write.
+ */
+describe('the system values', () => {
+  // the marker is the one in the BODY text: `indexOf` would otherwise find
+  // the attribute's, and completion inside an attribute expression is a
+  // different question with its own tests above
+  const PAGE = '<html :v=${1}><body><i :aka="probe">${v}</i></body></html>';
+  const AT = '"probe">${';
+
+  it('are offered in an expression', async () => {
+    const names = await offered(PAGE, AT);
+    expect(names).toEqual(expect.arrayContaining(['$id', '$parent', '$host', '$value', '$set', '$dom']));
+  });
+
+  it('come after what the page declares, not before it', async () => {
+    // `visibleFrom` answers nearest-first and the editor keeps that order, so
+    // anything added here would otherwise bury the names actually in scope
+    const names = await offered(PAGE, AT);
+    expect(names.indexOf('v')).toBeLessThan(names.indexOf('$id'));
+    expect(names.indexOf('body')).toBeLessThan(names.indexOf('$id'));
+  });
+
+  it('are offered after a navigation too, which is where $set is used', async () => {
+    // `panel.field?.$set('text', v)` is the shape this exists for
+    const names = await offered(
+      '<html><body><div :aka="panel" :n=${1}></div><i>${panel.}</i></body></html>',
+      '${panel.'
+    );
+    expect(names).toEqual(expect.arrayContaining(['n', '$set', '$value']));
+  });
+
+  it('carry their own description, having no declaration to point at', async () => {
+    const found = await offeredFull(PAGE, AT);
+    const set = found.find(c => c.name === '$set');
+    expect(set?.kind).toBe('system');
+    // marked as a call, which is what tells the editor to draw it as one
+    expect(set?.call).toBe(true);
+    expect(set?.detail).toMatch(/answers whether it landed/);
+    const id = found.find(c => c.name === '$id');
+    expect(id?.call).toBeFalsy();
+    expect(id?.detail).toMatch(/unique in the page/);
   });
 });
