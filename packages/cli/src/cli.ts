@@ -106,7 +106,11 @@ async function main() {
     .argument('[pathname]', `path to the docroot; defaults to ./${DEFAULT_DOCROOT}`)
     .option('-p, --port <number>', 'port number, default: 3000')
     .option('-d, --dev', 'dev mode: show runtime expression errors in the page')
-    .option('-c, --compress', 'compress responses (gzip/deflate) when the client accepts it')
+    .option(
+      '-c, --compress',
+      'compress responses (gzip/deflate) when the client accepts it; '
+        + 'redundant behind a proxy or CDN that already does'
+    )
     .action((pathname, options) => {
       pathname = pathname ?? DEFAULT_DOCROOT;
       console.log(`Starting server for ${pathname}...`);
