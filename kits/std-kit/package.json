@@ -1,6 +1,6 @@
 {
   "name": "@markout-lang/std-kit",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "The system parts of a Markout page -- data sources and the outside world -- written with the language rather than built into it",
   "repository": {
     "type": "git",
