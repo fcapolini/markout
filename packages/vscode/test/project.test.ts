@@ -214,14 +214,13 @@ describe('this repository', () => {
       .filter(f => !looksLikeMarkout(fs.readFileSync(f, 'utf8')))
       .map(f => path.basename(f));
     // the only ones that should miss are the pages that hold no markout at
-    // all: the hand-written twin the bootstrap demo is compared against, an
-    // index of links, and the `<lib>` wrappers that carry only meta tags
+    // all: the hand-written twin the bootstrap demo is compared against, and
+    // the `<lib>` wrappers that carry only meta tags
     expect(missed.sort()).toStrictEqual([
       'base.htm',
       'base.htm',
       'base.htm',
       'index-plain.html',
-      'index.html',
     ]);
   });
 

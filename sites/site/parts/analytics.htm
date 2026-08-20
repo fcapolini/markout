@@ -1,0 +1,36 @@
+<!---
+  Umami's tracking tag, in one file because a website id is one setting and
+  twelve pages carry it. Eleven of them include this; the twelfth is
+  `demos/bootstrap/index-plain.html`, which writes the tag out by hand along
+  with everything else it writes out by hand.
+
+  `<:include>` rather than `<:import>`: this is an instance, not a definition.
+  A definition arrives once per page however often it is named; a tag that has
+  to end up IN the markup has to be spliced exactly where the page writes it,
+  which here is the end of <head>.
+
+  Nothing below is an expression, and that is the point of writing it out
+  rather than reaching for the token pattern the kits use. Written literally,
+  the tag is copied into the served page and carries nothing into
+  `__MARKOUT_PROPS`; the moment `src` or the id becomes `${...}` it is a
+  reactive value riding along on every page of the site, which buys
+  configurability nobody needs for one analytics install.
+
+  `data-domains` is what keeps `npm run dev` out of the numbers. The script
+  loads from wherever the page is served -- localhost included -- and checks
+  `window.location.hostname` against this list before sending anything. It is
+  a client-side check rather than a secret: a website id is public by nature,
+  being readable in the source of every page that carries it.
+
+  Hashes are deliberately NOT excluded. `data-exclude-hash` would fold an
+  arrival at /#compared into /, and a shared link that points at a section of
+  the homepage is worth being able to see. It would prevent nothing else: the
+  tracker hooks `pushState`/`replaceState` and listens for no `hashchange`, so
+  clicking the navbar's own anchors sends nothing either way.
+-->
+<lib>
+  <script defer
+    src="https://analytics.ubimate.com/script.js"
+    data-website-id="e8d5fd06-f447-4b95-8d9a-9fc9d5760594"
+    data-domains="markout.dev"></script>
+</lib>

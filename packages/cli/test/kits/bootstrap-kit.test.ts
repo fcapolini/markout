@@ -661,6 +661,13 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     fs.writeFileSync(path.join(docroot, 'vendor/bootstrap.js'), STUB);
     fs.writeFileSync(path.join(docroot, 'vendor/bootstrap.css'), '');
     fs.writeFileSync(path.join(docroot, 'index.html'), PAGE);
+    // the site's analytics tag, stubbed like the CDN above it: the include
+    // has to RESOLVE for the page to compile, and the tag it carries would
+    // have a headless browser fetch a tracker over the network and register a
+    // visit nobody paid. Empty rather than absent, so that this suite says
+    // nothing about whether the site is tracked
+    fs.mkdirSync(path.join(docroot, 'parts'));
+    fs.writeFileSync(path.join(docroot, 'parts/analytics.htm'), '<lib></lib>\n');
 
     // the real demo, pointed at the stub. The URL tokens are what makes
     // that possible without forking the page: it imports the kit exactly as
