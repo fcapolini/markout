@@ -33,14 +33,9 @@ npm install -g @markout-lang/std-kit   # for a bare docroot
 See [where kits are found](../../docs/reference/cli.md#where-kits-are-found)
 for which of the two a given docroot will use.
 
-Run the showcase — `/demos/std/` on [the site](../../sites/site/) — with:
-
-```sh
-npm run dev
-```
-
-Then read the **source** of the served page, which is the point: the data is
-in the HTML, not fetched into it.
+The [std demo](https://markout.dev/demos/std/) puts it end to end. Read the
+**source** of that page rather than the page: the data is in the HTML, not
+fetched into it, which is the point.
 
 ## Why this kit exists
 
@@ -153,12 +148,6 @@ to avoid. When a page does want fresh data, it asks:
 
 A browser fetch wins over the served one from then on, being the newer of the
 two.
-
-## Tests
-
-`test/kits/std-kit.test.ts`. Nothing reaches the network: `fetch` is a global
-the runtime reads off `globalThis` when a context is built, so a test
-replaces it first — which is also how a page would supply its own.
 
 ## Notes on the awkward corners
 

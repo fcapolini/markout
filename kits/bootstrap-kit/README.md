@@ -33,54 +33,10 @@ Bootstrap out:
 <:import src="/npm/@markout-lang/bootstrap-kit/parts/card.htm" />
 ```
 
-Run the showcase — every component below, live — with:
-
-```sh
-npm run dev
-```
-
-That serves [the site](../../sites/site/), which is where the pages built on
-this kit live: `/demos/kitchen-sink.html`, every component one after another;
-and `/demos/orbit.html`, an operations dashboard built out of them, which is
-what they look like wired to one page's data.
-
-The site is a plain Express app rather than markout's `Server`, because Orbit
-is a whole application: it has an API of its own, served from a fake
-in-memory database (`orbit-db.ts`), and markout is the middleware that
-renders its pages. Orbit reads that API with `std-data` from the std kit,
-which fetches while the page renders — so the served console is complete and
-the browser asks for nothing.
-
-Orbit is four files, which is the shape an application takes:
-`demos/orbit.html` for its state, layout and logic; `demos/orbit/components.htm`
-for the tags it defines on top of the kit's; `demos/orbit/sources.htm` for
-where its data comes from; and `server.ts` for its API. The first is imported,
-the second included — a definition wants to arrive once per page however often
-it is named, and an instance wants to be spliced exactly where it is written,
-because that is where its name resolves.
-
-`orbit/sources.htm` also shows the token pattern working for an application's
-own fragment: its root carries `:apiBase="/api"`, which lands on whatever
-contains the `<:include>` unless that element declares it, so a page points
-Orbit at another host without the fragment changing. That is the same
-mechanism as `bsCssUrl` below — not something kits get and applications
-don't.
-
-## Tests
-
-`packages/cli/test/kits/bootstrap-kit.test.ts`, in two tiers:
-
-- **compiled**, which is most of it: every part compiles on its own, the
-  showcase compiles and server-renders with nothing reported, and the id
-  wiring is checked mechanically — every `aria-controls`, `aria-labelledby`,
-  `for`, `data-bs-target` and `data-bs-parent` has to name an element that
-  exists. That last one is the kit's whole reason for existing, so it is
-  worth a test that can't be argued with.
-- **live**, in Playwright: the value-driven components actually driven, and
-  a stubbed Bootstrap asserting the plugin calls. Skipped when no browser is
-  installed (`npx playwright install chromium`).
-
-Nothing reaches the network: the tests set the URL tokens to local files.
+Every component below is shown one after another in the [kitchen
+sink](https://markout.dev/demos/kitchen-sink), and
+[Orbit](https://markout.dev/demos/orbit) is an operations dashboard built out
+of them — what they look like wired to one page's data.
 
 ## What is and isn't a component
 
