@@ -1,7 +1,7 @@
 {
   "name": "@markout-lang/cli",
   "version": "0.2.0",
-  "description": "HTML-first reactive web framework: lexically scoped values on the DOM tree, compile-time dependency extraction, and isomorphic SSR",
+  "description": "HTML-first reactive language: lexically scoped values on the DOM tree, compile-time dependency extraction, and isomorphic SSR",
   "repository": {
     "type": "git",
     "url": "https://github.com/fcapolini/markout.git",
