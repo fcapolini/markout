@@ -8,6 +8,46 @@ Which mode you pick decides how much of the page arrives already rendered,
 not how it is written — see [two ways to deliver a
 page](../../README.md#two-ways-to-deliver-a-page).
 
+## Installing
+
+Two ways, for two kinds of project.
+
+A directory of HTML with no `package.json` around it wants the command on the
+PATH, installed once and forgotten:
+
+```sh
+npm i -g @markout-lang/cli
+```
+
+A project that already has one — anything using kits, since a kit is an npm
+package — pins it beside everything else, so that the compiler which builds
+the site in CI is the compiler that built it on your machine:
+
+```sh
+npm i -D @markout-lang/cli
+```
+
+The command is `markout` either way. Installed locally it is on the path
+`npm` scripts run with, and `npx markout` finds it from a shell.
+
+### Where kits are found
+
+A kit is looked for in `node_modules`, starting beside the docroot and walking
+up — the project's own installs, in other words. Only if that finds no kits
+at all are the ones installed alongside the CLI itself used, which is what a
+global install produces:
+
+```sh
+npm i -g @markout-lang/cli @markout-lang/std-kit
+```
+
+That fallback is deliberately all-or-nothing. A project with kits of its own
+never reaches past them for a global copy, so what it builds cannot depend on
+what happens to be installed on the machine building it — and two copies of
+one kit can never both be found, which is an error rather than a choice. The
+practical consequence is worth stating plainly: **the moment a docroot has one
+kit of its own, globally installed kits stop being visible to it.**
+
 ## The `markout/` convention
 
 Name that directory `markout/` and there is nothing to type and nothing to
@@ -20,13 +60,13 @@ markout/          your pages
 ```
 
 ```sh
-npx markout          # serves ./markout
-npx markout build    # compiles ./markout into ./dist
+markout          # serves ./markout
+markout build    # compiles ./markout into ./dist
 ```
 
 This is a convention, not a rule — any directory works when you name it. It
-earns its place by being the one thing a project can say without installing
-anything: there is no `package.json` in the layout above, and nothing had to
+earns its place by needing nothing around it: there is no `package.json` in
+the layout above, and nothing had to
 be configured for either command to know what to do.
 
 It is also what the editor support reads. [The VS Code
@@ -41,7 +81,7 @@ The CLI accepts an optional port with `-p` or `--port` and uses port `3000` by
 default:
 
 ```sh
-npx markout ./demo --port 8080
+markout ./demo --port 8080
 ```
 
 `-d`/`--dev` turns on dev mode, which does two things. It surfaces runtime
@@ -53,7 +93,7 @@ the bottom of it. And it reloads open pages when anything under the docroot
 changes, error pages included, so fixing the file is enough to see the fix:
 
 ```sh
-npx markout ./demo --dev
+markout ./demo --dev
 ```
 
 `-c`/`--compress` gzips rendered pages and static files for clients whose
@@ -62,7 +102,7 @@ request, and behind a reverse proxy that already does it the work would be
 done twice.
 
 ```sh
-npx markout ./demo --compress
+markout ./demo --compress
 ```
 
 ## Building static files
@@ -71,7 +111,7 @@ npx markout ./demo --compress
 any host. The source is the first argument and the output the second:
 
 ```sh
-npx markout build ./site ./dist
+markout build ./site ./dist
 ```
 
 Both are optional. The docroot defaults to `./markout` and the output to a
@@ -80,7 +120,7 @@ output directory under the docroot: the next run would compile its own output.
 So the whole ahead-of-time mode is:
 
 ```sh
-npx markout build
+markout build
 ```
 
 It compiles every `.html` under the docroot, writes the browser runtime beside
@@ -123,8 +163,8 @@ into the page, which is static site generation and worth having.
 it as files:
 
 ```sh
-npx markout ./site                                   # in one terminal
-npx markout build ./site ./dist -o http://127.0.0.1:3000
+markout ./site                                   # in one terminal
+markout build ./site ./dist -o http://127.0.0.1:3000
 ```
 
 It says what `$origin` is while the pages are built, so a relative `:url`
@@ -137,7 +177,7 @@ happens once, here, and what ships is the answer.
 A leading slash and the `.html` extension are both optional:
 
 ```sh
-npx markout build ./demo ./dist -p index -p /about.html
+markout build ./demo ./dist -p index -p /about.html
 ```
 
 A restricted build still writes the runtime — a page without it is not a page —
@@ -167,7 +207,7 @@ application needs from a server is a prop on it rather than a reason to build
 its own:
 
 ```ts
-import { Server } from '@markout-dev/cli';
+import { Server } from '@markout-lang/cli';
 
 await new Server({
   docroot: `${__dirname}/site`,
@@ -208,7 +248,7 @@ buys nothing — the proxy compresses what it receives regardless, so the second
 pass is pure cost. It earns its place when the visitor's connection ends at
 this server, and for seeing locally what a page really weighs.
 
-`@markout-dev/express` is still there for an application that already has a
+`@markout-lang/express` is still there for an application that already has a
 server of its own:
 
 ```ts
@@ -249,7 +289,7 @@ script in dev. Under a policy without `unsafe-inline` the first two are exactly
 what gets blocked, so `csp` gives them a nonce:
 
 ```ts
-import { cspNonce, markout } from '@markout-dev/express';
+import { cspNonce, markout } from '@markout-lang/express';
 
 app.use(cspNonce());                     // mints it, before anything is written
 app.use((req, res, next) => {

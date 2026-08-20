@@ -1,6 +1,6 @@
 {
-  "name": "@markout-dev/cli",
-  "version": "0.4.0",
+  "name": "@markout-lang/cli",
+  "version": "0.2.0",
   "description": "HTML-first reactive web framework: lexically scoped values on the DOM tree, compile-time dependency extraction, and isomorphic SSR",
   "repository": {
     "type": "git",
@@ -68,8 +68,8 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "@markout-dev/core": "^0.4.0",
-    "@markout-dev/express": "^0.4.0",
+    "@markout-lang/core": "^0.2.0",
+    "@markout-lang/express": "^0.2.0",
     "commander": "^15.0.0",
     "compression": "^1.8.1",
     "express": "^5.2.1",

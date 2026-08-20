@@ -166,7 +166,7 @@ fragments, the same thing is:
 
 ```html
 <head>
-  <:import src="/npm/@markout-dev/bootstrap-kit/all.htm" />
+  <:import src="/npm/@markout-lang/bootstrap-kit/all.htm" />
   <title>Northstar Studio | Product Design for Growing Teams</title>
 </head>
 
@@ -184,7 +184,7 @@ fragments, the same thing is:
 The markup that was only ever mechanical becomes data. The pinned Bootstrap
 version, the integrity hashes, the toggler/collapse `id` wiring and the
 accessibility attributes are written once in
-[`@markout-dev/bootstrap-kit`](kits/bootstrap-kit/) and can't drift from page to
+[`@markout-lang/bootstrap-kit`](kits/bootstrap-kit/) and can't drift from page to
 page. The kit is an installed package here, which is what `/npm/` in the
 import says — see [npm kits](docs/design/npm-kits.md); a kit vendored into
 the docroot is imported by its path instead.
@@ -400,12 +400,13 @@ they already run.
 Serve a directory of Markout HTML files:
 
 ```sh
-npx markout ./site
+npm i -g @markout-lang/cli
+markout ./site
 ```
 
-Name the directory `markout/` and there is nothing to type at all: `npx
-markout` serves it, and `npx markout build` compiles it into `dist/` beside
-it. Everything else — building for a host that isn't Node, mounting the
+Name the directory `markout/` and there is nothing to type at all: `markout`
+serves it, and `markout build` compiles it into `dist/` beside it.
+Everything else — building for a host that isn't Node, mounting the
 middleware in an application that has its own routes, and the error pages
 both modes serve — is in **[running a page](docs/reference/cli.md)**.
 

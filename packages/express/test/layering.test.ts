@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * The middleware's own layering, and the boundary between it and
- * `@markout-dev/core`.
+ * `@markout-lang/core`.
  *
  * The layers are small and the direction still matters: the pieces the
  * middleware drives -- the logger it reports through, the watcher it asks
@@ -25,18 +25,18 @@ const SRC = path.join(ROOT, 'src');
 const LAYERS: { name: string; pkg: string; members: string[] }[] = [
   {
     name: 'parts',
-    pkg: '@markout-dev/express',
+    pkg: '@markout-lang/express',
     members: ['livereload.ts', 'logger.ts', 'watcher.ts'],
   },
   {
     name: 'middleware',
-    pkg: '@markout-dev/express',
+    pkg: '@markout-lang/express',
     members: ['middleware.ts'],
   },
   // the package boundary itself: the only file allowed to see everything
   {
     name: 'index',
-    pkg: '@markout-dev/express',
+    pkg: '@markout-lang/express',
     members: ['index.ts'],
   },
 ];
@@ -113,7 +113,7 @@ describe('express layering', () => {
         .map(i => i.spec);
       expect(
         reachingIn,
-        'import from "@markout-dev/core" instead -- see its index.ts'
+        'import from "@markout-lang/core" instead -- see its index.ts'
       ).toEqual([]);
 
       const targets = imports.map(i => i.rel).filter((r): r is string => r !== null);

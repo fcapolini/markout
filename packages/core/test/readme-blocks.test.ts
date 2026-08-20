@@ -122,7 +122,7 @@ describe('README code quoted from the demo', () => {
     expect(quoted![0].length).toBeLessThan(400);
     expect(demo).toContain(quoted![0]);
     expect(demo).toContain(
-      '<:import src="/npm/@markout-dev/bootstrap-kit/all.htm" />'
+      '<:import src="/npm/@markout-lang/bootstrap-kit/all.htm" />'
     );
   });
 });

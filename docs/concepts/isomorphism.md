@@ -77,8 +77,8 @@ JSON files that sit beside its pages, so anything serving that directory makes
 the whole console buildable:
 
 ```sh
-npx markout ./site                                   # in one terminal
-npx markout build ./site ./dist -o http://127.0.0.1:3000
+markout ./site                                   # in one terminal
+markout build ./site ./dist -o http://127.0.0.1:3000
 ```
 
 What ships is the answer rather than the question, which is the point: the

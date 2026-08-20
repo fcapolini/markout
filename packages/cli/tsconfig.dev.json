@@ -1,7 +1,7 @@
 // The config `tsx` is given when running this package from source, and the
 // only place `paths` appears.
 //
-// It exists so that `npm run dev` picks up a change in @markout-dev/core without
+// It exists so that `npm run dev` picks up a change in @markout-lang/core without
 // a build in between. It is deliberately NOT tsconfig.json: mapping a package
 // name onto another project's SOURCE is exactly what a composite build must
 // not do -- there, the reference and the built .d.ts are what resolve it, and
@@ -11,8 +11,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@markout-dev/core": ["../core/src/index.ts"],
-      "@markout-dev/express": ["../express/src/index.ts"]
+      "@markout-lang/core": ["../core/src/index.ts"],
+      "@markout-lang/express": ["../express/src/index.ts"]
     }
   }
 }

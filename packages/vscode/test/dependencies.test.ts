@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
  * docs/design/monorepo.md, where the language server is named as the forcing
  * case and everything else is described as something that could have limped
  * along in one package. So it is worth an assertion rather than an intention:
- * one careless import of `@markout-dev/express`, or of the CLI, and an editor
+ * one careless import of `@markout-lang/express`, or of the CLI, and an editor
  * process is running express, compression and commander for no reason.
  *
  * Checked against the declared dependency closure of the workspace packages,
@@ -17,7 +17,7 @@ import { describe, expect, it } from 'vitest';
  */
 
 const ROOT = path.resolve(__dirname, '../../..');
-const FORBIDDEN = ['express', 'compression', 'commander', '@markout-dev/express', '@markout-dev/cli'];
+const FORBIDDEN = ['express', 'compression', 'commander', '@markout-lang/express', '@markout-lang/cli'];
 
 /** a workspace package's package.json, by name */
 function manifest(dir: string): { name: string; dependencies?: Record<string, string> } {
@@ -25,9 +25,9 @@ function manifest(dir: string): { name: string; dependencies?: Record<string, st
 }
 
 const WORKSPACE_DIRS: { [name: string]: string } = {
-  '@markout-dev/core': 'packages/core',
-  '@markout-dev/express': 'packages/express',
-  '@markout-dev/cli': 'packages/cli',
+  '@markout-lang/core': 'packages/core',
+  '@markout-lang/express': 'packages/express',
+  '@markout-lang/cli': 'packages/cli',
   'markout-vscode': 'packages/vscode',
 };
 
@@ -52,7 +52,7 @@ function closureOf(name: string, seen = new Set<string>()): Set<string> {
 describe('what the extension installs', () => {
   it('depends on the compiler and nothing else of ours', () => {
     const direct = Object.keys(manifest('packages/vscode').dependencies ?? {});
-    expect(direct.filter(d => d.startsWith('@markout-dev/'))).toStrictEqual(['@markout-dev/core']);
+    expect(direct.filter(d => d.startsWith('@markout-lang/'))).toStrictEqual(['@markout-lang/core']);
   });
 
   it('has no web server anywhere in its closure', () => {
@@ -63,10 +63,10 @@ describe('what the extension installs', () => {
   it('would notice if that stopped being true', () => {
     // the CLI is the package that legitimately has all of it, so finding
     // nothing there would mean the walk is looking at nothing
-    const closure = closureOf('@markout-dev/cli');
+    const closure = closureOf('@markout-lang/cli');
     expect([...closure].filter(d => FORBIDDEN.includes(d)).sort()).toStrictEqual([
-      '@markout-dev/cli',
-      '@markout-dev/express',
+      '@markout-lang/cli',
+      '@markout-lang/express',
       'commander',
       'compression',
       'express',

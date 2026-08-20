@@ -39,7 +39,7 @@ describe('a sweep that stopped early', () => {
   beforeEach(() => {
     fs.writeFileSync(
       path.join(root, 'package.json'),
-      JSON.stringify({ name: 's', dependencies: { markout: '^0.4.0' } })
+      JSON.stringify({ name: 's', dependencies: { markout: '^0.2.0' } })
     );
     for (let i = 0; i < 5; i++) {
       fs.writeFileSync(path.join(root, `p${i}.html`), '<html><body>${nope}</body></html>');

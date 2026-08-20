@@ -1,5 +1,5 @@
 /**
- * `@markout-dev/core` -- compile a page and render it. No HTTP anywhere.
+ * `@markout-lang/core` -- compile a page and render it. No HTTP anywhere.
  *
  * This file IS the package boundary: what is listed here is what another
  * package may depend on, and everything else is an internal of core's that

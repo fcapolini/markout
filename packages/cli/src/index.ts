@@ -1,5 +1,5 @@
 /**
- * `@markout-dev/cli` -- the `markout` command, and the two things it does,
+ * `@markout-lang/cli` -- the `markout` command, and the two things it does,
  * available to a program that wants them without the command line.
  *
  * The bin is a thin wrapper over these: `markout <docroot>` is a `Server`
@@ -9,7 +9,7 @@
  * a project should not have to reimplement the server in order to add one
  * route to it. See ServerProps.
  *
- * `@markout-dev/express` remains the smaller dependency for an application
+ * `@markout-lang/express` remains the smaller dependency for an application
  * that already has a server of its own; this package is the one that brings
  * a server with it.
  *

@@ -1,11 +1,11 @@
-# @markout-dev/express
+# @markout-lang/express
 
 [Markout](https://markout.dev) as Express middleware: your application's own
 routes first, then markout, then static files.
 
 ```js
 import express from 'express';
-import { markout } from '@markout-dev/express';
+import { markout } from '@markout-lang/express';
 
 const app = express();
 app.get('/api/things', myHandler);        // yours, and it wins

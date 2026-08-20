@@ -36,7 +36,7 @@ async function sweep(props: Parameters<typeof diagnoseWorkspace>[0] | undefined 
 
 describe('a project nobody has opened', () => {
   beforeEach(() => {
-    write('package.json', JSON.stringify({ name: 's', dependencies: { markout: '^0.4.0' } }));
+    write('package.json', JSON.stringify({ name: 's', dependencies: { markout: '^0.2.0' } }));
   });
 
   it('reports the pages that are broken', async () => {
@@ -85,7 +85,7 @@ describe('a project that is not markout\\u2019s', () => {
   });
 
   it('says nothing at all when turned off', async () => {
-    write('package.json', JSON.stringify({ name: 's', dependencies: { markout: '^0.4.0' } }));
+    write('package.json', JSON.stringify({ name: 's', dependencies: { markout: '^0.2.0' } }));
     write('bad.html', '<html><body>${nope}</body></html>');
     expect(await sweep({ workspaceFolders: [root], enable: 'never' })).toStrictEqual([]);
   });
@@ -100,11 +100,11 @@ describe('a window open on more than one folder', () => {
   afterEach(() => fs.rmSync(second, { recursive: true, force: true }));
 
   it('sweeps them all, each against its own docroot', async () => {
-    write('package.json', JSON.stringify({ name: 'a', dependencies: { markout: '^0.4.0' } }));
+    write('package.json', JSON.stringify({ name: 'a', dependencies: { markout: '^0.2.0' } }));
     write('a.html', '<html><body>${nope}</body></html>');
     fs.writeFileSync(
       path.join(second, 'package.json'),
-      JSON.stringify({ name: 'b', dependencies: { markout: '^0.4.0' } })
+      JSON.stringify({ name: 'b', dependencies: { markout: '^0.2.0' } })
     );
     // its own docroot, and the proof of it: `/lib.htm` is resolved against
     // the folder this page is in, not against the first folder in the list
@@ -125,11 +125,11 @@ describe('a window open on more than one folder', () => {
   });
 
   it('spends one budget over all of them', async () => {
-    write('package.json', JSON.stringify({ name: 'a', dependencies: { markout: '^0.4.0' } }));
+    write('package.json', JSON.stringify({ name: 'a', dependencies: { markout: '^0.2.0' } }));
     write('a.html', '<html><body>${nope}</body></html>');
     fs.writeFileSync(
       path.join(second, 'package.json'),
-      JSON.stringify({ name: 'b', dependencies: { markout: '^0.4.0' } })
+      JSON.stringify({ name: 'b', dependencies: { markout: '^0.2.0' } })
     );
     fs.writeFileSync(path.join(second, 'b.html'), '<html><body>${nope}</body></html>');
     // a limit that is per folder is not a limit: five folders would compile
@@ -145,7 +145,7 @@ describe('a window open on more than one folder', () => {
 
 describe('a project too big to sweep', () => {
   it('says how much it did not look at', async () => {
-    write('package.json', JSON.stringify({ name: 's', dependencies: { markout: '^0.4.0' } }));
+    write('package.json', JSON.stringify({ name: 's', dependencies: { markout: '^0.2.0' } }));
     for (let i = 0; i < 5; i++) {
       write(`p${i}.html`, '<html><body>${nope}</body></html>');
     }
@@ -156,7 +156,7 @@ describe('a project too big to sweep', () => {
   });
 
   it('counts only the limit, never the pages it had no opinion about', async () => {
-    write('package.json', JSON.stringify({ name: 's', dependencies: { markout: '^0.4.0' } }));
+    write('package.json', JSON.stringify({ name: 's', dependencies: { markout: '^0.2.0' } }));
     write('plain.html', '<!doctype html><html><body><p>ordinary</p></body></html>');
     write('page.html', '<html :n=${1}><body>${n}</body></html>');
     const { skipped } = await diagnoseWorkspace({ workspaceFolders: [root] });

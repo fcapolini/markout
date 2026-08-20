@@ -13,7 +13,7 @@ import { GLOBAL_NAMES } from "./stages/stage4-resolve";
 /**
  * The standard kit, which every page has without asking.
  *
- * `@markout-dev/std-kit` is the system parts of a page -- data sources, and
+ * `@markout-lang/std-kit` is the system parts of a page -- data sources, and
  * the outside world -- written with the language rather than built into it.
  * "Written with the language" is how it is BUILT; part of the language is
  * what it IS, and a part of the language you have to import is ceremony HTML
@@ -45,7 +45,7 @@ import { GLOBAL_NAMES } from "./stages/stage4-resolve";
  * 17ms for a page that imports the bootstrap kit. Nothing reaches the
  * output, since treeshaking drops what the page never mentions.
  */
-export const STD_KIT_PACKAGE = '@markout-dev/std-kit';
+export const STD_KIT_PACKAGE = '@markout-lang/std-kit';
 /** what a kit calls its everything file, by convention */
 export const STD_KIT_ENTRY = 'all.htm';
 

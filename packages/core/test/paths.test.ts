@@ -124,8 +124,8 @@ describe('mounted kits', () => {
       fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify(json));
       return dir;
     };
-    const kitDir = install('@markout-dev/bootstrap-kit', {
-      name: '@markout-dev/bootstrap-kit',
+    const kitDir = install('@markout-lang/bootstrap-kit', {
+      name: '@markout-lang/bootstrap-kit',
       markout: { root: '/bootstrap-kit' },
     });
     install('express', { name: 'express' });
@@ -137,14 +137,14 @@ describe('mounted kits', () => {
     const r = resolver.resolve('/bootstrap-kit/res/logo.png');
     expect(r.ok).toBe(true);
     r.ok && expect(r.filePath).toBe(path.join(kitDir, 'res', 'logo.png'));
-    r.ok && expect(r.root.kit?.name).toBe('@markout-dev/bootstrap-kit');
+    r.ok && expect(r.root.kit?.name).toBe('@markout-lang/bootstrap-kit');
   });
 
   it('gives a /npm/ spec the kit\'s own logical identity', () => {
     // the two spellings name one file, so `<:import>`'s once-only rule --
     // which dedups on this pathname -- holds across both
     const { kitDir, resolver } = kitted();
-    const r = resolver.resolve('/npm/@markout-dev/bootstrap-kit/all.htm');
+    const r = resolver.resolve('/npm/@markout-lang/bootstrap-kit/all.htm');
     expect(r.ok).toBe(true);
     r.ok && expect(r.pathname).toBe('/bootstrap-kit/all.htm');
     r.ok && expect(r.filePath).toBe(path.join(kitDir, 'all.htm'));
@@ -176,7 +176,7 @@ describe('mounted kits', () => {
 
   it('refuses /npm/ for a package that is not installed', () => {
     const { resolver } = kitted();
-    expect(resolver.resolve('/npm/@markout-dev/nope/all.htm')).toMatchObject({
+    expect(resolver.resolve('/npm/@markout-lang/nope/all.htm')).toMatchObject({
       ok: false,
       kind: 'unresolved',
     });

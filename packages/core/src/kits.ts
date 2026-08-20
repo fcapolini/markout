@@ -12,7 +12,7 @@ import path from 'path';
  *
  * The declaration is mandatory and is not derived from the package name.
  * npm guarantees the FULL name is unique and scopes exist so the unscoped
- * part need not be, so `@markout-dev/bootstrap-kit` and `@acme/bootstrap-kit`
+ * part need not be, so `@markout-lang/bootstrap-kit` and `@acme/bootstrap-kit`
  * would derive the same root while being a perfectly legal pair to install;
  * and a kit vendored into a docroot has no package name left to derive from,
  * while still needing the identity its own files refer to. See docs/design/npm-kits.md.
@@ -36,7 +36,7 @@ export const KIT_KEY = 'markout';
 const ROOT_RE = /^(\/[A-Za-z0-9][A-Za-z0-9._-]*)+$/;
 
 export interface Kit {
-  /** package name, e.g. `@markout-dev/bootstrap-kit` */
+  /** package name, e.g. `@markout-lang/bootstrap-kit` */
   name: string;
   /** absolute path of the package directory */
   dir: string;
@@ -62,7 +62,10 @@ export interface Discovery {
  * a resource referenced by a page that did not import its kit 404s, having
  * worked in dev.
  */
-export function discoverKits(docroot: string): Discovery {
+export function discoverKits(
+  docroot: string,
+  alsoFrom: string[] = []
+): Discovery {
   const root = path.resolve(docroot);
   const kits: Kit[] = [];
   const errors: string[] = [];
@@ -111,6 +114,25 @@ export function discoverKits(docroot: string): Discovery {
 
   for (const dir of nodeModulesDirs(root)) {
     scan(dir, consider);
+  }
+  // A bare docroot -- HTML in a directory, no package.json anywhere above it
+  // -- has no project to install kits into, so the only kits its author can
+  // have are the ones they installed globally. `alsoFrom` lets a caller offer
+  // its OWN install tree as a last resort: walked up from a globally
+  // installed CLI that reaches the global `node_modules`, and from a locally
+  // installed one it reaches the project's, which the walk above already
+  // covered.
+  //
+  // Only when the project tree yielded nothing, though. Appending it always
+  // would let a real project pick up a stray global copy of a kit it already
+  // has and fail the clash check above -- a build broken by an install that
+  // has nothing to do with it.
+  if (kits.length === 0) {
+    for (const from of alsoFrom) {
+      for (const dir of nodeModulesDirs(path.resolve(from))) {
+        scan(dir, consider);
+      }
+    }
   }
   return { kits, errors };
 }

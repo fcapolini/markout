@@ -17,7 +17,7 @@ import {
   RuntimeError,
   type Kit,
   type Page,
-} from "@markout-dev/core";
+} from "@markout-lang/core";
 import { defaultLogger, MarkoutLogger } from "./logger";
 import { createReloader, RELOAD_REQ, Reloader, withReloadScript } from "./livereload";
 import { TreeWatcher, watchTree } from "./watcher";
@@ -259,7 +259,9 @@ export function markout(props: MarkoutProps) {
   const csp = props.csp;
   const logger = props.logger ?? defaultLogger;
   const globals = props.globals;
-  const discovered = props.kits ? { kits: props.kits, errors: [] } : discoverKits(docroot);
+  const discovered = props.kits
+    ? { kits: props.kits, errors: [] }
+    : discoverKits(docroot, [__dirname]);
   // Logged rather than thrown: a refused kit is a pair of things claiming one
   // URL, which leaves every page that did not want that kit perfectly
   // serviceable. Said once, at startup, where somebody is watching.

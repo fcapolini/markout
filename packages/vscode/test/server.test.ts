@@ -87,7 +87,7 @@ beforeAll(async () => {
   // markout page from anybody else's HTML
   fs.writeFileSync(
     path.join(docroot, 'package.json'),
-    JSON.stringify({ name: 'fixture', dependencies: { markout: '^0.4.0' } })
+    JSON.stringify({ name: 'fixture', dependencies: { markout: '^0.2.0' } })
   );
   // a docroot BELOW the workspace folder, which is the arrangement that
   // catches a link resolved against the wrong root
@@ -104,7 +104,7 @@ beforeAll(async () => {
   second = fs.mkdtempSync(path.join(os.tmpdir(), 'markout-lsp-second-'));
   fs.writeFileSync(
     path.join(second, 'package.json'),
-    JSON.stringify({ name: 'next-door', dependencies: { markout: '^0.4.0' } })
+    JSON.stringify({ name: 'next-door', dependencies: { markout: '^0.2.0' } })
   );
   fs.writeFileSync(
     path.join(second, 'next-door.html'),

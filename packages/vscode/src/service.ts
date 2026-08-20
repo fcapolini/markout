@@ -237,7 +237,7 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
          *
          * Worth having even though the path looks obvious: half of them are
          * not. `/lib.htm` is docroot-relative rather than
-         * file-relative, and `/npm/@markout-dev/bootstrap-kit/all.htm` is inside
+         * file-relative, and `/npm/@markout-lang/bootstrap-kit/all.htm` is inside
          * an installed package -- neither is somewhere an editor would find
          * by guessing, and both are somewhere the compiler already knows.
          */

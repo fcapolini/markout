@@ -6,8 +6,8 @@ import path from 'path';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Server } from '../../src/server';
-import { CLIENT_CODE_REQ } from '@markout-dev/express';
-import { DOM_ERRORS_ID } from '@markout-dev/core';
+import { CLIENT_CODE_REQ } from '@markout-lang/express';
+import { DOM_ERRORS_ID } from '@markout-lang/core';
 
 // `user` is null, so `${user.name}` throws every time it's evaluated -- a
 // perfectly ordinary runtime failure that the compiler can't catch, since

@@ -11,7 +11,7 @@
 // graph was complete except at the top -- and `tsc -b` at the root therefore
 // built this project alone, checking `test/` and not one line of any
 // package. It reported success on a compiler that did not compile. Nothing
-// noticed, because each package's vitest config aliases `@markout-dev/*`
+// noticed, because each package's vitest config aliases `@markout-lang/*`
 // straight at the other's `src`: the suites run from source and never ask
 // whether a build would have worked.
 //

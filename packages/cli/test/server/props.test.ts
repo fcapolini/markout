@@ -5,7 +5,7 @@ import path from "path";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Server } from "../../src/server";
-import { cspNonce } from "@markout-dev/express";
+import { cspNonce } from "@markout-lang/express";
 
 /**
  * The props that exist so an application does not have to hand-roll its own

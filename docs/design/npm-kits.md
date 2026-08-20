@@ -27,7 +27,7 @@ kits shipped in this repository and for nothing else.
 pages that use them import through `/npm/`, which is this design in use
 rather than under test.)
 
-Publishing a kit as `@markout-dev/bootstrap-kit` puts it under `node_modules`,
+Publishing a kit as `@markout-lang/bootstrap-kit` puts it under `node_modules`,
 outside the docroot, which two things currently forbid on purpose:
 
 - the preprocessor confines every load to the docroot
@@ -59,11 +59,11 @@ else. So they get one spelling each.
 
 ## The standard kit is implicit
 
-`@markout-dev/std-kit` is the one kit a page does not import. It is the
+`@markout-lang/std-kit` is the one kit a page does not import. It is the
 system parts of a page — data sources, the outside world — written with the
 language rather than built into it, which makes it *part of* the language;
 and a part of the language you have to import is ceremony HTML asks for
-nowhere else. `@markout-dev/core` depends on it, and the preprocessor
+nowhere else. `@markout-lang/core` depends on it, and the preprocessor
 splices `<:import>` for it into the head of every page it compiles.
 
 Three rules keep that a convenience rather than a claim on the namespace:
@@ -87,7 +87,7 @@ asks nothing about them; the compiler is what puts the standard kit on that
 list, when — and only when — the mount table it was handed has it.
 
 It is spliced through the kit's **mounted root** (`/std-kit/all.htm`), not
-through `/npm/@markout-dev/std-kit/all.htm`. Both land on the same pathname —
+through `/npm/@markout-lang/std-kit/all.htm`. Both land on the same pathname —
 which is what lets the once-rule dedupe them — but the mount table is the one
 this compiler was handed and has already validated, while `/npm/` resolves a
 second way, by walking `node_modules` up from the docroot. A host that
@@ -111,7 +111,7 @@ For the Bootstrap kit, declaring `/bootstrap-kit`:
 ```html
 <html>
   <head>
-    <:import src="/npm/@markout-dev/bootstrap-kit/all.htm" />
+    <:import src="/npm/@markout-lang/bootstrap-kit/all.htm" />
   </head>
   <body>
     <img src="/bootstrap-kit/res/logo.png">
@@ -129,7 +129,7 @@ In the kit's own `package.json`:
 
 ```json
 {
-  "name": "@markout-dev/bootstrap-kit",
+  "name": "@markout-lang/bootstrap-kit",
   "markout": {
     "root": "/bootstrap-kit"
   }
@@ -144,17 +144,17 @@ key.
 
 #### Why it is not derived from the package name
 
-`@markout-dev/bootstrap-kit` → `/bootstrap-kit` is a rule the compiler could
+`@markout-lang/bootstrap-kit` → `/bootstrap-kit` is a rule the compiler could
 apply on its own, and it is the obvious way to spare kit authors a
 declaration. It is not taken, for three reasons of increasing weight.
 
 **It does not inherit npm's uniqueness.** The registry guarantees the *full*
 name is unique; scopes exist so that the unscoped part need not be.
-`@markout-dev/bootstrap-kit` and `@acme/bootstrap-kit` install side by side
+`@markout-lang/bootstrap-kit` and `@acme/bootstrap-kit` install side by side
 quite legally, and both derive `/bootstrap-kit` — so refusal 2 fires on a
 collision the derivation rule manufactured, between two packages the
 application author chose correctly and cannot edit. Deriving the full name
-avoids that and lands on `/@markout-dev/bootstrap-kit/res/logo.png`, which is the
+avoids that and lands on `/@markout-lang/bootstrap-kit/res/logo.png`, which is the
 `/npm/` URL space rejected below wearing a different prefix.
 
 **It couples the URL space to the package name.** A scope change, a
@@ -181,7 +181,7 @@ The cost being avoided is real but is paid once, by the kit author, at
 authoring time — so the compiler should suggest rather than decide:
 
 - a missing `root` is refused with the derived name in the message —
-  `@markout-dev/bootstrap-kit declares no markout.root — add "markout": { "root":
+  `@markout-lang/bootstrap-kit declares no markout.root — add "markout": { "root":
   "/bootstrap-kit" }` — so nobody has to invent a name, they paste the line;
 - the same derivation validates, warning when `root` and the package name
   have diverged, which is usually a rename somebody left half-finished.
@@ -212,7 +212,7 @@ directory of the same name gives pages, so this should give pages. It does
 not, unless the importing page says so:
 
 ```html
-<:import src="/npm/@markout-dev/showy-kit/all.htm" allow-pages />
+<:import src="/npm/@markout-lang/showy-kit/all.htm" allow-pages />
 ```
 
 The reason is measured rather than supposed. A kit shipping a broken
@@ -282,7 +282,7 @@ The test this design is held to, and the one to re-run against any change:
 > **Everything behaves as though, having installed the kit, you had made a
 > symlink to it from the docroot under its logical name.**
 >
->     ln -s node_modules/@markout-dev/bootstrap-kit docroot/bootstrap-kit
+>     ln -s node_modules/@markout-lang/bootstrap-kit docroot/bootstrap-kit
 
 Not an analogy. That arrangement *existed in this repository* when this was
 written — the std kit was reached through exactly such a symlink, and
@@ -313,7 +313,7 @@ second symlink — which is, again, literally what the std kit's link was.
 
 The import spelling, and only that. Under the model a page would write
 `<:import src="/bootstrap-kit/all.htm" />`; here it writes
-`/npm/@markout-dev/bootstrap-kit/all.htm`.
+`/npm/@markout-lang/bootstrap-kit/all.htm`.
 
 Decided, and worth being clear that refusal 6 forbids something that would
 otherwise work: with the mount table derived from installation, the logical
@@ -354,6 +354,35 @@ Deriving both the same way makes dev and built agree by construction rather
 than by discipline, which is the same standard the `:server-` work was held
 to. Pruning mounts no page references is a later optimization behind a flag,
 not the default.
+
+## Globally installed kits
+
+Discovery walks `node_modules` up from the docroot, and a docroot with no
+project around it has none to walk. That is the audience the language is
+pitched at, and it is exactly the audience that cannot install a kit anywhere
+the walk would look.
+
+So there is a fallback: a caller may offer its own install tree as a last
+resort. A globally installed CLI *sits inside* the global `node_modules`, so
+walking up from its own location arrives there without anyone having to find
+the prefix — the same code path serves a local install, where it arrives at
+the project's `node_modules` that the main walk already covered. The extension
+cannot use that trick, since it lives under the editor's extensions directory
+and `process.execPath` is the editor rather than the user's node, so it asks
+`npm root -g` once per language server and passes the answer in.
+
+The fallback is taken only when the docroot walk found **no kits at all**.
+Appending it unconditionally would be worse than useless: a project with its
+own copy of a kit, on a machine that also has a global copy, would find both —
+and two kits claiming one root is a refusal, not a choice. A build would break
+because of an install that had nothing to do with it. Gating on an empty
+result makes that unreachable rather than unlikely.
+
+What it costs is a rule that has to be read rather than deduced: a docroot
+with one kit of its own sees none of the global ones. The alternative, merging
+the two, would make what a docroot builds depend on the machine that built it
+— which is the property walking up from the docroot, and not from the working
+directory, exists to protect.
 
 ## Refusals
 
@@ -416,8 +445,8 @@ a constant. Three things ride along with it:
   consistent; import paths come from source text and are not.
 - **The sibling-prefix guard gets more load-bearing, not less.** It was
   written against a hypothetical `/a/site` versus `/a/site-other`. In
-  `node_modules`, `@markout-dev/bootstrap-kit` and a
-  `@markout-dev/bootstrap-kit-extras` are literal directory siblings.
+  `node_modules`, `@markout-lang/bootstrap-kit` and a
+  `@markout-lang/bootstrap-kit-extras` are literal directory siblings.
 - **Containment must stay lexical, and that is now a decision rather than an
   accident.** Under pnpm every dependency directory is a symlink into a store
   outside the project, so a `realpath`-based check would refuse every
@@ -535,7 +564,7 @@ where the code came from.
   needed the moment an application wants to *remap* a kit — the escape hatch
   a fatal collision otherwise lacks. Deferred, not dismissed.
 - **Whether the loader should be confined to declared entry points.** Today
-  the answer is no — `<:import src="/npm/@markout-dev/bootstrap-kit/parts/card.htm" />`
+  the answer is no — `<:import src="/npm/@markout-lang/bootstrap-kit/parts/card.htm" />`
   reaches a single part directly rather than going through `all.htm`, which
   is what a kit sitting in the docroot already allows. Whether a kit should
   be able to say otherwise is open; npm's own `exports` is the obvious place

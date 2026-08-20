@@ -2,7 +2,7 @@
  * The site: the homepage, the demos, and the one service among them.
  *
  * Not markout's own `Server` class but a plain Express app, because this is
- * the worked example of the arrangement `@markout-dev/express` is for: the
+ * the worked example of the arrangement `@markout-lang/express` is for: the
  * application's own routes FIRST, then markout, then static files. That
  * order is a requirement rather than a preference; a path with no extension
  * is a page request, and markout answers it.
@@ -20,7 +20,7 @@
  */
 import compression from "compression";
 import express, { type Express } from 'express';
-import { markout } from '@markout-dev/express';
+import { markout } from '@markout-lang/express';
 import { deskApi } from './demos/desk/api';
 
 export interface SiteProps {

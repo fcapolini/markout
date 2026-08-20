@@ -3,7 +3,7 @@
  *
  * A `.vsix` is unzipped somewhere with no `npm install` behind it, so an
  * extension's `require`s have to resolve from what is in the archive. This
- * package's biggest dependency is `@markout-dev/core`, a WORKSPACE package --
+ * package's biggest dependency is `@markout-lang/core`, a WORKSPACE package --
  * resolved here through a symlink node_modules that does not travel -- so an
  * unbundled build works in the development host, which runs from the repo,
  * and fails the moment it is installed. That is the whole reason to bundle,

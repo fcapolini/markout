@@ -14,7 +14,7 @@ import {
   type Kit,
   type PageError,
   type RuntimeError,
-} from '@markout-dev/core';
+} from '@markout-lang/core';
 
 export interface BuildProps {
   /** where the sources are */
@@ -155,7 +155,9 @@ export async function build(props: BuildProps): Promise<BuildResult> {
   // Discovered from what is INSTALLED rather than from what some page
   // imported, which is the same rule the middleware follows -- so the two
   // cannot disagree about whether a kit's resource exists. See docs/design/npm-kits.md.
-  const discovered = props.kits ? { kits: props.kits, errors: [] } : discoverKits(docroot);
+  const discovered = props.kits
+    ? { kits: props.kits, errors: [] }
+    : discoverKits(docroot, [__dirname]);
   const runtimeSrc = props.runtimeSrc ?? DEFAULT_RUNTIME_SRC;
   const compiler = new Compiler({ docroot, runtimeSrc, kits: discovered.kits });
   const resolver = new Resolver(docroot, discovered.kits);

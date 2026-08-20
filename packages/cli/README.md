@@ -1,17 +1,20 @@
-# @markout-dev/cli
+# @markout-lang/cli
 
 The command line for [Markout](https://markout.dev) — an HTML extension that
 adds modularity, reactivity and isomorphism to plain HTML.
 
 ```sh
-npx @markout-dev/cli ./site        # serve it, with live reload
-npx @markout-dev/cli build         # render ./markout into a sibling ./dist
+npm i -g @markout-lang/cli
+
+markout ./site        # serve it, with live reload
+markout build         # render ./markout into a sibling ./dist
 ```
 
-Installed, the command is `markout`:
+A project that already has a `package.json` — anything using kits — pins it
+instead, and the command is the same:
 
 ```sh
-npm i -D @markout-dev/cli
+npm i -D @markout-lang/cli
 npx markout ./site
 ```
 

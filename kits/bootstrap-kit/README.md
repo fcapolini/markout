@@ -4,12 +4,17 @@ Bootstrap 5.3 as Markout components — one part per component, following
 [Bootstrap's own cheatsheet](https://getbootstrap.com/docs/5.3/examples/cheatsheet/).
 
 ```sh
-npm install @markout-dev/bootstrap-kit
+npm install @markout-lang/bootstrap-kit      # in a project
+npm install -g @markout-lang/bootstrap-kit   # for a bare docroot
 ```
+
+See [where kits are found](../../docs/reference/cli.md#where-kits-are-found):
+a project's own kits are used whole, and a globally installed one is visible
+only to a docroot that has none of its own.
 
 ```html
 <head>
-  <:import src="/npm/@markout-dev/bootstrap-kit/all.htm" />
+  <:import src="/npm/@markout-lang/bootstrap-kit/all.htm" />
 </head>
 ```
 
@@ -24,8 +29,8 @@ is only imported once per page, so importing parts by hand never leaves
 Bootstrap out:
 
 ```html
-<:import src="/npm/@markout-dev/bootstrap-kit/parts/button.htm" />
-<:import src="/npm/@markout-dev/bootstrap-kit/parts/card.htm" />
+<:import src="/npm/@markout-lang/bootstrap-kit/parts/button.htm" />
+<:import src="/npm/@markout-lang/bootstrap-kit/parts/card.htm" />
 ```
 
 Run the showcase — every component below, live — with:

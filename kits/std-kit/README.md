@@ -11,7 +11,7 @@ It ships with the compiler, so a page has it already:
 </body>
 ```
 
-No install and no import. `@markout-dev/core` depends on this kit and splices
+No install and no import. `@markout-lang/core` depends on this kit and splices
 it into the head of every page it compiles, before anything the page wrote —
 so a page that defines `std-data` itself simply wins the name back, and a
 page that would rather say it out loud can still write the import, which is
@@ -19,15 +19,19 @@ skipped rather than doubled:
 
 ```html
 <head>
-  <:import src="/npm/@markout-dev/std-kit/all.htm" />
+  <:import src="/npm/@markout-lang/std-kit/all.htm" />
 </head>
 ```
 
 Installing it directly is only for pinning a version of your own:
 
 ```sh
-npm install @markout-dev/std-kit
+npm install @markout-lang/std-kit      # in a project
+npm install -g @markout-lang/std-kit   # for a bare docroot
 ```
+
+See [where kits are found](../../docs/reference/cli.md#where-kits-are-found)
+for which of the two a given docroot will use.
 
 Run the showcase — `/demos/std/` on [the site](../../sites/site/) — with:
 

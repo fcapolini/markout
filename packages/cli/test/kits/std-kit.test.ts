@@ -1,9 +1,9 @@
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Compiler, discoverKits } from '@markout-dev/core';
-import { renderPage } from '@markout-dev/core';
-import { STATE_GLOBAL } from '@markout-dev/core';
-import type { PageState } from '@markout-dev/core';
+import { Compiler, discoverKits } from '@markout-lang/core';
+import { renderPage } from '@markout-lang/core';
+import { STATE_GLOBAL } from '@markout-lang/core';
+import type { PageState } from '@markout-lang/core';
 
 /**
  * The std kit, compiled and rendered as a page would be.

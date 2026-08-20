@@ -12,7 +12,7 @@ import {
   type ErrorPages,
   type MarkoutLogger,
   type MarkoutProps,
-} from "@markout-dev/express";
+} from "@markout-lang/express";
 import process from "process";
 import { AddressInfo } from "net";
 
@@ -20,7 +20,7 @@ import { AddressInfo } from "net";
  * A server for a docroot, and -- as far as it can be -- for the application
  * around it.
  *
- * The alternative to this class is `@markout-dev/express`: an application
+ * The alternative to this class is `@markout-lang/express`: an application
  * builds its own Express app, mounts `markout()` in it and listens itself.
  * That arrangement is always available and nothing here replaces it, but it
  * used to be the answer to questions as small as "how do I bind to

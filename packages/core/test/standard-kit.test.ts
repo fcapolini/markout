@@ -8,7 +8,7 @@ import { discoverKits } from '../src/kits';
 /**
  * The standard kit is in every page, and takes nothing away from one.
  *
- * `@markout-dev/std-kit` is the system parts of a page written with the
+ * `@markout-lang/std-kit` is the system parts of a page written with the
  * language rather than built into it, which makes it part of the language --
  * and a part of the language you have to import is ceremony HTML does not
  * ask for anywhere else. So a page gets it the way it gets `<video>`.
@@ -92,7 +92,7 @@ describe('the standard kit', () => {
     // skipped rather than defining everything twice
     const docroot = project({
       'index.html':
-        '<html><head><:import src="/npm/@markout-dev/std-kit/all.htm" /></head>' +
+        '<html><head><:import src="/npm/@markout-lang/std-kit/all.htm" /></head>' +
         '<body><std-data /></body></html>',
     });
     const page = await compile(docroot);

@@ -1,5 +1,5 @@
 /**
- * `@markout-dev/express` -- markout as Express middleware.
+ * `@markout-lang/express` -- markout as Express middleware.
  *
  * This is the package an application installs when it already has a server
  * and wants markout to render its pages:

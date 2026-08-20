@@ -1,6 +1,6 @@
 {
   "name": "markout-vscode",
-  "version": "0.4.0",
+  "version": "0.2.0",
   "description": "Markout language support for VS Code: the compiler's diagnostics, in the editor",
   "keywords": [
     "markout",
@@ -57,7 +57,7 @@
     "vscode-textmate": "^9.3.2"
   },
   "dependencies": {
-    "@markout-dev/core": "^0.4.0",
+    "@markout-lang/core": "^0.2.0",
     "@volar/language-core": "^2.4.28",
     "@volar/language-server": "^2.4.28",
     "volar-service-html": "0.0.71",

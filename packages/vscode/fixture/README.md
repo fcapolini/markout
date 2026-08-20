@@ -44,7 +44,7 @@ definition.
 **`markout/data.html`** — `<std-data>`, from a kit this page never imports.
 The standard kit ships with the compiler and is spliced into every page, so
 there is nothing here to install and nothing to write. Then ctrl-click the
-tag: it opens `@markout-dev/std-kit/parts/data.htm` in `node_modules`, which
+tag: it opens `@markout-lang/std-kit/parts/data.htm` in `node_modules`, which
 is the point of having done it as a real kit rather than as something the
 compiler conjures — the definition is a file, and you can read it. `:url`
 goes to the same place, and typing `<std-` or a `:` inside the tag offers
@@ -116,12 +116,12 @@ reloading the window, since only a fresh launch runs the build task.
 
 None of the above exercises packaging, and packaging is where an extension
 that works breaks: the development host runs from this repository, where
-`@markout-dev/core` resolves through a workspace symlink that no `.vsix`
+`@markout-lang/core` resolves through a workspace symlink that no `.vsix`
 carries. So before publishing, install the archive and use that:
 
 ```sh
 npm run package -w markout-vscode
-code --install-extension packages/vscode/markout-vscode-0.4.0.vsix --force
+code --install-extension packages/vscode/markout-vscode-0.2.0.vsix --force
 ```
 
 It prints what went into the archive as it builds it — two bundles, the

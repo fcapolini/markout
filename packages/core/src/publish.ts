@@ -52,7 +52,7 @@ export const SERVABLE_DOTFILES = new Set([
  * The attribute by which a page lets an imported kit contribute PAGES to the
  * site, and not merely fragments and resources.
  *
- *     <:import src="/npm/@markout-dev/showy-kit/all.htm" allow-pages />
+ *     <:import src="/npm/@markout-lang/showy-kit/all.htm" allow-pages />
  *
  * Default-deny, and named for what it is. A kit's `.html` files would
  * otherwise be pages of the importing site -- which is what a symlinked
