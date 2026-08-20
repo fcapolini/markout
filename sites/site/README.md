@@ -3,6 +3,10 @@
 The pages that markout's own site is built from, and the demos it serves.
 Run it from the repository root with `npm run dev`.
 
+Deployed, it is markout.dev: one container built by [`Dockerfile`](./Dockerfile),
+on a CapRover server. [DEPLOY.md](./DEPLOY.md) is how it gets there and what
+has to be set for it to come up.
+
 ## Orbit
 
 `/demos/orbit.html` is an operations dashboard built out of the Bootstrap

@@ -1,0 +1,11 @@
+# Everything here is public and meant to be found: the homepage, the demos,
+# and the pages the demos are built from.
+User-agent: *
+Allow: /
+
+# The desk's service. Nothing under it is a page -- it answers JSON, and a
+# crawler following a query string through it would be indexing a ticket list
+# that lives in memory and changes under it.
+Disallow: /demos/desk/api/
+
+Sitemap: https://markout.dev/sitemap.xml

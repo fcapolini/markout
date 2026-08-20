@@ -1,0 +1,91 @@
+<!doctype html>
+<!--
+  The card a link to markout.dev unfurls into, in Slack, in a message, on a
+  timeline: 1200x630, which is the size those all crop to.
+
+  Source rather than output. It is rendered once to `sites/site/social-card.png`
+  -- the site serves a PNG because that is the only thing an unfurler will take
+  -- and it lives here with the other logo sources rather than in the docroot,
+  because it is not a page of the site. To re-render it after an edit:
+
+    npx playwright screenshot --viewport-size=1200,630 \
+      assets/social-card.html sites/site/social-card.png
+
+  The mark is `logo-small-plain.svg` inlined, for the reason that file gives:
+  in `currentColor` it takes the ink around it, and an <img> would not.
+-->
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Markout — social card</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 1200px;
+      height: 630px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 2.5rem;
+      padding: 5rem;
+      /* Bootstrap's dark body background and body colour: the card is the
+         site in its dark mode, not a second look invented for it. */
+      background: #212529;
+      color: #dee2e6;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .brand { display: flex; align-items: center; gap: 1.75rem; color: #fff; }
+    .brand svg { width: 104px; height: 104px; }
+    .brand span { font-size: 4.5rem; font-weight: 700; letter-spacing: -.02em; }
+
+    h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -.02em;
+      color: #fff;
+      max-width: 22ch;
+    }
+
+    p { font-size: 1.75rem; line-height: 1.4; color: #adb5bd; max-width: 40ch; }
+
+    .domain {
+      position: absolute;
+      right: 5rem;
+      bottom: 4rem;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #6ea8fe; /* --bs-primary-text-emphasis, dark palette */
+    }
+  </style>
+</head>
+
+<body>
+  <div class="brand">
+    <svg width="824" height="824" viewBox="0 0 824 824" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g transform="translate(-9, -2)">
+        <line x1="148.811" y1="418.416" x2="336.029" y2="605.634" stroke="currentColor" stroke-width="86" stroke-linecap="round"/>
+        <line x1="145.583" y1="415.136" x2="331.805" y2="228.914" stroke="currentColor" stroke-width="86" stroke-linecap="round"/>
+        <path d="M127.021 396.642C116.867 406.795 116.867 423.258 127.021 433.411C137.174 443.565 153.637 443.565 163.79 433.411L145.405 415.026L127.021 396.642ZM421.432 139L131.439 216.703L343.728 428.992L421.432 139ZM145.405 415.026L163.79 433.411L274.353 322.848L255.969 304.463L237.584 286.078L127.021 396.642L145.405 415.026Z" fill="currentColor"/>
+        <line x1="693.72" y1="411.445" x2="506.502" y2="224.227" stroke="currentColor" stroke-width="86" stroke-linecap="round"/>
+        <line x1="696.948" y1="414.725" x2="510.726" y2="600.947" stroke="currentColor" stroke-width="86" stroke-linecap="round"/>
+        <path d="M715.511 433.22C725.665 423.066 725.665 406.604 715.511 396.45C705.357 386.297 688.895 386.297 678.741 396.45L697.126 414.835L715.511 433.22ZM421.1 690.861L711.092 613.158L498.803 400.869L421.1 690.861ZM697.126 414.835L678.741 396.45L568.178 507.013L586.563 525.398L604.948 543.783L715.511 433.22L697.126 414.835Z" fill="currentColor"/>
+      </g>
+    </svg>
+    <span>markout</span>
+  </div>
+
+  <h1>Add application logic directly to your Bootstrap page.</h1>
+
+  <p>HTML that is modular, reactive and isomorphic — with no component
+    framework above your markup.</p>
+
+  <div class="domain">markout.dev</div>
+</body>
+
+</html>

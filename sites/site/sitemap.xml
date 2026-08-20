@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The pages of the site, which is a hand-written list because the site is a
+  hand-written one: a dozen pages, every one of them reachable from the two
+  indexes above them. `/demos/` lists every entry below it, so adding a demo
+  means editing that page and this one.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://markout.dev/</loc><priority>1.0</priority></url>
+  <url><loc>https://markout.dev/demos/</loc><priority>0.8</priority></url>
+  <url><loc>https://markout.dev/demos/kitchen-sink.html</loc></url>
+  <url><loc>https://markout.dev/demos/orbit.html</loc></url>
+  <url><loc>https://markout.dev/demos/desk/</loc></url>
+  <url><loc>https://markout.dev/demos/bootstrap/index.html</loc></url>
+  <url><loc>https://markout.dev/demos/bootstrap/index-plain.html</loc></url>
+  <url><loc>https://markout.dev/demos/std/index.html</loc></url>
+  <url><loc>https://markout.dev/demos/readme/index.html</loc></url>
+  <url><loc>https://markout.dev/demos/setlist/index.html</loc></url>
+  <url><loc>https://markout.dev/demos/shoelace/index.html</loc></url>
+  <url><loc>https://markout.dev/demos/webawesome/index.html</loc></url>
+</urlset>

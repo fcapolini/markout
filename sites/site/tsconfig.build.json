@@ -1,0 +1,31 @@
+// The one config here that EMITS: the server compiled to JavaScript, for the
+// image `Dockerfile` builds.
+//
+// Deployed, there is no TypeScript in the container at all -- no compiler, no
+// `tsx`, and no transpile between the process starting and the first page
+// being answered. `tsconfig.json` next to this one stays what it was, the
+// type check over the same files; this adds where the output goes and the
+// module system it is written in, which is Node16/CommonJS because
+// `require.main === module` is how server.ts knows it was run rather than
+// imported.
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noEmit": false,
+    "module": "Node16",
+    "moduleResolution": "node16",
+    // vitest's globals belong to the test run, not to this
+    "types": ["node"],
+    // `.` rather than the default, which would be `demos/desk` -- the deepest
+    // directory the inputs share. The output tree has to keep the shape of the
+    // source one, or `server.js` would be looking for its `./demos/desk/api`
+    // where nothing put it.
+    "rootDir": ".",
+    "outDir": "dist"
+  },
+  "include": ["*.ts", "demos/**/*.ts"]
+}

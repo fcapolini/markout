@@ -27,6 +27,31 @@
   <meta name="description"
         content="Markout makes HTML modular, reactive and isomorphic. Start with an ordinary Bootstrap page and add application logic where it belongs: in the markup.">
 
+  <!--
+    Where this page says it lives, and what a link to it unfurls into.
+
+    Absolute URLs throughout, and not because a relative one would be wrong
+    here: what reads these is not on the page. An unfurler has a URL and a
+    document, resolves nothing against the site, and takes an image only as a
+    raster one — hence the PNG, next to an SVG favicon every browser takes.
+    The canonical is the same argument about crawlers: a deployment answers to
+    a container name and to whatever URL the last deploy was checked on as
+    well as to its domain, and only one of those is the one to index.
+  -->
+  <link rel="canonical" href="https://markout.dev/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Markout">
+  <meta property="og:url" content="https://markout.dev/">
+  <meta property="og:title" content="Markout — application logic, directly in your Bootstrap page">
+  <meta property="og:description"
+        content="Markout makes HTML modular, reactive and isomorphic. Start with an ordinary Bootstrap page and add application logic where it belongs: in the markup.">
+  <meta property="og:image" content="https://markout.dev/social-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt"
+        content="Markout — add application logic directly to your Bootstrap page">
+  <meta name="twitter:card" content="summary_large_image">
+
   <style>
     /*
       The padding lives on the scrolling element rather than on the card body

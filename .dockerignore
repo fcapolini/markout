@@ -1,0 +1,16 @@
+# What the image is built from is the SOURCE tree: everything below is either
+# built here (and would arrive stale), or has no business in a container.
+.git
+.github
+node_modules
+**/node_modules
+dist
+**/dist
+out
+**/out
+coverage
+**/*.tsbuildinfo
+**/*.vsix
+**/.DS_Store
+.vscode
+.claude
