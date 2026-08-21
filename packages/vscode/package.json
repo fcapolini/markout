@@ -61,7 +61,7 @@
     "@volar/language-core": "^2.4.28",
     "@volar/language-server": "^2.4.28",
     "volar-service-html": "0.0.71",
-    "vscode-languageclient": "^9.0.1"
+    "vscode-languageclient": "^10.1.0"
   },
   "contributes": {
     "grammars": [
