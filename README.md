@@ -17,6 +17,10 @@
 
 Markout is an HTML extension that adds **modularity**, **reactivity** and
 **isomorphism** to plain HTML. It is not an application framework.
+Framework-shaped features live in *kits*, written in Markout itself rather
+than built into the language — so you can use the ones that ship, the
+[standard kit](kits/std-kit/) and [`bootstrap-kit`](kits/bootstrap-kit/)
+(Bootstrap 5.3 as components), or write your own.
 
 The page stays HTML. Anything without a `${...}` or a `:` is plain markup and
 stays plain markup, so adopting Markout means adding an attribute to a page
@@ -31,8 +35,7 @@ into data. In the vocabulary of model-view-presenter it is the presenter,
 written declaratively rather than as imperative view-pushing. A page's model
 is whatever values it declares, plus whatever a datasource fetches —
 `std-data` in the [standard kit](kits/std-kit/), which is a component rather
-than a language feature, on the principle that framework-shaped things belong
-in kits.
+than a language feature.
 
 ## Reactivity, in the page itself
 
