@@ -1,7 +1,7 @@
 <html lang="en">
 
 <head>
-  <!--
+  <!---
     The kit first, then this page's own tags on top of it. Between them they
     bring the charset, the viewport, Bootstrap's CSS and JS, and the script
     that sets the colour mode before the first paint -- all of which this
@@ -13,7 +13,7 @@
   <:import src="/npm/@markout-lang/bootstrap-kit/all.htm" />
   <:import src="/parts/home.htm" />
 
-  <!--
+  <!---
     Both are the SMALL variant of the logo, whose arrowheads are drawn to
     survive being 16 pixels across: a favicon is never anything else. The
     .svg is for browsers that take one -- which is every current one bar
@@ -27,7 +27,7 @@
   <meta name="description"
         content="Markout makes HTML modular, reactive and isomorphic. Start with an ordinary Bootstrap page and add application logic where it belongs: in the markup.">
 
-  <!--
+  <!---
     Where this page says it lives, and what a link to it unfurls into.
 
     Absolute URLs throughout, and not because a relative one would be wrong
@@ -253,9 +253,9 @@
 
 <body>
 
-  <!-- Navigation -->
+  <!--- Navigation -->
 
-  <!--
+  <!---
     The mark before the name, inlined rather than linked: it is drawn in
     `currentColor`, which only means anything to markup that is part of this
     page -- an <img> would be a document of its own and take the black a
@@ -295,7 +295,7 @@
              :href="https://github.com/fcapolini/markout">GitHub</bs-link>
   </bs-navbar>
 
-  <!-- Hero -->
+  <!--- Hero -->
 
   <header id="top"
           class="py-5">
@@ -355,7 +355,7 @@
     </div>
   </header>
 
-  <!-- Before / after: the boilerplate case -->
+  <!--- Before / after: the boilerplate case -->
 
   <section id="boilerplate"
            class="py-5 bg-body-tertiary">
@@ -477,7 +477,7 @@
     </div>
   </section>
 
-  <!-- Bootstrap Kit -->
+  <!--- Bootstrap Kit -->
 
   <section id="kit"
            class="py-5">
@@ -588,7 +588,7 @@
 
       </div>
 
-      <!-- What a kit component actually looks like -->
+      <!--- What a kit component actually looks like -->
 
       <div class="row justify-content-center mt-5 pt-lg-3">
         <div class="col-lg-10">
@@ -627,7 +627,7 @@
     </div>
   </section>
 
-  <!-- Bootstrap, but reactive -->
+  <!--- Bootstrap, but reactive -->
 
   <section id="reactive"
            class="py-5 bg-body-tertiary">
@@ -761,7 +761,7 @@
     </div>
   </section>
 
-  <!-- Conditionals -->
+  <!--- Conditionals -->
 
   <section id="conditionals"
            class="py-5">
@@ -840,10 +840,10 @@
     </div>
   </section>
 
-  <!-- App-specific kits -->
+  <!--- App-specific kits -->
 
   <section id="design-system"
-           class="py-5">
+           class="py-5 bg-body-tertiary">
     <div class="container py-lg-4">
 
       <div class="row justify-content-center text-center mb-5">
@@ -959,7 +959,7 @@
     </div>
   </section>
 
-  <!-- The language -->
+  <!--- The language -->
 
   <section id="language"
            class="py-5">
@@ -1050,7 +1050,7 @@
     </div>
   </section>
 
-  <!-- Isomorphic -->
+  <!--- Isomorphic -->
 
   <section id="isomorphic"
            class="py-5 bg-body-tertiary">
@@ -1124,7 +1124,7 @@
     </div>
   </section>
 
-  <!-- Two decisions -->
+  <!--- Two decisions -->
 
   <section class="py-5">
     <div class="container py-lg-4">
@@ -1170,7 +1170,7 @@
     </div>
   </section>
 
-  <!-- Compared to what you'd otherwise reach for -->
+  <!--- Compared to what you'd otherwise reach for -->
 
   <section id="compared"
            class="py-5 bg-body-tertiary">
@@ -1328,7 +1328,7 @@
     </div>
   </section>
 
-  <!-- Editor support -->
+  <!--- Editor support -->
 
   <section id="editor"
            class="py-5">
@@ -1388,7 +1388,7 @@
 
       </div>
 
-      <!--
+      <!---
         Two sentences that answer the two questions a reader has about any
         editor extension, in the order they ask them: what does it cost me to
         try, and what does it take away. Both answers are nothing, which is
@@ -1418,7 +1418,7 @@
         </div>
       </div>
 
-      <!--
+      <!---
         The one setting worth naming here. Formatting is the feature with a
         rival already installed -- VS Code's own HTML extension offers to
         format these files too, and on this language it is not a matter of
@@ -1445,9 +1445,9 @@
     </div>
   </section>
 
-  <!-- CTA -->
+  <!--- CTA -->
 
-  <!--
+  <!---
     This band is dark in both color modes, so it carries the dark palette
     explicitly: the code cards inside then keep dark chrome in light mode too,
     instead of turning into white cards on a black background.
@@ -1509,7 +1509,7 @@
               </code-card>
             </div>
 
-            <!--
+            <!---
               The second delivery mode, and the answer to the only real cost
               the comparison table admits to. Serving is the default because
               it is the shorter path to a page that runs; this is the one that
@@ -1552,7 +1552,7 @@
     </div>
   </section>
 
-  <!-- Footer -->
+  <!--- Footer -->
 
   <footer class="py-4">
     <div class="container">
@@ -1578,7 +1578,7 @@
     </div>
   </footer>
 
-  <!--
+  <!---
     Markout-aware highlighting, applied at load time so that the samples above
     stay plain, copyable text in the source of this page rather than a thicket
     of hand-written <span>s.
@@ -1628,7 +1628,7 @@
             continue;
           }
 
-          if (src.startsWith('<!--', i)) {
+          if (src.startsWith('<!---', i)) {
             const j = src.indexOf('-->', i);
             const end = j < 0 ? src.length : j + 3;
             out += span('tok-com', src.slice(i, end));
