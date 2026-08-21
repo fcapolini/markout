@@ -76,7 +76,7 @@ different document, not a differently indented one.
 files.** If you have `editor.formatOnSave` on, point HTML at this one:
 
 ```json
-"[html]": { "editor.defaultFormatter": "fcapolini.markout-vscode" }
+"[html]": { "editor.defaultFormatter": "markout.markout-vscode" }
 ```
 
 Not set for you, because these are `html` documents on purpose and this

@@ -21,7 +21,7 @@ npx markout ./site
 A bare `markout` serves `./markout`, and a bare `markout build` compiles that
 directory into a sibling `./dist` — the convention the whole toolchain shares,
 so a docroot means the same thing to the server, to a build and to the
-[VS Code extension](https://marketplace.visualstudio.com/items?itemName=fcapolini.markout-vscode).
+[VS Code extension](https://marketplace.visualstudio.com/items?itemName=markout.markout-vscode).
 
 Pages are ordinary `.html` files. Nothing here asks you to adopt a project
 layout beyond the docroot.

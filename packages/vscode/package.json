@@ -12,7 +12,7 @@
     "web components"
   ],
   "displayName": "Markout",
-  "publisher": "fcapolini",
+  "publisher": "markout",
   "engines": {
     "vscode": "^1.90.0"
   },

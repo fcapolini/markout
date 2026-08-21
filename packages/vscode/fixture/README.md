@@ -129,7 +129,7 @@ grammars, the icon, the README, the licence, and nothing else. Reload the
 window afterwards. To go back to the development host alone:
 
 ```sh
-code --uninstall-extension fcapolini.markout-vscode
+code --uninstall-extension markout.markout-vscode
 ```
 
 Running both at once means two language servers answering about the same
