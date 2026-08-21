@@ -1,0 +1,244 @@
+<html lang="en"
+
+      :hue=${259}>
+
+<head>
+  <:import src="/demos/tailwind-kit/all.htm" />
+
+  <title>Plans | Tailwind and Markout</title>
+  <meta name="description"
+        content="A Tailwind page whose accent colour is a Markout value: one reactive rule retunes every utility on the page.">
+
+  <!---
+    The reactive half of this page's CSS, and all of it: one rule, nine
+    custom properties.
+
+    Tailwind compiles `bg-brand-600` to `background-color:
+    var(--color-brand-600)`, so moving the variable moves every utility that
+    reads it -- no stylesheet regenerated, no class name touched, and
+    nothing on the page told about it. That is the `::` limit from the
+    syntax reference read the other way round: a compile-time token cannot
+    take part in runtime theming, and this is what it costs to want that.
+
+    Unlayered on purpose. Tailwind emits its own theme inside
+    `@layer theme`, and an unlayered rule outranks every cascade layer, so
+    this wins with no `!important` and no specificity games.
+
+    In its own <style> because one interpolation makes a whole sheet
+    reactive: `build.css` is static utilities and is never re-serialized,
+    and this is the part that changes.
+  -->
+  <style>
+    :root {
+      --color-brand-50: oklch(0.971 0.014 ${hue});
+      --color-brand-100: oklch(0.932 0.032 ${hue});
+      --color-brand-200: oklch(0.882 0.059 ${hue});
+      --color-brand-300: oklch(0.809 0.105 ${hue});
+      --color-brand-400: oklch(0.707 0.165 ${hue});
+      --color-brand-500: oklch(0.623 0.214 ${hue});
+      --color-brand-600: oklch(0.546 0.245 ${hue});
+      --color-brand-700: oklch(0.488 0.243 ${hue});
+      --color-brand-900: oklch(0.379 0.146 ${hue});
+    }
+  </style>
+
+  <:include src="/parts/analytics.htm" />
+</head>
+
+<!---
+  There are no components on this page, and that is the demo.
+
+  The other kits here wrap something: `bootstrap-kit` writes a modal's ids
+  and ARIA once, `shoelace-kit` loads a library of custom elements. Tailwind
+  has neither to offer -- a utility class is already the smallest thing it
+  has -- so `/demos/tailwind-kit/` is two meta tags and a `<link>`, and
+  everything below is plain HTML wearing Tailwind classes.
+
+  What markout adds is therefore visible in exactly three places:
+
+  - the `<style>` above, where the palette is a value;
+  - class strings chosen by a ternary, which is how a utility framework and
+    a reactive language meet: a class attribute is a string, and markout
+    computes strings;
+  - `:for-each`, which is why there is one card written here and three on
+    the page.
+
+  The cards also carry `:class-` toggles, kept deliberately, because they
+  are the one shape a Tailwind scanner cannot see -- see the comment above
+  them.
+-->
+<body class="min-h-screen bg-slate-50 text-slate-900 antialiased"
+
+      :yearly=${false}
+      :picked=${'team'}
+
+      :plans=${[
+        {
+          id: 'solo',
+          name: 'Solo',
+          price: 9,
+          blurb: 'One person, one project, no seat management.',
+          features: ['1 editor', '3 projects', 'Community support'],
+        },
+        {
+          id: 'team',
+          name: 'Team',
+          price: 29,
+          blurb: 'The one most people land on, so it says so.',
+          features: ['10 editors', 'Unlimited projects', 'Shared components', 'Email support'],
+        },
+        {
+          id: 'shop',
+          name: 'Shop',
+          price: 79,
+          blurb: 'For a studio running client work side by side.',
+          features: ['Unlimited editors', 'SSO', 'Audit log', 'Priority support'],
+        },
+      ]}>
+
+  <div class="mx-auto max-w-5xl px-6 py-16">
+
+    <header class="flex flex-wrap items-end justify-between gap-8">
+      <div>
+        <p class="text-sm font-semibold uppercase tracking-widest text-brand-600">Pricing</p>
+        <h1 class="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">Pick a plan.</h1>
+        <p class="mt-4 max-w-lg text-slate-600">
+          One Tailwind stylesheet, built ahead of time and never regenerated.
+          Everything that moves below is a Markout value.
+        </p>
+      </div>
+
+      <!---
+        The accent control. `--color-brand-*` is a real custom property in
+        the built sheet, so this slider is retuning every `brand` utility on
+        the page at once -- cards, ring, badge, links and the header word
+        above it.
+
+        `ev.target.value` rather than `$dom`: a handler is given its event,
+        and a range input reports a string, so `+` is doing the only
+        conversion on the page.
+      -->
+      <label class="flex items-center gap-3 rounded-xl bg-white px-4 py-3 ring-1 ring-slate-200">
+        <span class="text-sm font-medium text-slate-600">Accent</span>
+        <input type="range" min="0" max="360" step="1"
+               value=${hue}
+               :on-input=${(ev) => hue = +ev.target.value}
+               class="h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600">
+        <!---
+          A <span> and not a <code>, which is the one markout gotcha on this
+          page that has nothing to do with Tailwind: `<code>` is a
+          skip-content tag, so `${hue}` inside one is shown rather than read.
+          That is what lets a page about this language print its own syntax.
+        -->
+        <span class="w-12 text-right font-mono text-sm tabular-nums text-slate-500">${hue}°</span>
+      </label>
+    </header>
+
+    <!---
+      The billing switch, and the shape to reach for first on a Tailwind
+      page: a ternary of LITERAL class strings, interpolated into an
+      ordinary `class` attribute.
+
+      Tailwind builds its stylesheet by reading these files for candidate
+      strings, and it is looking at raw text rather than parsing HTML -- so
+      a utility written in quotes inside `${...}` is found exactly as one
+      written in the attribute is. Measured on this page: every class below
+      was generated with nothing added to app.css.
+
+      What it will NOT find is a name assembled from pieces. `bg-brand-${n}`
+      compiles fine, runs fine, and has no CSS behind it -- which is
+      Tailwind's own rule about dynamic class names rather than anything
+      this compiler does, and it applies here unchanged.
+    -->
+    <div class="mt-12 inline-flex rounded-full bg-white p-1 ring-1 ring-slate-200">
+      <button type="button"
+              :on-click=${() => yearly = false}
+              class="rounded-full px-5 py-2 text-sm font-medium transition
+                     ${!yearly ? 'bg-brand-600 text-white' : 'text-slate-600'}">
+        Monthly
+      </button>
+      <button type="button"
+              :on-click=${() => yearly = true}
+              class="rounded-full px-5 py-2 text-sm font-medium transition
+                     ${yearly ? 'bg-brand-600 text-white' : 'text-slate-600'}">
+        Yearly
+        <span class="ml-1 text-xs opacity-80">&minus;20%</span>
+      </button>
+    </div>
+
+    <div class="mt-8 grid gap-6 md:grid-cols-3">
+
+      <!---
+        One card, three on the page. The selected one is raised rather than
+        written twice.
+
+        These are `:class-` toggles, and they are here to show the one
+        markout shape Tailwind cannot see: the utility is spelled in the
+        attribute NAME, so what a scanner reads is `class-ring-2`, which is
+        not a utility. Nothing is generated, the page compiles clean, the
+        class goes on, and the card looks identical. The first build of this
+        demo lost all five.
+
+        Two ways out, and app.css takes the second so that this comment has
+        something to point at:
+
+          - write them the way the billing switch above does, which needs
+            nothing;
+          - or name them in `@source inline(...)`, which is what a page that
+            wants the toggle has to do.
+      -->
+      <article :for-each=${plans}
+               :for-key=${data.id}
+               class="flex flex-col rounded-2xl bg-white p-6 transition"
+               :class-ring-2=${picked === data.id}
+               :class-ring-brand-500=${picked === data.id}
+               :class-shadow-lg=${picked === data.id}
+               :class-ring-1=${picked !== data.id}
+               :class-ring-slate-200=${picked !== data.id}>
+
+        <div class="flex items-baseline justify-between">
+          <h2 class="text-lg font-semibold">${data.name}</h2>
+          <span class="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700
+                       ${data.id === 'team' ? '' : 'invisible'}">Most picked</span>
+        </div>
+
+        <p class="mt-2 text-sm text-slate-600">${data.blurb}</p>
+
+        <p class="mt-6 flex items-baseline gap-1">
+          <span class="text-4xl font-bold tracking-tight tabular-nums">
+            $${yearly ? Math.round(data.price * 12 * 0.8) : data.price}
+          </span>
+          <span class="text-sm text-slate-500">${yearly ? '/year' : '/month'}</span>
+        </p>
+
+        <ul class="mt-6 space-y-2 text-sm text-slate-600">
+          <li :for-each=${data.features} class="flex gap-2">
+            <span aria-hidden="true" class="text-brand-600">&check;</span>
+            ${data}
+          </li>
+        </ul>
+
+        <button type="button"
+                :on-click=${() => picked = data.id}
+                class="mt-8 w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition
+                       ${picked === data.id ? 'bg-brand-50 text-brand-700' : 'bg-brand-600 text-white'}">
+          ${picked === data.id ? 'Current choice' : 'Choose ' + data.name}
+        </button>
+      </article>
+    </div>
+
+    <footer class="mt-16 border-t border-slate-200 pt-8 text-sm text-slate-500">
+      <p>
+        The stylesheet is
+        <a href="/demos/tailwind/build.css" class="font-medium text-brand-700 underline underline-offset-2">build.css</a>,
+        compiled from
+        <a href="/demos/tailwind/app.css" class="font-medium text-brand-700 underline underline-offset-2">app.css</a>
+        by Tailwind and served as a static file. Markout never sees it, and
+        Tailwind never sees Markout &mdash; the two meet in the class
+        attribute, which is a string, and in <code class="text-slate-700">--color-brand-*</code>,
+        which is a variable.
+      </p>
+    </footer>
+  </div>
+</body>
+</html>

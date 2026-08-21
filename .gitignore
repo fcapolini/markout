@@ -5,3 +5,4 @@ out/
 coverage/
 packages/cli/bench/medium/bench-*.html
 *.tsbuildinfo
+.tw-scan/

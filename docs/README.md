@@ -42,9 +42,9 @@ calls that out explicitly.
 - [Data](concepts/data.md) - what belongs in values, how long each kind needs
   to last, and where data from outside the page comes in.
 - [Syntax reference](reference/syntax.md) - the whole language on one page.
-- [Running a page](reference/cli.md) - the CLI, building ahead of time, the
-  Express middleware for an application with its own routes, and the error
-  pages both delivery modes serve.
+- [Running a page](reference/cli.md) - the CLI, building ahead of time, a CSS
+  build step beside it, the Express middleware for an application with its own
+  routes, and the error pages both delivery modes serve.
 
 ## Design notes
 
@@ -62,6 +62,9 @@ pages above — what was chosen, what was rejected, and why.
 - [Editor support, on Volar](design/editor-support.md) - moving the compiler's
   diagnostics into the editor, and why a markout page needs virtual code
   rather than a language server of its own.
+- [Tailwind, and utility CSS generally](design/tailwind-support.md) - what a
+  class scanner can and cannot see in a markout page, measured; the one shape
+  that fails silently; and the class manifest designed to close it.
 - [Silent failures](design/silent-failures.md) - every way found so far for a
   page to be wrong without saying so, what closed each one, and what is still
   open. The compile-time-safety claim, audited rather than asserted.

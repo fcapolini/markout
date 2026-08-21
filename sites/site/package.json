@@ -8,15 +8,18 @@
     "start": "tsx --tsconfig ../../packages/cli/tsconfig.dev.json server.ts --prod",
     "build": "tsc -p tsconfig.json --noEmit",
     "build:image": "tsc -p tsconfig.build.json",
+    "build:tailwind": "markout build . ../.tw-scan -p /demos/tailwind/index.html --classes-only && tailwindcss -i demos/tailwind/app.css -o demos/tailwind/build.css --optimize",
     "clean": "rm -rf dist",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "author": "Fabrizio Capolini",
   "license": "MIT",
   "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
     "@types/compression": "^1.8.1",
     "@types/express": "^5.0.6",
     "@types/node": "^26.2.0",
+    "tailwindcss": "^4.3.3",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2"
   },

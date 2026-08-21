@@ -63,6 +63,13 @@ design system — and it is better evidence anyway, because it shows the mechani
 not "wrap a CSS framework", it is "define tags". Bootstrap is *the first kit*,
 not the point, and the page has to keep saying so.
 
+The [Tailwind demo](sites/site/demos/tailwind/) is a third stub and makes the
+point from the other side, which is why it stays a demo rather than becoming a
+published kit. A utility framework has no components to wrap, so the kit
+shrinks to a `<link>` and what is left on the page is markout against plain
+HTML — no `<:define>` anywhere. If the mechanism were "wrap a CSS framework",
+there would be nothing here to show.
+
 ## The competitor is Alpine, not React
 
 **This is the most common way to get the pitch wrong.** A Bootstrap user

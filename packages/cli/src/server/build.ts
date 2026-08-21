@@ -59,7 +59,37 @@ export interface BuildProps {
    * address the pages are going to live at when both are available.
    */
   origin?: string;
+  /**
+   * Append a `<template>` to every built page naming the classes its
+   * `:class-` toggles can put on it, so a CSS generator reading the output
+   * finds them -- see docs/design/tailwind-support.md.
+   *
+   * For a project that DEPLOYS this output: the manifest travels with the
+   * page, so pointing Tailwind at `dist/**` is the whole configuration. A
+   * project serving its sources from Node wants `classesOnly` instead, which
+   * puts the same names in one throwaway file and ships nothing.
+   */
+  classManifest?: boolean;
+  /**
+   * Write ONLY the class manifest -- one file, no pages, no assets, no
+   * runtime -- and skip rendering entirely.
+   *
+   * This is the served-mode half of the same feature. A page served by Node
+   * is compiled per request and never lands on disk, so a CSS generator has
+   * nothing to scan; this produces the scan target in one pass over the
+   * docroot, deterministically, without the browsing-history dependence a
+   * server that wrote its own output would have.
+   *
+   * Rendering is skipped because the answer does not depend on it: what
+   * classes a page can wear is fixed at compile time, which is also why
+   * serving per request needs nothing further. It makes this much faster than
+   * a build -- there is no settle loop and no datasource to wait for.
+   */
+  classesOnly?: boolean;
 }
+
+/** what `classesOnly` writes, relative to the output directory */
+export const CLASSES_MANIFEST_FILE = '_classes.html';
 
 export interface BuildResult {
   /** pages written, as docroot-relative pathnames */
@@ -68,6 +98,12 @@ export interface BuildResult {
   assets: string[];
   /** where the runtime landed, docroot-relative */
   runtime: string;
+  /**
+   * Class names the pages' `:class-` toggles can apply, sorted and merged
+   * across every page built. Present when `classManifest` or `classesOnly`
+   * asked for them.
+   */
+  classes?: string[];
   /**
    * Compile errors, with the page each came from. Non-empty means the build
    * FAILED: the pages it names were not written.
@@ -142,8 +178,9 @@ export async function build(props: BuildProps): Promise<BuildResult> {
     );
   }
 
-  const clientCode = loadClientCode();
-  if (!clientCode) {
+  // not needed by a manifest-only run, which writes no page to load it
+  const clientCode = props.classesOnly ? '' : loadClientCode();
+  if (!props.classesOnly && !clientCode) {
     // fatal here, unlike in the server: output is written once and then read
     // by somebody who was not watching this console
     throw new Error(
@@ -159,7 +196,12 @@ export async function build(props: BuildProps): Promise<BuildResult> {
     ? { kits: props.kits, errors: [] }
     : discoverKits(docroot, [__dirname]);
   const runtimeSrc = props.runtimeSrc ?? DEFAULT_RUNTIME_SRC;
-  const compiler = new Compiler({ docroot, runtimeSrc, kits: discovered.kits });
+  const compiler = new Compiler({
+    docroot,
+    runtimeSrc,
+    kits: discovered.kits,
+    classManifest: props.classManifest,
+  });
   const resolver = new Resolver(docroot, discovered.kits);
   const result: BuildResult = {
     pages: [],
@@ -178,6 +220,28 @@ export async function build(props: BuildProps): Promise<BuildResult> {
   const found = restricted
     ? { pages: props.pages!.map(pagePathname), assets: [] }
     : await collect(docroot, discovered.kits, resolver);
+
+  if (props.classesOnly) {
+    const names = new Set<string>();
+    for (const pathname of found.pages) {
+      const page = await compiler.compile(pathname);
+      if (page.errors.length) {
+        page.errors.forEach(error => result.errors.push({ pathname, error }));
+        continue;
+      }
+      page.classNames().forEach(name => names.add(name));
+    }
+    result.classes = [...names].sort();
+    result.runtime = '';
+    // A compile error means the page it names contributed nothing, so the
+    // manifest is short by however many toggles it held -- and a short
+    // manifest is exactly the silent failure this feature exists to prevent.
+    // Write nothing rather than something incomplete.
+    if (!result.errors.length) {
+      await write(outdir, CLASSES_MANIFEST_FILE, manifestFile(result.classes));
+    }
+    return result;
+  }
 
   // The runtime is written and then the assets are copied over it, so a
   // docroot with a file of this name silently replaced the runtime and the
@@ -218,6 +282,11 @@ export async function build(props: BuildProps): Promise<BuildResult> {
     }
     await write(outdir, pathname, '<!doctype html>\n' + page.source.doc.toString());
     result.pages.push(pathname);
+    if (props.classManifest) {
+      const all = new Set(result.classes ?? []);
+      page.classNames().forEach(name => all.add(name));
+      result.classes = [...all].sort();
+    }
   }
 
   await write(outdir, runtimeSrc, clientCode);
@@ -234,6 +303,25 @@ export async function build(props: BuildProps): Promise<BuildResult> {
   }
 
   return result;
+}
+
+/**
+ * The manifest as a file a scanner will read.
+ *
+ * Deliberately plain: a CSS generator looks for candidate strings in raw
+ * text, so a `class` attribute holding literals is all this has to be. Not a
+ * whole document, and not JSON -- a scanner would find nothing to extract
+ * from the latter, which is the entire point of choosing this shape.
+ */
+function manifestFile(classes: string[]): string {
+  return (
+    '<!-- Generated by "markout build --classes-only". Do not edit.\n' +
+    '     Every class the docroot\'s pages can apply through a `:class-`\n' +
+    '     toggle, which a CSS generator cannot see in the source: the\n' +
+    '     utility is spelled in the attribute NAME there.\n' +
+    '     Point your scanner at this file. See docs/design/tailwind-support.md. -->\n' +
+    `<div class="${classes.join(' ')}"></div>\n`
+  );
 }
 
 /**

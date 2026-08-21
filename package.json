@@ -10,6 +10,7 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present",
+    "build:tailwind": "npm run build:tailwind -w @markout-lang/site",
     "pretest": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",

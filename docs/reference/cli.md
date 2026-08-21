@@ -200,6 +200,221 @@ sits beside them, and denying dot-paths is common server hardening. The cost of
 the plain name is that a docroot file at that path is shadowed when serving,
 which `markout()` warns about at startup.
 
+## A CSS build step beside it
+
+Markout does not process CSS, and there is no plugin hook for one. The
+reasoning, the measurements behind the rules below, and what was rejected on
+the way are in [Tailwind, and utility CSS generally](../design/tailwind-support.md). A tool
+like Tailwind, which reads your markup and writes a stylesheet, is a second
+command that runs beside `markout` rather than inside it — the two meet in
+the `class` attribute, which is a string, and in custom properties, which are
+variables. The [Tailwind demo](../../sites/site/demos/tailwind/) is this
+section as a page.
+
+**Where the step goes.** Building ahead of time, Markout first and the CSS
+tool after, writing into the output:
+
+```sh
+markout build ./site ./dist
+tailwindcss -i ./site/app.css -o ./dist/app.css --optimize
+```
+
+Order is the only trap, and it is the ordinary one: `markout build` writes
+the whole output tree, so a CSS step that ran first has its file copied over
+or left in a directory that is about to be replaced. Served by Node there is
+no output tree, so the stylesheet is written into the docroot as an ordinary
+asset and the two commands are independent — `--watch` beside `markout ./site`
+for the length of a session.
+
+**What to scan.** Point the tool at the *sources*, not at the built pages:
+
+```css
+@import "tailwindcss" source(none);
+@source "./**/*.html";
+@source "./**/*.htm";
+```
+
+`source(none)` turns off automatic content detection, which is worth doing
+deliberately here: a Markout docroot usually sits inside a repository holding
+a great deal that is not the site, and the detector's job is to guess. The
+`.htm` line is the part specific to this compiler — a fragment is source that
+reaches the output *inlined into the pages that imported it*, so a locally
+defined kit's classes exist only there and a scan of `.html` alone misses
+every one of them.
+
+Scanning `dist` instead of the sources is a reasonable *addition* and a bad
+replacement. It catches one thing the sources cannot show — a class string
+that came out of data, since a built page has the render already in it — and
+it misses everything conditional that happened to be off at render time.
+
+**What a scanner sees, and the one thing it does not.** Tailwind reads these
+files for candidate strings as raw text rather than parsing HTML, so a utility
+written in quotes inside an expression is found exactly as readily as one
+written in an attribute. Measured against Tailwind 4.3:
+
+| written | found |
+| --- | --- |
+| `class="underline"` | yes |
+| `class=${'italic'}` | yes |
+| `class=${x ? 'lowercase' : 'capitalize'}` | yes, both |
+| `class="block ${x ? 'truncate' : ''}"` | yes |
+| a literal in a value, read into `class` elsewhere | yes |
+| `:class-uppercase=${x}` | **no** |
+| `` class=${`line-through-${n}`} `` | no |
+| `class=${'ring-' + '4'}` | no |
+
+The last two are Tailwind's own rule about assembling class names, and they
+apply here unchanged. The row that is markout's is the toggle: `:class-` puts
+the utility in the attribute *name*, so what a scanner reads is
+`class-uppercase`, which is not a utility. Nothing is generated, and the page
+compiles clean, runs clean, puts the class on and looks unchanged — the
+[silent failure](../design/silent-failures.md) shape, arriving from outside
+the compiler where nothing here can see it.
+
+Worse than it first looks, because it is not stable. A toggled `ring-1`
+survives if some *other* element on the page writes `ring-1` in a plain
+`class`, and stops being generated the day that element changes. Both were
+true of the Tailwind demo in one build.
+
+So on a page whose CSS is generated, prefer the ternary:
+
+```html
+<button class="rounded-full px-5 py-2 ${yearly ? 'bg-brand-600 text-white' : 'text-slate-600'}">
+```
+
+It needs nothing added to the stylesheet, and it composes with static classes
+in the same attribute.
+
+**Where the toggle is wanted anyway** — and you cannot rewrite one inside a kit
+somebody else published — ask the compiler for the names instead of guessing
+at them. Two flags, and which one you want follows from what you deploy.
+
+**Deploying the built output.** `--class-manifest` appends a `<template>` to
+each page naming the classes its toggles can apply:
+
+```sh
+markout build ./site ./dist --class-manifest
+tailwindcss -i app.css -o ./dist/app.css
+```
+
+The names travel with the page, so scanning `dist/**/*.html` is the whole
+configuration — nothing added to the stylesheet, nothing to keep in step. The
+template's content is inert (a `<template>` is parsed into a fragment, not the
+live DOM), and a page with no toggles gets none. The weight when there are: every
+distinct toggle in the whole Bootstrap kit is 35 names, 444 bytes before gzip.
+
+**Serving the sources from Node.** A page compiled per request never lands on
+disk, so there is nothing to scan. `--classes-only` produces the scan target in
+one pass and writes nothing else — no pages, no assets, no runtime, and no
+render, since what classes a page can wear does not depend on one:
+
+```sh
+markout build ./site ./.scan --classes-only     # writes .scan/_classes.html
+tailwindcss -i app.css -o ./site/app.css
+markout ./site
+```
+
+```css
+@source "./.scan/_classes.html";
+```
+
+`.scan/` is a build artifact to ignore, and the generated CSS lands inside the
+docroot so the server serves it as an ordinary asset. Re-run it when you add a
+toggle or a kit — the manifest is slow-moving, and everything that changes while
+you type is found from the sources already.
+
+Both flags read one set, resolved through `<:import>` and treeshaken, so a kit's
+toggles are included without your naming the kit and an unused definition's are
+not. That is what makes it worth asking the compiler rather than grepping.
+
+**The rule.** A literal class string anywhere in the file is found. A class
+named only in a `:class-` toggle, or assembled from pieces, is not — and for the
+toggle, the manifest is the answer.
+
+### Checking it in CI
+
+The manifest is also what makes this failure *detectable*, which it was not
+before: markout can state the set a scanner cannot see, so "every name in it has
+a rule" is a check anyone can run. Nothing here can run it for you — the
+stylesheet belongs to another tool and this compiler never sees it — so here is
+the check:
+
+```js
+// check-classes.mjs — node check-classes.mjs .scan/_classes.html site/app.css
+import { readFileSync } from 'node:fs';
+
+const [manifestPath, cssPath] = process.argv.slice(2);
+const manifest = readFileSync(manifestPath, 'utf8');
+const css = readFileSync(cssPath, 'utf8');
+
+const names = (manifest.match(/class="([^"]*)"/)?.[1] ?? '').split(/\s+/).filter(Boolean);
+if (!names.length) {
+  console.error(`${manifestPath} is empty -- nothing was checked`);
+  process.exit(1);
+}
+
+const missing = names.filter(name => {
+  const selector = '.' + name.replace(/[.:/[\]()#%,+*~^$|!'"<>=@&{}?\\]/g, c => '\\' + c);
+  const pattern = selector.replace(/[.*+?^${}()|[\]\\]/g, c => '\\' + c);
+  return !new RegExp(pattern + '(?![\\w-])').test(css);
+});
+
+if (missing.length) {
+  console.error(`no CSS for: ${missing.join(', ')}`);
+  process.exit(1);
+}
+console.log(`${names.length} class name(s) accounted for`);
+```
+
+Two things in there are load-bearing and easy to leave out:
+
+- **The empty check.** An empty manifest passes every other assertion, so a run
+  pointed at the wrong docroot goes green while testing nothing. That is why
+  `--classes-only` also warns when it finds no toggles: a guard that looks
+  defended and is not is worse than no guard.
+- **The trailing `(?![\w-])`.** Without it `p-1` matches `.p-12` and the check
+  quietly stops failing. The escaping above the guard is what a generator does
+  to selectors — `px-2.5` is written `.px-2\.5`, `md:grid-cols-3` is
+  `.md\:grid-cols-3`.
+
+It is a substring match rather than a CSS parse, which is the right trade here:
+it has no dependencies, it reads the stylesheet you actually ship, and the
+failure it is looking for — no rule at all for a name — does not need a parser to
+find. [demo-tailwind.test.ts](../../packages/cli/test/server/demo-tailwind.test.ts)
+is this same check as a test, and it is mutation-tested.
+
+**A kit's classes.** An installed kit is a directory of `.htm` under
+`node_modules`, which every content scanner ignores by default and should.
+A kit that carries utility classes therefore has to be named:
+
+```css
+@source "../node_modules/@markout-lang/bootstrap-kit";
+```
+
+**Theming while the page runs.** A generated stylesheet is fixed once it is
+written, but the values inside it need not be. Tailwind compiles a theme
+entry to a custom property and every utility to a `var()` read of it, so a
+page retunes the whole palette by writing the variables — no stylesheet
+regenerated, and no class name touched:
+
+```html
+<html :hue=${259}>
+<head>
+  <link rel="stylesheet" href="/app.css">
+  <style>
+    :root { --color-brand-600: oklch(0.546 0.245 ${hue}); }
+  </style>
+```
+
+Two details make that work. The rule is **unlayered**, and an unlayered rule
+outranks every cascade layer, so it beats the `@layer theme` the generated
+sheet puts its own values in without `!important`. And it is a value rather
+than a [compile-time constant](syntax.md#compile-time-constants) — `::` is
+gone before the page runs and cannot theme anything afterwards — which is
+also why it belongs in a `<style>` of its own: [one interpolation makes a
+whole sheet reactive](syntax.md#a-stylesheet-is-one-binding), and the
+generated one is the last thing you want re-serialized.
+
 ## Serving from your own program
 
 The CLI is a thin wrapper over a `Server` class, and most of what an

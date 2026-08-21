@@ -69,6 +69,32 @@ ships rather than after:
 - **A built page whose data source was down.** Every page says so, with a
   green build behind it. Partly addressed — a relative url now rejects — but
   an absolute one that answers badly still builds clean. See TODO.md.
+- **A `:class-` toggle whose CSS was never generated.** A utility framework
+  writes its stylesheet by reading the markup for class names, and markout
+  spells a toggled class in the attribute *name* — `:class-ring-2` — where no
+  scanner looks. The page compiles clean, puts the class on, and looks
+  unchanged. Found building the Tailwind demo, which lost every one of its
+  toggled utilities on the first build.
+  - **Not stable, which is the sharp end of it.** A toggled `ring-1` is
+    generated anyway if some *other* element on the page writes `ring-1` in a
+    plain `class`, and stops being generated the day that element changes.
+    Measured: both were true of the demo in one build. So the failure arrives
+    on an edit to markup that has nothing to do with it.
+  - Narrow, and worth saying so: an interpolation is fine. A scanner reads
+    raw text, so `${x ? 'ring-2' : ''}` inside a `class` attribute IS found,
+    and so is a literal sitting in a value elsewhere. It is the attribute-name
+    spelling alone that hides, which is why the escape is an idiom rather
+    than a safelist.
+  - **Outside the compiler, and now detectable.** The two features
+    disagreeing are markout's and somebody else's, so nothing here can close
+    it — but `markout build --classes-only` makes the compiler state the set
+    a scanner cannot see, which turns "wrong and silent" into a two-line CI
+    check: every name in `_classes.html` must have a rule in your stylesheet.
+    [demo-tailwind.test.ts](../../packages/cli/test/server/demo-tailwind.test.ts)
+    is that check for this repository, and it is mutation-tested.
+    [tailwind-support.md](tailwind-support.md) has the measurements and the
+    reasoning; [running a page](../reference/cli.md#a-css-build-step-beside-it)
+    has the rule.
 
 ## What tests this
 

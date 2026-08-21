@@ -1,0 +1,34 @@
+<!---
+  Tailwind, as infrastructure and nothing else.
+
+  There is no `<:define>` in this kit, and there is not meant to be one.
+  Bootstrap has components to wrap -- a modal is a `<div>`, three ids, four
+  ARIA attributes and a `data-bs-*` triplet, and writing that once is the
+  whole reason `bootstrap-kit` exists. Tailwind has none of that. A utility
+  class is already the smallest thing it has, and what a `tw-button` would
+  mean is the one decision Tailwind exists in order not to make.
+
+  So what a kit can honestly carry here is the setup, and the setup is two
+  meta tags and a stylesheet. Where that stylesheet comes from is a token, so
+  a page names its own build at the import site rather than forking this file:
+
+    <head ::twCssUrl="/css/app.css">
+      <:import src="/demos/tailwind-kit/all.htm" />
+
+  Deliberately NOT Tailwind's browser build. The CDN script generates the
+  sheet after the page has loaded, which shows the page unstyled first -- and
+  Tailwind documents it as a development convenience rather than a way to
+  ship. A markout page's claim is that its content arrived already rendered,
+  so the sheet is one Tailwind built ahead of time, exactly as it is built in
+  every other project:
+
+    tailwindcss -i app.css -o build.css
+
+  Where that step goes relative to `markout build`, and what it can and
+  cannot see of a markout page, is in docs/reference/cli.md.
+-->
+<lib ::twCssUrl=${'/demos/tailwind/build.css'}>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href=${twCssUrl}>
+</lib>

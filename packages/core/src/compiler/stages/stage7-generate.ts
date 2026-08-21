@@ -61,8 +61,10 @@ export const DEFAULT_RUNTIME_SRC = '/markout-runtime.js';
 export function stage7generate(
   page: Page,
   runtimeSrc = DEFAULT_RUNTIME_SRC,
-  dev = false
+  dev = false,
+  classManifest = false
 ) {
+  classManifest && injectClassManifest(page);
   const root = page.global.children[0];
   if (root) {
     page.propsAST = generateScope(root, false);
@@ -114,6 +116,46 @@ export function stage7generate(
  */
 function codegenOptions(dev: boolean) {
   return dev ? undefined : { format: { compact: true } };
+}
+
+/**
+ * Append a `<template>` naming every class the page can wear through a
+ * `:class-` toggle, so a CSS generator reading the output finds them.
+ *
+ * The problem it answers is in Page.classNames(): a toggle spells its utility
+ * in the attribute name, where no scanner looks. This says the same names in
+ * the one place every scanner does look -- a `class` attribute holding string
+ * literals.
+ *
+ * A `<template>` because its content is inert: parsed into a DocumentFragment
+ * rather than the live DOM, so nothing is styled, laid out, or announced. And
+ * because markout itself is finished with the page by the time this runs, so
+ * nothing here compiles, binds or renders.
+ *
+ * Toggles only, and nothing when there are none -- a page without one is
+ * byte-for-byte what it was before this existed. The weight when there are:
+ * every distinct toggle in the whole Bootstrap kit is 35 names, 444 bytes
+ * before gzip, and they compress well because most of those strings already
+ * appear elsewhere in the same document.
+ *
+ * Named for the page rather than for a vendor. A page declaring the classes
+ * it can wear is a fact about the page; it happens to be what Tailwind,
+ * UnoCSS and Panda all need, and knowing about any of them is not this
+ * compiler's business. See docs/design/tailwind-support.md.
+ */
+function injectClassManifest(page: Page) {
+  const doc = page.source.doc;
+  const body = doc.body;
+  const names = page.classNames();
+  if (!body || !names.length) {
+    return;
+  }
+  const template = doc.createElement('template');
+  template.setAttribute('data-markout-classes', null, body.loc);
+  const div = doc.createElement('div');
+  div.setAttribute('class', names.join(' '), body.loc);
+  template.appendChild(div);
+  body.appendChild(template);
 }
 
 function injectBootstrapScripts(page: Page, runtimeSrc: string, dev: boolean) {

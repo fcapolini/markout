@@ -85,6 +85,15 @@ export interface CompilerProps {
    * Names only; the compiler never sees, and never needs, the objects.
    */
   serverGlobals?: Iterable<string>;
+  /**
+   * Append a `<template>` naming every class a `:class-` toggle can put on
+   * the page, for a CSS generator that reads the output -- see
+   * stage7-generate's injectClassManifest and docs/design/tailwind-support.md.
+   *
+   * Off by default, because a project not generating its stylesheet from the
+   * markup pays nothing for a page that says what it already shows.
+   */
+  classManifest?: boolean;
 }
 
 export class Compiler {
@@ -92,6 +101,7 @@ export class Compiler {
   runtimeSrc: string;
   dev: boolean;
   treeshake: boolean;
+  classManifest: boolean;
   serverGlobals: ReadonlySet<string>;
 
   constructor(options: CompilerProps) {
@@ -105,6 +115,7 @@ export class Compiler {
     this.runtimeSrc = options.runtimeSrc ?? DEFAULT_RUNTIME_SRC;
     this.dev = options.dev ?? false;
     this.treeshake = options.treeshake ?? true;
+    this.classManifest = options.classManifest ?? false;
     this.serverGlobals = new Set(options.serverGlobals ?? []);
     // a name that is already the language's would be unreachable behind it,
     // and the page author would have no way to tell which one they got
@@ -128,7 +139,8 @@ export class Compiler {
     page.errors.length || stage4resolve(page);
     page.errors.length || stage5comptime(page);
     page.errors.length || !this.treeshake || stage6treeshake(page);
-    page.errors.length || stage7generate(page, this.runtimeSrc, this.dev);
+    page.errors.length ||
+      stage7generate(page, this.runtimeSrc, this.dev, this.classManifest);
     return page;
   }
 }

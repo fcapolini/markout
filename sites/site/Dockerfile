@@ -30,10 +30,12 @@ COPY kits/bootstrap-kit/package.json kits/bootstrap-kit/
 COPY sites/site/package.json sites/site/
 
 # The three workspaces this image is made of, and their dev dependencies --
-# `tsc` for all of them and `esbuild` for the browser runtime core bundles.
-# Naming them leaves out the CLI's test suite, which would otherwise download
-# a Playwright browser here to open no page at all, and the VS Code extension's
-# packaging tools.
+# `tsc` for all of them, `esbuild` for the browser runtime core bundles, and
+# the Tailwind CLI the demo of that name builds its stylesheet with. The last
+# one is 13MB the image never runs: the stylesheet is committed and served as
+# a static file, and this stage is discarded. Naming the workspaces leaves out
+# the CLI's test suite, which would otherwise download a Playwright browser
+# here to open no page at all, and the VS Code extension's packaging tools.
 RUN npm ci --no-audit --no-fund \
       -w @markout-lang/core -w @markout-lang/express -w @markout-lang/site \
       --include-workspace-root

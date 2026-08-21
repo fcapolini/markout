@@ -336,6 +336,45 @@ export class Page {
     this.errors.push(new PageError('error', msg, loc));
   }
 
+  /**
+   * Every class name this page can put on an element through a `:class-`
+   * toggle, sorted, after imports were resolved and treeshaking dropped what
+   * the page never uses.
+   *
+   * It exists because a toggle is invisible to the tools that generate CSS by
+   * reading markup. Tailwind and its kind scan source files for candidate
+   * strings, and `:class-bg-brand-600` spells the utility in the attribute
+   * NAME -- so what a scanner reads is `class-bg-brand-600`, which is not a
+   * utility. Nothing is generated, and the page then compiles clean, runs
+   * clean, puts the class on, and looks unchanged. Measured: the Tailwind
+   * demo lost every one of its toggled utilities on its first build.
+   *
+   * Everything else on a page is already found, because a scanner reads raw
+   * text: a literal in `class="..."`, in `${'italic'}`, in either branch of a
+   * ternary, or in a value read into `class` from elsewhere. So this reports
+   * TOGGLES ONLY -- listing the rest would be bytes buying nothing.
+   *
+   * Read off the scope tree rather than the markup, which is what makes it
+   * worth asking the compiler for at all: the tree is post-`<:import>`, so a
+   * kit's toggles are in here without the caller knowing which kit, and
+   * post-treeshake, so an unused definition's are not. A regex over the
+   * sources gets neither, and gets to disagree with this compiler about what
+   * a toggle is -- two implementations of one rule, which is a shape this
+   * project keeps a list of. See docs/design/tailwind-support.md.
+   */
+  classNames(): string[] {
+    const found = new Set<string>();
+    const walk = (scope: Scope) => {
+      for (const name of scope.values.keys()) {
+        name.startsWith(CLASS_VALUE_PREFIX) &&
+          found.add(name.slice(CLASS_VALUE_PREFIX.length));
+      }
+      scope.children.forEach(walk);
+    };
+    walk(this.global);
+    return [...found].sort();
+  }
+
   createValueId() {
     return `v${this.nextValueId++}`;
   }

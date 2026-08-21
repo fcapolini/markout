@@ -1,0 +1,72 @@
+/*
+  The Tailwind input for this demo, and the only CSS anybody wrote for it.
+  Everything else on the page is a utility class.
+
+  `source(none)` turns off Tailwind's automatic content detection and the
+  `@source` line below says what to scan instead. Both are deliberate: a
+  markout docroot holds `.htm` fragments that are compiled INTO pages rather
+  than served, and it sits inside a repository full of files that are not
+  this page. Naming the sources is how the scan stays the same on every
+  machine and in CI.
+
+  Rebuild with:
+
+      npm run build:tailwind
+
+  from the repository root. The output, `build.css`, is committed -- the
+  site serves it as an ordinary static file, so cloning the repository and
+  running `npm run dev` gets the demo with no CSS toolchain installed.
+*/
+@import "tailwindcss" source(none);
+
+@source "./index.html";
+
+/*
+  The one thing a scanner cannot do, and the only Markout-specific entry in
+  this file.
+
+  Tailwind finds utilities by reading these files for candidate strings. It
+  is looking at raw text rather than parsing HTML, so it finds a utility
+  written in quotes inside an expression -- `${x ? 'uppercase' : ''}` --
+  exactly as readily as one written in a `class` attribute. Almost everything
+  on this page relies on that, and the `@source` above is all it needs.
+
+  What it cannot find is markout's toggle, which spells the utility in the
+  attribute NAME:
+
+      :class-ring-2=${picked === data.id}
+
+  `class-ring-2` is not a utility, so nothing is generated. The page then
+  compiles clean, runs clean, puts the class on, and looks unchanged.
+  Measured, not guessed: the first build of this demo lost all five of the
+  classes the cards toggle.
+
+  So the compiler is asked instead of guessed at. `markout build
+  --classes-only` writes every class a page's toggles can apply -- resolved
+  through `<:import>` and treeshaken, which a regex over these sources could
+  do neither of -- and this scans the result. `npm run build:tailwind`
+  produces both in order. See docs/design/tailwind-support.md.
+*/
+@source "../../../.tw-scan/_classes.html";
+
+/*
+  The accent ramp the page themes at runtime.
+
+  Declaring it here is what makes `bg-brand-600` and `ring-brand-500` exist
+  at all -- a utility Tailwind never generated cannot be brought back by any
+  amount of markout. The VALUES here are only the starting point: Tailwind
+  compiles each one to a custom property and each utility to a `var()` read
+  of it, so the page can move all nine by writing five variables. See the
+  <style> block in index.html.
+*/
+@theme {
+  --color-brand-50: oklch(0.971 0.014 259);
+  --color-brand-100: oklch(0.932 0.032 259);
+  --color-brand-200: oklch(0.882 0.059 259);
+  --color-brand-300: oklch(0.809 0.105 259);
+  --color-brand-400: oklch(0.707 0.165 259);
+  --color-brand-500: oklch(0.623 0.214 259);
+  --color-brand-600: oklch(0.546 0.245 259);
+  --color-brand-700: oklch(0.488 0.243 259);
+  --color-brand-900: oklch(0.379 0.146 259);
+}
