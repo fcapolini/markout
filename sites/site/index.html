@@ -54,6 +54,21 @@
 
   <style>
     /*
+      The navbar is `sticky-top`, so it covers the top of whatever an in-page
+      link lands on. Browsers offer the fix as a property of the scroller
+      rather than of each target: `scroll-padding-top` insets where an anchor
+      comes to rest, for every jump on the page at once, with no class to
+      remember on a section and nothing to keep in step when one is added.
+
+      5rem clears the bar's 3.5rem and leaves the heading a little air above
+      it, which is what makes the landing read as deliberate rather than
+      merely uncovered.
+    */
+    html {
+      scroll-padding-top: 5rem;
+    }
+
+    /*
       The padding lives on the scrolling element rather than on the card body
       around it, so the horizontal scrollbar spans the full width of the dark
       surface instead of appearing inset within the padding.
@@ -285,7 +300,7 @@
   <header id="top"
           class="py-5">
     <div class="container py-lg-5">
-      <div class="row align-items-center g-5">
+      <div class="row align-items-center gy-5 gx-0 gx-sm-5">
 
         <div class="col-lg-7">
           <page-eyebrow :extra="mb-3">Bootstrap + Markout</page-eyebrow>
@@ -353,9 +368,9 @@
           </h2>
 
           <p class="lead text-body-secondary">
-            In alternative to making normal Bootstrap-based markup interactive,
-            you can leverage Markout's own Bootstrap kit to reduce clutter.
-            These two files render&nbsp;exactly&nbsp;the&nbsp;same.
+            You can make ordinary Bootstrap markup interactive as it stands, or
+            let Markout's own Bootstrap kit carry the parts that were only ever
+            mechanical. These two files render&nbsp;exactly&nbsp;the&nbsp;same.
           </p>
         </div>
       </div>
@@ -468,7 +483,7 @@
            class="py-5">
     <div class="container py-lg-4">
 
-      <div class="row align-items-center g-5">
+      <div class="row align-items-center gy-5 gx-0 gx-sm-5">
 
         <div class="col-lg-6">
           <page-eyebrow :extra="mb-3">Bootstrap Kit</page-eyebrow>
@@ -1041,7 +1056,7 @@
            class="py-5 bg-body-tertiary">
     <div class="container py-lg-4">
 
-      <div class="row align-items-center g-5">
+      <div class="row align-items-center gy-5 gx-0 gx-sm-5">
 
         <div class="col-lg-6">
           <page-eyebrow :variant="success"
@@ -1212,7 +1227,9 @@
                     A <code class="rule-code">&lt;script&gt;</code> tag
                   </td>
                   <td class="text-body-secondary">
-                    Node serving the page, or a build step
+                    Node to serve, or
+                    <code class="rule-code">markout build</code> to static
+                    files
                   </td>
                 </tr>
 
@@ -1350,7 +1367,9 @@
             imported kit defines, and the parameters one of those tags takes.
             Go to definition on a name, on a custom tag — including one inside
             an installed kit — and on an
-            <code class="rule-code">&lt;:import&gt;</code> path.
+            <code class="rule-code">&lt;:import&gt;</code> path. Hover, rename
+            and find-references reach as far as the name itself does, across
+            pages and fragments alike.
           </p>
         </div>
 
@@ -1361,18 +1380,65 @@
             <code class="rule-code">&gt;</code> in
             <code class="rule-code">${a &gt; b}</code> ends no tag, and one
             that thinks it does rewrites the rest of your attributes into
-            text.
+            text. A page is indented like a page, a
+            <code class="rule-code">.htm</code> fragment like the module it
+            is.
           </p>
         </div>
 
       </div>
 
+      <!--
+        Two sentences that answer the two questions a reader has about any
+        editor extension, in the order they ask them: what does it cost me to
+        try, and what does it take away. Both answers are nothing, which is
+        worth saying plainly rather than leaving to be discovered.
+      -->
       <div class="row justify-content-center mt-4">
         <div class="col-lg-8 text-center">
-          <p class="text-body-secondary mb-0">
+          <p class="text-body-secondary">
             The compiler is bundled, so it works on a project that has
-            installed nothing.
+            installed nothing. And it adds to VS Code's HTML support rather
+            than replacing it: a page is still an
+            <code class="rule-code">html</code> document, so Emmet, tag
+            completion and every other HTML extension keep working as
+            they&nbsp;did.
           </p>
+
+          <div class="d-flex justify-content-center flex-wrap gap-2 mt-4">
+            <bs-link :href="https://marketplace.visualstudio.com/items?itemName=fcapolini.markout-vscode"
+                     :button
+                     :variant="primary">Install for VS Code</bs-link>
+
+            <bs-link :href="https://github.com/fcapolini/markout/tree/main/packages/vscode"
+                     :button
+                     :variant="secondary"
+                     :outline>What it does, in full</bs-link>
+          </div>
+        </div>
+      </div>
+
+      <!--
+        The one setting worth naming here. Formatting is the feature with a
+        rival already installed -- VS Code's own HTML extension offers to
+        format these files too, and on this language it is not a matter of
+        taste which one wins. Left unset by the extension itself, since these
+        are `html` documents on purpose; so the page says it instead.
+      -->
+      <div class="row justify-content-center mt-4">
+        <div class="col-lg-6">
+          <code-card :title="settings.json"
+                     :label="json"
+                     :note>
+<pre class="mb-0"><code data-lang="json">"[html]": { "editor.defaultFormatter": "fcapolini.markout-vscode" }</code></pre>
+            <p :slot="note"
+               class="mb-0">
+              If you format on save: points HTML at this formatter instead of
+              the built-in one, which would read the
+              <code class="rule-code">&gt;</code> in an expression as the end
+              of the tag.
+            </p>
+          </code-card>
         </div>
       </div>
 
@@ -1439,6 +1505,28 @@
                    class="mb-0">
                   Dev mode auto-reloads the browser and puts expression errors
                   in the page itself, instead of only logging them server-side.
+                </p>
+              </code-card>
+            </div>
+
+            <!--
+              The second delivery mode, and the answer to the only real cost
+              the comparison table admits to. Serving is the default because
+              it is the shorter path to a page that runs; this is the one that
+              ends with nothing running at all.
+            -->
+            <div class="col-12">
+              <code-card :title="Ship it static"
+                         :mono=${false}
+                         :label="shell"
+                         :note>
+<pre class="mb-0"><code data-lang="sh">markout build ./my-site ./dist</code></pre>
+                <p :slot="note"
+                   class="mb-0">
+                  The same pages, compiled ahead of time. What lands in
+                  <code class="rule-code">./dist</code> is plain HTML, CSS and
+                  JS — nothing to run in production, and any static host
+                  will take it.
                 </p>
               </code-card>
             </div>
