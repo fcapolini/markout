@@ -10,5 +10,7 @@
   "testTextualIncludeCSS": "literal include as a style element",
   "testTextualIncludeJS": "literal include as a script element",
   "testTextualIncludeText": "literal include as an arbitrary element",
-  "test006recursiveimport": "a fragment's own <:import>, at its top level, still lands its attributes in <head>"
+  "test006recursiveimport": "a fragment's own <:import>, at its top level, still lands its attributes in <head>",
+  "testTextualIncludeEscaped": "literal include shown as source rather than spliced as markup",
+  "testTextualIncludeEscapedFalse": "escaping=\"false\" is the raw default, said out loud"
 }

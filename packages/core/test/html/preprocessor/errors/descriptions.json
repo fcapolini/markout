@@ -4,5 +4,8 @@
   "003": "invalid \"as\" attribute on a literal include",
   "004": "literal include of a missing file",
   "005": "<:import> outside <head> in a page is rejected",
-  "006": "<:import> not at a fragment's own top level is rejected"
+  "006": "<:import> not at a fragment's own top level is rejected",
+  "007": "\"escaping\" without \"as\", where there is no text to escape",
+  "008": "\"escaping\" given a value that is neither true nor false",
+  "009": "\"escaping\" given an expression"
 }

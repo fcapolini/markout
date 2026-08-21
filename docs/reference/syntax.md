@@ -476,6 +476,7 @@ where everything is built together and stops existing together.
 | --- | --- |
 | `<:include src="file.htm" />` | Splices another file into the current document. |
 | `<:include src="file.txt" as="pre" />` | Includes a file as a literal element named `pre` containing its text. |
+| `<:include src="page.html" as="pre" escaping />` | The same, escaped: the file is *shown* as source rather than landing as markup. |
 | `<:import src="file.htm" />` | Splices a fragment into the page; each file is only imported once per page. |
 | `<:define tag="x-y:button">...</:define>` | Declares a reusable custom tag. |
 | `<:logic :aka="x" :n=${1} />` | Declares a scope with no element of its own. |
@@ -704,6 +705,24 @@ never reaches the browser. It gives the element no scope either.
 A name no `<:define>` declares is a compile error. That is the point: a
 renamed component would otherwise leave its stylesheet waiting on a name
 nothing will ever use, and every page would silently lose the styling.
+
+### A literal include lands as markup, or as source
+
+`as` names an element to build and puts the file's text inside it, untouched:
+that is what an inlined `<style>`, `<script>` or svg needs, where an escaped
+`<` would be a syntax error rather than a character.
+
+A file being *shown* needs the opposite, and `escaping` is how it says so:
+
+```html
+<pre><:include src="/examples/counter.html" as="code" escaping /></pre>
+```
+
+The file arrives as text — `<html>` reaches the browser as `&lt;html&gt;` and
+is read rather than parsed — so a sample and the page it runs in can be the
+same file, and cannot drift apart. The flag is written bare or as
+`escaping="true"` / `escaping="false"`; anything else is refused, and it needs
+an `as` to apply to.
 
 ### A fragment has one root
 

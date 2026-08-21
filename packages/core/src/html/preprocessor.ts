@@ -10,6 +10,7 @@ export const INCLUDE_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'INCLUDE';
 export const IMPORT_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'IMPORT';
 export const INCLUDE_SRC_ATTR = 'src';
 export const INCLUDE_AS_ATTR = 'as';
+export const INCLUDE_ESCAPING_ATTR = 'escaping';
 export const GROUP_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'GROUP';
 
 export const MAX_NESTING = 100;
@@ -317,9 +318,70 @@ export class Preprocessor {
         );
         return;
       }
-      return this.processLiteralInclude(d, i, src, as, currDir, main);
+      const escaping = this.literalEscaping(d, main);
+      if (escaping === undefined) {
+        return;
+      }
+      return this.processLiteralInclude(d, i, src, as, escaping, currDir, main);
+    }
+    if (d.node.getAttributeNode(INCLUDE_ESCAPING_ATTR)) {
+      main.addError(
+        'error',
+        `"${INCLUDE_ESCAPING_ATTR}" belongs to a literal include: it says how a ` +
+          `file's TEXT is written out, and without "${INCLUDE_AS_ATTR}" the file is ` +
+          `read as markup and spliced in, with no text of its own to escape. Add ` +
+          `${INCLUDE_AS_ATTR}="pre" (or whatever tag should hold it), or drop ` +
+          `"${INCLUDE_ESCAPING_ATTR}"`,
+        d.node.loc
+      );
+      return;
     }
     return this.processCodeInclude(d, i, src, currDir, main, nesting);
+  }
+
+  /**
+   * `escaping` on a literal include: whether the file lands as TEXT or as
+   * markup.
+   *
+   * A literal include writes the file through untouched, which is what an
+   * inlined svg or stylesheet wants -- and the opposite of what a file being
+   * SHOWN wants, where `<form>` has to reach the browser as `&lt;form&gt;` or
+   * it renders instead of being read. Both are the same include with the
+   * same `as`, so the difference is a flag rather than two directives.
+   *
+   * A flag, and so present-means-on -- but `escaping="false"` is what someone
+   * turning it back off would write, and quietly leaving it ON would be the
+   * one reading no error could be argued out of. Both spellings are taken,
+   * and nothing else is: `escaping="no"` names an intention this cannot
+   * honour, so it is refused rather than rounded up to true.
+   *
+   * @returns the flag, or `undefined` when it was refused (already reported)
+   */
+  protected literalEscaping(d: Include, source: Source): boolean | undefined {
+    // by NODE, not by value: `escaping=${...}` reads as absent through
+    // getAttribute, and an expression silently meaning "off" is the failure
+    // this is here to prevent
+    const attr = d.node.getAttributeNode(INCLUDE_ESCAPING_ATTR);
+    if (!attr) {
+      return false;
+    }
+    // written bare, which is the spelling this expects and the one the parser
+    // hands over as a null value rather than an empty string
+    if (attr.value === null) {
+      return true;
+    }
+    const value =
+      typeof attr.value === 'string' ? attr.value.trim().toLowerCase() : null;
+    if (value === null || !['', 'true', 'false'].includes(value)) {
+      source.addError(
+        'error',
+        `Invalid "${INCLUDE_ESCAPING_ATTR}" attribute: it is a flag, written ` +
+          `bare or as "true"/"false", and holds no expression`,
+        d.node.loc
+      );
+      return undefined;
+    }
+    return value !== 'false';
   }
 
   protected async processLiteralInclude(
@@ -327,6 +389,7 @@ export class Preprocessor {
     i: number,
     fname: string,
     as: string,
+    escaping: boolean,
     currDir: string,
     source: Source
   ) {
@@ -335,9 +398,14 @@ export class Preprocessor {
       return;
     }
     const e = new dom.ServerElement(d.node.ownerDocument, as, d.node.loc);
-    e.appendChild(
-      new dom.ServerText(e.ownerDocument, loaded.text, d.node.loc, false)
-    );
+    // The file's text is CHARACTERS already -- it is a file, not parsed
+    // markup -- so it goes in undecoded and is only then marked for escaping
+    // on the way out. Constructing it as escaping runs the text through
+    // unescapeText first, which would read a .txt file's literal `&amp;` as
+    // an ampersand and show it as one.
+    const text = new dom.ServerText(e.ownerDocument, loaded.text, d.node.loc, false);
+    text.escaping = escaping;
+    e.appendChild(text);
     e.parentElement = d.parent;
     (e as dom.ServerNode).parentNode = d.parent;
     d.parent.childNodes.splice(i, 0, e);

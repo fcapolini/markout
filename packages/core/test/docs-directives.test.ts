@@ -451,6 +451,17 @@ const CASES: Record<string, Case> = {
       expect(p.body()).toContain('<pre>literal text</pre>');
     },
   },
+  '<:include src="page.html" as="pre" escaping />': {
+    works: async () => {
+      // the file is SHOWN: what reaches the browser is text that reads back
+      // as the source, not the markup it would otherwise become
+      const p = await run(
+        '<html><body><:include src="sample.html" as="pre" escaping /></body></html>',
+        { 'sample.html': '<b>markup &amp; text</b>' }
+      );
+      expect(p.body()).toContain('<pre>&lt;b&gt;markup &amp;amp; text&lt;/b&gt;</pre>');
+    },
+  },
   '<:import src="file.htm" />': {
     works: async () => {
       const p = await run(
