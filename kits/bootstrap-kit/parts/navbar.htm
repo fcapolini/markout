@@ -40,6 +40,17 @@
       extra,
     ].filter(s => s).join(' ')}
 
+    // The gap under the links is only wanted while they are stacked, which
+    // is up to `expand` and not to any one breakpoint: left at `mb-lg-0` it
+    // would survive into a bar that has already gone horizontal and push the
+    // links up off the brand's line. A navbar that never collapses has no
+    // stacked state to space out, hence the plain `mb-0`.
+    :_navClass=${[
+      'navbar-nav',
+      'me-auto',
+      expand ? `mb-2 mb-${expand}-0` : 'mb-0',
+    ].join(' ')}
+
     class=${_class}
     :class-sticky-top=${sticky}
     :class-fixed-top=${fixed}
@@ -59,7 +70,7 @@
       </button>
 
       <div class="collapse navbar-collapse" id=${_id}>
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <ul class=${_navClass}>
           <li class="nav-item" :for-each=${items} :for-as="item">
             <a class="nav-link"
               :class-active=${item.active}
