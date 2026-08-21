@@ -345,7 +345,7 @@
      data-lang="html"><:include src="/examples/counter.html" as="code" escaping /></pre>
             <code-preview :slot="preview"
                           :src="/examples/counter.html"
-                          :height="7rem" />
+                          :height="5.5rem" />
             <p :slot="note"
                class="mb-0">
               A Bootstrap button that declares its own value and updates it.
@@ -664,33 +664,40 @@
                      :extra="h-100"
                      :note>
 <pre class="mb-0"><code data-lang="html">&lt;:define tag="bs-input:div"
-         class="mb-3"
+  class="mb-3"
 
-         // parameters
-         :label=${''}
-         :type=${'text'}
-         :placeholder=${''}
-         :check=${() =&gt; true}
-         :message=${'Please check this value.'}
+  // parameters
+  :label=${null}
+  :type=${'text'}
+  :value=${''}
+  :placeholder=${''}
+  :required=${false}
+  :check=${(v) =&gt; true}
+  :message=${'Please check this value.'}
 
-         // private
-         :_value=${''}
-         :_invalid=${_value !== '' &amp;&amp; !check(_value)}
+  // private
+  :_empty=${value === '' || value == null}
+  :_invalid=${_empty ? required : !check(value)}
+
+  // read from outside: is there a value, and does it pass?
+  :valid=${!_empty &amp;&amp; check(value)}
 &gt;
   &lt;label class="form-label"&gt;${label}&lt;/label&gt;
 
   &lt;input class="form-control"
-         type=${type}
-         placeholder=${placeholder}
-         :class-is-invalid=${_invalid}
-         :on-input=${ev =&gt; _value = ev.target.value}&gt;
+    type=${type}
+    value=${value}
+    placeholder=${placeholder}
+    :class-is-invalid=${_invalid}
+    :on-input=${ev =&gt; value = ev.target.value}&gt;
 
   &lt;div class="invalid-feedback"&gt;${message}&lt;/div&gt;
 &lt;/:define&gt;</code></pre>
             <p :slot="note"
                class="mb-0">
               The validity rule arrives as a parameter, so the component holds
-              the wiring and the caller holds the policy.
+              the wiring and the caller holds the policy — and answers
+              <code class="rule-code">valid</code> for whoever asks.
             </p>
           </code-card>
         </div>
@@ -704,7 +711,7 @@
      data-lang="html"><:include src="/examples/validation.html" as="code" escaping /></pre>
             <code-preview :slot="preview"
                           :src="/examples/validation.html"
-                          :height="21rem"
+                          :height="19.5rem"
                           :label="the result — type into it" />
             <p :slot="note"
                class="mb-0">
@@ -735,9 +742,10 @@
             <div class="col-md-4">
               <h3 class="h5">Validity is derived, not&nbsp;set</h3>
               <p class="text-body-secondary mb-0">
-                <code class="rule-code">:_invalid</code> is an expression over
-                <code class="rule-code">:_value</code>, so there is no code path
-                that can forget to clear the error again.
+                <code class="rule-code">:_invalid</code> and
+                <code class="rule-code">:valid</code> are expressions over
+                <code class="rule-code">:value</code>, so there is no code path
+                that can forget to clear the error, or to re-enable the button.
               </p>
             </div>
 
@@ -877,43 +885,57 @@
 
         <div class="col-lg-5">
           <code-card :title="examples/design-system.html"
-                     :label="every page"
-                     :extra="mb-4">
+                     :label="every page">
 <pre class="mb-0"
      data-lang="html"><:include src="/examples/design-system.html" as="code" escaping /></pre>
             <code-preview :slot="preview"
                           :src="/examples/design-system.html"
-                          :height="13rem" />
+                          :height="12.5rem" />
           </code-card>
-
-          <h3 class="h5">Values reach the CSS</h3>
-          <p class="text-body-secondary">
-            <code class="rule-code">${…}</code> works in a stylesheet exactly
-            as it does in markup, so a value like
-            <code class="rule-code">appAccent</code> is a design token without
-            anything being a design token — no build step, no preprocessor,
-            no custom property indirection unless you want one.
-          </p>
-
-          <h3 class="h5">Defaults, then overrides</h3>
-          <p class="text-body-secondary">
-            <code class="rule-code">bsBtnRadius</code> belongs to the Bootstrap
-            kit, which declares its own default. Naming it again here replaces
-            it for every page that imports your kit — and you never forked the
-            component that reads it.
-          </p>
-
-          <h3 class="h5">
-            <code class="rule-code">::</code> means constant
-          </h3>
-          <p class="text-body-secondary mb-0">
-            A token that never changes shouldn't cost anything to watch.
-            Doubling the prefix marks a value as fixed at compile time: it is
-            worked out once while the page is built and substituted into every
-            reader, so nothing of it reaches the browser at all.
-          </p>
         </div>
 
+      </div>
+
+      <div class="row justify-content-center mt-4">
+        <div class="col-lg-10">
+
+          <div class="row g-4">
+            <div class="col-md-4">
+              <h3 class="h5">Values reach the CSS</h3>
+              <p class="text-body-secondary mb-0">
+                <code class="rule-code">${…}</code> works in a stylesheet
+                exactly as it does in markup, so a value like
+                <code class="rule-code">appAccent</code> is a design token
+                without anything being a design token — no build step, no
+                preprocessor, no custom property indirection unless you want
+                one.
+              </p>
+            </div>
+
+            <div class="col-md-4">
+              <h3 class="h5">Defaults, then overrides</h3>
+              <p class="text-body-secondary mb-0">
+                <code class="rule-code">bsBtnRadius</code> belongs to the
+                Bootstrap kit, which declares its own default. Naming it again
+                here replaces it for every page that imports your kit — and you
+                never forked the component that reads it.
+              </p>
+            </div>
+
+            <div class="col-md-4">
+              <h3 class="h5">
+                <code class="rule-code">::</code> means constant
+              </h3>
+              <p class="text-body-secondary mb-0">
+                A token that never changes shouldn't cost anything to watch.
+                Doubling the prefix marks a value as fixed at compile time: it
+                is worked out once while the page is built and substituted into
+                every reader, so nothing of it reaches the browser at all.
+              </p>
+            </div>
+          </div>
+
+        </div>
       </div>
 
       <div class="row justify-content-center mt-4">
