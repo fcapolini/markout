@@ -625,6 +625,8 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
       <bs-range :aka="amount" :label="Amount" :value=\${10} />
       <p id="echo">\${email.value}|\${terms.checked}|\${amount.value}</p>
 
+      <button id="submit" :attr-disabled=\${!email.valid}>submit</button>
+
       <bs-pagination :current=\${page} :pages=\${3} :select=\${(n) => page = n} />
       <p id="paged">page \${page}</p>
 
@@ -756,6 +758,31 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
 
       await input.fill('yes@please');
       expect(await input.getAttribute('class')).not.toContain('is-invalid');
+    } finally {
+      await page.close();
+    }
+  });
+
+  it('answers whether a control holds something to submit, not whether it is red', async () => {
+    const { page } = await open();
+    try {
+      const input = page.locator('input.form-control');
+      const submit = page.locator('#submit');
+      // empty: nothing wrong with it, and nothing in it either -- the two
+      // questions the component deliberately answers differently
+      expect(await input.getAttribute('class')).not.toContain('is-invalid');
+      expect(await submit.isDisabled()).toBe(true);
+
+      await input.fill('nope');
+      expect(await submit.isDisabled()).toBe(true);
+
+      await input.fill('yes@please');
+      expect(await submit.isDisabled()).toBe(false);
+
+      // and back, since this is a value like any other rather than a state
+      // something has to remember to clear
+      await input.fill('');
+      expect(await submit.isDisabled()).toBe(true);
     } finally {
       await page.close();
     }

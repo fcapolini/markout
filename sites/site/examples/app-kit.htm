@@ -10,8 +10,11 @@
     }
   </style>
 
-  <:define tag="app-email:div">
-    <bs-input :label="Email address"
+  <:define tag="app-email:div"
+    // what the page reads to gate its own controls
+    :valid=${input.valid}>
+    <bs-input :aka="input"
+      :label="Email address"
       :type="email"
       :placeholder="you@example.com"
       :check=${v => v.includes('@')}

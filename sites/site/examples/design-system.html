@@ -4,7 +4,8 @@
   <title>A page built on your own kit</title>
 </head>
 <body class="p-4">
-  <app-email />
-  <bs-button :variant="primary">Save</bs-button>
+  <app-email :aka="email" />
+  <bs-button :variant="primary"
+             :disabled=${!email.valid}>Save</bs-button>
 </body>
 </html>

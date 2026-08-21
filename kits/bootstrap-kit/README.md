@@ -108,6 +108,19 @@ That holds however deeply the component sits: a `bs-toast :aka="saved"`
 written inside a `bs-toast-container` is still named where you wrote it, so
 `saved.open = true` reaches it from anywhere on the page.
 
+`bs-input` and `bs-textarea` answer `valid` the same way -- is there a value,
+and does it pass `check`? -- which is what a submit button needs:
+
+```html
+<bs-input :aka="email" :label="Email" :check=${v => v.includes('@')} />
+<bs-button :disabled=${!email.valid}>Send</bs-button>
+```
+
+It is not the negation of the error state. An empty field is not marked
+wrong, which is what keeps a form from opening in red, and it is not
+something to submit either -- so it shows nothing and answers `false`.
+`required` is what makes empty an error as well as a gap.
+
 **Optional regions are `:if`.** A region that exists only when a parameter
 was given is written `:if=${header}`, and nothing inside it evaluates while
 the condition is false — which is what makes `${user.name}` safe to write in
@@ -229,6 +242,9 @@ commented.
 | `bs-check-group` | `legend` `type` `options` `value` `inline` `disabled` |
 | `bs-range` | `label` `name` `min` `max` `step` `value` `disabled` `showValue` |
 | `bs-input-group` | `prefix` `suffix` `size` |
+
+`bs-input` and `bs-textarea` also answer `valid`, which is read rather than
+passed -- see *Values are read and written* above.
 
 ### Components
 
