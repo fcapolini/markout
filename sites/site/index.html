@@ -1422,7 +1422,13 @@
         are `html` documents on purpose; so the page says it instead.
       -->
       <div class="row justify-content-center mt-4">
-        <div class="col-lg-6">
+        <!---
+          Wide enough for the line, which is the whole point of it: at half the
+          row it was cut off 36px from the end and had to be scrolled, and this
+          is the one sample on the page that exists to be copied. `lg-8` also
+          puts it under the paragraph above rather than beside nothing.
+        -->
+        <div class="col-lg-8">
           <code-card :title="settings.json"
                      :label="json"
                      :note>
