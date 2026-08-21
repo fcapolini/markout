@@ -85,6 +85,7 @@ export function stage1load(page: Page) {
   // expanding anything at all once a definition is based on another one
   // would work on a stencil that is about to be rewritten underneath it
   checkSlotNames(page);
+  checkStraySlots(page);
   rejectDerivedDefines(page) || expandCustomTagUsages(page);
   linkElseChains(page);
   checkLogicPlacement(page);
@@ -149,6 +150,72 @@ function checkSlotNames(page: Page): void {
     };
     walk(stencil);
   }
+}
+
+/**
+ * A `<:slot>` written anywhere but a definition body.
+ *
+ * The two halves of slotting are spelled differently on purpose: `<:slot>`
+ * DECLARES one, inside a `<:define>`, and `:slot="name"` on the content
+ * ADDRESSES one, at a usage site. Writing the element at the usage site is
+ * the plausible confusion -- it names the slot, so it reads like it fills
+ * it -- and it was silent, because unwrapSlots() replaces a `<:slot>` with
+ * whatever it holds. The content stayed, lost its address, and went to the
+ * default slot: for a navbar whose `end` slot sits at the right, a theme
+ * toggle that quietly rendered inside the brand at the left.
+ *
+ * Runs before expandCustomTagUsages, which puts unfilled `<:slot>`s from a
+ * cloned stencil into the page -- those are the legitimate kind, and this
+ * would report every one of them.
+ */
+function checkStraySlots(page: Page): void {
+  // a definition's body is exactly where `<:slot>` belongs; expandDefine has
+  // moved each one into a <template> of its own by now -- except where the
+  // definition was refused, which leaves the <:define> in the tree with its
+  // slots inside. Those are written correctly and are not this error; the
+  // definition already has one of its own to report
+  const bodies = new Set<object>(page.defineStencils.values());
+  const walk = (e: ServerElement, usage: string | null) => {
+    if (bodies.has(e) || e.tagName === DEFINE_DIRECTIVE_TAG) return;
+    const children =
+      e.tagName === 'TEMPLATE'
+        ? [...(e as ServerTemplateElement).content.childNodes]
+        : [...e.childNodes];
+    for (const child of children) {
+      if (child.nodeType !== NodeType.ELEMENT) continue;
+      const el = child as ServerElement;
+      if (el.tagName !== SLOT_DIRECTIVE_TAG) {
+        const tag = el.tagName.toLowerCase();
+        walk(el, page.customTags.has(tag) ? tag : usage);
+        continue;
+      }
+      const self = SLOT_DIRECTIVE_TAG.toLowerCase();
+      const name = `${el.getAttribute(SLOT_NAME_ATTR) ?? DEFAULT_SLOT_NAME}`;
+      const written = name ? `<${self} ${SLOT_NAME_ATTR}="${name}">` : `<${self}>`;
+      // the fix, spelled on the caller's own markup where that is possible:
+      // a made-up tag in the example reads as unrelated to what they wrote
+      const inner = [...el.childNodes].find(
+        n => n.nodeType === NodeType.ELEMENT
+      ) as ServerElement | undefined;
+      const shown = inner ? `<${inner.tagName.toLowerCase()}` : '<the-content';
+      addError(
+        page,
+        usage
+          ? `${written} inside <${usage}> fills no slot: <${self}> DECLARES one, ` +
+              `and only a <${DEFINE_DIRECTIVE_TAG.toLowerCase()}> has slots to ` +
+              `declare. A usage site ADDRESSES a slot with a ` +
+              `":${SLOT_TARGET_ATTR}" attribute on the content itself -- ` +
+              `${shown} :${SLOT_TARGET_ATTR}="${name}">. As written the ` +
+              `content is unaddressed and goes to <${usage}>'s default slot`
+          : `${written} means nothing outside a ` +
+              `<${DEFINE_DIRECTIVE_TAG.toLowerCase()}>: it marks where a ` +
+              `definition takes the caller's markup, and here there is no ` +
+              `definition and no caller. It renders as its own content`,
+        el.loc
+      );
+    }
+  };
+  walk(page.source.doc.documentElement!, null);
 }
 
 /**

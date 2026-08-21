@@ -98,3 +98,69 @@ describe('a definition with two slots of one name', () => {
     ).toStrictEqual([]);
   });
 });
+
+/**
+ * `<:slot>` at a usage site, which is the other half of slotting written in
+ * the wrong half's spelling.
+ *
+ * The element DECLARES a slot and the `:slot` attribute ADDRESSES one, and
+ * the two look enough alike that `<:slot name="end">` reads like it fills
+ * `end`. It doesn't, and it used to say nothing: unwrapSlots() replaced the
+ * element with what it held, and the content -- now carrying no address at
+ * all -- went to the default slot. That is a real page's theme toggle
+ * rendering inside a navbar's brand instead of at its right edge.
+ */
+describe('a <:slot> written outside a definition', () => {
+  const DEF = '<:define tag="my-box:div"><:slot name="end" /></:define>';
+
+  it('refuses one at a usage site, and says how to address a slot', () => {
+    const found = errors(
+      `<html><head>${DEF}</head>` +
+        '<body><my-box><:slot name="end"><b>X</b></:slot></my-box></body></html>'
+    ).join();
+    expect(found).toMatch(/<:slot name="end"> inside <my-box> fills no slot/);
+    // the fix, spelled on the caller's own tag rather than an invented one
+    expect(found).toMatch(/<b :slot="end">/);
+    // and what happens instead, since the markup does render -- just not
+    // where it was aimed, which is the part that makes this hard to see
+    expect(found).toMatch(/goes to <my-box>'s default slot/);
+  });
+
+  it('refuses one in plain page markup, where there is no caller at all', () => {
+    const found = errors(
+      `<html><head>${DEF}</head><body><div><:slot />x</div></body></html>`
+    ).join();
+    expect(found).toMatch(/<:slot> means nothing outside a <:define>/);
+    expect(found).not.toMatch(/default slot/);
+  });
+
+  it('finds one nested below the usage site, not just directly under it', () => {
+    expect(
+      errors(
+        `<html><head>${DEF}</head>` +
+          '<body><my-box><div><:slot name="end">X</:slot></div></my-box></body></html>'
+      ).join()
+    ).toMatch(/inside <my-box>/);
+  });
+
+  it('leaves a definition\'s own slots alone, expanded usages included', () => {
+    expect(
+      errors(
+        `<html><head>${DEF}</head>` +
+          '<body><my-box><b :slot="end">X</b></my-box><my-box /></body></html>'
+      )
+    ).toStrictEqual([]);
+  });
+
+  it('says nothing extra about a definition that was refused for another reason', () => {
+    // the <:define> stays in the tree when expandDefine gives up, slots and
+    // all, and those slots are written correctly -- reporting them too would
+    // bury the one error that explains the page
+    const found = errors(
+      '<html><head><:define tag="my-box:div" :aka="boxy"><:slot /></:define></head>' +
+        '<body><my-box /></body></html>'
+    );
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatch(/cannot carry ":aka"/);
+  });
+});
