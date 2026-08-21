@@ -338,14 +338,14 @@
         </div>
 
         <div class="col-lg-5">
-          <code-card :title="index.html"
+          <code-card :title="examples/counter.html"
                      :label="HTML"
                      :note>
-<pre class="mb-0"><code data-lang="html">&lt;button class="btn btn-primary"
-        :count=${0}
-        :on-click=${() =&gt; count++}&gt;
-  Clicked ${count} time${count !== 1 ? 's' : ''}
-&lt;/button&gt;</code></pre>
+<pre class="mb-0"
+     data-lang="html"><:include src="/examples/counter.html" as="code" escaping /></pre>
+            <code-preview :slot="preview"
+                          :src="/examples/counter.html"
+                          :height="7rem" />
             <p :slot="note"
                class="mb-0">
               A Bootstrap button that declares its own value and updates it.
@@ -696,24 +696,16 @@
         </div>
 
         <div class="col-lg-6">
-          <code-card :title="index.html"
+          <code-card :title="examples/validation.html"
                      :label="using it"
                      :extra="h-100"
                      :note>
-<pre class="mb-0"><code data-lang="html">&lt;form&gt;
-  &lt;bs-input :label="Email address"
-            :type="email"
-            :placeholder="you@example.com"
-            :check=${v =&gt; v.includes('@')}
-            :message="That doesn't look like an email address." /&gt;
-
-  &lt;bs-input :label="Password"
-            :type="password"
-            :check=${v =&gt; v.length &gt;= 8}
-            :message="Use at least 8 characters." /&gt;
-
-  &lt;button class="btn btn-primary"&gt;Create account&lt;/button&gt;
-&lt;/form&gt;</code></pre>
+<pre class="mb-0"
+     data-lang="html"><:include src="/examples/validation.html" as="code" escaping /></pre>
+            <code-preview :slot="preview"
+                          :src="/examples/validation.html"
+                          :height="21rem"
+                          :label="the result — type into it" />
             <p :slot="note"
                class="mb-0">
               Each <code class="rule-code">&lt;bs-input&gt;</code> keeps its own
@@ -866,32 +858,13 @@
       <div class="row g-4 align-items-start">
 
         <div class="col-lg-7">
-          <code-card :title="app-kit.htm"
+          <code-card :title="examples/app-kit.htm"
                      :label="your kit"
                      :variant="primary"
                      :extra="h-100"
                      :note>
-<pre class="mb-0"><code data-lang="html">&lt;lib ::bsBtnRadius="2rem"
-     ::appAccent="#6f42c1"&gt;
-
-  &lt;:import src="/npm/@markout-lang/bootstrap-kit/all.htm" /&gt;
-
-  &lt;style&gt;
-    .btn-primary {
-      background-color: ${appAccent};
-      border-color: ${appAccent};
-    }
-  &lt;/style&gt;
-
-  &lt;:define tag="app-email:div"&gt;
-    &lt;bs-input :label="Email address"
-              :type="email"
-              :placeholder="you@example.com"
-              :check=${v =&gt; v.includes('@')}
-              :message="That doesn't look like an email address." /&gt;
-  &lt;/:define&gt;
-
-&lt;/lib&gt;</code></pre>
+<pre class="mb-0"
+     data-lang="html"><:include src="/examples/app-kit.htm" as="code" escaping /></pre>
             <p :slot="note"
                class="mb-0">
               Three things at once: a value the Bootstrap kit already reads,
@@ -902,17 +875,14 @@
         </div>
 
         <div class="col-lg-5">
-          <code-card :title="index.html"
+          <code-card :title="examples/design-system.html"
                      :label="every page"
                      :extra="mb-4">
-<pre class="mb-0"><code data-lang="html">&lt;head&gt;
-  &lt;:import src="/app-kit.htm" /&gt;
-&lt;/head&gt;
-
-&lt;body&gt;
-  &lt;app-email /&gt;
-  &lt;bs-button :variant="primary"&gt;Save&lt;/bs-button&gt;
-&lt;/body&gt;</code></pre>
+<pre class="mb-0"
+     data-lang="html"><:include src="/examples/design-system.html" as="code" escaping /></pre>
+            <code-preview :slot="preview"
+                          :src="/examples/design-system.html"
+                          :height="13rem" />
           </code-card>
 
           <h3 class="h5">Values reach the CSS</h3>
@@ -1721,8 +1691,16 @@
           : esc(line)))
         .join('\n');
 
-      document.querySelectorAll('code[data-lang]').forEach((el) => {
-        el.innerHTML = (el.dataset.lang === 'sh' ? sh : html)(el.textContent);
+      /*
+        `data-lang` sits on the <pre> for a sample that arrives by
+        `<:include ... escaping>`: the include builds its own <code> and has
+        no attributes to give it. The trailing newline every file ends with
+        goes too, since it would print as a blank last line the hand-written
+        samples don't have.
+      */
+      document.querySelectorAll('code[data-lang], pre[data-lang] > code').forEach((el) => {
+        const lang = el.dataset.lang ?? el.parentElement.dataset.lang;
+        el.innerHTML = (lang === 'sh' ? sh : html)(el.textContent.replace(/\s+$/, ''));
       });
     })();
   </script>

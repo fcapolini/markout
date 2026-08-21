@@ -1,0 +1,21 @@
+<lib ::bsBtnRadius="2rem"
+  ::appAccent="#6f42c1">
+
+  <:import src="/npm/@markout-lang/bootstrap-kit/all.htm" />
+
+  <style>
+    .btn-primary {
+      background-color: ${appAccent};
+      border-color: ${appAccent};
+    }
+  </style>
+
+  <:define tag="app-email:div">
+    <bs-input :label="Email address"
+      :type="email"
+      :placeholder="you@example.com"
+      :check=${v => v.includes('@')}
+      :message="That doesn't look like an email address." />
+  </:define>
+
+</lib>

@@ -92,8 +92,60 @@
 
     <div class="card-body p-0 code-surface"><:slot /></div>
 
+    <!---
+      Between the sample and the line about it, which is the order the card
+      argues in: here is what you write, here is what it does, here is what
+      to notice. An unfilled slot renders its own content, and this one has
+      none, so a card without a preview is the card it was before.
+    -->
+    <:slot name="preview" />
+
     <div class="card-footer text-body-secondary small"
       :if=${note}><:slot name="note" /></div>
+  </:define>
+
+  <!---
+    The sample above, running.
+
+    A frame rather than the markup inlined here, because the samples ARE
+    pages: they start at `<html>` and declare values on it, and nothing
+    below a page's own root can be given a root's scope. Dropped into this
+    page they would have to be rewritten to fit inside it, and the thing on
+    screen would stop being the thing the card says you can copy.
+
+    It goes both ways, too: an example is a page of the site like any other,
+    so it can be opened on its own, and what is framed here is what a visitor
+    gets there. The source above it comes from that same file --
+    `<:include ... escaping>` -- so the two cannot drift apart.
+
+    `loading="lazy"` is not a nicety: every frame is another page for the
+    server to compile, and the ones down the page are for readers who reach
+    them. `title` is what a screen reader announces before entering the
+    frame, and "the result" is exactly what it is.
+  -->
+  <:define tag="code-preview:div"
+
+    // parameters
+    :src=${''}                 // the example page, served like any other
+    :height=${'10rem'}         // the frame's own height, sample by sample
+    :label=${'the result'}
+
+    class="border-top"
+  >
+    <div class="d-flex justify-content-between align-items-center px-3 py-1 small">
+      <span class="text-body-secondary">${label}</span>
+
+      <a class="link-secondary text-decoration-none"
+        href=${src}
+        target="_blank"
+        rel="noopener">open the page</a>
+    </div>
+
+    <iframe class="d-block w-100 border-0 bg-body"
+      src=${src}
+      title=${label}
+      loading="lazy"
+      :style-height=${height}></iframe>
   </:define>
 
   <!---

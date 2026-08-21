@@ -38,3 +38,17 @@ applications don't.
 
 `/demos/kitchen-sink.html` is every Bootstrap-kit component one after
 another, which is what a change to the kit gets checked against.
+
+## Examples
+
+`/examples/` holds the pages framed inside the homepage's code cards. Each
+one is a real page of the site, served and opened like any other, and the
+sample in the card above the frame is that same file read back with
+`<:include ... escaping />` -- so what is shown and what is running cannot
+say different things.
+
+They are deliberately not in `sitemap.xml`: they are three-line pages making
+one point each, reachable from the card that frames them. They carry no
+analytics tag either, for the reason the README demos don't -- every visit to
+the homepage loads them, and the pageviews would be the homepage's counted
+again.

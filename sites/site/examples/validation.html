@@ -1,0 +1,22 @@
+<html lang="en">
+<head>
+  <:import src="/npm/@markout-lang/bootstrap-kit/all.htm" />
+  <title>A form that validates itself</title>
+</head>
+<body class="p-4">
+  <form>
+    <bs-input :label="Email address"
+              :type="email"
+              :placeholder="you@example.com"
+              :check=${v => v.includes('@')}
+              :message="That doesn't look like an email address." />
+
+    <bs-input :label="Password"
+              :type="password"
+              :check=${v => v.length >= 8}
+              :message="Use at least 8 characters." />
+
+    <button class="btn btn-primary">Create account</button>
+  </form>
+</body>
+</html>
