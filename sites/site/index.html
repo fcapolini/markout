@@ -256,31 +256,34 @@
   <!--- Navigation -->
 
   <!---
-    The mark before the name, inlined rather than linked: it is drawn in
-    `currentColor`, which only means anything to markup that is part of this
-    page -- an <img> would be a document of its own and take the black a
-    lone svg defaults to. It carries no name, so it adds nothing to the
-    link's own text, which is what says "Markout" to a reader who isn't
-    looking at it.
-
-    `as="span"` makes this a literal include, dropping the file in whole and
-    wrapping it. Without it the file is read as markup, which for a fragment
-    means its root attributes are merged into the tag doing the including --
-    an svg's viewBox landing on the brand link, and no svg left.
+    The links point away from this page rather than down it. Someone who
+    keeps reading gets to every section anyway; someone who is already
+    convinced wants the demos, the docs, or the extension, and those are
+    the three places this page can't take them by scrolling.
   -->
   <bs-navbar :sticky
              :brand="#top"
              :extra="border-bottom"
-             :expand="xl"
+             :expand="md"
              :items=${[
-               { name: 'Before / after', link: '#boilerplate' },
-               { name: 'Bootstrap Kit', link: '#kit' },
-               { name: 'Reactivity', link: '#reactive' },
-               { name: 'Design systems', link: '#design-system' },
-               { name: 'The language', link: '#language' },
-               { name: 'Compared', link: '#compared' },
-               { name: 'Editor', link: '#editor' },
+               { name: 'Demos', link: '/demos/' },
+               { name: 'Docs', link: 'https://github.com/fcapolini/markout/blob/main/docs/reference/syntax.md' },
+               { name: 'VS Code extension', link: 'https://marketplace.visualstudio.com/items?itemName=markout.markout-vscode' },
+               { name: 'Get started', link: '#start' },
              ]}>
+    <!---
+      The mark before the name, inlined rather than linked: it is drawn in
+      `currentColor`, which only means anything to markup that is part of
+      this page -- an <img> would be a document of its own and take the black
+      a lone svg defaults to. It carries no name, so it adds nothing to the
+      link's own text, which is what says "Markout" to a reader who isn't
+      looking at it.
+
+      `as="span"` makes this a literal include, dropping the file in whole and
+      wrapping it. Without it the file is read as markup, which for a fragment
+      means its root attributes are merged into the tag doing the including --
+      an svg's viewBox landing on the brand link, and no svg left.
+    -->
     <span class="fw-semibold d-flex align-items-center gap-2">
       <:include src="/logo-small-plain.svg" as="span" />
       Markout
