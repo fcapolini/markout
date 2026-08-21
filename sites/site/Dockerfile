@@ -95,6 +95,7 @@ COPY sites/site/index.html sites/site/robots.txt sites/site/sitemap.xml ./public
 COPY sites/site/favicon.ico sites/site/favicon.svg sites/site/logo-small-plain.svg ./public/
 COPY sites/site/social-card.png ./public/
 COPY sites/site/parts ./public/parts
+COPY sites/site/examples ./public/examples
 COPY sites/site/demos ./public/demos
 # The desk's service is the one piece of TypeScript inside the demos, and its
 # compiled half is up in the application. Nothing here is a source file.
