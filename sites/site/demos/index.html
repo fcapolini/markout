@@ -31,16 +31,20 @@
   an entry — which is the same claim the Bootstrap kit makes about a navbar,
   made here about this page.
 -->
-<body :demos=${[
+<body ::repo=${'https://github.com/fcapolini/markout/tree/main/sites/site/'}
+
+      :demos=${[
         {
           name: 'Kitchen Sink',
           href: '/demos/kitchen-sink.html',
+          source: 'demos/kitchen-sink.html',
           blurb: 'Every component in @markout-lang/bootstrap-kit, on one page, in use.',
           tag: 'bootstrap-kit',
         },
         {
           name: 'Orbit',
           href: '/demos/orbit.html',
+          source: 'demos/orbit.html',
           blurb: 'An operations console built out of the kit. Its data is a directory of ' +
                  'JSON files, fetched while the page renders — no back end, and the ' +
                  'browser asks for nothing.',
@@ -49,6 +53,7 @@
         {
           name: 'Desk',
           href: '/demos/desk/',
+          source: 'demos/desk',
           blurb: 'The other half of Orbit: a small support desk with a service of its own. ' +
                  'A search the server answers, a thread that cannot be asked for until the ' +
                  'list has replied, a reply that POSTs, and one value it refuses to publish.',
@@ -57,6 +62,7 @@
         {
           name: 'Before and after',
           href: '/demos/bootstrap/index.html',
+          source: 'demos/bootstrap',
           blurb: 'The same marketing page written twice: once by hand, once with the kit. ' +
                  'All the difference is in the first 35 lines.',
           tag: 'bootstrap-kit',
@@ -65,6 +71,7 @@
         {
           name: 'Data sources',
           href: '/demos/std/index.html',
+          source: 'demos/std',
           blurb: '@markout-lang/std-kit: a page that reads its data on the server and ships it ' +
                  'rendered. Read the source of what is served — that is the point.',
           tag: 'std-kit',
@@ -72,12 +79,14 @@
         {
           name: 'The README, running',
           href: '/demos/readme/index.html',
+          source: 'demos/readme',
           blurb: 'Every example from the README as a page you can open.',
           tag: 'language',
         },
         {
           name: 'Setlist',
           href: '/demos/setlist/index.html',
+          source: 'demos/setlist',
           blurb: 'A small application with a kit of its own — components that are not a ' +
                  'CSS framework wrapper.',
           tag: 'application',
@@ -85,6 +94,7 @@
         {
           name: 'Shoelace',
           href: '/demos/shoelace/index.html',
+          source: 'demos/shoelace',
           blurb: 'Web components instead of CSS classes: `:prop-` and `:on-` against a ' +
                  'custom-element library.',
           tag: 'web components',
@@ -92,6 +102,7 @@
         {
           name: 'Web Awesome',
           href: '/demos/webawesome/index.html',
+          source: 'demos/webawesome',
           blurb: 'The same idea again, against a different component library.',
           tag: 'web components',
         },
@@ -113,20 +124,38 @@
         <p class="lead text-body-secondary mb-0">
           Every page here is served by Markout and rendered before it reaches
           the browser. View source on any of them: the markup you see is the
-          markup that arrived.
+          markup that arrived — and every card links what was written, in the
+          repository, beside it.
         </p>
       </div>
     </div>
 
     <div class="row g-4">
       <div class="col-md-6 col-xl-4" :for-each=${demos} :for-as="demo">
-        <bs-card :extra="h-100">
-          <span class="badge text-bg-secondary mb-3">${demo.tag}</span>
+        <!---
+          A column body so the links can be pushed to the foot of it: the
+          cards are `h-100` and the blurbs are not the same length, so
+          without it every card's links sit wherever its own prose ended.
+        -->
+        <bs-card :extra="h-100"
+                 :bodyExtra="d-flex flex-column">
+          <span class="badge text-bg-secondary mb-3 align-self-start">${demo.tag}</span>
           <h2 class="h4 mb-2"><a class="stretched-link link-body-emphasis text-decoration-none"
                                  href=${demo.href}>${demo.name}</a></h2>
           <p class="text-body-secondary mb-0">${demo.blurb}</p>
-          <p class="mt-3 mb-0" :for-data=${demo.also}>
-            <a class="small position-relative" href=${data.href}>${data.name}</a>
+          <!---
+            Lifted above the heading's `stretched-link`, which covers the whole
+            card: `position-relative` alone is not enough, the stretched
+            `::after` sitting at `z-index: 1` and a relative element with no
+            index of its own staying under it. That is Bootstrap's documented
+            pair -- position AND index -- and without the second half these
+            links are drawn where they read as clickable and answer nothing.
+          -->
+          <p class="mt-3 mb-0 mt-auto pt-3 small d-flex flex-wrap gap-3 position-relative z-2">
+            <a :for-data=${demo.also}
+               href=${data.href}>${data.name}</a>
+
+            <a href=${repo + demo.source}>source</a>
           </p>
         </bs-card>
       </div>
