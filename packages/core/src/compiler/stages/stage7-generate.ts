@@ -80,8 +80,12 @@ export function stage7generate(
   page: Page,
   runtimeSrc = DEFAULT_RUNTIME_SRC,
   dev = false,
-  classManifest = false
+  classManifest = false,
+  generator = true
 ) {
+  // first, so it lands at the end of the head the AUTHOR wrote rather than
+  // after however many stencils the page turns out to need
+  generator && injectGenerator(page);
   relocateStencils(page);
   classManifest && injectClassManifest(page);
   const root = page.global.children[0];
@@ -135,6 +139,59 @@ export function stage7generate(
  */
 function codegenOptions(dev: boolean) {
   return dev ? undefined : { format: { compact: true } };
+}
+
+/** what a compiled page says built it, when it does not already say */
+export const GENERATOR_NAME = 'Markout';
+
+/**
+ * `<meta name="generator" content="Markout">`, at the end of `<head>`.
+ *
+ * How a generator has said what it is since long before this one: a site
+ * carries the name of the thing that built it, and everything that counts
+ * what the web is made of reads exactly this. It is also the only signal a
+ * language gets from the sites it never hears about.
+ *
+ * **At the end, and this is the reason rather than tidiness.** A document's
+ * `<meta charset>` is only honoured within the first 1024 bytes, so anything
+ * inserted at the TOP of a head pushes a late-declared one towards that
+ * edge. Appending cannot.
+ *
+ * **No version.** A version names the release to look up advisories for,
+ * which is a thing to hand an attacker rather than a thing to publish -- the
+ * same reasoning that gives this server CSP nonces and a page limit. It
+ * would also rewrite every built page on every release, for a fact nobody
+ * reading the page can use.
+ *
+ * **Not if the page already says.** An author who wrote their own generator
+ * meta has said something deliberate about what made this page, and a
+ * second one would contradict it. Matched case-insensitively, because a
+ * meta's name is ASCII case-insensitive and `name="Generator"` is the same
+ * declaration.
+ *
+ * Skipped where there is no `<head>` to append to, which is what a fragment
+ * is -- so an imported file carries nothing and the page that imports it
+ * carries one.
+ */
+function injectGenerator(page: Page) {
+  const doc = page.source.doc;
+  const head = doc.head;
+  if (!head || saysGenerator(head)) {
+    return;
+  }
+  const meta = doc.createElement('meta');
+  meta.setAttribute('name', 'generator', head.loc);
+  meta.setAttribute('content', GENERATOR_NAME, head.loc);
+  head.appendChild(meta);
+}
+
+function saysGenerator(head: ServerElement): boolean {
+  return head.childNodes.some(
+    n =>
+      n.nodeType === NodeType.ELEMENT &&
+      (n as ServerElement).tagName === 'META' &&
+      `${(n as ServerElement).getAttribute('name') ?? ''}`.toLowerCase() === 'generator'
+  );
 }
 
 /**

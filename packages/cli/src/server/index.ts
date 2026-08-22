@@ -113,6 +113,8 @@ export interface ServerProps {
   compress?: boolean;
   /** objects pages may reach from a `:server-` value; see MarkoutProps */
   globals?: { [name: string]: unknown };
+  /** say what built the pages; on by default, see MarkoutProps */
+  generator?: boolean;
   /**
    * What a visitor gets instead of a bare status line: a not-found page of
    * the site's own, and a page for a docroot that will not compile. See

@@ -94,6 +94,18 @@ export interface CompilerProps {
    * markup pays nothing for a page that says what it already shows.
    */
   classManifest?: boolean;
+  /**
+   * Say what built the page: `<meta name="generator" content="Markout">`,
+   * appended to `<head>` unless the page already names a generator.
+   *
+   * On by default, and off is a supported answer rather than a thing to
+   * strip afterwards. Someone hardening a deployment would otherwise be
+   * post-processing the HTML to remove it, which is the arrangement every
+   * generator that made this unconditional has left its users with. It
+   * carries no version, deliberately -- see stage7-generate's
+   * injectGenerator.
+   */
+  generator?: boolean;
 }
 
 export class Compiler {
@@ -102,6 +114,7 @@ export class Compiler {
   dev: boolean;
   treeshake: boolean;
   classManifest: boolean;
+  generator: boolean;
   serverGlobals: ReadonlySet<string>;
 
   constructor(options: CompilerProps) {
@@ -116,6 +129,7 @@ export class Compiler {
     this.dev = options.dev ?? false;
     this.treeshake = options.treeshake ?? true;
     this.classManifest = options.classManifest ?? false;
+    this.generator = options.generator ?? true;
     this.serverGlobals = new Set(options.serverGlobals ?? []);
     // a name that is already the language's would be unreachable behind it,
     // and the page author would have no way to tell which one they got
@@ -140,7 +154,7 @@ export class Compiler {
     page.errors.length || stage5comptime(page);
     page.errors.length || !this.treeshake || stage6treeshake(page);
     page.errors.length ||
-      stage7generate(page, this.runtimeSrc, this.dev, this.classManifest);
+      stage7generate(page, this.runtimeSrc, this.dev, this.classManifest, this.generator);
     return page;
   }
 }

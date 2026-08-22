@@ -50,6 +50,14 @@ export interface MarkoutProps {
   dev?: boolean;
   logger?: MarkoutLogger;
   /**
+   * Say what built the pages: `<meta name="generator" content="Markout">`,
+   * appended to a page's `<head>` unless it already names a generator.
+   *
+   * On by default. Off is a supported answer for a deployment that would
+   * rather not say, instead of a thing to strip out of the HTML afterwards.
+   */
+  generator?: boolean;
+  /**
    * Objects the pages may reach from a `:server-` value -- a database
    * handle, a mailer, whatever this application has.
    *
@@ -274,6 +282,7 @@ export function markout(props: MarkoutProps) {
     docroot,
     dev,
     kits: discovered.kits,
+    generator: props.generator,
     serverGlobals: globals ? Object.keys(globals) : undefined,
   });
   const clientCode = loadClientCode();

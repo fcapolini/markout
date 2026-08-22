@@ -123,6 +123,12 @@ So the whole ahead-of-time mode is:
 markout build
 ```
 
+Each built page carries `<meta name="generator" content="Markout">` at the end
+of its `<head>`, unless it already names a generator of its own —
+`--no-generator` leaves it out, and the served mode takes the same flag. It
+carries no version, deliberately: that would name the release to look up
+advisories for.
+
 It compiles every `.html` under the docroot, writes the browser runtime beside
 them, and copies everything else across — except `.htm` fragments, which are
 source that reaches the output inlined into the pages that imported them, and

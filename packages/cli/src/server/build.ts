@@ -71,6 +71,15 @@ export interface BuildProps {
    */
   classManifest?: boolean;
   /**
+   * Say what built the pages: `<meta name="generator" content="Markout">`,
+   * appended to a page's `<head>` unless it already names a generator.
+   *
+   * On by default. A built site is where this matters most -- it is the
+   * copy that goes somewhere nobody here will ever hear about -- and also
+   * the one whose bytes someone may want to account for exactly.
+   */
+  generator?: boolean;
+  /**
    * Write ONLY the class manifest -- one file, no pages, no assets, no
    * runtime -- and skip rendering entirely.
    *
@@ -201,6 +210,7 @@ export async function build(props: BuildProps): Promise<BuildResult> {
     runtimeSrc,
     kits: discovered.kits,
     classManifest: props.classManifest,
+    generator: props.generator,
   });
   const resolver = new Resolver(docroot, discovered.kits);
   const result: BuildResult = {

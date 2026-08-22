@@ -22,6 +22,27 @@ The broad flow is:
 The important point is that the runtime is not a separate semantic model. The
 server and browser both execute the same scope/value logic.
 
+## What compiling adds to the page
+
+A compiled page carries a little markup its author did not write, and all of
+it is at the end of `<head>` or the end of `<body>`, where it displaces
+nothing:
+
+- **Marker comments** where interpolated text, a custom-tag usage site, or a
+  conditional or replicated element was written. They hold the place; the
+  runtime writes around them. See
+  [stencils out of the way](../design/stencil-placement.md).
+- **Stencils** — a `<template>` per conditional or replicated region, in
+  `<head>`, holding the markup that is not currently in the page.
+- **Two `<script>`s** at the end of `<body>`: the compiled props, and the
+  browser runtime.
+- **`<meta name="generator" content="Markout">`** at the end of `<head>`,
+  unless the page already names a generator of its own. No version: a
+  version names the release to look up advisories for, which is a thing to
+  hand an attacker rather than to publish. Turn it off with
+  `markout build --no-generator`, `markout --no-generator`, or
+  `generator: false` on the middleware or the compiler.
+
 ## Default scopes
 
 The root HTML elements have built-in names:

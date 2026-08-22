@@ -83,7 +83,13 @@ async function main() {
       `write only ${CLASSES_MANIFEST_FILE} -- the same names, merged, with ` +
         'no pages, assets or runtime; the scan target for a served docroot'
     )
-    .action(async (pathname: string | undefined, outdir: string | undefined, options: { page: string[]; origin?: string; classManifest?: boolean; classesOnly?: boolean }) => {
+    // negated, so the default reads as what it is: pages say what built
+    // them unless a deployment would rather they did not
+    .option(
+      '--no-generator',
+      'omit <meta name="generator" content="Markout"> from the built pages'
+    )
+    .action(async (pathname: string | undefined, outdir: string | undefined, options: { page: string[]; origin?: string; classManifest?: boolean; classesOnly?: boolean; generator?: boolean }) => {
       const docroot = path.resolve(process.cwd(), pathname ?? DEFAULT_DOCROOT);
       // beside the docroot rather than inside it: `build` refuses an output
       // directory under the docroot, because the next run would compile its
@@ -116,6 +122,7 @@ async function main() {
             origin,
             classManifest: options.classManifest,
             classesOnly: options.classesOnly,
+            generator: options.generator,
           }),
           options.page.length > 0,
           !!options.classesOnly
@@ -137,6 +144,10 @@ async function main() {
       'compress responses (gzip/deflate) when the client accepts it; '
         + 'redundant behind a proxy or CDN that already does'
     )
+    .option(
+      '--no-generator',
+      'omit <meta name="generator" content="Markout"> from the served pages'
+    )
     .action((pathname, options) => {
       pathname = pathname ?? DEFAULT_DOCROOT;
       console.log(`Starting server for ${pathname}...`);
@@ -151,6 +162,7 @@ async function main() {
         port,
         dev: !!options.dev,
         compress: !!options.compress,
+        generator: options.generator,
       }).start();
     });
 
