@@ -577,8 +577,17 @@ export class ServerDocument extends ServerElement implements Document {
     return new ServerText(this, text, this.loc, false);
   }
 
+  /**
+   * `<template>` gets the class that has a content fragment, as in a
+   * browser: one created here is otherwise an ordinary element whose
+   * `content` is undefined, and anything walking the document by the rules
+   * a template asks for -- the runtime's own lookups, most of all -- reads
+   * that as a crash rather than as an empty stencil.
+   */
   createElement(tagName: string): ServerElement {
-    return new ServerElement(this, tagName, this.loc);
+    return tagName.toLowerCase() === 'template'
+      ? new ServerTemplateElement(this, this.loc)
+      : new ServerElement(this, tagName, this.loc);
   }
 
   get documentElement(): ServerElement | null {

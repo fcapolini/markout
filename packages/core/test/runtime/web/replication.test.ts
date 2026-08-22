@@ -10,10 +10,13 @@ import type { RuntimeError } from '../../../src/runtime/core/core-context';
 import { WebContext } from '../../../src/runtime/web/web-context';
 import { WebScope } from '../../../src/runtime/web/web-scope';
 
-// mirrors what stage1-load produces for a :for-each host: the stencil
-// element lives inside a <template>, keeping its own data-markout id
+// mirrors what the compiler produces for a :for-each host: a marker comment
+// where the element was written, `-c<scopeId>.<stencilKey>`, and the stencil
+// itself out of the way in <head>, keeping the host's own data-markout id
 const HTML =
-  '<html data-markout="0"><ul><template><li data-markout="1"></li></template></ul></html>';
+  '<html data-markout="0">' +
+  '<head><template data-markout-stencil="q0"><li data-markout="1"></li></template></head>' +
+  '<ul><!---c1.q0--></ul></html>';
 
 function setup(root: CoreScopeProps, html = HTML, onError?: RuntimeError[]) {
   const source = parse(html, 'test');
@@ -64,7 +67,7 @@ function findByTag(root: any, tagName: string): any {
 }
 
 describe('replication: DOM cloning/reuse', () => {
-  it('turns the stencil into an inert <template> and creates real clone elements', () => {
+  it('leaves a marker where the host was written and creates real clone elements', () => {
     const { source, host } = setup({
       id: '0',
       values: {},
@@ -74,10 +77,12 @@ describe('replication: DOM cloning/reuse', () => {
     });
 
     const ul = findByTag(source.doc, 'UL');
-    const liTags = ul.childNodes.filter((n: any) => n.tagName === 'TEMPLATE' || n.tagName === 'LI');
+    const liTags = ul.childNodes.filter((n: any) => n.tagName === 'LI');
 
-    assert.equal(liTags[0].tagName, 'TEMPLATE');
-    assert.equal(liTags.length, 4, 'template stencil + 3 real clone <li>s');
+    // nothing but the marker and the replicas: the stencil is in <head>, so
+    // `ul > li:first-child` is the first replica and `:nth-child` counts items
+    assert.equal(ul.childNodes[0].nodeType, 8, 'the marker comment comes first');
+    assert.equal(liTags.length, 3, '3 real clone <li>s, and no stencil among them');
     assert.equal(host.clones?.length, 3);
   });
 
@@ -86,10 +91,9 @@ describe('replication: DOM cloning/reuse', () => {
     // stamped with the id clone(0) would use (the host's own stencil
     // never represents item 0 -- clone(0) always covers it)
     const html =
-      '<html data-markout="0"><ul>' +
-      '<template><li data-markout="1"></li></template>' +
-      '<li data-markout="1-0"></li>' +
-      '</ul></html>';
+      '<html data-markout="0">' +
+      '<head><template data-markout-stencil="q0"><li data-markout="1"></li></template></head>' +
+      '<ul><!---c1.q0--><li data-markout="1-0"></li></ul></html>';
     const source = parse(html, 'test');
     const ul = findByTag(source.doc, 'UL');
     const preexisting = ul.childNodes.find((n: any) => n.getAttribute?.('data-markout') === '1-0');
@@ -124,7 +128,7 @@ describe('replication: DOM cloning/reuse', () => {
     assert.equal(host.clones?.length, 4);
 
     const markup = source.doc.toString().replace(/ data-markout="[^"]*"/g, '');
-    assert.equal(markup.match(/<li>/g)?.length, 5, 'template stencil + 4 real clones');
+    assert.equal(markup.match(/<li>/g)?.length, 5, 'the stencil in <head> + 4 real clones');
   });
 
   it('binds text in a clone stamped from a stencil whose markers sit side by side', () => {
@@ -133,9 +137,10 @@ describe('replication: DOM cloning/reuse', () => {
     // parses back is the marker pair with no text node between them, and
     // that is what every clone created after a shrink/grow is cloned from
     const html =
-      '<html data-markout="0"><ul>' +
-      '<template><li data-markout="1"><!---t0--><!---/--></li></template>' +
-      '</ul></html>';
+      '<html data-markout="0">' +
+      '<head><template data-markout-stencil="q0">' +
+      '<li data-markout="1"><!---t0--><!---/--></li></template></head>' +
+      '<ul><!---c1.q0--></ul></html>';
     const { source, host } = setup(
       {
         id: '0',

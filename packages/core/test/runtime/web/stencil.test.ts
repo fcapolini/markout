@@ -12,7 +12,8 @@ import { WebContext } from '../../../src/runtime/web/web-context';
 /**
  * A `:for-each` host is a stencil, not a rendering.
  *
- * Its element is compiled into an inert `<template>` and everything a reader
+ * Its element is compiled into an inert `<template>` -- moved to <head>,
+ * with a marker comment left where it was written -- and everything a reader
  * sees is a clone. The host used to build and evaluate its whole subtree
  * anyway, which is wrong in a way that only shows up at the edges: those
  * scopes read a per-item name that is never set, so an expression that is
@@ -42,9 +43,10 @@ function run(html: string) {
     /** what the reader sees: the live clones, never a stencil */
     body: markup
       .slice(markup.indexOf('<body'))
-      .replace(/<template>[\s\S]*?<\/template>/g, '')
       .replace(/<!--.*?-->/g, '')
       .replace(/ data-markout="[^"]*"/g, ''),
+    /** where the stencils are: out of the way, in <head> */
+    head: markup.slice(0, markup.indexOf('<body')),
   };
 }
 
@@ -66,14 +68,13 @@ describe('a :for-each host does not evaluate its subtree', () => {
   it('leaves the stencil unwritten rather than binding it like a replica', () => {
     // the host's own values are prototypes for the clones, which build their
     // own; evaluating them here only ever wrote into markup nobody sees
-    const { markup } = run(
+    const { head, body } = run(
       '<html><body><ul><li :for-each=${["x"]} :n=${"visible"}>${n}</li></ul></body></html>'
     );
 
-    const stencil = markup.slice(markup.indexOf('<template>'), markup.indexOf('</template>'));
-    expect(stencil).toContain('<li');
-    expect(stencil).not.toContain('visible');
-    expect(markup.slice(markup.indexOf('</template>'))).toContain('visible');
+    expect(head).toContain('<li');
+    expect(head).not.toContain('visible');
+    expect(body).toContain('visible');
   });
 
   it('still replicates when the host carries a custom tag', () => {

@@ -154,6 +154,19 @@ describe("Browser execution (happy-dom)", () => {
       </html>`
     );
 
+    fs.writeFileSync(
+      path.join(tempDir, "regions.html"),
+      `<html :shown=\${true} :hidden=\${false}>
+        <body>
+          <ul>
+            <li class="a" :if=\${shown}>shown</li>
+            <li class="b" :if=\${hidden}>hidden</li>
+          </ul>
+          <button :on-click=\${() => { shown = !shown; hidden = !hidden; }}>flip</button>
+        </body>
+      </html>`
+    );
+
     server = new Server({ docroot: tempDir });
     await server.start();
   });
@@ -184,6 +197,43 @@ describe("Browser execution (happy-dom)", () => {
       button.dispatchEvent(new page.mainFrame.window.MouseEvent('click'));
       button.dispatchEvent(new page.mainFrame.window.MouseEvent('click'));
       expect(button.textContent?.replace(/\s+/g, ' ').trim()).toBe('Clicked 3 times');
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it('should hydrate a region whichever side of the page its markup arrived on', async () => {
+    // the seam this arrangement creates: what the server rendered is
+    // standing in the page and is adopted where it stands, while what it did
+    // not is in a stencil in <head> and is stamped out of there. Both have
+    // to end up as the same live thing, and a page has both on it.
+    const browser = new Browser({ settings: { enableJavaScriptEvaluation: true } });
+    try {
+      const page = browser.newPage();
+      await page.goto(`http://127.0.0.1:${server.port}/regions.html`);
+      await page.waitUntilComplete();
+
+      const document = page.mainFrame.document;
+      const ul = document.querySelector('ul')!;
+      const at = (sel: string) => document.querySelector(`li.${sel}`);
+      // no stencil among the children, which is the whole point: a page can
+      // write `li:first-child` and mean the first one it wrote
+      expect([...ul.children].map(e => e.tagName)).toEqual(['LI']);
+      expect(ul.firstElementChild?.textContent).toBe('shown');
+
+      const rendered = at('a');
+      const flip = document.querySelector('button')!;
+      flip.dispatchEvent(new page.mainFrame.window.MouseEvent('click'));
+      expect(at('a')).toBe(null);
+      expect(at('b')?.textContent).toBe('hidden');
+      // and where it went: after the marker its own markup was written at,
+      // so the two never swap places
+      expect([...ul.children].map(e => e.className)).toEqual(['b']);
+
+      flip.dispatchEvent(new page.mainFrame.window.MouseEvent('click'));
+      expect(at('b')).toBe(null);
+      // the very element the server rendered, not a rebuild of it
+      expect(at('a')).toBe(rendered);
     } finally {
       await browser.close();
     }

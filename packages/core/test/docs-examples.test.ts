@@ -302,7 +302,7 @@ describe('docs/concepts/kits.md', () => {
 
     expectClean(result);
     // one card per post, each with its own badge, all reading the loop's item
-    const live = result.body.slice(result.body.indexOf('</template>'));
+    const live = result.body;
     expect(live).toContain('One');
     expect(live).toContain('Two');
     expect(live).toContain('<span class="badge">a</span>');
@@ -336,7 +336,7 @@ describe('docs/concepts/data.md', () => {
     );
 
     expectClean(result);
-    const live = result.body.slice(result.body.indexOf('</template>'));
+    const live = result.body;
     expect(live).toContain('value="capo 3"');
   });
 
@@ -351,7 +351,7 @@ describe('docs/concepts/data.md', () => {
     // server-rendered from the values alone, which is the reason it has to be
     // data at all rather than something the DOM remembers
     expect(result.body).toContain('<p>All</p>');
-    const live = result.body.slice(result.body.indexOf('</template>'));
+    const live = result.body;
     expect(live).toContain('>All<');
     expect(live).toContain('>Spring<');
   });
@@ -369,7 +369,7 @@ describe('docs/concepts/directives.md', () => {
     expectClean(result);
     // one replica per row, each reading its own item -- a key changes which
     // replica an item belongs to, never what gets rendered
-    const live = result.body.slice(result.body.indexOf('</template>'));
+    const live = result.body;
     expect(live).toContain('One');
     expect(live).toContain('Two');
   });

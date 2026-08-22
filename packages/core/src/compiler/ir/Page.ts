@@ -1,6 +1,11 @@
 import type * as acorn from 'acorn';
 import { PageError, Source } from '../../html/parser';
-import type { ServerContainerNode, ServerElement, ServerNode } from '../../html/server-dom';
+import type {
+  ServerContainerNode,
+  ServerElement,
+  ServerNode,
+  ServerTemplateElement,
+} from '../../html/server-dom';
 import type { Node } from 'estree';
 import { DIRECTIVE_TAG_PREFIX } from '../../html/dom';
 import { Scope } from './Scope';
@@ -153,6 +158,13 @@ export const DEFINE_TAG_ATTR = 'tag';
 // its custom tag name once its own scope is created; stripped before that
 // scope's element is otherwise treated like any other
 export const DEFINE_NAME_MARKER = 'data-markout-define';
+/**
+ * Internal-only marker stamped on the `<template>` a conditional or
+ * replicated element is wrapped in, so stage7 can find every one of them --
+ * including the copies, which are made by cloning markup and so are in no
+ * list the compiler keeps. Stripped when the stencil is relocated.
+ */
+export const REGION_STENCIL_MARKER = 'data-markout-region';
 
 export class Page {
   source: Source;
@@ -239,6 +251,16 @@ export class Page {
    * are long stripped, so the distinction is recorded here as it is made.
    */
   optionalStencils: Set<ServerElement>;
+  /**
+   * Every relocated region stencil, in the order stage7 moved them.
+   *
+   * Kept because a compiled page is rendered once per request and its
+   * document is reused: a render may drop a stencil it has proved spent
+   * (see render.ts), and the next one -- whose data may hide the very region
+   * that was showing -- needs it back. The same arrangement `stateScriptAt`
+   * lives with, for the same reason.
+   */
+  regionStencils: ServerTemplateElement[];
   /** nodes moved into a custom-tag instance's slot -> that instance. A
    * stencil clone isn't in the scope tree, so this is the only way a usage
    * site nested in slotted content can find what it now sits inside */
@@ -305,6 +327,7 @@ export class Page {
     this.usageInstances = new Map();
     this.rehomedScopes = new Map();
     this.optionalStencils = new Set();
+    this.regionStencils = [];
     this.slottedInto = new Map();
     this.definitionScopes = new Set();
     this.logicScopes = new Map();
@@ -382,6 +405,20 @@ export class Page {
   createScopeId() {
     return `s${this.nextScopeId++}`;
   }
+
+  /**
+   * A stencil's key, in a namespace of its own.
+   *
+   * Not the scope id it holds: a `<:define>` body is cloned per usage site
+   * that fills a slot, and the copies keep the scope ids they were made
+   * from (see Scope's `Carried`), so a region inside one would answer to the
+   * same key as the region it was copied from. What has to be unique is the
+   * markup, and that is what this counts.
+   */
+  createStencilId() {
+    return `q${this.nextStencilId++}`;
+  }
+  nextStencilId = 0;
 }
 
 /**

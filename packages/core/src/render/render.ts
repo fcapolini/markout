@@ -1,9 +1,10 @@
-import { WebContext } from "../runtime/web/web-context";
-import type { CoreScopeProps } from "../runtime/core/core-scope";
+import { DOM_STENCIL_ONCE_ATTR, WebContext } from "../runtime/web/web-context";
+import { WebScope } from "../runtime/web/web-scope";
+import type { CoreScope, CoreScopeProps } from "../runtime/core/core-scope";
 import type { PageState, RuntimeError } from "../runtime/core/core-context";
 import { STATE_GLOBAL } from "../runtime/core/core-context";
 import type { Page } from "../compiler/ir/Page";
-import { ServerText, type ServerNode } from "../html/server-dom";
+import { ServerText, type ServerElement, type ServerNode } from "../html/server-dom";
 import { escapeScriptText, quote, serialize, UnserializableError } from "./serialize";
 
 /**
@@ -46,6 +47,7 @@ export async function renderPage(
   // before the early return: a page with no props still carries whatever
   // scripts stage7 gave it, and one served under a policy needs them stamped
   applyNonce(page, props?.nonce);
+  restoreStencils(page);
   if (!page.propsString) {
     return [];
   }
@@ -101,8 +103,57 @@ export async function renderPage(
     ctx.resetReported();
     ctx.refresh();
   }
+  dropSpentStencils(ctx);
   emitState(page, ctx.collectState(), errors);
   return errors;
+}
+
+/**
+ * Puts every region stencil back in `<head>`, in the order stage7 made them.
+ *
+ * A compiled page is cached and rendered once per request, and the previous
+ * render may have dropped a stencil it had proved spent -- against data that
+ * says nothing about this request's. Unlinked and re-appended wholesale
+ * rather than only where one is missing, so that two responses to the same
+ * page are byte-for-byte alike whatever either one dropped: a stencil put
+ * back would otherwise land after the ones that stayed.
+ */
+function restoreStencils(page: Page) {
+  const doc = page.source.doc;
+  const head = doc.head ?? doc.documentElement;
+  if (!head || !page.regionStencils.length) return;
+  for (const template of page.regionStencils) {
+    template.unlink();
+    head.appendChild(template);
+  }
+}
+
+/**
+ * Drops the stencils this rendering has spent.
+ *
+ * A stencil marked `once` has at most one live scope -- an `:if`, `:else`,
+ * `:else-if` or `:for-data` outside anything replicated -- so once that
+ * scope's element is standing in the page there is nothing left to stamp
+ * out of it: the region hides by detaching its element and shows by putting
+ * that same element back. Serving the markup twice would be the one cost
+ * this whole arrangement was not supposed to add.
+ *
+ * Asked of the scopes rather than of the markup, because the scope is what
+ * knows: `dom` is the element and `isConnected` is the question, and both
+ * are already the same two facts the runtime shows and hides by.
+ */
+function dropSpentStencils(ctx: WebContext) {
+  const walk = (scope: CoreScope) => {
+    const { dom, stencil } = scope as WebScope;
+    stencil &&
+      dom?.isConnected &&
+      (stencil as unknown as ServerElement)
+        .getAttributeNames()
+        .includes(DOM_STENCIL_ONCE_ATTR) &&
+      (stencil as unknown as ServerElement).unlink();
+    scope.children.forEach(walk);
+  };
+  walk(ctx.root);
 }
 
 /**

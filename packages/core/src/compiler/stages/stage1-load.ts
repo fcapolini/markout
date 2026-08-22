@@ -48,6 +48,7 @@ import {
   LOGIC_BASE_TAG,
   DEFINE_TAG_ATTR,
   DEFINE_NAME_MARKER,
+  REGION_STENCIL_MARKER,
   SLOT_DIRECTIVE_TAG,
   SLOT_NAME_ATTR,
   SLOT_TARGET_ATTR,
@@ -355,11 +356,12 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
       // per item, `:for-data` shows the one it already has. Neither
       // element is itself a live rendering
       if (needsStencil(childEl)) {
-        const stencil = wrapInTemplate(childEl);
         // an OPTIONAL stencil is one whose element may be in the page: both
-        // arities of "zero or one" park their element rather than clone it
-        (hasAttr(childEl, FOR_DATA_ATTR) || !!branchAttr(childEl)) &&
-          page.optionalStencils.add(stencil);
+        // arities of "zero or one" stand their one element there, where a
+        // `:for-each` only ever clones
+        const optional = hasAttr(childEl, FOR_DATA_ATTR) || !!branchAttr(childEl);
+        const stencil = wrapInTemplate(childEl, optional);
+        optional && page.optionalStencils.add(stencil);
       }
       const childScope = load(page, scope, childEl);
       after && page.elseChains.set(childScope, after);
@@ -612,9 +614,29 @@ function hasAttr(e: ServerElement, name: string): boolean {
   return (e.attributes as ServerAttribute[]).some(attr => attr.name === full);
 }
 
-function wrapInTemplate(e: ServerElement): ServerElement {
+/**
+ * The stencil a region renders from, wrapped around its element in place.
+ *
+ * It does not stay there: stage7 moves every one of these to <head> and
+ * leaves a marker comment where it stood, so that nothing a page styles or
+ * measures counts a stencil among its children (see
+ * docs/design/stencil-placement.md). The wrap happens here regardless,
+ * because every compile-time walk between the two stages reasons about
+ * being inside one -- `findSlots`, `checkSlotNames`, `checkStraySlots` and
+ * `optionalStencils` all ask it of the tree.
+ *
+ * The marker is an attribute rather than a list on the Page for the one
+ * reason that decides it: a `<:define>` body holding a region is CLONED per
+ * usage site that fills a slot, so the copies exist in no list this stage
+ * could keep -- and an attribute travels with the markup it belongs to.
+ */
+function wrapInTemplate(e: ServerElement, optional: boolean): ServerElement {
   const parent = e.parentElement!;
   const template = new ServerTemplateElement(e.ownerDocument, e.loc);
+  // the value says which arity, because stage7 needs to know and the `:`
+  // attributes are stripped long before it runs -- the same reason
+  // page.optionalStencils exists, said where a clone can carry it
+  template.setAttribute(REGION_STENCIL_MARKER, optional ? 'once' : 'many', e.loc);
   parent.insertBefore(template, e);
   parent.removeChild(e);
   template.appendChild(e);

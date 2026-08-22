@@ -93,10 +93,11 @@
       one. `:has()` asks the question directly, and it stays a fallback,
       since the moment scrollspy marks anything this stops matching.
 
-      `:first-of-type`, not `:first-child`: a `:for-each` leaves its stencil
-      in the DOM as a <template>, which is an element like any other and
-      therefore the first child. Anything written against a replicated list
-      has to count types rather than children.
+      `:first-of-type` rather than `:first-child` for no reason any more: a
+      `:for-each` used to leave its stencil in the DOM as a <template>,
+      which counted as the first child. It is in <head> now, so either
+      works here -- this one is left as it stands because it is equally
+      correct and the demo is not about the change.
     */
     #dash-side-nav:not(:has(.active)) > li:first-of-type > .nav-link {
       color: var(--bs-nav-pills-link-active-color);

@@ -62,7 +62,7 @@ describe('custom tags inside replicated markup', () => {
     expect(errors).toStrictEqual([]);
     expect(runtimeErrors).toStrictEqual([]);
     expect(body).not.toContain('<my-card');
-    const live = body.slice(body.indexOf('</template>'));
+    const live = body;
     expect(live).toContain('>a<');
     expect(live).toContain('>b<');
     expect(live.match(/class="card"/g)!.length).toBe(2);
@@ -81,7 +81,7 @@ describe('custom tags inside replicated markup', () => {
 
     expect(errors).toStrictEqual([]);
     expect(runtimeErrors).toStrictEqual([]);
-    const live = body.slice(body.indexOf('</template>'));
+    const live = body;
     expect(live).toContain('page-data');
     expect(live).not.toContain('>a<');
   });
@@ -98,7 +98,7 @@ describe('custom tags inside replicated markup', () => {
 
     expect(errors).toStrictEqual([]);
     expect(runtimeErrors).toStrictEqual([]);
-    const live = body.slice(body.indexOf('</template>'));
+    const live = body;
     expect(live).toContain('from-page');
     expect(live).not.toContain('definition');
   });
@@ -116,7 +116,6 @@ describe('custom tags inside replicated markup', () => {
     expect(errors).toStrictEqual([]);
     expect(runtimeErrors).toStrictEqual([]);
     const live = body
-      .slice(body.indexOf('</template>'))
       .replace(/<!--.*?-->/g, '')
       .replace(/ data-markout="[^"]*"/g, '');
     expect(live).toContain('<i data-v="a">a</i>');
@@ -134,7 +133,7 @@ describe('custom tags inside replicated markup', () => {
 
     expect(errors).toStrictEqual([]);
     expect(runtimeErrors).toStrictEqual([]);
-    const live = body.slice(body.indexOf('</template>'));
+    const live = body;
     expect(live).toContain('page');
     expect(live).not.toContain('definition');
   });
@@ -287,7 +286,7 @@ describe('slots', () => {
 
     expect(errors).toStrictEqual([]);
     expect(runtimeErrors).toStrictEqual([]);
-    const live = body.slice(body.indexOf('</template>'));
+    const live = body;
     expect(live).toContain('item <!---t0-->1');
     expect(live).toContain('item <!---t0-->2');
   });
@@ -453,8 +452,7 @@ describe('a slot inside the definition own :for-each', () => {
 
     expect(errors).toStrictEqual([]);
     expect(runtimeErrors).toStrictEqual([]);
-    // past the inert stencil, which renders too but never reaches the page
-    const live = body.slice(body.indexOf('</template>'));
+    const live = body;
     expect(live).toContain('item <!---t0-->a');
     expect(live).toContain('item <!---t0-->b');
   });

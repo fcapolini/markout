@@ -6,9 +6,26 @@ import type {
   ObjectExpression,
   Property,
 } from 'estree';
-import { ServerText } from '../../html/server-dom';
+import {
+  ServerComment,
+  ServerElement,
+  ServerTemplateElement,
+  ServerText,
+} from '../../html/server-dom';
+import { NodeType } from '../../html/dom';
 import { DEV_GLOBAL, PROPS_GLOBAL } from '../../runtime/core/core-context';
-import { EVENT_VALUE_PREFIX, TEXT_VALUE_PREFIX } from '../ir/Page';
+import {
+  EVENT_VALUE_PREFIX,
+  REGION_STENCIL_MARKER,
+  TEXT_VALUE_PREFIX,
+} from '../ir/Page';
+import {
+  DOM_ID_ATTR,
+  DOM_REGION_MARKER,
+  DOM_STENCIL_ATTR,
+  DOM_STENCIL_ONCE_ATTR,
+  DOM_USE_MARKER,
+} from '../../runtime/web/web-context';
 import type { Page } from '../ir/Page';
 import type { Scope } from '../ir/Scope';
 import type { Value, ValueDepRef } from '../ir/Value';
@@ -64,6 +81,7 @@ export function stage7generate(
   dev = false,
   classManifest = false
 ) {
+  relocateStencils(page);
   classManifest && injectClassManifest(page);
   const root = page.global.children[0];
   if (root) {
@@ -116,6 +134,107 @@ export function stage7generate(
  */
 function codegenOptions(dev: boolean) {
   return dev ? undefined : { format: { compact: true } };
+}
+
+/**
+ * Moves every region stencil to `<head>`, leaving a marker comment behind.
+ *
+ * A `:if`, `:else`, `:for-data` or `:for-each` is compiled into a
+ * `<template>` holding the markup it renders from. Written where the
+ * element was, that template is an element like any other: `:nth-child`
+ * counts it, `:first-child` never matches the first replica, `:empty` is
+ * false for a container holding only a stencil -- and inside `<svg>` there
+ * is no HTML `<template>` at all, so the whole mechanism breaks. Nested in a
+ * `:for-each`, it is also copied into every replica along with everything
+ * it holds.
+ *
+ * So the markup goes to `<head>` and a comment holds the place, exactly as
+ * an interpolation and a custom-tag usage site already do. See
+ * docs/design/stencil-placement.md.
+ *
+ * The marker says both things the runtime needs: whose region this is, and
+ * which stencil it renders from -- `-c<scopeId>.<stencilKey>`. Two ids
+ * rather than one because they answer different questions. A scope id is
+ * unique only among its container's descendants, which is what lets one
+ * marker stand in every replica; a stencil key is unique in the document,
+ * because a `<:define>` body is cloned per usage site that fills a slot and
+ * those copies keep the scope ids they were made from.
+ *
+ * Runs here, after every compile-time walk that reasons about being inside
+ * a stencil, so none of them has to learn a second arrangement.
+ */
+function relocateStencils(page: Page) {
+  const doc = page.source.doc;
+  const head = doc.head ?? doc.documentElement;
+  if (!head) return;
+  // collected before anything moves, so nesting is still readable: a
+  // stencil inside another one may be instantiated many times over, which
+  // is the difference between a spent stencil and one still needed
+  const found: { template: ServerTemplateElement; nested: boolean }[] = [];
+  const walk = (e: ServerElement, nested: boolean) => {
+    const container = e.tagName === 'TEMPLATE' ? (e as ServerTemplateElement).content : e;
+    const inStencil = nested || e.tagName === 'TEMPLATE';
+    for (const child of [...container.childNodes]) {
+      if (child.nodeType !== NodeType.ELEMENT) continue;
+      const el = child as ServerElement;
+      el.getAttribute(REGION_STENCIL_MARKER) !== null &&
+        found.push({ template: el as ServerTemplateElement, nested: inStencil });
+      walk(el, inStencil);
+    }
+  };
+  walk(doc, false);
+
+  for (const { template, nested } of found) {
+    const scopeId = stencilScopeId(template);
+    const parent = template.parentNode;
+    // an empty stencil belongs to nothing: `<x-logic :for-each>` names a tag
+    // whose instances have no element, so the usage left no marker for one.
+    // Nothing renders from it and nothing can look for it
+    if (scopeId === undefined || !parent) continue;
+    const once = `${template.getAttribute(REGION_STENCIL_MARKER)}` === 'once';
+    const key = page.createStencilId();
+    template.removeAttribute(REGION_STENCIL_MARKER);
+    template.setAttribute(DOM_STENCIL_ATTR, key, template.loc);
+    // only where it can be acted on: a stencil standing inside another is
+    // stamped out once per instance of that one, so no single rendering
+    // ever spends it
+    once && !nested && template.setAttribute(DOM_STENCIL_ONCE_ATTR, null, template.loc);
+    parent.insertBefore(
+      new ServerComment(doc, `${DOM_REGION_MARKER}${scopeId}.${key}`, template.loc),
+      template
+    );
+    parent.removeChild(template);
+    head.appendChild(template);
+    page.regionStencils.push(template);
+  }
+}
+
+/**
+ * Whose region a stencil holds, read off the markup rather than the scopes.
+ *
+ * The element it wraps carries the id, except when the region is a custom
+ * tag: expandCustomTagUsages has replaced that element with the usage
+ * marker naming the instance's scope, and the element itself does not exist
+ * until the runtime stamps it out.
+ *
+ * Read from the markup because the scope cannot be looked up: a usage
+ * instance has no element to match against, and a definition's copies share
+ * the id of the scope they were copied from -- so neither an element nor an
+ * id identifies one scope here. The markup is the only thing that is
+ * already one-to-one with the stencil.
+ */
+function stencilScopeId(template: ServerTemplateElement): string | undefined {
+  for (const n of template.content.childNodes) {
+    if (n.nodeType === NodeType.ELEMENT) {
+      const id = (n as ServerElement).getAttribute(DOM_ID_ATTR);
+      if (id !== null) return `${id}`;
+    }
+    if (n.nodeType === NodeType.COMMENT) {
+      const text = `${(n as ServerComment).textContent}`;
+      if (text.startsWith(DOM_USE_MARKER)) return text.slice(DOM_USE_MARKER.length);
+    }
+  }
+  return undefined;
 }
 
 /**

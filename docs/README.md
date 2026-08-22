@@ -65,11 +65,11 @@ pages above — what was chosen, what was rejected, and why.
 - [Tailwind, and utility CSS generally](design/tailwind-support.md) - what a
   class scanner can and cannot see in a markout page, measured; the one shape
   that fails silently; and the class manifest designed to close it.
-- [Stencils out of the way](design/stencil-placement.md) - proposed: a marker
-  comment where a conditional or replicated element was written — `:if`,
-  `:else`, `:for-data`, `:for-each` alike — and the `<template>` it used to
-  sit in moved to `<head>`, so CSS stops counting the stencil and inline SVG
-  can hold one.
+- [Stencils out of the way](design/stencil-placement.md) - a marker comment
+  where a conditional or replicated element was written — `:if`, `:else`,
+  `:for-data`, `:for-each` alike — and the `<template>` it used to sit in
+  moved to `<head>`, so CSS counts what the page wrote, inline SVG can hold
+  a region, and a loop stops copying one stencil per row.
 - [Silent failures](design/silent-failures.md) - every way found so far for a
   page to be wrong without saying so, what closed each one, and what is still
   open. The compile-time-safety claim, audited rather than asserted.

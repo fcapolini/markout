@@ -306,7 +306,7 @@ describe('values declared inside slotted content', () => {
       (n.childNodes ?? []).forEach(walk);
     };
     walk(body);
-    // the stencil inside the <template> is not part of the document a
+    // the stencil is out of the way in <head> and is no part of the body a
     // browser renders, so only the two replicas count
     assert.deepEqual(rendered, ['[a]', '[b]']);
   });

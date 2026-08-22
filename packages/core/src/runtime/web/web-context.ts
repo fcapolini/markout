@@ -21,6 +21,25 @@ export const DOM_TEXT_MARKER2 = '-/';
 // WebScope with a real, cloned-from-template element the first time no
 // already-instantiated element (e.g. from SSR) is found for that scope id
 export const DOM_USE_MARKER = '-u';
+// marks where a conditional or replicated element was written (see
+// stage7-generate.ts's relocateStencils): `${DOM_REGION_MARKER}${stencilKey}`,
+// e.g. `-cq3`. The markup itself is not here -- it is in the <template>
+// carrying the same key, out of the way in <head> -- so a page's structural
+// CSS counts what it wrote and nothing else. See
+// docs/design/stencil-placement.md
+export const DOM_REGION_MARKER = '-c';
+/** the key a relocated stencil answers to, matching its markers' */
+export const DOM_STENCIL_ATTR = 'data-markout-stencil';
+/**
+ * On a stencil that can have at most one live scope -- an `:if`,
+ * `:else-if`, `:else` or `:for-data` outside anything replicated.
+ *
+ * Written by the compiler and read only when a rendered page is serialized:
+ * such a stencil, once its region is standing in the page, can never be
+ * needed again, so it is dropped rather than served twice. See
+ * render.ts's dropSpentStencils.
+ */
+export const DOM_STENCIL_ONCE_ATTR = 'data-markout-once';
 // duplicated from html/parser.ts's ATOMIC_TEXT_TAGS rather than imported --
 // runtime code stays independent of the compiler/parser (same convention as
 // core-scope.ts's FOR_DATA_DEFAULT_NAME); <style>/<title> hold their whole
@@ -158,7 +177,7 @@ export class WebContext extends CoreContext {
     const doc = (this.props as WebContextProps).doc;
     const childNodesOf = (e: Element): NodeList =>
       e.tagName === 'TEMPLATE'
-        ? (e as unknown as TemplateElement).content.childNodes
+        ? (e as unknown as TemplateElement).content?.childNodes ?? e.childNodes
         : e.childNodes;
     const search = (childNodes: NodeList, template?: Element): T | undefined => {
       for (const n of childNodes) {
@@ -195,7 +214,10 @@ export class WebContext extends CoreContext {
   /** finds a custom-tag usage site's marker comment, if it hasn't been
    * replaced with a real instantiated element yet (e.g. by SSR) */
   findUseMarker(scopeId: string, within?: Element): Comment | undefined {
-    const marker = `${DOM_USE_MARKER}${scopeId}`;
+    return this.findMarker(`${DOM_USE_MARKER}${scopeId}`, within);
+  }
+
+  private findMarker(marker: string, within?: Element): Comment | undefined {
     return this.searchDocument(
       n =>
         n.nodeType === NodeType.COMMENT && (n as Comment).textContent === marker
@@ -204,4 +226,38 @@ export class WebContext extends CoreContext {
       within
     );
   }
+
+  /**
+   * The relocated `<template>` a region is stamped out of.
+   *
+   * Indexed on first use rather than searched per scope: a page with n
+   * regions would otherwise search for one n times, which is how a mount
+   * goes quadratic on exactly the pages that have the most markup.
+   *
+   * And indexed from where they are put rather than by walking the
+   * document, which costs the whole page once per mount for the sake of a
+   * few nodes in <head>: relocateStencils appends every one of them to
+   * <head>, or to <html> for a document that has none, so those two levels
+   * are where they are. Deliberately coupled to that -- the alternative was
+   * measurably the most expensive thing a mount did.
+   */
+  findStencil(key: string): Element | undefined {
+    if (!this.stencils) {
+      this.stencils = new Map();
+      const index = (e: Element) => {
+        const id = e.getAttribute(DOM_STENCIL_ATTR);
+        id !== null && !this.stencils!.has(id) && this.stencils!.set(id, e);
+      };
+      const root = (this.props as WebContextProps).doc?.documentElement;
+      for (const n of root?.childNodes ?? []) {
+        if (n.nodeType !== NodeType.ELEMENT) continue;
+        index(n as Element);
+        for (const m of (n as Element).childNodes) {
+          m.nodeType === NodeType.ELEMENT && index(m as Element);
+        }
+      }
+    }
+    return this.stencils.get(key);
+  }
+  private stencils?: Map<string, Element>;
 }

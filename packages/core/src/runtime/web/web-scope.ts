@@ -8,15 +8,30 @@ import {
   TemplateElement,
   Text,
 } from '../../html/dom';
-import { CoreScope, CoreScopeProps, RT_FOR_DATA_VALUE, RT_IF_VALUE, cloneId } from '../core/core-scope';
+import {
+  CoreScope,
+  CoreScopeProps,
+  RT_FOR_DATA_VALUE,
+  RT_FOR_EACH_VALUE,
+  RT_IF_VALUE,
+  cloneId,
+} from '../core/core-scope';
 import { CoreValue, CoreValueProps } from '../core/core-value';
 import {
   DOM_ATOMIC_TEXT_TAGS,
   DOM_ID_ATTR,
+  DOM_REGION_MARKER,
   DOM_TEXT_MARKER1,
   WebContext,
   WebContextProps,
 } from './web-context';
+
+/**
+ * Whatever holds a node: an element, or a `<template>`'s content fragment
+ * for anything sitting inside a stencil. The DOM has no one name for the
+ * two, and this code has to move nodes in both.
+ */
+type ContainerNode = Pick<Element, 'childNodes' | 'insertBefore' | 'removeChild'>;
 
 export const RT_ATTR_VALUE_PREFIX = 'attr$';
 /** `:prop-x`: the element's JS property, for what an attribute can't carry */
@@ -47,9 +62,14 @@ export class WebScope extends CoreScope {
   /** interpolated text nodes of this scope's own territory, by marker id */
   declare texts: Map<number, Text>;
   declare domListeners?: { name: string; listener: EventListener }[];
-  // the <template> this scope's stencil lives inside, if any -- also set
-  // during init(), so it needs the same `declare` treatment as above
-  declare templateEl?: Element;
+  // A region's two halves, both set during init() and so needing the same
+  // `declare` treatment as above: the marker comment standing where its
+  // markup was written, which is the only thing that says WHERE, and the
+  // relocated <template> holding the markup, which is the only thing that
+  // says WHAT. One element used to be both, by sitting where the markup
+  // belonged -- see docs/design/stencil-placement.md
+  declare anchor?: Comment;
+  declare stencil?: Element;
   // set by clone() right before constructing a new clone scope, so that
   // clone's own init() (running during its super()) can pick up the DOM
   // node clone() already resolved for it; not itself touched during any
@@ -70,11 +90,14 @@ export class WebScope extends CoreScope {
     super.init();
     this.texts = new Map();
     const templateId = this.props.template;
+    const parentDom = this.parent instanceof WebScope ? this.parent.dom : undefined;
     const view = this.cloned
       ? (this.parent as WebScope)?.pendingCloneDom
-      : templateId
-        ? this.acquireUsageDom(templateId)
-        : this.lookupView(this.parent instanceof WebScope ? this.parent.dom : undefined);
+      : this.isRegion()
+        ? this.acquireRegionDom(parentDom)
+        : templateId
+          ? this.acquireUsageDom(templateId, parentDom)
+          : this.lookupView(parentDom);
     // Declared even when there is no element, and never inherited: answering
     // with an ANCESTOR's element would be the plausible-but-wrong kind of
     // failure that is hardest to notice (the same reason $id is
@@ -146,24 +169,6 @@ export class WebScope extends CoreScope {
         );
       });
     };
-    // A `:for-data` scope is moved between the document and the stencil it
-    // came in, so it needs to know where that stencil is for its whole life.
-    // lookupView() sets templateEl only when the element was found INSIDE
-    // one, which is the hidden case; when the server rendered it visible the
-    // element sits immediately after the template instead, because that is
-    // where showView() puts it
-    if (
-      (this.props.values?.[RT_FOR_DATA_VALUE] || this.props.values?.[RT_IF_VALUE]) &&
-      !this.cloned &&
-      !this.templateEl
-    ) {
-      const previous = view.previousSibling;
-      if (previous?.nodeType === NodeType.ELEMENT && (previous as Element).tagName === 'TEMPLATE') {
-        this.templateEl = previous as Element;
-        this.showing = true;
-      }
-    }
-
     // An atomic-text element with a scope of ITS OWN (`<textarea :on-input=...>`)
     // is the one case the walk below cannot reach: its content marker sits
     // outside the element, among its parent's children, because a comment
@@ -196,6 +201,77 @@ export class WebScope extends CoreScope {
     f(this.dom);
   }
 
+  /** whether this scope's markup comes and goes, or is stamped out */
+  private isRegion(): boolean {
+    const values = this.props.values;
+    return !!(
+      values?.[RT_FOR_EACH_VALUE] ||
+      values?.[RT_FOR_DATA_VALUE] ||
+      values?.[RT_IF_VALUE]
+    );
+  }
+
+  /**
+   * Resolves a region's marker and its stencil, and gets it an element.
+   *
+   * Three ways to end up with one, in the order they are tried:
+   *
+   * - **Already in the page.** A server-rendered region that was showing,
+   *   met again on hydration. Adopted as it stands, and `showing` says so --
+   *   nothing is cloned and no markup moves, which is the whole point of
+   *   rendering it there in the first place.
+   * - **The stencil's own element, for a `:for-each` host.** Its element is
+   *   never a rendering (see CoreScope.isStencil), so it keeps the one
+   *   inside the stencil and every replica is a clone of that.
+   * - **A clone of it, for anything optional.** A stencil is a source and
+   *   never a parking spot: one may serve every replica of an enclosing
+   *   `:for-each`, so a region that wrote itself back into it would be
+   *   writing into what its siblings are about to stamp out. The clone is
+   *   held detached until `showView` puts it after the marker.
+   */
+  private acquireRegionDom(parentDom?: Element): Element | undefined {
+    const ctx = this.ctx as WebContext;
+    const id = `${this.props.id}`;
+    const marker = this.lookupMarker(id, parentDom);
+    if (!marker) return undefined;
+    this.anchor = marker;
+    // resolved even when the element turns out to be standing in the page
+    // already: what a rendering has spent is asked of the scopes afterwards
+    // (see render.ts's dropSpentStencils), and a scope that never looked
+    // would answer that it had spent nothing
+    const text = `${marker.textContent}`;
+    const stencil = ctx.findStencil(text.slice(text.indexOf('.') + 1));
+    this.stencil = stencil;
+    const replicates = !!this.props.values?.[RT_FOR_EACH_VALUE];
+    if (!replicates) {
+      // the node after the marker, rather than a search for the id: showView
+      // puts it exactly there and the server rendered it exactly there, so
+      // one look answers what a walk of the whole container would -- which
+      // matters per replica, where a second walk is a second pass over the
+      // same subtree for every row on the page
+      const next = marker.nextSibling;
+      if (
+        next?.nodeType === NodeType.ELEMENT &&
+        (next as Element).getAttribute(DOM_ID_ATTR) === id
+      ) {
+        this.showing = true;
+        return next as Element;
+      }
+    }
+    if (!stencil) return undefined;
+    const proto = this.props.template
+      ? // a custom tag: what the stencil holds is the usage marker, and the
+        // instance is stamped into it there, once, whoever gets there first
+        this.acquireUsageDom(this.props.template, stencil)
+      : ([...(stencil as unknown as TemplateElement).content.childNodes].find(
+          n => n.nodeType === NodeType.ELEMENT
+        ) as Element | undefined);
+    if (!proto || replicates) return proto;
+    const node = proto.cloneNode(true) as unknown as Element;
+    node.setAttribute(DOM_ID_ATTR, id);
+    return node;
+  }
+
   /**
    * A usage instance sits where the tag was written, so its element and its
    * marker are looked for within its container's own subtree -- the same
@@ -203,25 +279,21 @@ export class WebScope extends CoreScope {
    * a `:for-each` become a separate instance per replica, each finding its
    * own marker rather than racing for one document-wide match.
    *
-   * The <:define> stencil is the exception: it lives in <head>, nowhere near
-   * the usage, so that lookup stays document-wide.
+   * `within` is that container, except for a usage that is also a region:
+   * there the marker was moved to <head> with the stencil around it, so the
+   * instance is stamped out in there and the region does the rest.
+   *
+   * The <:define> stencil is the exception to the exception: it lives in
+   * <head> and is nowhere near either, so that lookup stays document-wide.
    */
-  private acquireUsageDom(templateId: string): Element | undefined {
+  private acquireUsageDom(templateId: string, within?: Element): Element | undefined {
     const ctx = this.ctx as WebContext;
     const id = `${this.props.id}`;
-    const within = this.parent instanceof WebScope ? this.parent.dom : undefined;
     const existing = ctx.findElementById(id, within);
-    // a `:for-each` on the tag leaves this instance sitting in a stencil, and
-    // acquireCloneDom needs to know which one. Undefined for an ordinary
-    // usage, which is what it has always been
-    if (existing) {
-      this.templateEl = ctx.foundInTemplate;
-      return existing;
-    }
+    if (existing) return existing;
 
     const stencil = ctx.findElementById(templateId);
     const marker = ctx.findUseMarker(id, within);
-    const inTemplate = ctx.foundInTemplate;
     if (!stencil || !marker) return undefined;
 
     const node = stencil.cloneNode(true) as unknown as Element;
@@ -234,7 +306,6 @@ export class WebScope extends CoreScope {
     const container = (marker as unknown as { parentNode: Element }).parentNode;
     container.insertBefore(node, marker);
     container.removeChild(marker);
-    this.templateEl = inTemplate;
     return node;
   }
 
@@ -248,6 +319,44 @@ export class WebScope extends CoreScope {
    */
   private lookupView(parentView?: Element): Element | undefined {
     const id = `${this.props.id}`;
+    return this.lookupWithin(parentView, n =>
+      n.nodeType === NodeType.ELEMENT && (n as Element).getAttribute(DOM_ID_ATTR) === id
+        ? (n as Element)
+        : undefined
+    );
+  }
+
+  /**
+   * Finds this region's marker comment, under the same containment rule.
+   *
+   * One marker is written per region and replication copies it along with
+   * everything else, so the same scope id stands in every replica -- and
+   * which one is mine is answered by whose territory it is in, exactly as
+   * lookupView answers it for an element.
+   */
+  private lookupMarker(id: string, parentView?: Element): Comment | undefined {
+    const prefix = `${DOM_REGION_MARKER}${id}.`;
+    return this.lookupWithin(parentView, n =>
+      n.nodeType === NodeType.COMMENT &&
+      `${(n as Comment).textContent}`.startsWith(prefix)
+        ? (n as Comment)
+        : undefined
+    );
+  }
+
+  /**
+   * Walks a scope's own territory: everything under `parentView` down to,
+   * but never into, the next scope's element.
+   *
+   * That boundary is what keeps ids unique only among a single parent's
+   * descendants rather than document-wide, so repeated instances don't
+   * collide with each other's -- and it is what makes both of the searches
+   * above cost the subtree they are asking about rather than the document.
+   */
+  private lookupWithin<T>(
+    parentView: Element | undefined,
+    match: (n: Node) => T | undefined
+  ): T | undefined {
     const container: Element | Document | undefined =
       parentView ?? (this.ctx.props as WebContextProps).doc;
     if (!container) return undefined;
@@ -255,20 +364,15 @@ export class WebScope extends CoreScope {
       (e as Element).tagName === 'TEMPLATE'
         ? (e as unknown as TemplateElement).content.childNodes
         : e.childNodes;
-    const lookup = (childNodes: NodeList, template?: Element): Element | undefined => {
+    const lookup = (childNodes: NodeList): T | undefined => {
       for (const n of childNodes) {
+        const found = match(n);
+        if (found !== undefined) return found;
         if (n.nodeType !== NodeType.ELEMENT) continue;
         const e = n as Element;
-        const v = e.getAttribute(DOM_ID_ATTR);
-        if (v !== null) {
-          if (v === id) {
-            this.templateEl = template;
-            return e;
-          }
-          continue;
-        }
-        const ret = lookup(childNodesOf(e), e.tagName === 'TEMPLATE' ? e : template);
-        if (ret) return ret;
+        if (e.getAttribute(DOM_ID_ATTR) !== null) continue;
+        const ret = lookup(childNodesOf(e));
+        if (ret !== undefined) return ret;
       }
       return undefined;
     };
@@ -421,31 +525,44 @@ export class WebScope extends CoreScope {
   }
 
   /**
-   * Puts this scope's element back where the stencil sits.
+   * Puts this scope's element where its markup was written.
    *
-   * Immediately after the template, which is exactly where the compiler had
-   * the element before wrapInTemplate() moved it in -- so the rendered
-   * position is the written position, and init() can find its way back to
-   * the template by looking one node to the left.
+   * Immediately after the marker, which is exactly where the element stood
+   * before the stencil around it was moved out of the way -- so the
+   * rendered position is the written position, and a page's structural CSS
+   * counts what its author wrote and nothing else.
    */
   override showView(): void {
-    const template = this.templateEl;
-    if (!this.dom || !template) return;
-    const container = (template as unknown as { parentNode: Element }).parentNode;
-    container?.insertBefore(this.dom, template.nextSibling);
+    const container = this.anchorContainer();
+    if (!this.dom || !container || !this.anchor) return;
+    container.insertBefore(this.dom, this.anchor.nextSibling);
   }
 
   /**
-   * Parks it back inside the stencil.
+   * Takes it out of the page, and keeps it.
    *
-   * Not `remove()`: the element goes where a page that never showed it would
-   * have carried it, so the served markup is the same either way and the
-   * node stays reachable for the next time the value comes back.
+   * Detached rather than parked back in the stencil, which is what makes
+   * the element stable across any number of hide/show cycles: one stencil
+   * serves every replica of an enclosing `:for-each`, so a region writing
+   * itself back into it would be writing into what its siblings stamp out.
+   * The scope holds the node, which is all "not rebuilt when it comes back"
+   * ever needed.
    */
   override hideView(): void {
-    const template = this.templateEl;
-    if (!this.dom || !template) return;
-    (template as unknown as TemplateElement).content.appendChild(this.dom);
+    const dom = this.dom as unknown as { parentNode?: { removeChild(n: unknown): void } };
+    dom?.parentNode?.removeChild(this.dom);
+  }
+
+  /**
+   * Whatever holds this region's marker -- an element, or a stencil's
+   * content fragment for a region nested inside another one's markup.
+   *
+   * `parentNode` rather than `parentElement` for exactly that second case:
+   * a fragment is not an element, so the element answer is null there, in
+   * this DOM as much as in a browser.
+   */
+  private anchorContainer(): ContainerNode | undefined {
+    return (this.anchor as unknown as { parentNode?: ContainerNode } | undefined)?.parentNode;
   }
 
   /**
@@ -480,8 +597,8 @@ export class WebScope extends CoreScope {
    * the feature while appearing to work.
    */
   override reorderClones(): void {
-    const anchor = this.templateEl;
-    const container = anchor?.parentElement;
+    const anchor = this.anchor;
+    const container = this.anchorContainer();
     if (!anchor || !container || !this.clones?.length) return;
     // walks forward from the anchor comparing `nextSibling` directly, rather
     // than mirroring childNodes into an array and doing indexOf()/splice()
@@ -500,16 +617,17 @@ export class WebScope extends CoreScope {
 
   /**
    * Finds an already-existing element for a clone id (e.g. one SSR already
-   * rendered) among the template's siblings, reusing it if present; failing
-   * that, stamps out a new one from the template's stencil and inserts it
-   * right after the last existing clone (or the template itself, if this is
-   * the first). Returns undefined if this scope has no template to clone
-   * from at all (e.g. a scope with no matching DOM element in the first
-   * place, or one whose :for-each host never resolved one).
+   * rendered) among the marker's siblings, reusing it if present; failing
+   * that, stamps out a new one from the host's own element -- which is the
+   * one the stencil holds, never a rendering -- and inserts it right after
+   * the last existing clone (or the marker itself, if this is the first).
+   * Returns undefined if this scope has nothing to clone from at all (e.g.
+   * a scope with no matching DOM element in the first place, or one whose
+   * :for-each host never resolved one).
    */
   private acquireCloneDom(id: string): Element | undefined {
-    const anchor = this.templateEl;
-    const container = anchor?.parentElement;
+    const anchor = this.anchor;
+    const container = this.anchorContainer();
     if (!anchor || !container) return undefined;
 
     // re-snapshotting and scanning all of container's children here, once
@@ -526,9 +644,7 @@ export class WebScope extends CoreScope {
       this.noMoreHydratedClones = true;
     }
 
-    const stencil = [...(anchor as unknown as TemplateElement).content.childNodes].find(
-      n => n.nodeType === NodeType.ELEMENT
-    ) as Element | undefined;
+    const stencil = this.dom;
     if (!stencil) return undefined;
 
     const node = stencil.cloneNode(true) as unknown as Element;

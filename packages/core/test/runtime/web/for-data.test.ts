@@ -38,11 +38,17 @@ function run(html: string) {
     ctx,
     errors,
     runtime: runtime.map(e => `${e.phase}: ${e.message}`),
+    /** what the reader sees: no stencil is in here, they are all in <head> */
     markup: () => {
       const s = page.source.doc.toString();
       return s
         .slice(s.indexOf('<body'), s.indexOf('<script'))
         .replace(/ data-markout="[^"]*"/g, '');
+    },
+    /** where a region's markup waits while it has nothing to show */
+    head: () => {
+      const s = page.source.doc.toString();
+      return s.slice(0, s.indexOf('<body')).replace(/ data-markout="[^"]*"/g, '');
     },
   };
 }
@@ -61,16 +67,17 @@ describe(':for-data', () => {
     // `data.boom.deep` would throw for anyone who ran it. Nobody does, and
     // that is the whole feature: a guard that still evaluates its body is
     // not a guard
-    const { errors, runtime, markup } = run(
+    const { errors, runtime, markup, head } = run(
       '<html><body :user=${null}><p :for-data=${user}>${data.boom.deep}</p></body></html>'
     );
     expect(errors).toStrictEqual([]);
     expect(runtime).toStrictEqual([]);
-    const body = markup();
-    // parked in its stencil rather than deleted, which is how it travels to
-    // the browser at all and how it comes back if the value does
-    expect(body).toContain('<template><p>');
-    expect(body.slice(body.indexOf('</template>'))).not.toContain('<p');
+    // nothing where it was written but the marker holding the place
+    expect(markup()).not.toContain('<p');
+    expect(markup()).toContain('<!---c');
+    // and the markup itself waiting in its stencil, which is how it travels
+    // to the browser at all and how it comes back if the value does
+    expect(head()).toContain('<p>');
   });
 
   it('treats 0 and the empty string as data', () => {
@@ -80,9 +87,8 @@ describe(':for-data', () => {
       '<html><body :n=${0} :s=${""}><p :for-data=${n}>[${data}]</p>' +
         '<i :for-data=${s}>[${data}]</i></body></html>'
     );
-    const live = markup().slice(markup().lastIndexOf('</template>'));
     expect(markup()).toContain('<p>[<!---t0-->0<!---/-->]</p>');
-    expect(live).toContain('<i>');
+    expect(markup()).toContain('<i>');
   });
 
   it('binds the item under :for-as like :for-each does', () => {
@@ -102,7 +108,7 @@ describe(':for-data', () => {
     expect(markup()).toContain('<p>');
 
     body.user = null;
-    expect(markup().slice(markup().indexOf('</template>'))).not.toContain('<p');
+    expect(markup()).not.toContain('<p');
 
     body.user = { name: 'Grace' };
     // back in place, with the new item -- and the region has to still be
@@ -129,7 +135,7 @@ describe(':for-data', () => {
       '<html><body :user=${{ name: "Ada" }}><i>before</i>' +
         '<p :for-data=${user}>mid</p><b>after</b></body></html>'
     );
-    const body = markup().replace(/<template>[\s\S]*?<\/template>/g, '');
+    const body = markup();
     expect(body.indexOf('<i>')).toBeLessThan(body.indexOf('<p>'));
     expect(body.indexOf('<p>')).toBeLessThan(body.indexOf('<b>'));
   });
@@ -171,8 +177,7 @@ describe(':for-data', () => {
     );
     expect(errors).toStrictEqual([]);
     expect(runtime).toStrictEqual([]);
-    const body = markup();
-    expect(body.slice(body.lastIndexOf('</template>'))).not.toContain('<i');
+    expect(markup()).not.toContain('<i');
   });
 
   it('refuses :for-key, which has nothing to tell apart', () => {
@@ -220,7 +225,7 @@ describe(':for-data: child scopes', () => {
     const r = run(
       '<html :on=${null}><body><div :for-data=${on}><i :n=${7}>${n}</i></div></body></html>'
     );
-    const live = () => r.markup().slice(r.markup().indexOf('</template>'));
+    const live = () => r.markup();
     expect(live()).not.toContain('<i');
     r.ctx!.root.proxy['on'] = true;
     expect(live()).toContain('<i><!---t0-->7<!---/--></i>');
@@ -232,7 +237,7 @@ describe(':for-data: child scopes', () => {
     const r = run(
       '<html :on=${true}><body><div :for-data=${on}><i :n=${3}>${n}</i></div></body></html>'
     );
-    const live = () => r.markup().slice(r.markup().indexOf('</template>'));
+    const live = () => r.markup();
     expect(live()).toContain('<i><!---t0-->3<!---/--></i>');
     r.ctx!.root.proxy['on'] = null;
     expect(live()).not.toContain('<i');
@@ -257,7 +262,6 @@ describe(':for-data: child scopes', () => {
         '<i :who=${data.name}>${who}</i></div></body></html>'
     );
     expect(r.runtime).toStrictEqual([]);
-    const body = r.markup();
-    expect(body.slice(body.indexOf('</template>'))).not.toContain('<i');
+    expect(r.markup()).not.toContain('<i');
   });
 });

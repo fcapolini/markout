@@ -48,12 +48,11 @@ function run(html: string) {
     errors,
     doc: page.source.doc,
     runtime: runtime.map(e => `${e.phase}: ${e.message}`),
-    /** what is actually in the page: stencils and their contents removed */
+    /** what is actually in the page: every stencil is elsewhere, in <head> */
     live: () => {
       const s = page.source.doc.toString();
       return s
         .slice(s.indexOf('<body'), s.indexOf('<script'))
-        .replace(/<template>[\s\S]*?<\/template>/g, '')
         .replace(/ data-markout="[^"]*"/g, '')
         .replace(/<!--.*?-->/g, '');
     },
@@ -341,9 +340,9 @@ describe(':else-if / :else', () => {
 /**
  * The elements actually in the document, as `tag.class`.
  *
- * A walk rather than a regex over the markup, because these cases nest one
- * `<template>` inside another and a non-greedy strip closes at the wrong one
- * -- which reads as a branch being shown when it is parked.
+ * A walk rather than a regex over the markup, because a branch that is away
+ * is held by its scope and in no document at all -- so what these cases are
+ * asking is exactly what the DOM has, and nothing about how it serializes.
  */
 function shown(r: ReturnType<typeof run>): string[] {
   const out: string[] = [];

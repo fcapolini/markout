@@ -51,6 +51,7 @@ ships rather than after:
 | A scope copied for a usage site's stencil | `copyForUsage` enumerated fields; `elseOf` was added later and dropped, so every branch of an adaptive component came out unlinked and an `:else` showed beside its own `:if` | Every key of `Scope` is sorted into carried / fresh / method, and adding one fails to typecheck |
 | Format Document on a markout file | VS Code's HTML formatter read `>` inside `${…}` as the end of a tag, turning every later attribute into text | The extension provides formatting and removes HTML's, for these files |
 | `:for-data` as a condition | `!= null`, so `''` rendered an empty styled wrapper | Not a language rule: the kit uses `:if`, and the docs say which asks which question |
+| CSS written against a replicated or conditional list | The stencil `<template>` sat where the markup was written and counted as a child, so `li:first-child` matched nothing and the style just never appeared | The stencil is in `<head>` and a comment holds its place; structural selectors count what the page wrote. See [stencils out of the way](stencil-placement.md) |
 
 ## Open
 

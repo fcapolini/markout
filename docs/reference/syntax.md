@@ -405,8 +405,8 @@ Whitespace and comments in between are fine — neither renders — but
 anything that does render is a compile error, since it would appear between
 two alternatives at most one of which is showing. Everything true of `:if`
 stays true of the others: a branch that isn't showing evaluates nothing
-inside itself, and its element is parked in a `<template>` rather than
-rebuilt when it comes back.
+inside itself, and its element is held by its scope rather than rebuilt when
+it comes back.
 
 `:if` and `:for-data` differ in the question they ask. `:for-data` is
 `!= null`, so `0` and `''` are data — right for an item, wrong for a
@@ -418,10 +418,10 @@ Neither evaluates its body while it isn't showing, which is what makes
 `${user.name}` safe to write inside one.
 
 The host element becomes an inert `<template>` and every visible item is a
-clone of it. That `<template>` is still an element in the DOM, and the first
-one — so CSS written against a replicated list has to use `:first-of-type`
-rather than `:first-child`, and `:nth-of-type` rather than `:nth-child`. See
-[replication](../concepts/directives.md#the-stencil-is-a-real-element-and-css-can-see-it).
+clone of it. That `<template>` is in `<head>`, with a comment standing where
+the element was written — so a replicated list's children are its replicas
+and nothing else, and `:first-child` and `:nth-child` mean what they say. See
+[replication](../concepts/directives.md#the-stencil-is-not-where-you-wrote-it).
 
 ### A name inside a region is read with `?.`
 

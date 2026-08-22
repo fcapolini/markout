@@ -61,7 +61,6 @@ function run(html: string) {
       const s = page.source.doc.toString();
       const body = s
         .slice(s.indexOf('<body'), s.indexOf('<script'))
-        .replace(/<template>[\s\S]*?<\/template>/g, '')
         .replace(/<!--.*?-->/g, '');
       return /<i>([\s\S]*?)<\/i>/.exec(body)?.[1] ?? '(no probe)';
     },

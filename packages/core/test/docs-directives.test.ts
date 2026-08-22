@@ -342,8 +342,8 @@ const CASES: Record<string, Case> = {
   ':if=${expr}': {
     works: async () => {
       const p = await run('<html :on=${false}><body><i :if=${on}>here</i></body></html>');
-      // parked in its stencil rather than deleted, so it can come back
-      const live = () => p.body().replace(/<template>[\s\S]*?<\/template>/g, '');
+      // held by its scope rather than deleted, so it can come back
+      const live = () => p.body();
       expect(live()).not.toContain('<i>here</i>');
       p.ctx.root.proxy['on'] = true;
       expect(live()).toContain('<i>here</i>');
@@ -360,7 +360,7 @@ const CASES: Record<string, Case> = {
           '<i :if=${n === 1}>one</i><i :else-if=${n === 2}>two</i>' +
           '</body></html>'
       );
-      const live = () => p.body().replace(/<template>[\s\S]*?<\/template>/g, '');
+      const live = () => p.body();
       expect(live()).toContain('<i>two</i>');
       expect(live()).not.toContain('<i>one</i>');
       // the branch that gives up its position is the one whose own condition
@@ -378,7 +378,7 @@ const CASES: Record<string, Case> = {
       const p = await run(
         '<html :on=${false}><body><i :if=${on}>yes</i><i :else>no</i></body></html>'
       );
-      const live = () => p.body().replace(/<template>[\s\S]*?<\/template>/g, '');
+      const live = () => p.body();
       expect(live()).toContain('<i>no</i>');
       p.ctx.root.proxy['on'] = true;
       expect(live()).toContain('<i>yes</i>');
@@ -388,7 +388,7 @@ const CASES: Record<string, Case> = {
   ':for-each=${expr}': {
     works: async () => {
       const p = await run('<html><body><i :for-each=${["a", "b"]}>${data}</i></body></html>');
-      const live = p.body().slice(p.body().indexOf('</template>'));
+      const live = p.body();
       expect(live.match(/<i>/g)?.length).toBe(2);
       expect(live).toContain('>a<');
       expect(live).toContain('>b<');
@@ -399,7 +399,7 @@ const CASES: Record<string, Case> = {
       const p = await run(
         '<html><body><i :for-each=${["a"]} :for-as="item">${item}</i></body></html>'
       );
-      expect(p.body().slice(p.body().indexOf('</template>'))).toContain('>a<');
+      expect(p.body()).toContain('>a<');
     },
   },
   ':for-key=${expr}': {
@@ -427,8 +427,9 @@ const CASES: Record<string, Case> = {
       // present renders, absent doesn't -- and the absent one's body never
       // evaluates, which is what makes `${data.boom.deep}` safe to write
       expect(p.body()).toContain('<i>Ada</i>');
-      // parked in its stencil rather than deleted, so it can come back
-      expect(p.body()).toContain('<template><b></b></template>');
+      // and nothing where the absent one was written: markers are stripped
+      // from this view, and the markup itself waits in a stencil in <head>
+      expect(p.body()).not.toContain('<b>');
     },
   },
 
@@ -598,7 +599,7 @@ const CASES: Record<string, Case> = {
           '<:logic :aka="w" :write=${() => panel.field?.$set("text", "B")} />' +
           '</body></html>'
       );
-      const live = () => p.body().replace(/<template>[\s\S]*?<\/template>/g, '');
+      const live = () => p.body();
       expect(live()).toContain('<i>A</i>');
       // it landed, and says so
       expect(p.ctx.root.proxy['body']['w'].write()).toBe(true);
