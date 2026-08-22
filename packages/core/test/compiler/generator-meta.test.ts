@@ -21,12 +21,16 @@ beforeAll(() => {
 });
 afterAll(() => fs.rmSync(docroot, { recursive: true, force: true }));
 
-async function head(page: string, generator?: boolean) {
+async function page(source: string, generator?: boolean) {
   const name = `g${seq++}.html`;
-  fs.writeFileSync(path.join(docroot, name), page);
+  fs.writeFileSync(path.join(docroot, name), source);
   const compiled = await new Compiler({ docroot, generator }).compile(`/${name}`);
   expect(compiled.errors.map(e => e.msg)).toStrictEqual([]);
-  const html = compiled.source.doc.toString();
+  return compiled.source.doc.toString();
+}
+
+async function head(source: string, generator?: boolean) {
+  const html = await page(source, generator);
   return html.slice(0, html.indexOf('<body'));
 }
 
@@ -65,6 +69,50 @@ describe('the generator meta', () => {
     // matched however it is spelled: a meta's name is ASCII case-insensitive
     expect(out).toContain('content="Mine"');
     expect(out).not.toContain('Markout');
+  });
+
+  it('leaves one alone wherever the page put it', async () => {
+    // invalid markup, and unambiguous about what its author meant. A second
+    // declaration contradicting it is the worse of the two readings
+    const inBody = await page(
+      '<html><head></head><body><meta name="generator" content="InBody"></body></html>'
+    );
+    expect(inBody.match(/name="generator"/g)).toHaveLength(1);
+    expect(inBody).toContain('content="InBody"');
+
+    // including one a region renders, which is still the page saying so
+    const inRegion = await page(
+      '<html><head></head><body><meta name="generator" content="Maybe" :if=${false}>' +
+        '</body></html>'
+    );
+    expect(inRegion.match(/name="generator"/g)).toHaveLength(1);
+  });
+
+  it('takes the one an imported fragment contributes', async () => {
+    fs.writeFileSync(
+      path.join(docroot, 'gen-lib.htm'),
+      '<lib><meta name="generator" content="Fragment"></lib>'
+    );
+    const out = await head(
+      '<html><head><:import src="gen-lib.htm"/></head><body>b</body></html>'
+    );
+    expect(out).toContain('content="Fragment"');
+    expect(out).not.toContain('Markout');
+  });
+
+  it('is added once however many times a page is compiled', async () => {
+    // the compiled document is cached and re-rendered per request, and a
+    // stage that appended would be one more thing accumulating in it
+    const name = `g${seq++}.html`;
+    fs.writeFileSync(
+      path.join(docroot, name),
+      '<html><head></head><body>b</body></html>'
+    );
+    const compiler = new Compiler({ docroot });
+    const first = (await compiler.compile(`/${name}`)).source.doc.toString();
+    const again = (await compiler.compile(`/${name}`)).source.doc.toString();
+    expect(first.match(/name="generator"/g)).toHaveLength(1);
+    expect(again.match(/name="generator"/g)).toHaveLength(1);
   });
 
   it('is not there when the compiler is told not to', async () => {

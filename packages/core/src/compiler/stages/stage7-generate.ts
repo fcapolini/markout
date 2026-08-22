@@ -167,7 +167,13 @@ export const GENERATOR_NAME = 'Markout';
  * meta has said something deliberate about what made this page, and a
  * second one would contradict it. Matched case-insensitively, because a
  * meta's name is ASCII case-insensitive and `name="Generator"` is the same
- * declaration.
+ * declaration -- and looked for anywhere in the document rather than only
+ * among the head's children. One written in `<body>` is invalid markup and
+ * says nothing to a parser, but it is not ambiguous about what its author
+ * meant, and answering an odd spelling of "this page was made by X" with a
+ * second, contradicting declaration is the worse of the two readings. The
+ * walk descends into `<template>` content for the same reason: a region
+ * that renders one is still the page saying so.
  *
  * Skipped where there is no `<head>` to append to, which is what a fragment
  * is -- so an imported file carries nothing and the page that imports it
@@ -176,7 +182,7 @@ export const GENERATOR_NAME = 'Markout';
 function injectGenerator(page: Page) {
   const doc = page.source.doc;
   const head = doc.head;
-  if (!head || saysGenerator(head)) {
+  if (!head || saysGenerator(doc)) {
     return;
   }
   const meta = doc.createElement('meta');
@@ -185,13 +191,16 @@ function injectGenerator(page: Page) {
   head.appendChild(meta);
 }
 
-function saysGenerator(head: ServerElement): boolean {
-  return head.childNodes.some(
-    n =>
-      n.nodeType === NodeType.ELEMENT &&
-      (n as ServerElement).tagName === 'META' &&
-      `${(n as ServerElement).getAttribute('name') ?? ''}`.toLowerCase() === 'generator'
-  );
+function saysGenerator(e: ServerElement): boolean {
+  const children =
+    e.tagName === 'TEMPLATE' ? (e as ServerTemplateElement).content.childNodes : e.childNodes;
+  return children.some(n => {
+    if (n.nodeType !== NodeType.ELEMENT) return false;
+    const el = n as ServerElement;
+    return el.tagName === 'META'
+      ? `${el.getAttribute('name') ?? ''}`.toLowerCase() === 'generator'
+      : saysGenerator(el);
+  });
 }
 
 /**
