@@ -52,6 +52,7 @@ ships rather than after:
 | Format Document on a markout file | VS Code's HTML formatter read `>` inside `${…}` as the end of a tag, turning every later attribute into text | The extension provides formatting and removes HTML's, for these files |
 | `:for-data` as a condition | `!= null`, so `''` rendered an empty styled wrapper | Not a language rule: the kit uses `:if`, and the docs say which asks which question |
 | CSS written against a replicated or conditional list | The stencil `<template>` sat where the markup was written and counted as a child, so `li:first-child` matched nothing and the style just never appeared | The stencil is in `<head>` and a comment holds its place; structural selectors count what the page wrote. See [stencils out of the way](stencil-placement.md) |
+| A region inside inline SVG | Caught in the act while moving stencils to `<head>`: a `<circle>` in a stencil parses into the HTML namespace, so the clone was an `HTMLUnknownElement` that drew nothing and reported nothing — where the arrangement before it had at least thrown | The stencil travels with the `<svg>`/`<math>` that names its namespace, and the test parses the served bytes in a DOM that has namespaces — the compiler's own has none to get wrong |
 
 ## Open
 

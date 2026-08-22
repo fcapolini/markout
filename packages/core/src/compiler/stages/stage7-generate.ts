@@ -9,6 +9,7 @@ import type {
 import {
   ServerComment,
   ServerElement,
+  ServerNode,
   ServerTemplateElement,
   ServerText,
 } from '../../html/server-dom';
@@ -169,22 +170,35 @@ function relocateStencils(page: Page) {
   if (!head) return;
   // collected before anything moves, so nesting is still readable: a
   // stencil inside another one may be instantiated many times over, which
-  // is the difference between a spent stencil and one still needed
-  const found: { template: ServerTemplateElement; nested: boolean }[] = [];
-  const walk = (e: ServerElement, nested: boolean) => {
+  // is the difference between a spent stencil and one still needed. And so
+  // is the namespace it was written in, which nothing about the template
+  // itself records
+  const found: {
+    template: ServerTemplateElement;
+    nested: boolean;
+    foreign?: string;
+  }[] = [];
+  const walk = (e: ServerElement, nested: boolean, foreign?: string) => {
     const container = e.tagName === 'TEMPLATE' ? (e as ServerTemplateElement).content : e;
     const inStencil = nested || e.tagName === 'TEMPLATE';
+    // <foreignObject> is the door back out of SVG: what is written in there
+    // is HTML again, and wrapping it would put it back in the wrong one
+    const within = FOREIGN_ROOT_TAGS.has(e.tagName)
+      ? e.tagName.toLowerCase()
+      : e.tagName === FOREIGN_ESCAPE_TAG
+        ? undefined
+        : foreign;
     for (const child of [...container.childNodes]) {
       if (child.nodeType !== NodeType.ELEMENT) continue;
       const el = child as ServerElement;
       el.getAttribute(REGION_STENCIL_MARKER) !== null &&
-        found.push({ template: el as ServerTemplateElement, nested: inStencil });
-      walk(el, inStencil);
+        found.push({ template: el as ServerTemplateElement, nested: inStencil, foreign: within });
+      walk(el, inStencil, within);
     }
   };
   walk(doc, false);
 
-  for (const { template, nested } of found) {
+  for (const { template, nested, foreign } of found) {
     const scopeId = stencilScopeId(template);
     const parent = template.parentNode;
     // an empty stencil belongs to nothing: `<x-logic :for-each>` names a tag
@@ -199,6 +213,7 @@ function relocateStencils(page: Page) {
     // stamped out once per instance of that one, so no single rendering
     // ever spends it
     once && !nested && template.setAttribute(DOM_STENCIL_ONCE_ATTR, null, template.loc);
+    foreign && wrapForeignContent(template, foreign);
     parent.insertBefore(
       new ServerComment(doc, `${DOM_REGION_MARKER}${scopeId}.${key}`, template.loc),
       template
@@ -207,6 +222,35 @@ function relocateStencils(page: Page) {
     head.appendChild(template);
     page.regionStencils.push(template);
   }
+}
+
+/** the two namespaces an HTML document can switch into, and the way back */
+const FOREIGN_ROOT_TAGS = new Set(['SVG', 'MATH']);
+const FOREIGN_ESCAPE_TAG = 'FOREIGNOBJECT';
+
+/**
+ * Re-roots a stencil's markup under the element that names its namespace.
+ *
+ * `<circle>` means an SVG circle inside `<svg>` and an unknown HTML element
+ * anywhere else, and a stencil in <head> is anywhere else. Served as
+ * `<template><circle/></template>` the browser parses it into the HTML
+ * namespace, and the clone this makes renders nothing at all -- which is
+ * the failure this whole file exists to avoid, since nothing throws and
+ * nothing is reported.
+ *
+ * So the markup travels with an `<svg>` (or `<math>`) around it, which is
+ * exactly what tells the parser where it belongs. Nothing else changes:
+ * the region's own element is found inside the stencil by its id, wrapper
+ * or no wrapper, and the wrapper itself is never cloned.
+ */
+function wrapForeignContent(template: ServerTemplateElement, tag: string): void {
+  const doc = template.ownerDocument;
+  const root = new ServerElement(doc, tag, template.loc);
+  for (const child of [...template.content.childNodes]) {
+    (child as ServerNode).unlink();
+    root.appendChild(child);
+  }
+  template.appendChild(root);
 }
 
 /**

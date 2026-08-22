@@ -12,10 +12,10 @@ and in [the syntax reference](../reference/syntax.md).
 ## What it used to do
 
 [stage1-load.ts](../../packages/core/src/compiler/stages/stage1-load.ts)'s
-`wrapInTemplate()` put a `<template>` where the element was written and
-moved the element inside it — and left it there. Every construct that renders zero, one, or
-many times goes through it — `needsStencil()` is `:for-each`, `:for-data`,
-or any of the three branch spellings.
+`wrapInTemplate()` put a `<template>` where the element was written, moved
+the element inside it, and left it there. Every construct that renders
+zero, one or many times goes through it — `needsStencil()` is `:for-each`,
+`:for-data`, or any of the three branch spellings.
 
 The runtime then used that one element for five different jobs, all
 through `WebScope.templateEl`
@@ -29,8 +29,9 @@ through `WebScope.templateEl`
 | What do I stamp replicas from | `acquireCloneDom()` — clone its content |
 | What do I order replicas against | `reorderClones()` — walk forward from it |
 
-Two of those are about **position** and three are about **markup**. It was
-the same element only because it happened to sit where the markup belonged.
+Two of those are about **position**, two about **markup**, and one about
+state. It was the same element only because it happened to sit where the
+markup belonged.
 
 ## What it cost
 
@@ -56,11 +57,14 @@ never matched, which is why this was a
 ### Foreign content broke outright
 
 Inside `<svg>` or `<math>` there is no such thing as an HTML `<template>`.
-The parser is in foreign-content mode, so what comes back is an SVG element
+The parser is in foreign-content mode, so what came back was an SVG element
 named `template` with no `.content` at all — and `hideView()`'s
-`template.content.appendChild(...)` threw on it. A comment is legal
-everywhere in foreign content. This is not a styling inconvenience; it is
-`:if`, `:for-data` and `:for-each` not working inside inline SVG.
+`template.content.appendChild(...)` threw on it. Not a styling
+inconvenience: `:if`, `:for-data` and `:for-each` did not work inside
+inline SVG.
+
+A comment is legal everywhere in foreign content, so moving the stencil out
+was half the answer. The other half is below, and it was nearly missed.
 
 ### Every replica carried a copy
 
@@ -227,6 +231,41 @@ A page mounted in the browser with no server rendering behind it keeps
 every stencil the compiler emitted — there is no state to decide against,
 and nothing rendered to make one redundant.
 
+### A stencil in `<head>` is in the HTML namespace
+
+The one place this arrangement cannot be naive, and it very nearly shipped
+wrong.
+
+`<circle>` means an SVG circle inside `<svg>` and an unknown HTML element
+anywhere else — the namespace comes from where the parser met it, not from
+the tag. A stencil in `<head>` is anywhere else. So
+`<template><circle/></template>` parses into the HTML namespace, and the
+clone stamped out of it is an `HTMLUnknownElement` that renders nothing.
+
+That is worse than the crash it replaced. The old arrangement threw, and a
+page that throws is a page someone fixes; this one draws nothing and says
+nothing, which is the exact failure [silent
+failures](silent-failures.md) exists to catalogue.
+
+So a stencil whose markup was written inside foreign content travels with
+the element that names the namespace around it:
+
+```html
+<template data-markout-stencil="q0"><svg><circle data-markout="s4"/></svg></template>
+```
+
+The wrapper is never cloned and never named anywhere else — the region
+finds its own element inside the stencil **by its id**, which it now does
+in every case, wrapper or no wrapper. `<foreignObject>` is the door back
+out, and the walk that decides this closes it: markup written in there is
+HTML again, and an `<svg>` around it would put it in the wrong namespace
+just as surely.
+
+Asserted against a real parse of the served bytes
+([svg-regions.test.ts](../../packages/cli/test/server/svg-regions.test.ts)),
+because the compiler's own DOM has no namespaces to get wrong — which is
+precisely why the first cut passed every test it had.
+
 ## Where the relocation happens
 
 Late — stage7, which already appends a `<template>` to `<body>` for the
@@ -239,8 +278,8 @@ in stage1 would have meant revisiting every one of them.
 
 So the compiler-side change is small: `wrapInTemplate()` is as it was, plus
 a `data-markout-region` marker attribute, and `relocateStencils()` in
-stage7 walks the document, keys each stencil, drops a comment where it
-stood and moves it to `<head>`.
+stage7 walks the document, keys each stencil, wraps it if it was written in
+foreign content, drops a comment where it stood and moves it to `<head>`.
 
 The marker is an **attribute rather than a list on the Page** for one
 reason, and it is the same reason the marker carries two ids: a `<:define>`
@@ -262,8 +301,9 @@ with.
 
 ## What it cost to build
 
-- The most delicate file in the runtime, and one bug that only a
-  second render could show (above).
+- The most delicate file in the runtime, and two bugs that no test then in
+  the suite could have shown: one that needed a *second* render, and one
+  that needed a DOM with namespaces (both above).
 - One latent bug found on the way, in a place that had nothing to do with
   this: `document.createElement('template')` returned an ordinary element
   with no content fragment, so anything walking the document by the rules a

@@ -263,9 +263,11 @@ export class WebScope extends CoreScope {
       ? // a custom tag: what the stencil holds is the usage marker, and the
         // instance is stamped into it there, once, whoever gets there first
         this.acquireUsageDom(this.props.template, stencil)
-      : ([...(stencil as unknown as TemplateElement).content.childNodes].find(
-          n => n.nodeType === NodeType.ELEMENT
-        ) as Element | undefined);
+      : // by id rather than "the first element in there", because markup
+        // written inside `<svg>` travels with an `<svg>` around it: a
+        // `<circle>` alone in a stencil is an unknown HTML element, and a
+        // clone of that renders nothing (see relocateStencils)
+        ctx.findElementById(id, stencil);
     if (!proto || replicates) return proto;
     const node = proto.cloneNode(true) as unknown as Element;
     node.setAttribute(DOM_ID_ATTR, id);
