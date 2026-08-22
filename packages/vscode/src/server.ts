@@ -141,6 +141,26 @@ function warn(message: string) {
   }
 }
 
+interface Settings {
+  enable?: 'auto' | 'always' | 'never';
+  /** one docroot or several; see docrootFor in ./diagnostics */
+  docroot?: string | string[];
+}
+
+/**
+ * `markout.docroot` as SET, reduced to what it configures.
+ *
+ * An empty setting is how the schema spells "no answer", and a setting is
+ * empty in more ways now that it may be a list: `""`, `[]`, and a list of
+ * blanks left behind by editing one. All three have to arrive downstream as
+ * `undefined`, or the file's own project never gets asked.
+ */
+function configured(value: string | string[] | undefined): string | string[] | undefined {
+  const given = typeof value === 'string' ? [value] : (value ?? []);
+  const kept = given.filter(entry => typeof entry === 'string' && entry.trim());
+  return kept.length ? (typeof value === 'string' ? value : kept) : undefined;
+}
+
 /**
  * `markout.docroot` and `markout.enable`, as they are NOW.
  *
@@ -154,7 +174,7 @@ function warn(message: string) {
  * to the services -- because they are built once, at initialize, and a value
  * copied in then is a value frozen then.
  */
-let settings: { enable?: 'auto' | 'always' | 'never'; docroot?: string } = {};
+let settings: Settings = {};
 
 /**
  * Re-read them, and make the editor ask everything again.
@@ -164,11 +184,9 @@ let settings: { enable?: 'auto' | 'always' | 'never'; docroot?: string } = {};
  * it, and the editor does not ask again until it is told to.
  */
 async function settingsChanged() {
-  const pulled = await configurations.get<{ enable?: 'auto' | 'always' | 'never'; docroot?: string }>(
-    'markout'
-  );
+  const pulled = await configurations.get<Settings>('markout');
   if (pulled) {
-    settings = { enable: pulled.enable, docroot: pulled.docroot || undefined };
+    settings = { enable: pulled.enable, docroot: configured(pulled.docroot) };
   }
   invalidate();
 }
@@ -181,10 +199,8 @@ function workspaceFolders() {
 }
 
 connection.onInitialize(params => {
-  const initial = params.initializationOptions as
-    | { enable?: 'auto' | 'always' | 'never'; docroot?: string }
-    | undefined;
-  settings = { enable: initial?.enable, docroot: initial?.docroot || undefined };
+  const initial = params.initializationOptions as Settings | undefined;
+  settings = { enable: initial?.enable, docroot: configured(initial?.docroot) };
 
   return server.initialize(
     params,

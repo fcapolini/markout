@@ -89,9 +89,15 @@
       "title": "Markout",
       "properties": {
         "markout.docroot": {
-          "type": "string",
+          "type": [
+            "string",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
           "default": "",
-          "markdownDescription": "The directory pages are resolved against, so that `/lib.htm` means the same thing here as it does when served. Empty means guess: the nearest ancestor named `markout`, then the nearest one with a `package.json`, then the workspace folder."
+          "markdownDescription": "The directory pages are resolved against, so that `/lib.htm` means the same thing here as it does when served. An array names several, for a window open on more than one project: each file is read against the innermost one that contains it. Empty falls back to `markout.docroot` in the nearest `package.json`, then to a guess -- the nearest ancestor named `markout`, then the nearest one with a `package.json`, then the workspace folder."
         },
         "markout.enable": {
           "type": "string",

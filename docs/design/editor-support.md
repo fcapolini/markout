@@ -485,7 +485,7 @@ test green and the extension doing nothing.
 
 ## A window is not a constant
 
-Three things about the window were read once, at startup, and treated as
+Four things about the window were read once, at startup, and treated as
 facts about the world thereafter. Each of them is something a person changes
 in the ordinary course of using an editor.
 
@@ -514,10 +514,40 @@ Folders added to a window after it opened are picked up too, since the list
 is read from Volar's live `workspaceFolders` on every request rather than
 from the initialize params.
 
-One thing deliberately left: `markout.docroot` is a window-scoped setting, so
-a multi-root window applies one value to every folder. Set it per project and
-it is wrong for the others — the default, which guesses per file, is the
-right answer in that window.
+**Docroots.** `markout.docroot` was one directory, applied to every file in
+the window — the same mistake in a subtler place. A window-scoped setting
+cannot be right for a window holding several projects, so naming one
+project's docroot made it wrong for the others, and the advice was to leave
+the setting alone and let the guess do the work. Which is advice that gives
+up on the setting in exactly the projects that need it: a monorepo of sites
+is where an author most wants to say where the pages are.
+
+It is now plural, and it has a second home:
+
+- **the setting** takes a string or an array of them, and stays what a person
+  reaches for when the other two are wrong;
+- **`markout.docroot` in the nearest `package.json`** is the project's own
+  answer — checked in, shared by everyone who opens the repository, and the
+  only one of the three a build could ever be made to agree with. It is read
+  from the nearest manifest that *says so*, walking past those that do not,
+  which is the same "nearest ancestor wins" rule the guess already uses;
+- **the guess** is unchanged, and is still what answers when nobody said.
+
+What makes several usable is that a configured docroot is a *candidate*
+rather than an answer. The one chosen is the innermost that actually contains
+the file — `folderOf`'s rule, since docroots nest as freely as workspace
+folders do — and a file under none of them falls through to the next source
+instead of being forced under one it is not in. That is precisely what the
+single value did wrong: `pathnameOf` on a file outside its docroot yields
+`/../..`, and the compiler refuses it, so the editor reported a missing file
+that was sitting right there. A file under exactly one docroot behaves as it
+always did, which is nearly every project.
+
+The section key is `markout`, the same one a kit declares `markout.root`
+under. Deliberately: one section, one spelling, two things a package can say
+about itself — a kit says where its files are *addressed* from, an
+application says where its pages *are*. Nothing reads both keys off one
+manifest, so they cannot be taken for each other.
 
 **The sweep's bound.** It compiles at most 200 pages, which is a bound worth
 having and a bound that must be *admitted*: an empty Problems panel after an

@@ -106,10 +106,34 @@ without depending on it — a vendored copy, or a page opened on its own.
 
 | Setting | Default | What it is |
 | --- | --- | --- |
-| `markout.docroot` | *empty* | The directory absolute paths are resolved against, so that `/lib.htm` means in the editor what it will mean when served. Empty guesses: the nearest ancestor named `markout`, then the nearest with a `package.json`, then the workspace folder. |
+| `markout.docroot` | *empty* | The directory absolute paths are resolved against, so that `/lib.htm` means in the editor what it will mean when served. A string, or an array of them for a project that serves more than one. Empty falls back to the project's own answer, below. |
 | `markout.enable` | `auto` | `auto` looks for the evidence above. `always` diagnoses every HTML file. `never` says nothing. |
 
 Both take effect where you change them — no window reload.
+
+### More than one docroot
+
+A window is often open on a project that serves several — a site and a demo
+beside each other, or a monorepo of them. Name them in the project's own
+`package.json`, where the answer is checked in rather than per-person:
+
+```json
+{
+  "markout": {
+    "docroot": ["sites/site/markout", "kits/bootstrap"]
+  }
+}
+```
+
+Paths are relative to the `package.json` that declares them, and a single
+string is still a single string. Each file is read against the **innermost**
+docroot that contains it; a file under none of them falls through to the
+guess — the nearest ancestor named `markout`, then the nearest with a
+`package.json`, then the workspace folder.
+
+The `markout.docroot` setting overrides this when it names a docroot the file
+is in, which makes it what it should always have been: the local override,
+not the only answer.
 
 ## Requirements
 

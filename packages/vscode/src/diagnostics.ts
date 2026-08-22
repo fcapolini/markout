@@ -211,6 +211,145 @@ export function folderOf(filePath: string, folders: string[] = []): string | und
 /** the one directory name that means "pages are served from here" */
 export const DOCROOT_DIR_NAME = 'markout';
 
+/**
+ * The `package.json` section a project configures markout in.
+ *
+ * The same key a kit declares its logical root under (`markout.root`, see
+ * core's `KIT_KEY`), and deliberately so: one section, one spelling, two
+ * things a package can say about itself -- a KIT says where its files are
+ * addressed from, an APPLICATION says where its pages are. Nothing reads
+ * both keys off one manifest, so they cannot be confused for each other.
+ */
+export const MANIFEST_KEY = 'markout';
+
+/**
+ * `markout.docroot`, normalized: one docroot or several, as absolute paths.
+ *
+ * Several, because a window is routinely open on a project that serves more
+ * than one -- a monorepo of sites, or a site with a demo beside it -- and
+ * because a single value applied to every file is the failure the setting
+ * was supposed to fix. A string stays a string at the point of writing; the
+ * plural is what happens to it here.
+ *
+ * Relative entries resolve against `from`: the manifest's own directory for
+ * a package.json, and each workspace folder for a setting, which is the only
+ * base a window-scoped value could sensibly have. Anything that is not a
+ * non-empty string is dropped rather than refused -- a half-edited setting
+ * is a normal state for a file somebody is typing in, and the guess below it
+ * is a working answer.
+ */
+export function docrootsOf(value: unknown, from: string): string[] {
+  const given = typeof value === 'string' ? [value] : Array.isArray(value) ? value : [];
+  const found: string[] = [];
+  for (const entry of given) {
+    if (typeof entry !== 'string' || !entry.trim()) {
+      continue;
+    }
+    const full = path.resolve(from, entry);
+    found.includes(full) || found.push(full);
+  }
+  return found;
+}
+
+/**
+ * The docroots a project declares in its `package.json`, nearest manifest
+ * first-and-only.
+ *
+ * Nearest that SAYS SO, rather than nearest at all: a monorepo's root
+ * manifest is where "these are my sites" belongs, and a package in between
+ * that says nothing about markout should not silence it. Reading only the
+ * first manifest that carries the key keeps the rule the same one
+ * guessDocroot already uses -- nearest ancestor wins -- so an author who can
+ * predict one can predict the other.
+ *
+ * Bounded by the workspace folder for the same reason the guess is: above it
+ * is somebody else's project, and a `markout` section up there is not this
+ * window's business.
+ *
+ * Read per call rather than cached, on the same terms as `kitsFor`'s note in
+ * this file: editing `markout.docroot` in a package.json changes what every
+ * absolute path in the project means, and a stale answer to that reports
+ * missing files that are sitting right there. It is a handful of small reads
+ * up the same tree the guess already walks with `existsSync`. If it shows up
+ * in a profile, cache it and invalidate on package.json -- not before.
+ */
+export function manifestDocroots(filePath: string, workspaceFolder?: string): string[] {
+  let dir = path.dirname(path.resolve(filePath));
+  const stop = workspaceFolder ? path.resolve(workspaceFolder) : path.parse(dir).root;
+  for (;;) {
+    const declared = readManifestDocroot(path.join(dir, 'package.json'));
+    if (declared !== undefined) {
+      return docrootsOf(declared, dir);
+    }
+    if (dir === stop || dir === path.dirname(dir)) {
+      return [];
+    }
+    dir = path.dirname(dir);
+  }
+}
+
+/** `markout.docroot` out of one manifest, or nothing if it does not say */
+function readManifestDocroot(manifest: string): unknown {
+  let json: Record<string, unknown>;
+  try {
+    json = JSON.parse(require('fs').readFileSync(manifest, 'utf8'));
+  } catch {
+    // unreadable or unparseable is not evidence either way -- the same
+    // reading isMarkoutProject takes of a manifest it cannot understand
+    return undefined;
+  }
+  const section = json[MANIFEST_KEY] as { docroot?: unknown } | undefined;
+  return section && typeof section === 'object' ? section.docroot : undefined;
+}
+
+/**
+ * The docroot one file is read against: what was configured, else the guess.
+ *
+ * Three sources, in the order an author would expect to override them:
+ *
+ * 1. **the `markout.docroot` setting** -- this window, this person, right
+ *    now, and the thing they reach for when the other two are wrong;
+ * 2. **`markout.docroot` in the nearest `package.json`** -- the project's
+ *    own answer, checked in, shared by everyone who opens it, and the only
+ *    one of the three that a build could ever be made to agree with;
+ * 3. **the guess** -- guessDocroot, unchanged.
+ *
+ * Configured docroots are candidates rather than an answer: the one CHOSEN
+ * is the innermost that actually contains the file, by exactly the rule
+ * folderOf uses for workspace folders, since docroots may nest as freely as
+ * folders do. A file under none of them falls through to the next source
+ * rather than being forced under one it is not in -- which is what the
+ * single-value setting did, and what made it unusable in a window holding
+ * more than one project.
+ *
+ * A file under exactly one configured docroot therefore behaves as it always
+ * did, which is the case nearly every project is.
+ */
+export function docrootFor(
+  filePath: string,
+  props: {
+    /** `markout.docroot`, as configured: one, several, or none */
+    docroot?: string | string[];
+    workspaceFolders?: string[];
+  }
+): string {
+  // read once: these arrive as GETTERS over live settings -- see the props
+  // server.ts passes -- so each mention is a call, and two of them within
+  // one answer could disagree
+  const setting = props.docroot;
+  const folders = props.workspaceFolders;
+  const folder = folderOf(filePath, folders);
+  // a relative setting has no base of its own, so every folder is offered
+  // one; an absolute one resolves to itself whichever base it is given
+  const bases = folders?.length ? folders : [process.cwd()];
+  const configured = bases.flatMap(base => docrootsOf(setting, base));
+  return (
+    folderOf(filePath, configured) ??
+    folderOf(filePath, manifestDocroots(filePath, folder)) ??
+    guessDocroot(filePath, folder)
+  );
+}
+
 function existsSync(p: string): boolean {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires

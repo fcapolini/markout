@@ -34,7 +34,8 @@ export async function activate(context: vscode.ExtensionContext) {
     // answer rather than the only one
     initializationOptions: {
       enable: settings.get<'auto' | 'always' | 'never'>('enable', 'auto'),
-      docroot: settings.get<string>('docroot') || undefined,
+      // string or array: the server reduces an empty one to "not set"
+      docroot: settings.get<string | string[]>('docroot'),
     },
     // `html`, not a language of our own: see PAGE_LANGUAGE_ID. Whether a
     // given HTML file is a markout page is a question about the PROJECT, and

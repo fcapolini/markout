@@ -5,8 +5,7 @@ import { URI } from 'vscode-uri';
 import {
   diagnose,
   type MarkoutDiagnostic,
-  folderOf,
-  guessDocroot,
+  docrootFor,
   isMarkoutProject,
   looksLikeMarkout,
   pathnameOf,
@@ -35,7 +34,7 @@ export interface MarkoutServiceProps {
   /**
    * The folders the window is open on, in any order.
    *
-   * A file's docroot is looked for under the one it is IN -- see folderOf --
+   * A file's docroot is looked for under the one it is IN -- see docrootFor --
    * because the folders of a multi-root workspace are separate projects, not
    * views of one.
    *
@@ -44,8 +43,13 @@ export interface MarkoutServiceProps {
    * these as getters.
    */
   workspaceFolders?: string[];
-  /** an explicit docroot, from `markout.docroot`; guessed when absent */
-  docroot?: string;
+  /**
+   * Explicit docroots, from `markout.docroot`: one, several, or none.
+   *
+   * Never the answer on its own -- see docrootFor, which chooses among these,
+   * the project's own `package.json`, and the guess, per file.
+   */
+  docroot?: string | string[];
   /** `markout.enable`: whether a project has to look like markout's */
   enable?: 'auto' | 'always' | 'never';
   /** the editor's unsaved buffers, by file path */
@@ -78,7 +82,7 @@ export interface MarkoutServiceProps {
  */
 export function createDocumentContext(props: {
   workspaceFolders?: string[];
-  docroot?: string;
+  docroot?: string | string[];
   /** turns an embedded document's uri back into the file's */
   decode: (uri: URI) => URI | undefined;
   /** the service's own resolver, for everything that is not ours */
@@ -91,8 +95,7 @@ export function createDocumentContext(props: {
         return props.fallback(ref, baseUri);
       }
       const filePath = baseUri.fsPath;
-      const docroot =
-        props.docroot ?? guessDocroot(filePath, folderOf(filePath, props.workspaceFolders));
+      const docroot = docrootFor(filePath, props);
       const target = resolveReference({
         docroot,
         fromPathname: pathnameOf(filePath, docroot),
@@ -172,9 +175,8 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
       documentFormattingProvider: true,
     },
     create(context) {
-      /** the docroot a file is read against: the setting, or the guess */
-      const docrootFor = (filePath: string) =>
-        props.docroot ?? guessDocroot(filePath, folderOf(filePath, props.workspaceFolders));
+      /** the docroot a file is read against: see docrootFor in ./diagnostics */
+      const docrootOf = (filePath: string) => docrootFor(filePath, props);
 
       /**
        * The source file behind a virtual document, if this service owns it.
@@ -204,7 +206,7 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
           return undefined;
         }
         const filePath = uri.fsPath;
-        const docroot = docrootFor(filePath);
+        const docroot = docrootOf(filePath);
         return {
           docroot,
           props: {
@@ -275,7 +277,7 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
             return undefined;
           }
           const filePath = uri.fsPath;
-          const docroot = docrootFor(filePath);
+          const docroot = docrootOf(filePath);
           const found = await findReferences({
             docroot,
             pathname: pathnameOf(filePath, docroot),
@@ -296,7 +298,7 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
             return undefined;
           }
           const filePath = uri.fsPath;
-          const docroot = docrootFor(filePath);
+          const docroot = docrootOf(filePath);
           const found = await findHover({
             docroot,
             pathname: pathnameOf(filePath, docroot),
@@ -322,7 +324,7 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
           if (text === undefined) {
             return undefined;
           }
-          const docroot = docrootFor(filePath);
+          const docroot = docrootOf(filePath);
           const found = await findCompletions({
             docroot,
             pathname: pathnameOf(filePath, docroot),
@@ -364,7 +366,7 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
           const text = document.getText();
           const offset = document.offsetAt(position);
           const filePath = uri.fsPath;
-          const docroot = docrootFor(filePath);
+          const docroot = docrootOf(filePath);
           const pathname = pathnameOf(filePath, docroot);
 
           // a file a directive names
@@ -480,7 +482,7 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
           // reading the real thing is what lets the scan see an expression as
           // an expression
           const text = props.open(uri.fsPath) ?? document.getText();
-          const docroot = docrootFor(uri.fsPath);
+          const docroot = docrootOf(uri.fsPath);
           if (enable === 'auto' && !looksLikeMarkout(text) && !isMarkoutProject(docroot)) {
             return undefined;
           }
@@ -506,7 +508,7 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
           if (enable === 'never') {
             return [];
           }
-          const docroot = docrootFor(filePath);
+          const docroot = docrootOf(filePath);
           // This extension has no file suffix of its own to hide behind, so
           // it has to be shown evidence. Either will do, and the first is the
           // one that matters: a project that installs nothing and runs

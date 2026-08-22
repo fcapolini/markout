@@ -2,8 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import {
   diagnose,
-  folderOf,
-  guessDocroot,
+  docrootFor,
   isMarkoutProject,
   looksLikeMarkout,
   type MarkoutDiagnostic,
@@ -42,8 +41,13 @@ export interface WorkspaceProps {
    * panel is one panel and the limit below is one budget.
    */
   workspaceFolders: string[];
-  /** an explicit docroot, from `markout.docroot`; guessed per file when absent */
-  docroot?: string;
+  /**
+   * Explicit docroots, from `markout.docroot`: one, several, or none.
+   *
+   * Still resolved per FILE -- see docrootFor -- because a sweep of a window
+   * holding several projects is the case this became plural for.
+   */
+  docroot?: string | string[];
   enable?: 'auto' | 'always' | 'never';
   open?: (filePath: string) => string | undefined;
   /**
@@ -88,8 +92,7 @@ export async function diagnoseWorkspace(props: WorkspaceProps): Promise<{
     if (text === undefined) {
       continue;
     }
-    const docroot =
-      props.docroot ?? guessDocroot(file, folderOf(file, props.workspaceFolders));
+    const docroot = docrootFor(file, props);
     if (enable === 'auto' && !looksLikeMarkout(text) && !isMarkoutProject(docroot)) {
       continue;
     }
