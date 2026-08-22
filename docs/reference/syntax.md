@@ -391,6 +391,12 @@ render", so an element may answer once: any two together is a compile error.
 `:else-if` and `:else` are the same answer under other spellings, and so
 count as `:if` here — an element is one branch, not the choice between two.
 
+None of them may go on `<html>`, `<head>` or `<body>`, which is also a
+compile error. A region's markup moves into a stencil, and those three are
+where a compiled page keeps what makes it work — every stencil in the head,
+the props and the runtime in the body. Whatever you meant goes on an
+element inside.
+
 A chain shows the first branch whose condition holds and no other:
 
 ```html

@@ -82,7 +82,13 @@ import { DOM_ID_ATTR, DOM_TEXT_MARKER1, DOM_TEXT_MARKER2, DOM_USE_MARKER } from 
  */
 
 export function stage1load(page: Page) {
-  page.main = load(page, page.global, page.source.doc.documentElement!, 'page');
+  // <html> never reaches the child walk that refuses a region on <head> or
+  // <body>, being the element that walk starts from -- and it is the worst
+  // of the three: a page that renders nothing at all, since a root scope
+  // with nothing to show evaluates none of its values
+  const root = page.source.doc.documentElement!;
+  needsStencil(root) && refuseStructuralRegion(page, root);
+  page.main = load(page, page.global, root, 'page');
   // expanding anything at all once a definition is based on another one
   // would work on a stencil that is about to be rewritten underneath it
   checkSlotNames(page);
@@ -355,7 +361,7 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
       // the stencil the runtime renders from: `:for-each` clones it once
       // per item, `:for-data` shows the one it already has. Neither
       // element is itself a live rendering
-      if (needsStencil(childEl)) {
+      if (needsStencil(childEl) && !refuseStructuralRegion(page, childEl)) {
         // an OPTIONAL stencil is one whose element may be in the page: both
         // arities of "zero or one" stand their one element there, where a
         // `:for-each` only ever clones
@@ -484,6 +490,43 @@ function literalOnly(
  * or one. Either way what the compiler emits is a stencil rather than a
  * rendering, and the runtime decides how many times it appears.
  */
+/**
+ * The three elements a page is made of, which cannot themselves come and go.
+ *
+ * A region's markup moves into a stencil, and `<head>` and `<body>` are
+ * where a compiled page keeps the things that make it work: every other
+ * region's stencil is appended to the head, and the props and the runtime
+ * are appended to the body. Take either away and those go with it -- and
+ * the way they go is the worst kind. `document.body` answers with a direct
+ * child of `<html>` and nothing else, so a `<body>` inside a stencil is no
+ * body at all: the bootstrap scripts had nowhere to be appended, and the
+ * page shipped rendered, complete, and completely inert, with nothing said
+ * about it at compile time or at run time.
+ *
+ * Refused rather than made to work, because there is nothing here to want:
+ * `<html>` is the document, and a `<head>` or `<body>` that is not there is
+ * not a page with something hidden in it, it is a broken document. What an
+ * author means goes on an element inside.
+ */
+const STRUCTURAL_TAGS = new Set(['HTML', 'HEAD', 'BODY']);
+
+function refuseStructuralRegion(page: Page, e: ServerElement): boolean {
+  if (!STRUCTURAL_TAGS.has(e.tagName)) return false;
+  const written = [FOR_EACH_ATTR, FOR_DATA_ATTR, IF_ATTR, ELSE_IF_ATTR, ELSE_ATTR].find(name =>
+    hasAttr(e, name)
+  );
+  const tag = e.tagName.toLowerCase();
+  addError(
+    page,
+    `<${tag}> cannot carry "${SPECIAL_ATTR_PREFIX}${written}": a page keeps ` +
+      `its stencils in <head> and its bootstrap in <body>, so a region that ` +
+      `takes one of them away takes those with it and the page stops working ` +
+      `entirely. Put it on an element inside <${tag}>`,
+    e.loc
+  );
+  return true;
+}
+
 function needsStencil(e: ServerElement): boolean {
   return hasAttr(e, FOR_EACH_ATTR) || hasAttr(e, FOR_DATA_ATTR) || !!branchAttr(e);
 }

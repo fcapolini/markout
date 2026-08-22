@@ -356,23 +356,35 @@ levels of `<head>` the stencils are actually put in.
 
 ## What is left
 
-Nothing the feature needs, and three things worth knowing:
+Nothing the feature needs. The three things this section used to list have
+each been answered, and one of them turned out to be wrong:
 
-- **The stage1 wrap could go.** Now that relocation happens in stage7,
-  `wrapInTemplate()` exists only so the stages between can ask "am I inside
-  a stencil?". Drop it and `:else` adjacency would survive the load walk,
-  which is what the `previous` / `separated` bookkeeping in `load()` exists
-  to work around. A cleanup with its own risk, and no user-visible effect.
-- **Two invariants rest on one test each**: the foreign-content wrapper and
-  the `data-markout-once` flag. Both are narrow by construction — one is
-  only reachable through a DOM with namespaces, the other through a nested
-  stencil — but neither has any redundancy. Established by mutation rather
-  than by reading, which is also how the untested `restoreStencils` was
-  found.
-- **`:if` on `<head>` itself** puts the stencil after `</body>`, because
-  the head it would go in is the markup being moved. Nothing is lost and
-  the browser parses it back into `<body>`, where the index still finds it
-  — but it works by accident rather than by decision.
+- **The stage1 wrap cannot go, and would buy nothing.** The claim was that
+  `wrapInTemplate()` is what destroys `:else` adjacency during the load
+  walk, so dropping it would let the `previous` / `separated` bookkeeping
+  in `load()` go with it. It would not. `extractValues` strips every `:`
+  attribute off an element as it reads it, so by the end of that walk the
+  branch spelling is gone from the tree and the scope was never in it —
+  which is what that bookkeeping is carrying. Adjacency is the least of it.
+  The wrap stays, and stages 2 through 6 go on asking the tree whether they
+  are inside a stencil.
+- **The two thin invariants have a second guard**, at the compiler rather
+  than through a browser:
+  [stencil-relocation.test.ts](../../packages/core/test/compiler/stencil-relocation.test.ts)
+  asserts the foreign-content wrapper, which stencils are marked spendable,
+  and that two copies of one definition get two keys — the case that
+  decided the marker carries two ids.
+- **A region on `<html>`, `<head>` or `<body>` is now a compile error.**
+  Not an accident worth living with, and worse than it looked: `<body :if>`
+  was inert whether the condition held or not. `document.body` answers with
+  a direct child of `<html>` and nothing else, so a body inside a stencil is
+  no body at all — `injectBootstrapScripts` found nowhere to put the props
+  or the runtime and returned, and the page shipped rendered, complete, and
+  dead. It predates this whole change (stage1 wrapped in place too, with the
+  same effect) and it says nothing at compile time or run time, which is
+  what makes refusing it the fix rather than placing the stencil more
+  carefully. There is nothing here to want: a `<head>` that is not there is
+  not a page with something hidden in it.
 
 ## Rejected
 
