@@ -18,6 +18,7 @@ than built into the language — so you can use the ones that ship, the
   <source media="(prefers-color-scheme: dark)" srcset="assets/orbit-dark.png">
   <img src="assets/orbit-light.png" alt="Orbit, an operations console: a KPI row with sparklines, a traffic chart, a regional breakdown and a cost forecast">
 </picture>
+
 [**Orbit**](https://markout.dev/demos/orbit.html) is an operations console demo
 written in Markout + bootstrap-kit, over a directory of JSON files and no back end. Its
 numbers are fetched while the page renders, so every one of them is in the
