@@ -63,6 +63,32 @@ describe('what a rendered page carries', () => {
     expect(html.match(/<li/g)).toHaveLength(3);
   });
 
+  it('has the markup back for a request that hides what the last one showed', async () => {
+    // the trap the whole restore step exists for, and the one a page served
+    // twice with the same data cannot show: the first render proves a
+    // stencil spent and drops it, and the second render's data hides the
+    // very region that was standing there. `$origin` is the one input a
+    // render takes that can differ between two renders of one compiled page
+    const name = `p${seq++}.html`;
+    fs.writeFileSync(
+      path.join(docroot, name),
+      '<html><head></head><body><p :if=${$origin.endsWith("one")}>maybe</p></body></html>'
+    );
+    const compiled = await new Compiler({ docroot }).compile(`/${name}`);
+    expect(await renderPage(compiled, { origin: 'https://one' })).toStrictEqual([]);
+    const shown = compiled.source.doc.toString();
+    expect(shown).toContain('>maybe</p>');
+    expect(shown).not.toContain('data-markout-stencil');
+
+    expect(await renderPage(compiled, { origin: 'https://two' })).toStrictEqual([]);
+    const hidden = compiled.source.doc.toString();
+    // out of the page, and still on it: a response whose markup went
+    // nowhere is a region the browser could never show
+    expect(hidden.slice(hidden.indexOf('<body'))).not.toContain('<p');
+    expect(hidden).toContain('data-markout-stencil');
+    expect(hidden.match(/maybe/g)).toHaveLength(1);
+  });
+
   it('renders the same bytes twice, whatever the first render dropped', async () => {
     const name = `p${seq++}.html`;
     fs.writeFileSync(
