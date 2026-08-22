@@ -1,0 +1,22 @@
+# What GitHub counts when it draws the language bar.
+#
+# The bar is by bytes, and this repository holds far more HTML than
+# TypeScript -- 284 files against 170 -- because the demos, the kits and the
+# editor's fixtures are all written in the language the TypeScript
+# implements. Left alone, the bar says "HTML project" about a compiler.
+#
+# So the examples are marked as what they are. Nothing here is hidden that
+# somebody would want counted: `kits/` stays, because a kit is product and it
+# is written in Markout on purpose.
+
+# Fragments are HTML with attributes linguist has never heard of.
+*.htm linguist-language=HTML
+
+# The demo site: examples of the language, not the implementation of it.
+sites/** linguist-documentation
+
+# The editor extension's test fixtures, including the deliberately broken one.
+packages/vscode/fixture/** linguist-vendored
+
+# Compiled output that escapes .gitignore.
+**/dist/** linguist-generated

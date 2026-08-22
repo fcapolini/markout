@@ -2,18 +2,10 @@
 
 # Markout
 
-[
-  ![Build](https://github.com/fcapolini/markout/actions/workflows/build.yml/badge.svg?branch=main&event=push)
-](https://github.com/fcapolini/markout/actions/workflows/build.yml)
-[
-  ![Test](https://github.com/fcapolini/markout/actions/workflows/test.yml/badge.svg?branch=main&event=push)
-](https://github.com/fcapolini/markout/actions/workflows/test.yml)
-[
-  ![Coverage](https://github.com/fcapolini/markout/actions/workflows/coverage.yml/badge.svg?branch=main&event=push)
-](https://github.com/fcapolini/markout/actions/workflows/coverage.yml)
-[
-  ![CodeQL](https://github.com/fcapolini/markout/actions/workflows/codeql.yml/badge.svg?branch=main&event=push)
-](https://github.com/fcapolini/markout/actions/workflows/codeql.yml)
+[![Build](https://github.com/fcapolini/markout/actions/workflows/build.yml/badge.svg?branch=main&event=push)](https://github.com/fcapolini/markout/actions/workflows/build.yml)
+[![Test](https://github.com/fcapolini/markout/actions/workflows/test.yml/badge.svg?branch=main&event=push)](https://github.com/fcapolini/markout/actions/workflows/test.yml)
+[![Coverage](https://github.com/fcapolini/markout/actions/workflows/coverage.yml/badge.svg?branch=main&event=push)](https://github.com/fcapolini/markout/actions/workflows/coverage.yml)
+[![CodeQL](https://github.com/fcapolini/markout/actions/workflows/codeql.yml/badge.svg?branch=main&event=push)](https://github.com/fcapolini/markout/actions/workflows/codeql.yml)
 
 Markout is an HTML extension that adds **modularity**, **reactivity** and
 **isomorphism** to plain HTML. It is not an application framework.
@@ -21,6 +13,16 @@ Framework-shaped features live in *kits*, written in Markout itself rather
 than built into the language — so you can use the ones that ship, the
 [standard kit](kits/std-kit/) and [`bootstrap-kit`](kits/bootstrap-kit/)
 (Bootstrap 5.3 as components), or write your own.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/orbit-dark.png">
+  <img src="assets/orbit-light.png" alt="Orbit, an operations console: a KPI row with sparklines, a traffic chart, a regional breakdown and a cost forecast">
+</picture>
+[**Orbit**](https://markout.dev/demos/orbit.html) is an operations console demo
+written in Markout + bootstrap-kit, over a directory of JSON files and no back end. Its
+numbers are fetched while the page renders, so every one of them is in the
+HTML that arrives and the browser asks for nothing, as can be seen in its source.
+[Its source](sites/site/demos/orbit.html) · [all the demos](https://markout.dev/demos/)
 
 The page stays HTML. Anything without a `${...}` or a `:` is plain markup and
 stays plain markup, so adopting Markout means adding an attribute to a page
@@ -427,3 +429,48 @@ end a tag.
 The compiler is bundled, so it works on a project that has installed
 nothing.
 
+## How it's built
+
+A TypeScript monorepo on npm workspaces, MIT licensed.
+
+| | |
+| --- | --- |
+| [`packages/core`](packages/core/) | the compiler and the client runtime — HTML in, a scope tree with every name resolved out, plus the payload of expressions and their dependency lists that a page comes alive from |
+| [`packages/cli`](packages/cli/) | `markout <dir>` to serve, `markout build <dir> <out>` to compile ahead of time |
+| [`packages/express`](packages/express/) | the same render as middleware, for an application that has its own routes |
+| [`packages/vscode`](packages/vscode/) | the editor integration |
+| [`kits/`](kits/) | `bootstrap-kit` (every component on Bootstrap's 5.3 cheatsheet, one file each) and `std-kit`, both written in Markout rather than in TypeScript |
+| [`sites/site`](sites/site/) | markout.dev and its demos, written in Markout and served by the Express package |
+
+2,248 tests across 103 files, with coverage and CodeQL on every push.
+
+Three decisions, rather than the rest of the inventory:
+
+**One compiler, four ways to run it.** The dev server, the Express
+middleware, `markout build` and the editor all run the same `Compiler`. The
+editor is the interesting one: `readFile` is a parameter of the compiler so
+the language server can hand it the buffer instead of the file, which is why
+every diagnostic in VS Code is the compiler's own and
+[`packages/vscode/src/diagnostics.ts`](packages/vscode/src/diagnostics.ts)
+re-implements no rule. What you get, in the terminal or on the line you are
+typing, names a file, a line and a column:
+
+```
+/parts/ui.htm:323:5: Unknown reference: "URLSearchParams"
+```
+
+**A value that crosses from the server is settled before the page is.** A
+`:server-` value is a promise the render waits on and serialises the result
+of, so a page arrives complete rather than arriving and then filling in. A
+*rejected* one fails the build instead of shipping a page with a hole in it,
+because such a value crosses frozen and the browser has no way to retry it —
+[value transfer](docs/design/value-transfer.md) has the reasoning, and
+[silent failures](docs/design/silent-failures.md) has the standard the rest
+of the compiler is held to.
+
+**A page pays for what it uses.** The compiled output is the rendered markup
+plus one payload of expressions and their dependencies; a page with nothing
+reactive on it ships no runtime at all.
+
+Markout is in production on [ubimate.com](https://ubimate.com), which is
+where the sharp edges get found.
