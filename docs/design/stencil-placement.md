@@ -331,14 +331,48 @@ five, against the commit before this one:
 The bytes are the inner stencil no longer being copied into all thousand
 replicas. The mount is the other side of exactly that: what used to arrive
 pre-cloned inside each replica is now one `cloneNode` per region that
-shows — about 6µs each, five hundred times. It is the trade the design
-makes, and this is the shape that pays the most of it: a page with a few
-conditionals on it mounts as it always did.
+shows — about 6µs each, five hundred times.
+
+That is the worst case the trade has, and it is worth saying how little of
+it a real page sees. `bench/medium` is the same app at three catalog sizes,
+driven in Chromium (`npm run bench:medium`), and the mount cost does not
+move:
+
+| Rows | Mount before | Mount after | Filter | Sort | 20× add-to-cart |
+| --- | --- | --- | --- | --- | --- |
+| 300 | 63.6ms | 62.0ms | 8.3 → 8.3 | 4.5 → 4.7 | 10.1 → 10.6 |
+| 1,020 | 218.6ms | 213.7ms | 27.6 → 25.6 | 13.1 → 12.9 | 34.3 → 34.3 |
+| 10,020 | 1985.9ms | 1946.6ms | 263.3 → 263.4 | 187.9 → 189.7 | 656.4 → 652.4 |
+
+Noise in both directions and nothing outside it: cloning a region is not
+what a real app's mount is made of. Its built pages lost 3.7–4.0% of their
+bytes — a smaller share than the synthetic page's 26% only because most of
+what these ones weigh is the props script, not markup.
 
 One thing that did **not** survive measurement: the stencil index was
 originally built by walking the whole document once per mount, which cost
 more than everything else this change added put together. It reads the two
 levels of `<head>` the stencils are actually put in.
+
+## What is left
+
+Nothing the feature needs, and three things worth knowing:
+
+- **The stage1 wrap could go.** Now that relocation happens in stage7,
+  `wrapInTemplate()` exists only so the stages between can ask "am I inside
+  a stencil?". Drop it and `:else` adjacency would survive the load walk,
+  which is what the `previous` / `separated` bookkeeping in `load()` exists
+  to work around. A cleanup with its own risk, and no user-visible effect.
+- **Two invariants rest on one test each**: the foreign-content wrapper and
+  the `data-markout-once` flag. Both are narrow by construction — one is
+  only reachable through a DOM with namespaces, the other through a nested
+  stencil — but neither has any redundancy. Established by mutation rather
+  than by reading, which is also how the untested `restoreStencils` was
+  found.
+- **`:if` on `<head>` itself** puts the stencil after `</body>`, because
+  the head it would go in is the markup being moved. Nothing is lost and
+  the browser parses it back into `<body>`, where the index still finds it
+  — but it works by accident rather than by decision.
 
 ## Rejected
 
