@@ -143,6 +143,22 @@ describe('a window open on more than one folder', () => {
   });
 });
 
+describe('a project that installs nothing', () => {
+  it('reports on ordinary-looking pages under a `markout/` folder', async () => {
+    // the reported case, end to end: an empty folder, a `markout/`
+    // directory created in it, a page holding nothing that could identify
+    // itself as markout. There is no package.json anywhere -- the folder
+    // name is the whole declaration, and until it was read as one this
+    // answered with silence
+    write('markout/index.html', '<html><body>${nope}</body></html>');
+    const { problems, checked } = await diagnoseWorkspace({ workspaceFolders: [root] });
+    expect(checked).toBe(1);
+    expect(problems.flatMap(p => p.diagnostics.map(d => d.message))).toStrictEqual([
+      'Unknown reference: "nope"',
+    ]);
+  });
+});
+
 describe('a project too big to sweep', () => {
   it('says how much it did not look at', async () => {
     write('package.json', JSON.stringify({ name: 's', dependencies: { markout: '^0.2.0' } }));

@@ -103,6 +103,23 @@ describe('so the question is asked about the project', () => {
     expect(isMarkoutProject(dir)).toBe(false);
   });
 
+  it('says yes to a docroot called `markout`, which is the no-install mode', () => {
+    // The case the manifest gate alone was silent for, and the one markout
+    // is pitched at: an empty folder, a `markout/` directory in it, pages.
+    // There is nothing to install and so nothing to depend on markout --
+    // the folder name is the only thing the author can say it with, which
+    // is what it was chosen distinctive FOR.
+    fs.mkdirSync(path.join(dir, 'markout'));
+    expect(isMarkoutProject(path.join(dir, 'markout'))).toBe(true);
+  });
+
+  it('says yes to a project that configures markout but depends on nothing', () => {
+    // `markout.docroot` is somebody saying where their pages are. Nobody
+    // writes that section by accident
+    write('package.json', JSON.stringify({ name: 'app', markout: { docroot: 'site' } }));
+    expect(isMarkoutProject(dir)).toBe(true);
+  });
+
   it('says no where there is no package.json at all', () => {
     // a Java project's HTML, a folder of static pages, a gist
     expect(isMarkoutProject(dir)).toBe(false);

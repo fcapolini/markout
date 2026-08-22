@@ -303,14 +303,35 @@ So the extension looks for **evidence**, and either kind will do:
   Thymeleaf's `th:text` and an `xmlns:th` do not begin with a colon. It is
   the `=${` that is ours. Measured against every page and fragment in this
   repository, and against Alpine, Vue, Thymeleaf, JSP EL and Underscore.
-- **the project** — the nearest `package.json` depending on `markout` or
-  `@markout-lang/*`.
+- **the project** — three ways of saying so, any of which will do: the
+  docroot IS a directory named `markout`; the nearest `package.json` carries
+  a `markout` section (`markout.docroot`, or a kit's own `markout.root`); or
+  it depends on `markout` or `@markout-lang/*`.
 
 The first is the one that matters, and a project-only gate was the first
 version's mistake. Markout's delivery story is that the project installs
 *nothing*: write the pages, `markout ./markout`, done. Such a project has no
 `package.json` at all, so a gate that required one would be silent for
 exactly the audience the language is pitched at.
+
+The `markout` directory was the half of that fix that got left out. The
+convention was defined here as the thing that claims a DOCROOT and never
+read as the thing that identifies a PROJECT, so the two halves of the gate
+between them still missed the plainest possible case: an empty folder, a
+`markout/` created in it, ordinary HTML written inside. Nothing is installed,
+so there is no manifest; nothing in the page is markout's yet, because a page
+being written does not start out with a `<:import>` in it. The extension said
+nothing, and the author's evidence that it was working was supposed to be
+that it said nothing. It is admitted as evidence now, on the grounds it was
+made distinctive for — `public`, `www` and `static` belong to every
+static-site tool there is, and `markout` belongs to this one.
+
+A `markout` SECTION is evidence for the same reason a level up: nobody writes
+`markout.docroot` into a package.json by accident, and a project that has
+said where its pages are has said what is meant to read them. Without this,
+the docroot a project declares would be honoured while the project declaring
+it stayed unrecognised, which is a strange enough pair of answers to be a bug
+on its own.
 
 `${…}` on its own is deliberately **not** evidence, though it is markout's
 one interpolation syntax — because it is also JSP EL's and Underscore's, and
@@ -331,7 +352,8 @@ no-install mode, where the folder name is the only thing an author can say it
 with — and it is that name rather than `public`, `www` or `static` on
 purpose, since those belong to every static-site tool there is and claiming
 one would mean guessing at a Rails app's docroot. `markout.docroot` overrides
-both.
+both, and the same name is evidence for the gate above, not only for the
+guess.
 
 **That convention is the language's, not the editor's**, which is what makes
 it usable at all: bare `markout` serves `./markout` and bare `markout build`

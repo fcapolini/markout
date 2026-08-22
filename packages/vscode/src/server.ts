@@ -270,10 +270,42 @@ connection.onInitialized(() => {
    * the editor to re-pull every open document.
    */
   let pending: NodeJS.Timeout | undefined;
-  server.documents.onDidChangeContent(() => {
+  const soon = () => {
     clearTimeout(pending);
     pending = setTimeout(invalidate, 300);
-  });
+  };
+  server.documents.onDidChangeContent(soon);
+
+  /**
+   * A file APPEARING is a change too, and was the one nothing here heard.
+   *
+   * `onDidChangeContent` fires for documents the EDITOR is holding, which a
+   * file just created on disk is not until something opens it -- and a
+   * package.json is often never opened at all. So the answer went stale in
+   * the one direction an author cannot see: pages added under a new
+   * `markout/` folder, or the `markout` section written to say where they
+   * are, left the Problems panel showing what was true before the folder
+   * existed. It came right on the next window reload, which is what makes it
+   * read as "the extension has not noticed yet" rather than as a cache.
+   *
+   * `watchFiles` first, and it is the half that was missing. Volar fans
+   * `workspace/didChangeWatchedFiles` out to the callbacks below, but it
+   * only registers the connection handler that feeds them from INSIDE
+   * `watchFiles` -- so with nothing ever asking to watch anything, the
+   * notification the client was faithfully sending (synchronize.fileEvents,
+   * see ./client) arrived at a server with no handler for it, and every
+   * callback here was dead code. Volar's own file-system cache subscribes
+   * the same way and was just as dead, which is the other half of why a
+   * created file went unseen.
+   *
+   * The patterns are the client's, restated: a client whose
+   * `didChangeWatchedFiles` supports dynamic registration is asked directly,
+   * which is one fewer thing for an editor's own configuration to get wrong.
+   * Both routes land on the same notification and the same debounce, so a
+   * client that does both sends two and this re-pulls once.
+   */
+  void server.fileWatcher.watchFiles(['**/*.{html,htm}', '**/package.json']);
+  server.fileWatcher.onDidChangeWatchedFiles(soon);
 
   // A setting is changed to be used, so it is read again and everything is
   // asked again. Registered on the ORIGINAL callback list rather than the

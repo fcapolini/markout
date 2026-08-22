@@ -44,8 +44,11 @@ export async function activate(context: vscode.ExtensionContext) {
     synchronize: {
       // a page is recompiled when a fragment it imports changes, and the
       // fragment may never have been opened -- so the server has to hear
-      // about files the editor is not showing
-      fileEvents: vscode.workspace.createFileSystemWatcher('**/*.{html,htm}'),
+      // about files the editor is not showing. `package.json` is watched for
+      // the same reason and is opened even less often: it carries
+      // `markout.docroot`, which decides what every absolute path means, and
+      // the dependency that answers whether this is a markout project at all
+      fileEvents: vscode.workspace.createFileSystemWatcher('**/{*.html,*.htm,package.json}'),
       // and `markout.docroot` decides what every absolute path in every page
       // means, so changing it has to reach the server that is already
       // running. Without this the client sends nothing, the server never

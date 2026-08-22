@@ -411,6 +411,16 @@ const EXPRESSION_ATTRIBUTE = /[\s"']::?[A-Za-z_$][\w:$-]*=\$\{/;
  * gets silence, and the `markout.enable` setting for when the guess is wrong.
  */
 export function isMarkoutProject(docroot: string): boolean {
+  // The docroot is a directory called `markout`, which is the ONLY way the
+  // no-install mode has of saying so. There is no package.json to depend on
+  // markout in a project whose whole story is that you install nothing --
+  // write the pages, `npx markout ./markout`, done -- so a gate that only
+  // read manifests was silent for exactly the audience the convention was
+  // invented for. The name is distinctive on purpose (see DOCROOT_DIR_NAME);
+  // that it can be trusted as evidence is what it was chosen distinctive FOR.
+  if (path.basename(path.resolve(docroot)) === DOCROOT_DIR_NAME) {
+    return true;
+  }
   const manifest = path.join(docroot, 'package.json');
   let text: string;
   try {
@@ -420,6 +430,12 @@ export function isMarkoutProject(docroot: string): boolean {
   }
   try {
     const json = JSON.parse(text);
+    // a `markout` section is the project configuring markout -- a docroot,
+    // or a kit's own root. Nobody writes one by accident, and a project that
+    // says where its pages are has said which tool is meant to read them
+    if (json[MANIFEST_KEY] && typeof json[MANIFEST_KEY] === 'object') {
+      return true;
+    }
     const named = [
       ...Object.keys(json.dependencies ?? {}),
       ...Object.keys(json.devDependencies ?? {}),

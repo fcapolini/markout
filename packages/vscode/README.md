@@ -97,10 +97,18 @@ reporting anything. Either kind will do:
   is an expression (`:count=${…}`). It is the `=${` that is markout's: Alpine
   and Vue write `:class="…"` quoted, and Thymeleaf's `th:text` does not begin
   with a colon.
-- **the project** — a `package.json` depending on `markout` or `@markout-lang/*`.
+- **the project** — any of three ways of saying so: a docroot that *is* a
+  directory named `markout`, a `package.json` with a `markout` section in it
+  (`markout.docroot`, or a kit's `markout.root`), or a `package.json`
+  depending on `markout` or `@markout-lang/*`.
 
-`markout.enable: always` is the escape hatch for a project that uses markout
-without depending on it — a vendored copy, or a page opened on its own.
+The first of those is the one that matters for markout's delivery story:
+create a `markout/` folder, write ordinary-looking pages in it, run
+`npx markout` — there is nothing installed to depend on markout, and the
+folder name is the whole declaration.
+
+`markout.enable: always` is the escape hatch for the rest — a vendored copy
+under some other name, or a page opened on its own.
 
 ## Settings
 

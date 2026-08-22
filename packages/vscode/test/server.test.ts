@@ -136,6 +136,13 @@ beforeAll(async () => {
         configurationPulled?.();
         return;
       }
+      if (message.method === 'client/registerCapability') {
+        // the server asking to watch files itself, which VS Code answers and
+        // a harness standing in for one must too -- an unanswered request
+        // leaves the registration pending forever
+        send({ id: message.id, result: null });
+        return;
+      }
       if (message.method === 'window/showMessageRequest') {
         shown.push(message.params.message);
         send({ id: message.id, result: null });
@@ -185,6 +192,12 @@ beforeAll(async () => {
         diagnostics: { refreshSupport: true },
         // an editor that can be ASKED for its settings, which VS Code is
         configuration: true,
+        // and one that watches files and says so. Volar registers the
+        // handler for `workspace/didChangeWatchedFiles` only when something
+        // asks to watch and only when the CLIENT claims this -- so without
+        // it here, the notification arrives at a server holding no handler
+        // for it and the harness cannot tell a live wire from a dead one
+        didChangeWatchedFiles: { dynamicRegistration: true },
       },
     },
   });
@@ -509,6 +522,39 @@ describe('the server, over stdio', () => {
       (item.items ?? []).map((d: any) => `${path.basename(item.uri)}: ${d.message}`)
     );
     expect(found).toContainEqual(expect.stringMatching(/unopened\.html: .*absent/));
+  });
+
+  it('asks for a re-pull when a file APPEARS, which no open document reports', async () => {
+    // The case that reads as "the extension has not noticed yet": pages
+    // added under a new `markout/` folder, or a package.json written to say
+    // where they are, change every answer and change no open document. Volar
+    // caches against a document VERSION, so without this the panel keeps
+    // saying what was true before the folder existed until the window is
+    // reloaded.
+    const added = path.join(second, 'markout', 'appeared.html');
+    fs.mkdirSync(path.dirname(added), { recursive: true });
+    fs.writeFileSync(added, '<html><body>${vanished}</body></html>');
+
+    // let any debounce still owed from an earlier test run out first, or
+    // this measures that one and passes however dead the wiring is -- which
+    // is exactly what it did before this line
+    await new Promise(resolve => setTimeout(resolve, 600));
+    const seen = refreshes;
+    notify('workspace/didChangeWatchedFiles', {
+      // 1 is Created, which is the half `didChangeContent` cannot see
+      changes: [{ uri: `file://${added}`, type: 1 }],
+    });
+    // past the debounce, and past the refresh that follows it
+    await new Promise(resolve => setTimeout(resolve, 600));
+    expect(refreshes).toBeGreaterThan(seen);
+
+    // and the sweep now has an opinion about it -- a plain-looking page in a
+    // folder called `markout`, in a project that installs nothing
+    const report = await request('workspace/diagnostic', { previousResultIds: [] });
+    const found = (report?.items ?? []).flatMap((item: any) =>
+      (item.items ?? []).map((d: any) => `${path.basename(item.uri)}: ${d.message}`)
+    );
+    expect(found).toContainEqual(expect.stringMatching(/appeared\.html: .*vanished/));
   });
 
   it('checks a page again when the fragment it imports changes', async () => {
