@@ -70,9 +70,14 @@ The server fetches while it renders, waits, and sends the result with the
 page. So the rows are in the served HTML, the browser fetches nothing, and
 there is no flash — `${rows}` in the page is `${rows}` in the markup.
 
+> **A relative `:url` needs something serving the page.** A build has no
+> request to take an origin from, so a page compiled ahead of time needs an
+> absolute `:url`, a `:client` datasource, or `markout build --origin`.
+> Without one of those the build stops and names the datasource.
+
 | Parameter | Default | Meaning |
 | --- | --- | --- |
-| `:url` | `""` | Where to fetch. Nothing happens without one. Page-relative is fine. |
+| `:url` | `""` | Where to fetch. Nothing happens without one. Page-relative is fine while something is serving the page — see above. |
 | `:client` | `false` | Fetch in the browser instead of while rendering. |
 
 | Reads | Meaning |
@@ -92,6 +97,22 @@ resolves it against `$origin` — which the server takes from the request and
 the browser from `location`. Without that the two would disagree: a server
 has no page to be relative *to*, so a bare path there is not a different
 address, it is not an address at all.
+
+Which is also why the third delivery is the one to watch. `markout build` has
+no request behind the render, so there is no `$origin`, and a relative `:url`
+has nothing to resolve against at the moment it would be fetched:
+
+```
+cannot fetch "/people.json" while rendering: it is relative and nothing is
+serving this page, so there is no address to resolve it against.
+```
+
+The build stops there rather than writing a page with a hole in it. Give the
+datasource an absolute `:url`, mark it `:client` so the browser resolves it
+against a real `location.origin`, or tell the build what it is being built
+for — `markout build --origin http://127.0.0.1:3000`, with the docroot served
+from another terminal, which is how a page whose data is files in its own
+docroot gets built at all.
 
 A URL that *changes* refetches, in the browser, since that is where the
 change happened:
