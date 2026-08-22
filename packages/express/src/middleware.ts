@@ -462,7 +462,9 @@ export function markout(props: MarkoutProps) {
       return;
     }
 
-    const pathname = await resolvePath(req, i, resolver);
+    const pathname = await resolvePath(req, i, resolver, msg =>
+      logger('error', `[markout] ${msg}`)
+    );
     if (!pathname) {
       return serveNotFound(req, res, nonce);
     }
@@ -685,13 +687,27 @@ async function serveKitAsset(
   res.sendFile(at.filePath, { dotfiles: 'ignore' }, err => err && next());
 }
 
+/**
+ * Errors that mean "there is no such file", as against "I could not find
+ * out whether there is".
+ *
+ * A name too long, or one holding a NUL byte, is a name nothing can be
+ * called: the file is not there in the only sense a visitor cares about.
+ * `EACCES` is deliberately not among them -- that one says the file is
+ * there and the server cannot look at it, which is a fact about the
+ * deployment and not about the URL.
+ */
+const ABSENT_ERRNOS = new Set(['ENOENT', 'ENOTDIR', 'ENAMETOOLONG', 'EINVAL', 'EILSEQ']);
+
 // exported for direct unit testing: Express normalizes `..` out of req.path
 // before any middleware sees it, so a real HTTP request can't exercise the
 // bypass this guards against
 export async function resolvePath(
   req: Request,
   i: number,
-  resolver: Resolver
+  resolver: Resolver,
+  /** told when a page could not be looked up, as against not being there */
+  report: (msg: string) => void = () => {}
 ) {
   let pathname = i < 0 ? req.path : req.path.substring(0, i).toLowerCase();
   // containment lives in the resolver, which is also what knows about roots
@@ -714,9 +730,21 @@ export async function resolvePath(
         // if path is a dir, access <dir>/index.html
         pathname = path.join(pathname, 'index');
       }
-    } catch (ignored) {
-      // Intentionally ignore file system errors (file not found, permission denied, etc.)
-      // Return undefined to let caller handle with 404 response
+    } catch (err) {
+      // "not there" is the ordinary answer and says nothing; anything else
+      // is the server failing to look, and used to arrive as the same 404.
+      // A permission error on a docroot, an EMFILE under load, a disk that
+      // has gone away -- every one of them reported the page missing, in an
+      // access log full of 404s, with the file sitting right there. The
+      // status is unchanged, because a visitor has no better answer to be
+      // given; what changes is that somebody is told
+      const code = (err as NodeJS.ErrnoException)?.code;
+      code &&
+        !ABSENT_ERRNOS.has(code) &&
+        report(
+          `${pathname}: cannot tell whether this page exists (${code}) -- ` +
+            `serving it as not found`
+        );
       return;
     }
   }
