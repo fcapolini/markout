@@ -638,7 +638,19 @@ export class CoreScope {
   }
 
   updateValues(recur = true) {
-    this.liveKeys().forEach((key) => this.values[key].get());
+    this.liveKeys().forEach((key) => {
+      const value = this.values[key];
+      // a refresh has just rebuilt the graph under here, so everything with
+      // sources is asked again -- `get()` on its own would now decline,
+      // having been told only about sources that MOVED, and this walk is
+      // the one caller that means "recompute" rather than "read".
+      //
+      // Sourceless expressions are left alone, which is what the cycle
+      // check did before dirty tracking: `:rows=${[]}` re-evaluated here
+      // would hand back a different empty array and wake every reader of it
+      value.src.size && (value.dirty = true);
+      value.get();
+    });
     recur && this.children.forEach((scope) => scope.updateValues());
   }
 

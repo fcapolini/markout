@@ -115,8 +115,9 @@ The system alternates between two modes, tracked by `CoreContext`:
 - **Pull mode**, during a `refresh()`: the context walks the whole scope
   subtree three times — `unlinkValues()` (tear down the dependency graph),
   `linkValues()` (rebuild it from each value's declared `deps`), then
-  `updateValues()` (call `.get()` on every value, which lazily evaluates
-  expressions whose `cycle` is stale). `refreshLevel` is incremented for the
+  `updateValues()` (mark every value that has sources dirty, then call
+  `.get()` on it — this walk is the one caller that means "recompute"
+  rather than "read"). `refreshLevel` is incremented for the
   duration so that individual value updates don't try to eagerly propagate
   (see below) — propagation during a refresh is implicit, driven by the
   traversal itself. Each of these three methods also takes a `recur` flag
@@ -143,11 +144,24 @@ The system alternates between two modes, tracked by `CoreContext`:
   the cycle in which it changed — no error, nothing to see in the graph
   afterwards.
 
-A `CoreValue.get()` short-circuits: an expression value only re-evaluates if
-its `cycle` is behind the context's current `cycle`, and only if it's either
-never been evaluated (`cycle === 0`) or has at least one dependency
-(`src.size`) that could have changed it — a dependency-free expression is
-treated as a one-shot computation.
+A `CoreValue.get()` short-circuits on two separate questions. `cycle` bounds
+how OFTEN a value may evaluate — at most once per propagation, which is what
+keeps a diamond from recomputing down both arms. `dirty` decides WHETHER it
+needs to at all: it is set on a value's readers when that value lands on a
+new result, so an expression re-evaluates only when something it actually
+reads has moved. A value that has never been evaluated (`cycle === 0`)
+evaluates regardless, and a dependency-free expression is a one-shot
+computation — nothing can ever mark it dirty.
+
+The two are easy to conflate, and conflating them is expensive. `cycle`
+advances on every propagation anywhere on the page, so testing it alone
+answers "has anything changed?" when the question is "has anything I read
+changed?". A keyed `:for-each` calls `set()` on each replica's alias, and
+each of those opens a cycle: a derived value read from inside the loop was
+re-evaluated once per row, and where it built a fresh object — `${new
+Set(cart.map(l => l.id))}`, the shape `useMemo` and `$derived` both
+encourage — every re-evaluation also changed identity and propagated back to
+every row. Reordering N rows cost N² evaluations.
 
 A refresh is required once at application launch (to link the whole tree for
 the first time) and can be re-applied to a local branch whenever its

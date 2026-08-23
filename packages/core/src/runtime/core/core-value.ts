@@ -72,6 +72,24 @@ export class CoreValue<T = any> {
   src: Set<CoreValue>;
   dst: Set<CoreValue>;
   cycle: number;
+  /**
+   * A source has actually moved since this value last evaluated.
+   *
+   * `cycle` says "something, somewhere, propagated"; this says "something
+   * THIS value reads changed". They used to be the same test, and the
+   * difference is not academic: a keyed `:for-each` calls `set()` on each
+   * replica's alias, every one of those opens a cycle, and a derived value
+   * read from inside the loop was re-evaluated once per row. Where that
+   * derived builds a fresh object -- `${new Set(cart.map(l => l.id))}`, the
+   * shape React's `useMemo` and Svelte's `$derived` both encourage -- each
+   * re-evaluation also changed identity and propagated to every row that
+   * read it, so reordering 10k rows cost 10k x 10k evaluations. Sorting the
+   * catalog benchmark took 59 seconds.
+   *
+   * Set by whatever changed, and only for what reads it, so a value that
+   * nothing it depends on has touched simply keeps its result.
+   */
+  dirty = false;
   exp?: ValueExp<T>;
   value: T | undefined;
   /**
@@ -251,7 +269,8 @@ export class CoreValue<T = any> {
       // a function or an object literal, every pass differs from the last,
       // so each propagates again and the recursion only ends at the stack
       this.cycle = ctx.cycle;
-      if (first || this.src.size) {
+      if (first || this.dirty) {
+        this.dirty = false;
         this.update();
       }
     }
@@ -274,6 +293,7 @@ export class CoreValue<T = any> {
     this.value = value;
     if (old == null ? value != null : value !== old) {
       this.cb && this.scope.ctx.pending.add(this);
+      this.markDirty();
       this.propagate();
     }
     return true;
@@ -318,6 +338,10 @@ export class CoreValue<T = any> {
     }
     if (old == null ? this.value != null : this.value !== old) {
       this.cb && this.scope.ctx.pending.add(this);
+      // marked even when the propagation below is suppressed: a refresh
+      // drives its own subtree by traversal, but a reader OUTSIDE it only
+      // ever learns through this flag
+      this.markDirty();
       this.dst.size && this.scope.ctx.refreshLevel < 1 && this.propagate();
     }
   }
@@ -375,6 +399,18 @@ export class CoreValue<T = any> {
    * Draining by depth removes the shape of the problem rather than that
    * instance of it.
    */
+  /**
+   * Says, to everything that reads this value, that it has moved.
+   *
+   * Only the direct readers: one of them landing on a new result marks ITS
+   * readers in turn, and one that lands on the same result stops the
+   * cascade there -- which is the point, and the reason this is a flag on
+   * the edge rather than a generation counter on the context.
+   */
+  private markDirty() {
+    this.dst.forEach(v => (v.dirty = true));
+  }
+
   protected propagate() {
     const ctx = this.scope.ctx;
     if (ctx.pushLevel < 1) {
