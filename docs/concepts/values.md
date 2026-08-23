@@ -48,21 +48,26 @@ not infer them from the expression body.
 
 ## Expression semantics
 
-Expressions run with the owning scope as `this`. That is why the
-compiler qualifies non-local references as `this.foo` and records the matching
-dependency edges during compilation.
+An expression is handed the scope it evaluates against, as an argument. That
+is why the compiler qualifies non-local references as `$.foo` and records the
+matching dependency edges during compilation.
 
 In practice, that means:
 
 - bare references are compiled into explicit scope lookups;
-- nested classic `function` expressions are rejected because they would rebind
-  `this`;
-- arrow functions are the safe syntax.
+- any function may appear inside an expression, arrow or classic — the scope
+  is an ordinary closure variable, so nothing rebinds it;
+- `$` is that argument, and is the one name an expression may not declare.
+  A local of that name would shadow the scope, so it is a compile error.
 
-`:on-*`, `:did-*` and `:will-*` go further: the expression has to *be* an
-arrow function, written there. `${handler}` is refused even when `handler`
-holds one — see the [syntax
-reference](../reference/syntax.md#values).
+This was `this` until the scope became an argument, and the change removed a
+rule rather than replacing one: a classic `function` had to be refused
+everywhere inside an expression, because it would have rebound `this` and
+lost the scope.
+
+`:on-*`, `:did-*` and `:will-*` go further: the expression has to *be* a
+function written there. `${handler}` is refused even when `handler` holds
+one — see the [syntax reference](../reference/syntax.md#values).
 
 ## Reference chains
 

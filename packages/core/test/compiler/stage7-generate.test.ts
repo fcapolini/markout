@@ -109,25 +109,28 @@ describe('stage7-generate', () => {
 
     const value = prop(prop(page.propsAST, 'values'), 'class$active');
     const exp = evalExpr(prop(value, 'exp'));
-    expect(exp.apply({})).toBe(true);
+    expect(exp({})).toBe(true);
   });
 
-  it('should qualify this.foo references and evaluate them against the given scope proxy', async () => {
-    addValue(root, 'doubled', parseExpr('this.count * 2'));
+  it('should qualify $.foo references and evaluate them against the given scope proxy', async () => {
+    addValue(root, 'doubled', parseExpr('$.count * 2'));
 
     stage4resolve(page);
     stage7generate(page);
 
     const doubled = prop(prop(page.propsAST, 'values'), 'doubled');
     const exp = evalExpr(prop(doubled, 'exp'));
-    expect(exp.apply({ count: 21 })).toBe(42);
+    // handed the scope, rather than wearing it as `this`: the wrapper is an
+    // arrow now, which is what let the language stop refusing classic
+    // functions inside expressions
+    expect(exp({ count: 21 })).toBe(42);
   });
 
   it('should compile deps into the path each one names', async () => {
     addValue(root, 'count', null);
     addValue(page.global, 'count', null);
-    addValue(root, 'doubled', parseExpr('this.count * 2'));
-    addValue(root, 'fromParent', parseExpr('this.$parent.count * 2'));
+    addValue(root, 'doubled', parseExpr('$.count * 2'));
+    addValue(root, 'fromParent', parseExpr('$.$parent.count * 2'));
 
     stage4resolve(page);
     stage7generate(page);
@@ -165,7 +168,7 @@ describe('stage7-generate', () => {
   it('should translate compiled key prefixes to the ones WebScope expects', async () => {
     addValue(root, 'on$click', parseExpr('() => {}'));
     const textAttr = new ServerAttribute(doc, null as any, ':t$0', null, LOC);
-    textAttr.value = parseExpr('this.count');
+    textAttr.value = parseExpr('$.count');
     textAttr.valueLoc = LOC;
     const textValue = new Value('t$0', textAttr, root);
     root.textValues.set('t$0', textValue);

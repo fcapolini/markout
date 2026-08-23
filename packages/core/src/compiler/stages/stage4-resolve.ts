@@ -1,6 +1,7 @@
 import * as estraverse from 'estraverse';
 import type { Node } from 'estree';
 import type { Page } from '../ir/Page';
+import { RT_SCOPE_PARAM } from './stage3-qualify';
 import type { ServerAttribute } from '../../html/server-dom';
 import {
   DID_VALUE_PREFIX,
@@ -565,7 +566,13 @@ function chainSegments(node: Node): Segment[] | undefined {
     segments.unshift({ name: n.property.name, optional: !!n.optional });
     n = n.object as Node;
   }
-  return n.type === 'ThisExpression' && segments.length ? segments : undefined;
+  // rooted at the scope parameter stage3 qualified with. It was a
+  // `this` until expressions started reaching their scope by argument --
+  // which is one node type to a walk like this one, and one language rule
+  // fewer to everyone else (see RT_SCOPE_PARAM)
+  return n.type === 'Identifier' && n.name === RT_SCOPE_PARAM && segments.length
+    ? segments
+    : undefined;
 }
 
 /**

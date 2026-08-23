@@ -54,13 +54,15 @@ describe("Reactive page compilation", () => {
     const res = await request(app).get('/counter.html');
     const props = extractProps(res.text);
 
-    expect(props.values.count.exp.apply({})).toBe(0);
+    // each expression is handed the scope it evaluates against, rather than
+    // wearing it as `this`
+    expect(props.values.count.exp({})).toBe(0);
 
     const body = props.children[1];
-    expect(typeof body.values['event$click'].exp.apply({ count: 5 })).toBe('function');
+    expect(typeof body.values['event$click'].exp({ count: 5 })).toBe('function');
 
     const fakeScope = { count: 5, $value: () => ({}) };
-    expect(body.values['text$0'].exp.apply(fakeScope)).toBe(5);
+    expect(body.values['text$0'].exp(fakeScope)).toBe(5);
     // the path the dependency names, walked by the runtime rather than by a
     // closure the props had to carry
     expect(body.values['text$0'].deps[0]).toEqual(['count']);

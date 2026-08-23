@@ -41,9 +41,7 @@ it(`adds a dynamic value`, () => {
       id: '0',
       values: {
         v1: {
-          exp: function () {
-            return 42;
-          },
+          exp: ($: any) => 42,
         },
       },
     },
@@ -60,10 +58,7 @@ it(`adds dependency (1)`, () => {
       values: {
         v0: { val: 42 },
         v1: {
-          exp: function () {
-            // @ts-ignore
-            return this.v0;
-          },
+          exp: ($: any) => $.v0,
           deps: [
             ['v0'],
           ],
@@ -82,15 +77,10 @@ it(`adds dependency (2)`, () => {
       id: '0',
       values: {
         v0: {
-          exp: function () {
-            return 42;
-          },
+          exp: ($: any) => 42,
         },
         v1: {
-          exp: function () {
-            // @ts-ignore
-            return this.v0;
-          },
+          exp: ($: any) => $.v0,
           deps: [
             ['v0'],
           ],
@@ -138,10 +128,7 @@ it(`can see outer value`, () => {
           name: 'head',
           values: {
             v1: {
-              exp: function () {
-                // @ts-ignore
-                return this.v0;
-              },
+              exp: ($: any) => $.v0,
               deps: [
                 ['v0'],
               ],
@@ -178,10 +165,7 @@ it(`should call value callback (2)`, () => {
       values: {
         v0: { val: 42 },
         v1: {
-          exp: function () {
-            // @ts-ignore
-            return this.v0;
-          },
+          exp: ($: any) => $.v0,
           deps: [
             ['v0'],
           ],
@@ -212,10 +196,7 @@ it(`should call value callback (2)`, () => {
           name: 'head',
           values: {
             v1: {
-              exp: function () {
-                // @ts-ignore
-                return this.v0;
-              },
+              exp: ($: any) => $.v0,
               deps: [
                 ['v0'],
               ],
@@ -383,14 +364,14 @@ it(`settles both arms of a diamond before evaluating what reads them`, () => {
         items: { val: [1, 2, 3, 4, 5, 6] },
         // a fresh array every evaluation, so it always counts as changed --
         // which is what pushes the short arm ahead of the long one
-        rows: { exp: function (this: any) { return [...this.items]; }, deps: [dep('items')] },
-        pages: { exp: function (this: any) { return this.rows.length / 2; }, deps: [dep('rows')] },
+        rows: { exp: ($: any) => [...$.items], deps: [dep('items')] },
+        pages: { exp: ($: any) => $.rows.length / 2, deps: [dep('rows')] },
         page: {
-          exp: function (this: any) { return Math.min(this.n, this.pages); },
+          exp: ($: any) => Math.min($.n, $.pages),
           deps: [dep('n'), dep('pages')],
         },
         shown: {
-          exp: function (this: any) { return this.rows.slice((this.page - 1) * 2, this.page * 2); },
+          exp: ($: any) => $.rows.slice(($.page - 1) * 2, $.page * 2),
           deps: [dep('rows'), dep('page')],
         },
       },
@@ -420,8 +401,8 @@ it(`orders a propagation by how far a value is from what it depends on`, () => {
       id: '0',
       values: {
         a: { val: 1 },
-        b: { exp: function (this: any) { return this.a + 1; }, deps: [dep('a')] },
-        c: { exp: function (this: any) { return this.b + 1; }, deps: [dep('b')] },
+        b: { exp: ($: any) => $.a + 1, deps: [dep('a')] },
+        c: { exp: ($: any) => $.b + 1, deps: [dep('b')] },
       },
     },
   }).refresh();

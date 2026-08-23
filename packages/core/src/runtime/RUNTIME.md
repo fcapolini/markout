@@ -71,8 +71,8 @@ they exist purely as extension points for layers built on top of it.
 A `CoreValueProps<T>` is one of:
 
 - a plain value (`val`): set once, or updated later via `set()`;
-- an expression (`exp` + `deps`): `exp` is evaluated (with the owning
-  scope's `proxy` as `this`) to derive the value, and `deps` is the
+- an expression (`exp` + `deps`): `exp` is called with the owning scope's
+  `proxy` as its one argument to derive the value, and `deps` is the
   explicit, precompiled list of dependencies used to build the dependency
   graph. Each entry is the **path** to what it names — `[...via, key]`,
   where every segment before the last is a property of the scope proxy
@@ -200,18 +200,21 @@ execution. Concretely, the compiler is responsible for:
 - detecting every reference an expression makes to a non-local (i.e.
   outer-scope or system) variable, and emitting it as an explicit entry in
   that value's `deps`;
-- fully qualifying every such reference with `this.`, so it's resolved
-  through the owning scope's `proxy`/`lookup()` rather than captured as a
-  raw closure variable — this is what lets an `exp` function be handed a
-  different `this` (the scope's `proxy`) via `.apply()`;
+- fully qualifying every such reference with `$.`, so it's resolved through
+  the owning scope's `proxy`/`lookup()` rather than captured as a raw
+  closure variable — `$` is the parameter every compiled expression takes,
+  and the runtime calls `exp(scope.proxy)`;
 - reserving identifiers starting with `$` (e.g. `$value`, `$parent`) for
   system-level values, and rejecting their use in application code, so they
   can never be shadowed or collide with user-defined values;
-- ensuring every function nested inside an expression is an arrow function,
-  never a classic `function`, since a classic function rebinds `this` and
-  would mask the `.apply(scope.proxy)` binding — the compiler can either
-  reject classic functions outright or transparently rewrite them as arrow
-  functions;
+- refusing an expression that DECLARES `$` -- a parameter, a variable, a
+  destructured name, a catch clause. The qualifier leaves locals alone, so
+  one of that name would shadow the scope and read the wrong object without
+  anything failing out loud. (This replaced a much wider rule: while the
+  scope arrived as `this`, no classic `function` could appear anywhere
+  inside an expression, because it would rebind `this` and lose the scope.
+  A parameter is captured like any other closure variable, so that rule is
+  gone and any kind of function may be written.);
 - validating that every reference it qualifies actually resolves to a real
   declared value or named (`:aka`) scope somewhere in the reachable scope
   chain (own scope, ancestors, or a named scope's own values), reporting a

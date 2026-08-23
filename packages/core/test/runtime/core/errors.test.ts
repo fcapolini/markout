@@ -15,7 +15,7 @@ describe('runtime error reporting', () => {
       values: {
         n: { val: { x: 1 } as any },
         out: {
-          exp: function (this: any) { return this.n.x; },
+          exp: ($: any) => $.n.x,
           deps: [['n']],
         },
       },
@@ -33,7 +33,7 @@ describe('runtime error reporting', () => {
   it('reports a failed expression with the scope and value that failed', () => {
     const { ctx, errors } = setup({
       id: 's7',
-      values: { boom: { exp: function () { return (null as any).x; } } },
+      values: { boom: { exp: ($: any) => (null as any).x } },
     });
     ctx.refresh();
 
@@ -49,7 +49,7 @@ describe('runtime error reporting', () => {
       values: {
         count: { val: 1 },
         doubled: {
-          exp: function (this: any) { return this.count * 2; },
+          exp: ($: any) => $.count * 2,
           // nothing declares "nope": only a compiler bug produces this, and
           // its sole symptom would otherwise be a binding that never updates
           deps: [['nope']],
@@ -66,7 +66,7 @@ describe('runtime error reporting', () => {
   it('reports a repeatedly-failing expression once, not once per cycle', () => {
     const { ctx, errors } = setup({
       id: '0',
-      values: { boom: { exp: function () { return (null as any).x; } } },
+      values: { boom: { exp: ($: any) => (null as any).x } },
     });
     ctx.refresh();
     ctx.refresh();
@@ -103,7 +103,7 @@ describe('runtime error reporting', () => {
       new CoreContext({
         root: {
           id: 's2',
-          values: { boom: { exp: function () { return (null as any).x; } } },
+          values: { boom: { exp: ($: any) => (null as any).x } },
         },
       }).refresh();
     } finally {

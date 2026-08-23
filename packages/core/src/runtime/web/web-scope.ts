@@ -499,7 +499,7 @@ export class WebScope extends CoreScope {
       // the compiler keeps dash-case event names (e.g. custom events like
       // "item-selected") verbatim in the compiled key, same as class$/style$
       const name = key.slice(RT_EVENT_VALUE_PREFIX.length);
-      if (typeof ret.exp?.apply(this.proxy) === "function") {
+      if (typeof ret.exp?.(this.proxy) === "function") {
         const listener: EventListener = (e: Event) => this.proxy[key]?.(e);
         this.domListeners ||= [];
         this.domListeners.push({ name, listener });

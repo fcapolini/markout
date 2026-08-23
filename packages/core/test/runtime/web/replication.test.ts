@@ -40,7 +40,7 @@ function keyedSetup(items: any[], onError?: RuntimeError[]) {
           values: {
             [RT_FOR_EACH_VALUE]: { val: items },
             data: {},
-            [RT_FOR_KEY_VALUE]: { exp: function (this: any) { return this.data.id; } },
+            [RT_FOR_KEY_VALUE]: { exp: ($: any) => $.data.id },
           },
         },
       ],

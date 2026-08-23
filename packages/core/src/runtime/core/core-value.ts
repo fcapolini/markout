@@ -1,6 +1,16 @@
 import { CoreScope } from './core-scope';
 
-export type ValueExp<T> = () => T;
+/**
+ * A value's expression: handed the scope it evaluates against.
+ *
+ * An argument rather than `this`, which is what it used to be
+ * (`exp.apply(scope.proxy)`). That convention is why a classic `function`
+ * could not appear anywhere inside an expression -- it would rebind `this`
+ * and lose the scope -- so the language refused them for the sake of the
+ * calling convention. A parameter is captured like any other closure
+ * variable, and the refusal went with it.
+ */
+export type ValueExp<T> = (scope: any) => T;
 /**
  * A dependency, as the path to it: `[...via, key]`.
  *
@@ -23,7 +33,7 @@ const RT_HOST_KEY = '$host';
 
 export interface CoreValueProps<T> {
   val?: T;
-  exp?: () => T;
+  exp?: ValueExp<T>;
   deps?: ValueDep[];
   /**
    * Dependencies the runtime is allowed to find nothing for.
@@ -283,7 +293,7 @@ export class CoreValue<T = any> {
     }
     const old = this.value;
     try {
-      const next = this.exp!.apply(this.scope.proxy) as unknown;
+      const next = this.exp!(this.scope.proxy) as unknown;
       // a server expression may answer with a promise; the promise is not
       // the value, and never becomes one. See `pending`
       const thenable =

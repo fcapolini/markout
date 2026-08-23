@@ -88,21 +88,11 @@ describe('stage2-validate', () => {
       expect(result.errors).toStrictEqual([]);
     });
 
-    it('should reject function declarations in event handlers', () => {
-      const scope = page.global;
-      const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
-      attr.value = parseExpr('function handleClick() { }');
-      attr.valueLoc = LOC;
-
-      const value = new Value('on-click', attr, scope);
-      scope.values.set('on-click', value);
-
-      const result = stage2validate(page);
-      expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors[0].msg).toContain('must be an arrow function');
-    });
-
-    it('should reject function expressions in event handlers', () => {
+    it('takes a classic function as a handler, which used to be refused', () => {
+      // it was refused for one reason: a classic function rebinds `this`,
+      // and `this` was how a compiled expression reached its scope. It
+      // reaches it through a parameter now, so there is nothing left to
+      // protect -- see RT_SCOPE_PARAM
       const scope = page.global;
       const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
       attr.value = parseExpr('(function (e) { console.log(e); })');
@@ -111,9 +101,36 @@ describe('stage2-validate', () => {
       const value = new Value('on-click', attr, scope);
       scope.values.set('on-click', value);
 
+      expect(stage2validate(page).errors).toStrictEqual([]);
+    });
+
+    it('takes one nested inside an arrow handler too', () => {
+      const scope = page.global;
+      const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
+      attr.value = parseExpr('() => [1].map(function (n) { return n + 1; })');
+      attr.valueLoc = LOC;
+
+      const value = new Value('on-click', attr, scope);
+      scope.values.set('on-click', value);
+
+      expect(stage2validate(page).errors).toStrictEqual([]);
+    });
+
+    it('refuses an expression that binds the scope parameter itself', () => {
+      // the one thing the parameter costs: `$` is takeable, the qualifier
+      // leaves locals alone, and a local of that name would read the wrong
+      // object without anything going wrong out loud
+      const scope = page.global;
+      const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
+      attr.value = parseExpr('() => [1].map($ => $ + 1)');
+      attr.valueLoc = LOC;
+
+      const value = new Value('on-click', attr, scope);
+      scope.values.set('on-click', value);
+
       const result = stage2validate(page);
       expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors[0].msg).toContain('must be an arrow function');
+      expect(result.errors[0].msg).toContain('reaches its scope');
     });
 
     it('should reject plain identifiers in event handlers', () => {
@@ -127,10 +144,10 @@ describe('stage2-validate', () => {
 
       const result = stage2validate(page);
       expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors[0].msg).toContain('must be an arrow function');
+      expect(result.errors[0].msg).toContain('must be a function written here');
     });
 
-    it('should reject a classic function nested inside an otherwise-valid arrow handler', () => {
+    it('takes a function DECLARED inside a handler body, which used to be refused too', () => {
       const scope = page.global;
       const attr = new ServerAttribute(doc, null as any, ':on-click', null, LOC);
       attr.value = parseExpr('() => { function helper() { return 1; } return helper(); }');
@@ -139,9 +156,7 @@ describe('stage2-validate', () => {
       const value = new Value('on-click', attr, scope);
       scope.values.set('on-click', value);
 
-      const result = stage2validate(page);
-      expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors[0].msg).toContain('must be arrow functions');
+      expect(stage2validate(page).errors).toStrictEqual([]);
     });
 
     it('should not validate event handlers given as a plain literal string (no interpolation)', () => {

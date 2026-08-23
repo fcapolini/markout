@@ -140,18 +140,25 @@ describe('docs/reference/syntax.md', () => {
     expect(ok('<b :on-click=${async () => { await count; }}>x</b>')).toStrictEqual([]);
     expect(ok('<b :did-init=${() => count++}>x</b>')).toStrictEqual([]);
 
+    // a callback has to BE a function, written here, because that is where
+    // its dependencies are read from -- naming one is not being one
     for (const bad of [
       '<b :on-click=${handler}>x</b>',
-      '<b :on-click=${function () {}}>x</b>',
       '<b :did-init=${handler}>x</b>',
       '<b :will-dispose=${handler}>x</b>',
     ]) {
-      expect(ok(bad).join(' ')).toContain('must be an arrow function');
+      expect(ok(bad).join(' ')).toContain('must be a function written here');
     }
 
-    // and the wider rule: no classic function anywhere inside any expression
-    expect(ok('<b :x=${() => { const f = function () {}; return f; }}>x</b>').join(' '))
-      .toContain('Nested functions must be arrow functions');
+    // a classic one is a function written here, and is taken: it used to be
+    // refused because it rebinds `this`, and an expression reaches its scope
+    // through a parameter now
+    expect(ok('<b :on-click=${function () {}}>x</b>')).toStrictEqual([]);
+    expect(ok('<b :x=${() => { const f = function () {}; return f; }}>x</b>')).toStrictEqual([]);
+
+    // what a page may not do is take the name the scope arrives under
+    expect(ok('<b :x=${() => [1].map($ => $)}>x</b>').join(' '))
+      .toContain('reaches its scope');
   });
 
   it('passes an array through :prop- when the expression fills the value', async () => {

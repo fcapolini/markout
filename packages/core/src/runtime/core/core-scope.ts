@@ -1057,7 +1057,7 @@ export class CoreScope {
     const keyOf = (item: any) => {
       probed = item;
       try {
-        return keyExp.apply(probe);
+        return keyExp(probe);
       } catch (err) {
         that.ctx.onError('update', err, that.values[RT_FOR_KEY_VALUE]);
         return undefined;

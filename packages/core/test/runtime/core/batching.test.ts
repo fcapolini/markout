@@ -251,17 +251,13 @@ describe('DOM Update Batching', () => {
     let externalState = 1;
     const value1 = new CoreValue(
       {
-        exp: function () {
-          return externalState * 2;
-        },
+        exp: ($: any) => externalState * 2,
       },
       scope
     );
     const value2 = new CoreValue(
       {
-        exp: function () {
-          return externalState * 3;
-        },
+        exp: ($: any) => externalState * 3,
       },
       scope
     );
@@ -300,9 +296,7 @@ describe('DOM Update Batching', () => {
 
     const value = new CoreValue(
       {
-        exp: function () {
-          return externalState * 10;
-        },
+        exp: ($: any) => externalState * 10,
       },
       scope
     );

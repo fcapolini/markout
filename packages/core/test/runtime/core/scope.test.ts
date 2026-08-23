@@ -108,9 +108,7 @@ describe('dependencies', () => {
         values: {
           a: { val: 1 },
           b: {
-            exp: function (this: any) {
-              return this.a + 1;
-            },
+            exp: ($: any) => $.a + 1,
             deps: [
               ['a'],
             ],
@@ -136,9 +134,7 @@ describe('dependencies', () => {
         values: {
           a: { val: 1 },
           b: {
-            exp: function (this: any) {
-              return this.a + 1;
-            },
+            exp: ($: any) => $.a + 1,
             deps: [
               ['a'],
             ],
@@ -248,17 +244,13 @@ describe('chained propagation', () => {
         values: {
           a: { val: 1 },
           b: {
-            exp: function (this: any) {
-              return this.a + 1;
-            },
+            exp: ($: any) => $.a + 1,
             deps: [
               ['a'],
             ],
           },
           c: {
-            exp: function (this: any) {
-              return this.b + 1;
-            },
+            exp: ($: any) => $.b + 1,
             deps: [
               ['b'],
             ],

@@ -64,7 +64,7 @@ describe('stage3-qualify', () => {
     expect(qualified.type).toBe('BinaryExpression');
     const left = qualified.left;
     expect(left.type).toBe('MemberExpression');
-    expect(left.object.type).toBe('ThisExpression');
+    expect(left.object.name).toBe('$');
     expect(left.property.type).toBe('Identifier');
     expect(left.property.name).toBe('otherValue');
   });
@@ -82,7 +82,7 @@ describe('stage3-qualify', () => {
     const qualified = attr.value as any;
     expect(qualified.type).toBe('MemberExpression');
     expect(qualified.object.type).toBe('MemberExpression');
-    expect(qualified.object.object.type).toBe('ThisExpression');
+    expect(qualified.object.object.name).toBe('$');
     expect(qualified.object.property.name).toBe('$parent');
     expect(qualified.property.name).toBe('value');
   });
@@ -126,7 +126,7 @@ describe('stage3-qualify', () => {
 
     const qualified = textNode.textContent as any;
     expect(qualified.type).toBe('MemberExpression');
-    expect(qualified.object.type).toBe('ThisExpression');
+    expect(qualified.object.name).toBe('$');
     expect(qualified.property.name).toBe('name');
   });
 
@@ -157,7 +157,7 @@ describe('stage3-qualify', () => {
     const qualified = attr.value as any;
     expect(qualified.type).toBe('MemberExpression');
     expect(qualified.object.type).toBe('MemberExpression');
-    expect(qualified.object.object.type).toBe('ThisExpression');
+    expect(qualified.object.object.name).toBe('$');
     expect(qualified.object.property.name).toBe('$parent');
     expect(qualified.property.name).toBe('data');
   });
@@ -176,7 +176,7 @@ describe('stage3-qualify', () => {
     const qualified = attr.value as any;
     expect(qualified.type).toBe('MemberExpression');
     expect(qualified.object.type).toBe('MemberExpression');
-    expect(qualified.object.object.type).toBe('ThisExpression');
+    expect(qualified.object.object.name).toBe('$');
     expect(qualified.object.property.name).toBe('data');
   });
 });
@@ -209,27 +209,27 @@ describe('destructuring: a binding or a target', () => {
   }
 
   it('qualifies an array pattern target', () => {
-    expect(handler('() => { [n] = [5]; }')).toContain('[this.n]=[5]');
+    expect(handler('() => { [n] = [5]; }')).toContain('[$.n]=[5]');
   });
 
   it('qualifies an object pattern target, but not the property it names', () => {
-    expect(handler('() => { ({v: n} = {v: 5}); }')).toContain('{v:this.n}');
+    expect(handler('() => { ({v: n} = {v: 5}); }')).toContain('{v:$.n}');
   });
 
   it('spells out a shorthand it had to qualify', () => {
-    expect(handler('() => { ({n} = {n: 5}); }')).toContain('{n:this.n}');
+    expect(handler('() => { ({n} = {n: 5}); }')).toContain('{n:$.n}');
   });
 
   it('handles defaults, rests and several targets at once', () => {
-    expect(handler('() => { [n = 9] = []; }')).toContain('[this.n=9]');
-    expect(handler('() => { [n, ...m] = [1, 2, 3]; }')).toContain('[this.n,...this.m]');
+    expect(handler('() => { [n = 9] = []; }')).toContain('[$.n=9]');
+    expect(handler('() => { [n, ...m] = [1, 2, 3]; }')).toContain('[$.n,...$.m]');
     // the one worth being able to write
-    expect(handler('() => { [n, m] = [m, n]; }')).toContain('[this.n,this.m]=[this.m,this.n]');
+    expect(handler('() => { [n, m] = [m, n]; }')).toContain('[$.n,$.m]=[$.m,$.n]');
   });
 
   it('leaves a real binding alone', () => {
-    expect(handler('() => { const [x] = [n]; return x; }')).toContain('const [x]=[this.n]');
-    expect(handler('({ v }) => v + n')).toContain('({v})=>v+this.n');
+    expect(handler('() => { const [x] = [n]; return x; }')).toContain('const [x]=[$.n]');
+    expect(handler('({ v }) => v + n')).toContain('({v})=>v+$.n');
     expect(handler('() => { const {a: {b}} = {a: {b: n}}; return b; }')).toContain('{a:{b}}');
   });
 });

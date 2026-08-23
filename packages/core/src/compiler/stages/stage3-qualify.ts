@@ -11,6 +11,25 @@ import type { Value } from '../ir/Value';
 const RT_PARENT_VALUE_KEY = '$parent';
 
 /**
+ * The name a compiled expression reaches its scope through.
+ *
+ * A parameter rather than `this`, which is what this used to be, and the
+ * difference is a language rule rather than an encoding: `this` is rebound
+ * by every classic `function`, so one written anywhere inside an expression
+ * would have lost the scope -- and the language refused them outright for
+ * that reason alone. A parameter is an ordinary closure variable, captured
+ * the same way through any kind of function, so the refusal has nothing
+ * left to protect and is gone.
+ *
+ * One character because every qualified reference pays for it, and `this.`
+ * was five. Which is also why it needs the guard in stage2: `$` is the most
+ * takeable identifier in JavaScript, the qualifier deliberately leaves
+ * locals alone, and `${items.map($ => $.x + n)}` would otherwise qualify
+ * `n` against the item -- a wrong answer rather than an error.
+ */
+export const RT_SCOPE_PARAM = '$';
+
+/**
  * Stage 3: Qualify value references:
  * - references to values in expressions must be qualified with the appropriate scope prefix
  * - references to local variables inside expressions are not qualified
@@ -92,6 +111,14 @@ function qualifyExpression(key: string, expression: Node) {
       if (node.type !== 'Identifier') {
         return;
       }
+      // the scope parameter this walk itself introduces. estraverse.replace
+      // descends into what it just substituted, and `$` used to be a
+      // ThisExpression -- which no Identifier branch could reach. As a name
+      // it is reachable, and qualifying it would produce `$.$`, then
+      // `$.$.$`, without ever coming back
+      if (node.name === RT_SCOPE_PARAM) {
+        return;
+      }
       if (isInDeclaration(node, stack)) {
         return;
       }
@@ -111,7 +138,7 @@ function qualifyExpression(key: string, expression: Node) {
           type: 'MemberExpression',
           object: {
             type: 'MemberExpression',
-            object: { type: 'ThisExpression' },
+            object: { type: 'Identifier', name: RT_SCOPE_PARAM },
             property: { type: 'Identifier', name: RT_PARENT_VALUE_KEY },
             computed: false,
             optional: false,
@@ -123,7 +150,7 @@ function qualifyExpression(key: string, expression: Node) {
       }
       return {
         type: 'MemberExpression',
-        object: { type: 'ThisExpression' },
+        object: { type: 'Identifier', name: RT_SCOPE_PARAM },
         property: node,
         computed: false,
         optional: false,

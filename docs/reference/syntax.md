@@ -170,21 +170,28 @@ happens to touch changed. They still have to *resolve*, though — a name that
 is nowhere is a compile error wherever it is written, handler bodies
 included, rather than a failure waiting for the first click.
 
-The four callback families take a **literal arrow function**, written at
-that spot. A classic `function` is refused because it would rebind `this`,
-which is how the surrounding scope is reached; and for now a reference to
-one is refused too, so `${handler}` is an error even where `handler` holds a
-function:
+The four callback families take a **function literal, written at that
+spot** — an arrow or a classic `function`, either way. What is refused is a
+*reference* to one: `${handler}` is an error even where `handler` holds a
+function, because a callback's dependencies are read from what stands here,
+and a name is not a body:
 
 ```html
-<button :on-click=${() => count++}>          <!-- yes -->
-<button :on-click=${async () => save()}>     <!-- yes: still an arrow -->
-<button :on-click=${handler}>                <!-- error -->
-<button :on-click=${function () { ... }}>    <!-- error -->
+<button :on-click=${() => count++}>              <!-- yes -->
+<button :on-click=${async () => save()}>         <!-- yes -->
+<button :on-click=${function () { count++ }}>    <!-- yes -->
+<button :on-click=${handler}>                    <!-- error -->
 ```
 
-The ban on classic functions is wider than these three: one may not appear
-anywhere inside any `${...}`, for the same reason.
+There is no rule against classic functions anywhere else either. One may
+appear anywhere inside any `${...}`, nested as deeply as you like, and it
+sees the scope exactly as an arrow does — an expression reaches its scope
+through an argument the compiler passes it, not through `this`, so nothing
+about `function` can take it away.
+
+The one name an expression may not declare is **`$`**, which is that
+argument. `${items.map($ => $.x)}` is a compile error, and any other name
+works.
 
 ### Compile-time constants
 

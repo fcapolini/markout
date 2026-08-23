@@ -59,29 +59,29 @@ describe('stage4-resolve', () => {
     expect(value.deps).toStrictEqual([]);
   });
 
-  it('should record a this.foo reference as a non-parent dependency', () => {
+  it('should record a $.foo reference as a non-parent dependency', () => {
     const scope = new Scope(page, page.global);
     addValue(scope, 'count', null);
-    const value = addValue(scope, 'x', 'this.count + 1');
+    const value = addValue(scope, 'x', '$.count + 1');
 
     stage4resolve(page);
     expect(value.deps).toStrictEqual([{ key: 'count' }]);
   });
 
-  it('should record a this.$parent.foo reference as a parent dependency', () => {
+  it('should record a $.$parent.foo reference as a parent dependency', () => {
     const scope = new Scope(page, page.global);
     addValue(page.global, 'count', null);
-    const value = addValue(scope, 'x', 'this.$parent.count + 1');
+    const value = addValue(scope, 'x', '$.$parent.count + 1');
 
     stage4resolve(page);
     expect(value.deps).toStrictEqual([{ via: ['$parent'], key: 'count' }]);
   });
 
-  it('should record a this.foo.bar reference as a named-scope dependency when foo is a known :aka scope', () => {
+  it('should record a $.foo.bar reference as a named-scope dependency when foo is a known :aka scope', () => {
     const scope = new Scope(page, page.global);
     const foo = new Scope(page, page.global, undefined, 'foo');
     addValue(foo, 'bar', null);
-    const value = addValue(scope, 'x', 'this.foo.bar + 1');
+    const value = addValue(scope, 'x', '$.foo.bar + 1');
 
     stage4resolve(page);
     expect(value.deps).toStrictEqual([{ via: ['foo'], key: 'bar' }]);
@@ -92,16 +92,16 @@ describe('stage4-resolve', () => {
     const scope = new Scope(page, middle);
     const foo = new Scope(page, page.global, undefined, 'foo');
     addValue(foo, 'bar', null);
-    const value = addValue(scope, 'x', 'this.foo.bar + 1');
+    const value = addValue(scope, 'x', '$.foo.bar + 1');
 
     stage4resolve(page);
     expect(value.deps).toStrictEqual([{ via: ['foo'], key: 'bar' }]);
   });
 
-  it('should NOT treat this.foo.bar as a scope reference when foo is just an ordinary value', () => {
+  it('should NOT treat $.foo.bar as a scope reference when foo is just an ordinary value', () => {
     const scope = new Scope(page, page.global);
     addValue(page.global, 'items', null);
-    const value = addValue(scope, 'x', 'this.items.filter');
+    const value = addValue(scope, 'x', '$.items.filter');
 
     stage4resolve(page);
     expect(value.deps).toStrictEqual([{ key: 'items' }]);
@@ -112,7 +112,7 @@ describe('stage4-resolve', () => {
     addValue(middle, 'foo', null);
     const scope = new Scope(page, middle);
     new Scope(page, page.global, undefined, 'foo');
-    const value = addValue(scope, 'x', 'this.foo.bar + 1');
+    const value = addValue(scope, 'x', '$.foo.bar + 1');
 
     stage4resolve(page);
     expect(value.deps).toStrictEqual([{ key: 'foo' }]);
@@ -121,7 +121,7 @@ describe('stage4-resolve', () => {
   it('should dedupe repeated references to the same dependency', () => {
     const scope = new Scope(page, page.global);
     addValue(scope, 'count', null);
-    const value = addValue(scope, 'x', 'this.count + this.count * 2');
+    const value = addValue(scope, 'x', '$.count + $.count * 2');
 
     stage4resolve(page);
     expect(value.deps).toStrictEqual([{ key: 'count' }]);
@@ -131,7 +131,7 @@ describe('stage4-resolve', () => {
     const scope = new Scope(page, page.global);
     addValue(scope, 'a', null);
     addValue(page.global, 'b', null);
-    const value = addValue(scope, 'x', 'this.a + this.$parent.b');
+    const value = addValue(scope, 'x', '$.a + $.$parent.b');
 
     stage4resolve(page);
     expect(value.deps).toEqual(
@@ -145,7 +145,7 @@ describe('stage4-resolve', () => {
 
   it('should not record dependencies referenced only inside an event handler body', () => {
     const scope = new Scope(page, page.global);
-    const value = addValue(scope, 'on$click', '() => this.count++');
+    const value = addValue(scope, 'on$click', '() => $.count++');
 
     stage4resolve(page);
     expect(value.deps).toStrictEqual([]);
@@ -153,7 +153,7 @@ describe('stage4-resolve', () => {
 
   it('should not record dependencies referenced only inside a lifecycle hook body', () => {
     const scope = new Scope(page, page.global);
-    const value = addValue(scope, 'did$init', '() => this.count++');
+    const value = addValue(scope, 'did$init', '() => $.count++');
 
     stage4resolve(page);
     expect(value.deps).toStrictEqual([]);
@@ -167,7 +167,7 @@ describe('stage4-resolve', () => {
     // what breaks when this is "optimised"
     const scope = new Scope(page, page.global);
     addValue(scope, 'suffix', null);
-    const value = addValue(scope, 'fmt', '(n) => n + this.suffix');
+    const value = addValue(scope, 'fmt', '(n) => n + $.suffix');
 
     stage4resolve(page);
     expect(value.deps).toStrictEqual([{ key: 'suffix' }]);
@@ -176,7 +176,7 @@ describe('stage4-resolve', () => {
   it('should not record dependencies referenced only inside a will- hook body', () => {
     // the sibling of the on$/did$ cases: same rule, and it had no test
     const scope = new Scope(page, page.global);
-    const value = addValue(scope, 'will$dispose', '() => this.count++');
+    const value = addValue(scope, 'will$dispose', '() => $.count++');
 
     stage4resolve(page);
     expect(value.deps).toStrictEqual([]);
@@ -201,7 +201,7 @@ describe('stage4-resolve', () => {
     const scope = new Scope(page, page.global);
     addValue(scope, 'items', null);
     addValue(scope, 'offset', null);
-    const value = addValue(scope, 'x', 'this.items.map(item => item + this.offset)');
+    const value = addValue(scope, 'x', '$.items.map(item => item + $.offset)');
 
     stage4resolve(page);
     expect(value.deps).toEqual(
@@ -218,7 +218,7 @@ describe('stage4-resolve', () => {
     addValue(scope, 'count', null);
     const textAttr = new ServerAttribute(doc, null as any, ':t$0', null, LOC);
     const textValue = new Value('t$0', textAttr, scope);
-    textAttr.value = parseExpr('this.count');
+    textAttr.value = parseExpr('$.count');
     scope.textValues.set('t$0', textValue);
 
     stage4resolve(page);
@@ -229,7 +229,7 @@ describe('stage4-resolve', () => {
     const scope = new Scope(page, page.global);
     const child = new Scope(page, scope);
     addValue(child, 'count', null);
-    const value = addValue(child, 'x', 'this.count');
+    const value = addValue(child, 'x', '$.count');
 
     stage4resolve(page);
     expect(value.deps).toStrictEqual([{ key: 'count' }]);

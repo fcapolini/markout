@@ -29,6 +29,7 @@ import {
 } from '../../runtime/web/web-context';
 import type { Page } from '../ir/Page';
 import type { Scope } from '../ir/Scope';
+import { RT_SCOPE_PARAM } from './stage3-qualify';
 import type { Value, ValueDepRef } from '../ir/Value';
 
 // stage1's compiled prefixes don't all match what WebScope.newValue expects;
@@ -802,23 +803,29 @@ function memberExpression(object: Expression, prop: Expression): Expression {
   } as unknown as Expression;
 }
 
-function thisMember(name: string): Expression {
-  return memberExpression({ type: 'ThisExpression' } as unknown as Expression, identifier(name));
-}
-
-// the wrapper must be a plain `function`, never an arrow: CoreValue.get()
-// calls it via `.apply(scope.proxy)`, which only a plain function honors
+/**
+ * `$ => <expression>`: the wrapper the runtime calls to evaluate a value.
+ *
+ * An arrow taking the scope as an argument, where this used to be a plain
+ * `function` called with `.apply(scope.proxy)`. That calling convention was
+ * the whole reason a classic `function` could not appear anywhere inside an
+ * expression -- it would have rebound `this` and lost the scope -- so the
+ * language carried a refusal for the sake of a wrapper. A parameter is
+ * captured like any other closure variable, and the refusal went with it.
+ *
+ * Cheaper as well as freer, which is what the entry in TODO.md was after:
+ * `function(){return x}` is twenty characters of wrapper against four, and
+ * every reference inside it says `$.` where it used to say `this.`.
+ */
 function functionExpression(returned: Expression): Expression {
   return {
-    type: 'FunctionExpression',
+    type: 'ArrowFunctionExpression',
     id: null,
-    params: [],
+    params: [identifier(RT_SCOPE_PARAM)],
     generator: false,
     async: false,
-    body: {
-      type: 'BlockStatement',
-      body: [{ type: 'ReturnStatement', argument: returned }],
-    },
+    expression: true,
+    body: returned,
   } as unknown as Expression;
 }
 

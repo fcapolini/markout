@@ -1,5 +1,6 @@
 import * as estraverse from 'estraverse';
-import type { Node } from 'estree';
+import type { Identifier, Node } from 'estree';
+import { RT_SCOPE_PARAM } from './stage3-qualify';
 import type { Page } from '../ir/Page';
 import {
   ATTR_VALUE_PREFIX,
@@ -225,8 +226,12 @@ function validateValue(page: Page, name: string, value: Value) {
   }
   const ast = expression as unknown as Node;
 
-  // event and lifecycle callbacks must themselves be arrow functions: a
-  // classic one would rebind `this`, which is how the scope is reached
+  // A callback has to BE a function, written here. Not because of `this` any
+  // more -- a compiled expression reaches its scope through a parameter, so
+  // a classic function keeps it like anything else -- but because the
+  // dependencies of a callback's body are extracted from what stands at this
+  // spot. `${handler}` names one instead of being one, and there would be
+  // nothing here to read.
   if (CALLBACK_VALUE_PREFIXES.some(p => name.startsWith(p))) {
     // `:handle-x` has already been desugared into a call that passes `x`, so
     // what the author actually wrote is the callee
@@ -234,16 +239,16 @@ function validateValue(page: Page, name: string, value: Value) {
       name.startsWith(HANDLE_VALUE_PREFIX) && ast.type === 'CallExpression'
         ? ((ast as unknown as { callee: Node }).callee)
         : ast;
-    if (fn.type !== 'ArrowFunctionExpression') {
+    if (fn.type !== 'ArrowFunctionExpression' && fn.type !== 'FunctionExpression') {
       addError(
         page,
-        `Callback "${name}" must be an arrow function, got ${fn.type}`,
+        `Callback "${name}" must be a function written here, got ${fn.type}`,
         value.node.loc || undefined
       );
     }
   }
 
-  validateNoClassicFunctions(page, name, ast, value.node.loc || undefined);
+  validateScopeParamFree(page, name, ast, value.node.loc || undefined);
 }
 
 function validateTextValue(page: Page, name: string, value: Value) {
@@ -256,18 +261,68 @@ function validateTextValue(page: Page, name: string, value: Value) {
     return;
   }
 
-  validateNoClassicFunctions(page, name, expression as unknown as Node, value.node.loc || undefined);
+  validateScopeParamFree(page, name, expression as unknown as Node, value.node.loc || undefined);
 }
 
-function validateNoClassicFunctions(page: Page, name: string, ast: Node, loc: any) {
+/**
+ * Refuses an expression that binds `$` to something of its own.
+ *
+ * `$` is how a compiled expression reaches its scope -- the parameter
+ * stage7 wraps every one of them in -- and the qualifier deliberately
+ * leaves locals alone, so a local of that name is not an error waiting to
+ * happen but a silent one: in `${items.map($ => $.x + n)}`, `n` qualifies
+ * to `$.n` and reads the item. A wrong answer, from a page that compiled
+ * and ran.
+ *
+ * `$`-prefixed names were already the language's own, reserved so a system
+ * value can never be shadowed. This is that rule reaching the other kind of
+ * name -- one an expression declares rather than reads.
+ */
+function validateScopeParamFree(page: Page, name: string, ast: Node, loc: any) {
+  const refuse = (node: Node) =>
+    addError(
+      page,
+      `"${RT_SCOPE_PARAM}" is how an expression reaches its scope and cannot be ` +
+        `declared in one (in "${name}"). Any other name works`,
+      (node as any).loc ?? loc
+    );
+  const check = (node: Node | null | undefined) => {
+    if (!node) return;
+    switch (node.type) {
+      case 'Identifier':
+        (node as Identifier).name === RT_SCOPE_PARAM && refuse(node);
+        return;
+      case 'ObjectPattern':
+        (node as any).properties.forEach((p: any) =>
+          check(p.type === 'RestElement' ? p.argument : p.value)
+        );
+        return;
+      case 'ArrayPattern':
+        (node as any).elements.forEach((e: any) => check(e));
+        return;
+      case 'AssignmentPattern':
+        check((node as any).left);
+        return;
+      case 'RestElement':
+        check((node as any).argument);
+        return;
+    }
+  };
   estraverse.traverse(ast, {
     enter(node: Node) {
-      if (node.type === 'FunctionDeclaration' || node.type === 'FunctionExpression') {
-        addError(
-          page,
-          `Nested functions must be arrow functions, found a classic function in "${name}"`,
-          (node as any).loc ?? loc
-        );
+      switch (node.type) {
+        case 'FunctionDeclaration':
+        case 'FunctionExpression':
+        case 'ArrowFunctionExpression':
+          check((node as any).id);
+          (node as any).params.forEach(check);
+          return;
+        case 'VariableDeclarator':
+          check((node as any).id);
+          return;
+        case 'CatchClause':
+          check((node as any).param);
+          return;
       }
     },
   });
