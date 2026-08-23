@@ -8,6 +8,7 @@ import { stage4resolve } from '../../src/compiler/stages/stage4-resolve';
 import { stage7generate } from '../../src/compiler/stages/stage7-generate';
 import { renderPage } from '../../src/render/render';
 import { WebContext } from '../../src/runtime/web/web-context';
+import { loadProps } from '../../src/render/props';
 
 // `<:logic>` is a scope with no element. Everything else that declares
 // values is markup that happens to carry them, so page-level state had to
@@ -173,7 +174,7 @@ describe('<:define tag="x:logic">', () => {
     expect(page.errors).toStrictEqual([]);
     await renderPage(page);
     const ctx = new WebContext({
-      root: new Function(`return (${page.propsString});`)(),
+      ...loadProps(page.propsString),
       doc: page.source.doc,
       server: true,
     }).refresh() as any;

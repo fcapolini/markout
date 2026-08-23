@@ -7,6 +7,7 @@ import { stage4resolve } from '../src/compiler/stages/stage4-resolve';
 import { stage7generate } from '../src/compiler/stages/stage7-generate';
 import { parse } from '../src/html/parser';
 import { WebContext } from '../src/runtime/web/web-context';
+import { loadProps } from '../src/render/props';
 
 /**
  * What a value holding a function means, and why it re-evaluates.
@@ -44,7 +45,7 @@ function render(html: string) {
   // and reported again, which turns one failure into a cascade
   const errors: string[] = [];
   const ctx = new WebContext({
-    root: new Function(`return (${page.propsString});`)(),
+    ...loadProps(page.propsString),
     doc: page.source.doc,
     onError: e => errors.push(`${e.phase}/${e.key}: ${e.message}`),
   }).refresh();

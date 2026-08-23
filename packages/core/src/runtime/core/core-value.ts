@@ -133,7 +133,12 @@ export class CoreValue<T = any> {
     this.src = new Set();
     this.dst = new Set();
     this.cycle = 0;
-    this.exp = props.exp;
+    // an index into the page's expression table, or the function itself
+    // when the props were built by hand -- see CoreValueProps.exp
+    this.exp =
+      typeof props.exp === 'number'
+        ? (scope.ctx.props.exps as ValueExp<T>[] | undefined)?.[props.exp]
+        : props.exp;
     this.value = props.val;
   }
 

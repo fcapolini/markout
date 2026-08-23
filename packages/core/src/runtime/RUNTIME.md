@@ -68,6 +68,18 @@ they exist purely as extension points for layers built on top of it.
 
 ## Values: static vs. reactive
 
+The props a page carries arrive in two halves. Everything a scope holds is
+data except the expressions, which have to be JavaScript — so those are
+lifted into one array (`CoreContextProps.exps`) and a value's `exp` is an
+index into it, which lets the whole tree be `JSON.parse`d rather than
+evaluated as a JavaScript object literal. About five times faster on a page
+of any size, since the structure never reaches the JavaScript parser at
+all; and identical expressions are emitted once, which most of a page's are
+as soon as a component has more than one instance.
+
+Props built by hand — a test, a host supplying a global — put the function
+in `exp` directly, and both loaders accept either.
+
 A `CoreValueProps<T>` is one of:
 
 - a plain value (`val`): set once, or updated later via `set()`;

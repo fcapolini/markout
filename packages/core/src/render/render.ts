@@ -5,6 +5,7 @@ import type { PageState, RuntimeError } from "../runtime/core/core-context";
 import { STATE_GLOBAL } from "../runtime/core/core-context";
 import type { Page } from "../compiler/ir/Page";
 import { ServerText, type ServerElement, type ServerNode } from "../html/server-dom";
+import { loadProps } from "./props";
 import { escapeScriptText, quote, serialize, UnserializableError } from "./serialize";
 
 /**
@@ -52,9 +53,10 @@ export async function renderPage(
     return [];
   }
   const errors: RuntimeError[] = [];
-  const root = new Function(`return (${page.propsString});`)() as CoreScopeProps;
+  const { root, exps } = loadProps(page.propsString);
   const ctx = new WebContext({
     root,
+    exps,
     doc: page.source.doc,
     onError: e => errors.push(e),
     // property bindings have nothing to write into a served page (see

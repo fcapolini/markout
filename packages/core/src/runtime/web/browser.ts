@@ -16,7 +16,13 @@ declare const document: {
 
 /** Reads `window[PROPS_GLOBAL]` and boots a `WebContext` from it, if present. */
 export function init(): WebContext | undefined {
-  const root = window[PROPS_GLOBAL] as CoreScopeProps | undefined;
+  // two halves: the expressions, which have to be JavaScript, and the tree
+  // that refers to them by index, which the page hands over already parsed
+  // out of JSON. See stage7-generate's emitProps
+  const props = window[PROPS_GLOBAL] as
+    | { e: ((scope: unknown) => unknown)[]; p: CoreScopeProps }
+    | undefined;
+  const root = props?.p;
   if (!root) {
     console.error(`markout: window.${PROPS_GLOBAL} not found, nothing to initialize`);
     return undefined;
@@ -27,6 +33,7 @@ export function init(): WebContext | undefined {
   const dev = window[DEV_GLOBAL] === true;
   const context = new WebContext({
     root,
+    exps: props!.e,
     doc: document as unknown as MarkoutDocument,
     dev,
     // results of the server's `:server-` values, absent on a page that declared

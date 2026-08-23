@@ -9,6 +9,7 @@ import { parse } from '../../../src/html/parser';
 import type { RuntimeError } from '../../../src/runtime/core/core-context';
 import { WebContext } from '../../../src/runtime/web/web-context';
 import { renderPage } from '../../../src/render/render';
+import { loadProps } from '../../../src/render/props';
 
 /**
  * The two lifecycle pairs, and the difference between them.
@@ -41,7 +42,7 @@ async function run(html: string) {
   const atServe = [...log];
   log.length = 0;
   const ctx = new WebContext({
-    root: new Function(`return (${page.propsString});`)(),
+    ...loadProps(page.propsString),
     doc: page.source.doc,
     onError: (e: RuntimeError) => log.push(`ERROR ${e.message}`),
   }).refresh();

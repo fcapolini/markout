@@ -10,6 +10,7 @@ import { renderPage } from '../../src/render/render';
 import { CoreContext, STATE_GLOBAL } from '../../src/runtime/core/core-context';
 import type { PageState } from '../../src/runtime/core/core-context';
 import type { CoreScope, CoreScopeProps } from '../../src/runtime/core/core-scope';
+import { loadProps } from '../../src/render/props';
 
 // End to end: the server renders, collects its `:server-` values, and writes
 // them into the reserved script; a client built from the same props plus that
@@ -43,8 +44,7 @@ function readState(page: Page): PageState | undefined {
 /** a client rehydrating the served page: the props the BROWSER is given --
  *  not the server's -- plus whatever state came with them */
 function rehydrate(page: Page, state?: PageState) {
-  const root = new Function(`return (${page.clientPropsString});`)() as CoreScopeProps;
-  return new CoreContext({ root, state }).refresh();
+  return new CoreContext({ ...loadProps(page.clientPropsString!), state }).refresh();
 }
 
 /** the replicas of the page's one `:for-each`, wherever it sits in the tree */

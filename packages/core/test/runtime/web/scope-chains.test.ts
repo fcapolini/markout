@@ -9,6 +9,7 @@ import { NodeType } from '../../../src/html/dom';
 import { parse } from '../../../src/html/parser';
 import { CoreScope, CoreScopeProps } from '../../../src/runtime/core/core-scope';
 import { WebContext } from '../../../src/runtime/web/web-context';
+import { loadProps } from '../../../src/render/props';
 
 /**
  * Compiles real page source and runs the generated props through the actual
@@ -29,8 +30,8 @@ function run(html: string) {
     'expected the page to compile cleanly'
   );
   stage7generate(page);
-  const root = new Function(`return (${page.propsString});`)() as CoreScopeProps;
-  const ctx = new WebContext({ root, doc: page.source.doc }).refresh();
+  const { root, exps } = loadProps(page.propsString);
+  const ctx = new WebContext({ root, exps, doc: page.source.doc }).refresh();
   return { page, ctx };
 }
 

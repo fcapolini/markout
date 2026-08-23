@@ -675,6 +675,20 @@ export class CoreScope {
     return !!this.props.values?.[RT_FOR_DATA_VALUE] && !this.showing;
   }
 
+  /**
+   * An expression, however the props name it.
+   *
+   * A page's expressions are lifted into one array and referred to by index
+   * (see CoreContextProps.exps); props built by hand carry the function
+   * itself. CoreValue does this for every value it builds -- this is for the
+   * one expression that never becomes a value.
+   */
+  expressionOf<T>(exp: ValueExp<T> | number | undefined): ValueExp<T> | undefined {
+    return typeof exp === 'number'
+      ? (this.ctx.props.exps as ValueExp<T>[] | undefined)?.[exp]
+      : exp;
+  }
+
   /** whether a `:for-data` scope currently has something to show */
   showing = false;
 
@@ -1006,7 +1020,10 @@ export class CoreScope {
     // in place, so anything the DOM itself holds (focus, scroll offset, an
     // input's typed value, a running animation, a media element's playhead)
     // stays where it was while the data slides out from under it
-    const keyExp = that.props.values?.[RT_FOR_KEY_VALUE]?.exp;
+    // read off the props rather than through a CoreValue, because `:for-key`
+    // never becomes one (see newValue) -- so this is the one place that has
+    // to resolve an expression index itself
+    const keyExp = that.expressionOf(that.props.values?.[RT_FOR_KEY_VALUE]?.exp);
     keyExp
       ? CoreScope.replicateByKey(that, vv, offset, length, alias, keyExp)
       : CoreScope.replicateByIndex(that, vv, offset, length, alias);

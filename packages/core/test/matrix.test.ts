@@ -8,6 +8,7 @@ import { stage7generate } from '../src/compiler/stages/stage7-generate';
 import { parse } from '../src/html/parser';
 import type { RuntimeError } from '../src/runtime/core/core-context';
 import { WebContext } from '../src/runtime/web/web-context';
+import { loadProps } from '../src/render/props';
 
 /**
  * Every kind of binding, in every kind of container that relocates or
@@ -295,9 +296,10 @@ function check(binding: (typeof BINDINGS)[number], container: (typeof CONTAINERS
   // 2. server rendering raises nothing -- including the unbound-binding
   //    report, which is what catches a value whose DOM target went missing
   const ssrErrors: RuntimeError[] = [];
-  const root = new Function(`return (${page.propsString});`)();
+  const { root, exps } = loadProps(page.propsString);
   const ctx = new WebContext({
     root,
+    exps,
     doc: page.source.doc,
     onError: e => ssrErrors.push(e),
   }).refresh();
@@ -328,7 +330,7 @@ function check(binding: (typeof BINDINGS)[number], container: (typeof CONTAINERS
   const rehydrated = parse(served, 'matrix.html');
   const hydrationErrors: RuntimeError[] = [];
   new WebContext({
-    root: new Function(`return (${page.propsString});`)(),
+    ...loadProps(page.propsString),
     doc: rehydrated.doc,
     onError: e => hydrationErrors.push(e),
   }).refresh();
@@ -427,7 +429,7 @@ describe('$id across containers', () => {
 
       const errors: RuntimeError[] = [];
       new WebContext({
-        root: new Function(`return (${page.propsString});`)(),
+        ...loadProps(page.propsString),
         doc: page.source.doc,
         onError: e => errors.push(e),
       }).refresh();

@@ -7,6 +7,7 @@ import { Compiler } from '../src/compiler';
 import type { RuntimeError } from '../src/runtime/core/core-context';
 import { WebContext } from '../src/runtime/web/web-context';
 import { renderPage } from '../src/render/render';
+import { loadProps } from '../src/render/props';
 
 /**
  * Every directive the syntax reference lists does something observable.
@@ -105,7 +106,7 @@ async function run(page: string, files?: Record<string, string>): Promise<Probe>
   const errors = await renderPage(compiled);
   expect(errors).toStrictEqual([]);
   const ctx = new WebContext({
-    root: new Function(`return (${compiled.propsString});`)(),
+    ...loadProps(compiled.propsString),
     doc: compiled.source.doc,
     onError: e => {
       throw new Error(`${e.phase}/${e.key}: ${e.message}`);
@@ -134,7 +135,7 @@ async function runInBrowser(page: string) {
   window.document.write(compiled.source.doc.toString());
   const errors: RuntimeError[] = [];
   new WebContext({
-    root: new Function(`return (${compiled.propsString});`)(),
+    ...loadProps(compiled.propsString),
     doc: window.document as any,
     onError: e => errors.push(e),
   }).refresh();

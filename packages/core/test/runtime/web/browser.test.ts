@@ -10,7 +10,10 @@ describe('browser bootstrap', () => {
 
   it('should construct and refresh a WebContext from window[PROPS_GLOBAL]', () => {
     const source = parse('<html data-markout="0"></html>', 'test');
-    vi.stubGlobal('window', { [PROPS_GLOBAL]: { id: '0', values: { attr$lang: { val: 'en' } } } });
+    // as a page carries them: the expressions in `e`, the tree in `p`
+    vi.stubGlobal('window', {
+      [PROPS_GLOBAL]: { e: [], p: { id: '0', values: { attr$lang: { val: 'en' } } } },
+    });
     vi.stubGlobal('document', source.doc);
 
     const context = init();

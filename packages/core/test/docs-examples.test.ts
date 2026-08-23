@@ -8,6 +8,7 @@ import { stage7generate } from '../src/compiler/stages/stage7-generate';
 import { parse } from '../src/html/parser';
 import { renderPage } from '../src/render/render';
 import { WebContext } from '../src/runtime/web/web-context';
+import { loadProps } from '../src/render/props';
 
 // Every example in docs/ that a reader would type in, compiled and rendered.
 // Documentation that doesn't run is worse than none: it costs the reader the
@@ -94,7 +95,7 @@ describe('docs/reference/syntax.md', () => {
     const page = compile(html);
     expect(page.errors.map(e => e.msg)).toStrictEqual([]);
     const ctx = new WebContext({
-      root: new Function(`return (${page.propsString});`)(),
+      ...loadProps(page.propsString),
       doc: page.source.doc,
       server: true,
       onError: e => {
@@ -169,7 +170,7 @@ describe('docs/reference/syntax.md', () => {
     );
     expect(page.errors.map(e => e.msg)).toStrictEqual([]);
     const ctx = new WebContext({
-      root: new Function(`return (${page.propsString});`)(),
+      ...loadProps(page.propsString),
       doc: page.source.doc,
       onError: e => {
         throw new Error(e.message);

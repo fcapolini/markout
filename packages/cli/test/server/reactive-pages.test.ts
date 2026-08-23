@@ -14,7 +14,10 @@ function extractProps(html: string): any {
   if (!match) {
     throw new Error('could not find window.__MARKOUT_PROPS in served HTML');
   }
-  return new Function(`return (${match[1]});`)();
+  // two halves as the page carries them: `e` the expressions, `p` the tree
+  // that names them by index
+  const { e, p } = new Function(`return (${match[1]});`)();
+  return { exps: e, ...p };
 }
 
 describe("Reactive page compilation", () => {
@@ -56,13 +59,13 @@ describe("Reactive page compilation", () => {
 
     // each expression is handed the scope it evaluates against, rather than
     // wearing it as `this`
-    expect(props.values.count.exp({})).toBe(0);
+    expect(props.exps[props.values.count.exp]({})).toBe(0);
 
     const body = props.children[1];
-    expect(typeof body.values['event$click'].exp({ count: 5 })).toBe('function');
+    expect(typeof props.exps[body.values['event$click'].exp]({ count: 5 })).toBe('function');
 
     const fakeScope = { count: 5, $value: () => ({}) };
-    expect(body.values['text$0'].exp(fakeScope)).toBe(5);
+    expect(props.exps[body.values['text$0'].exp](fakeScope)).toBe(5);
     // the path the dependency names, walked by the runtime rather than by a
     // closure the props had to carry
     expect(body.values['text$0'].deps[0]).toEqual(['count']);

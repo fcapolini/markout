@@ -89,7 +89,8 @@ describe('stage7-generate: :server-', () => {
   it('emits the mark in the props', () => {
     const p = compile('<html :server-t=${1}><body>${t}</body></html>');
     expect(p.errors).toStrictEqual([]);
-    expect(p.propsString).toMatch(/serverOnly:\s*true/);
+    // in the data half, which is JSON now
+    expect(p.propsString).toContain('serverOnly\\":true');
   });
 
   it('reserves a state script for the server to fill', () => {

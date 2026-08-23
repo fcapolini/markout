@@ -1,6 +1,6 @@
 import { CoreGlobal, ORIGIN_GLOBAL } from './core-global';
 import { CoreScope, CoreScopeProps } from './core-scope';
-import { CoreValue, CoreValueProps } from './core-value';
+import { CoreValue, CoreValueProps, ValueExp } from './core-value';
 
 export const PROPS_GLOBAL = '__MARKOUT_PROPS';
 /** set alongside PROPS_GLOBAL when the page was compiled in dev mode */
@@ -81,6 +81,20 @@ export const STATE_GLOBAL = '__MARKOUT_STATE';
 
 export interface CoreContextProps {
   root: CoreScopeProps;
+  /**
+   * The page's expressions, which its values refer to by index.
+   *
+   * Props are data with holes in them: everything a scope carries is JSON
+   * except the expressions, which have to be JavaScript. Lifting them out
+   * lets the tree be `JSON.parse`d rather than evaluated as a JavaScript
+   * object literal -- about five times faster, since the structure never
+   * reaches the JavaScript parser -- and lets the identical ones be shared,
+   * which most of a page's are once a component has more than one instance.
+   *
+   * Absent for props built by hand, where a value's `exp` is the function
+   * itself. See CoreValue's constructor.
+   */
+  exps?: ValueExp<any>[];
   addedGlobals?: { [key: string | symbol]: CoreValueProps<any> };
   /**
    * Receives every runtime error, replacing the default console logging.

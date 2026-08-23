@@ -8,6 +8,7 @@ import { stage7generate } from '../src/compiler/stages/stage7-generate';
 import { parse } from '../src/html/parser';
 import type { RuntimeError } from '../src/runtime/core/core-context';
 import { WebContext } from '../src/runtime/web/web-context';
+import { loadProps } from '../src/render/props';
 
 /**
  * `:aka` names, resolved by BOTH halves and checked against each other.
@@ -48,7 +49,7 @@ function run(html: string) {
   }
   stage7generate(page);
   const ctx = new WebContext({
-    root: new Function(`return (${page.propsString});`)(),
+    ...loadProps(page.propsString),
     doc: page.source.doc,
     onError: (e: RuntimeError) => runtime.push(e),
   }).refresh();

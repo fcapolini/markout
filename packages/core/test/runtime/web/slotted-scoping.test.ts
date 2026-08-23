@@ -9,6 +9,7 @@ import { NodeType } from '../../../src/html/dom';
 import { parse } from '../../../src/html/parser';
 import { CoreScope, CoreScopeProps } from '../../../src/runtime/core/core-scope';
 import { WebContext } from '../../../src/runtime/web/web-context';
+import { loadProps } from '../../../src/render/props';
 
 /**
  * Names declared on markup that a usage site slots INTO a custom tag, read
@@ -38,9 +39,9 @@ function run(html: string) {
     'expected the page to compile cleanly'
   );
   stage7generate(page);
-  const root = new Function(`return (${page.propsString});`)() as CoreScopeProps;
+  const { root, exps } = loadProps(page.propsString);
   const errors: string[] = [];
-  const ctx = new WebContext({ root, doc: page.source.doc });
+  const ctx = new WebContext({ root, exps, doc: page.source.doc });
   // a lookup that misses is reported, not thrown: CoreValue.link() calls it
   // "a markout bug, not a page bug", so a test that only looked at the DOM
   // would miss the diagnosis even when it caught the symptom

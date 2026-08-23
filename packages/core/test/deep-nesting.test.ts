@@ -8,6 +8,7 @@ import { stage7generate } from '../src/compiler/stages/stage7-generate';
 import { parse } from '../src/html/parser';
 import type { RuntimeError } from '../src/runtime/core/core-context';
 import { WebContext } from '../src/runtime/web/web-context';
+import { loadProps } from '../src/render/props';
 
 /**
  * Three constructs deep, hand-picked rather than generated.
@@ -34,7 +35,7 @@ function render(html: string) {
   const ctx = page.errors.length
     ? undefined
     : new WebContext({
-        root: new Function(`return (${page.propsString});`)(),
+        ...loadProps(page.propsString),
         doc: page.source.doc,
         onError: e => runtime.push(e),
       }).refresh();

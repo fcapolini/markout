@@ -7,6 +7,7 @@ import { stage4resolve } from '../../src/compiler/stages/stage4-resolve';
 import { stage7generate } from '../../src/compiler/stages/stage7-generate';
 import { parse } from '../../src/html/parser';
 import { WebContext } from '../../src/runtime/web/web-context';
+import { loadProps } from '../../src/render/props';
 
 /**
  * What happens to the text nodes sitting directly inside a usage site when
@@ -34,8 +35,8 @@ function render(html: string): string {
     'expected the page to compile cleanly'
   );
   stage7generate(page);
-  const root = new Function(`return (${page.propsString});`)();
-  new WebContext({ root, doc: page.source.doc }).refresh();
+  const { root, exps } = loadProps(page.propsString);
+  new WebContext({ root, exps, doc: page.source.doc }).refresh();
   const body = findByTag(page.source.doc, 'BODY');
   const out = body
     .toString()

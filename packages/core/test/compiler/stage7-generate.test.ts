@@ -30,21 +30,21 @@ function parseExpr(source: string): acorn.Expression {
   });
 }
 
-// looks up an ObjectExpression AST's property value by key name -- keys are
-// either an Identifier (structural props) or a quoted Literal (scope values)
-function prop(obj: any, name: string): any {
-  return obj.properties.find((p: any) => keyName(p) === name)?.value;
+/**
+ * The props as a loader gets them: the expression array and the tree that
+ * refers to it by index.
+ *
+ * Loaded from `propsString` rather than read off an intermediate, so what
+ * these assertions see is the source the page carries -- including that it
+ * parses at all, which is the one thing an AST could never tell us.
+ */
+function emitted(page: Page): { e: ((s: any) => any)[]; p: any } {
+  return new Function(`return (${page.propsString});`)();
 }
 
-function keyName(p: any): string {
-  return p.key.type === 'Literal' ? p.key.value : p.key.name;
-}
-
-// turns a generated FunctionExpression AST node into a real callable, the
-// way an actual loader (outside the compiler) would after reading the code
-function evalExpr(node: any): (...args: any[]) => any {
-  return new Function(`return (${generate(node)});`)();
-}
+/** a scope's or value's property, and the expression an `exp` index names */
+const prop = (obj: any, name: string): any => obj?.[name];
+const expOf = (loaded: { e: ((s: any) => any)[] }, value: any) => loaded.e[value.exp];
 
 describe('stage7-generate', () => {
   let doc: ServerDocument;
@@ -68,15 +68,16 @@ describe('stage7-generate', () => {
     return v;
   }
 
-  it('should generate propsAST and propsString with the root scope id and name', async () => {
+  it('should generate props carrying the root scope id and name', async () => {
     stage4resolve(page);
     stage7generate(page);
 
-    expect(page.propsAST).toBeDefined();
-    expect(prop(page.propsAST, 'id').value).toBe(root.id);
-    expect(prop(page.propsAST, 'name').value).toBe('page');
-    expect(typeof page.propsString).toBe('string');
-    expect(page.propsString).toContain(root.id);
+    const loaded = emitted(page);
+    expect(loaded.p.id).toBe(root.id);
+    expect(loaded.p.name).toBe('page');
+    expect(Array.isArray(loaded.e)).toBe(true);
+    // the tree arrives as data rather than as evaluated JavaScript
+    expect(page.propsString).toContain('JSON.parse(');
   });
 
   it('should compile a literal value into an exp function returning that constant', async () => {
@@ -85,9 +86,8 @@ describe('stage7-generate', () => {
     stage4resolve(page);
     stage7generate(page);
 
-    const count = prop(prop(page.propsAST, 'values'), 'count');
-    const exp = evalExpr(prop(count, 'exp'));
-    expect(exp.apply({})).toBe(42);
+    const loaded = emitted(page);
+    expect(expOf(loaded, prop(loaded.p.values, 'count'))({})).toBe(42);
   });
 
   it('should compile a plain (non-`${}`) string value into an exp returning that literal string', async () => {
@@ -96,9 +96,8 @@ describe('stage7-generate', () => {
     stage4resolve(page);
     stage7generate(page);
 
-    const label = prop(prop(page.propsAST, 'values'), 'label');
-    const exp = evalExpr(prop(label, 'exp'));
-    expect(exp.apply({})).toBe('hello');
+    const loaded = emitted(page);
+    expect(expOf(loaded, prop(loaded.p.values, 'label'))({})).toBe('hello');
   });
 
   it('should treat a presence-only (null) value as true', async () => {
@@ -107,9 +106,8 @@ describe('stage7-generate', () => {
     stage4resolve(page);
     stage7generate(page);
 
-    const value = prop(prop(page.propsAST, 'values'), 'class$active');
-    const exp = evalExpr(prop(value, 'exp'));
-    expect(exp({})).toBe(true);
+    const loaded = emitted(page);
+    expect(expOf(loaded, prop(loaded.p.values, 'class$active'))({})).toBe(true);
   });
 
   it('should qualify $.foo references and evaluate them against the given scope proxy', async () => {
@@ -118,12 +116,11 @@ describe('stage7-generate', () => {
     stage4resolve(page);
     stage7generate(page);
 
-    const doubled = prop(prop(page.propsAST, 'values'), 'doubled');
-    const exp = evalExpr(prop(doubled, 'exp'));
+    const loaded = emitted(page);
     // handed the scope, rather than wearing it as `this`: the wrapper is an
     // arrow now, which is what let the language stop refusing classic
     // functions inside expressions
-    expect(exp({ count: 21 })).toBe(42);
+    expect(expOf(loaded, prop(loaded.p.values, 'doubled'))({ count: 21 })).toBe(42);
   });
 
   it('should compile deps into the path each one names', async () => {
@@ -153,14 +150,9 @@ describe('stage7-generate', () => {
     // the last segment is a scope navigation and the last is the key. The
     // runtime does the walking (CoreValue.resolveDep), which is what took
     // one allocated-and-called-once function per edge out of the props
-    const values = prop(page.propsAST, 'values');
-    const depsOf = (name: string) =>
-      evalExpr(
-        prop(values, name).properties.find((p: any) => p.key.name === 'deps').value
-      );
-
-    expect(depsOf('doubled')).toEqual([['count']]);
-    expect(depsOf('fromParent')).toEqual([['$parent', 'count']]);
+    const values = emitted(page).p.values;
+    expect(values.doubled.deps).toEqual([['count']]);
+    expect(values.fromParent.deps).toEqual([['$parent', 'count']]);
     void fakeScope;
     void seen;
   });
@@ -178,7 +170,7 @@ describe('stage7-generate', () => {
     stage4resolve(page);
     stage7generate(page);
 
-    const keys = prop(page.propsAST, 'values').properties.map((p: any) => keyName(p));
+    const keys = Object.keys(emitted(page).p.values);
     expect(keys).toContain('event$click');
     expect(keys).toContain('text$0');
     expect(keys).toContain('class$active');
@@ -194,11 +186,11 @@ describe('stage7-generate', () => {
     stage4resolve(page);
     stage7generate(page);
 
-    const children = prop(page.propsAST, 'children').elements;
+    const loaded = emitted(page);
+    const children = loaded.p.children;
     expect(children).toHaveLength(1);
-    expect(prop(children[0], 'id').value).toBe(child.id);
-    const x = prop(prop(children[0], 'values'), 'x');
-    expect(evalExpr(prop(x, 'exp')).apply({})).toBe(1);
+    expect(children[0].id).toBe(child.id);
+    expect(expOf(loaded, prop(children[0].values, 'x'))({})).toBe(1);
   });
 });
 
@@ -268,10 +260,10 @@ describe('stage7-generate bootstrap scripts', () => {
     const window: any = {};
     // eslint-disable-next-line no-new-func
     new Function('window', text)(window);
-    const scope = window.__MARKOUT_PROPS;
+    const { e, p: scope } = window.__MARKOUT_PROPS;
     const hit = scope.values['hit'] ?? scope.children[0]?.values['hit'];
-    expect(hit.exp.call({})).toBe(false);
-    expect(hit.exp.call({}) === /<!--x/u.test('a')).toBe(true);
+    expect(e[hit.exp]({})).toBe(false);
+    expect(e[hit.exp]({}) === /<!--x/u.test('a')).toBe(true);
   });
 
   it('leaves a regex without the character alone', async () => {
@@ -303,14 +295,10 @@ describe('stage7-generate full pipeline: dependency codegen', () => {
       '<html><body><div :count=${0}><p>${count}</p></div></body></html>'
     );
 
-    const body = prop(p.propsAST, 'children').elements[1];
-    const div = prop(body, 'children').elements[0];
-    const textValue = prop(div, 'values').properties.find(
-      (property: any) => keyName(property) === 'text$0'
-    ).value;
-    const dep = prop(textValue, 'deps').elements[0];
-
-    expect(generate(dep)).toBe("['count']");
+    const body = emitted(p).p.children[1];
+    const div = body.children[0];
+    const textValue = prop(div, 'values')['text$0'];
+    expect(prop(textValue, 'deps')[0]).toEqual(['count']);
   });
 
   it('still compiles to the same path when the reference lives in its own nested (:aka) scope', async () => {
@@ -322,15 +310,11 @@ describe('stage7-generate full pipeline: dependency codegen', () => {
       '<html><body><div :count=${0}><p :aka="foo">${count}</p></div></body></html>'
     );
 
-    const body = prop(p.propsAST, 'children').elements[1];
-    const div = prop(body, 'children').elements[0];
-    const foo = prop(div, 'children').elements[0];
-    const textValue = prop(foo, 'values').properties.find(
-      (property: any) => keyName(property) === 'text$0'
-    ).value;
-    const dep = prop(textValue, 'deps').elements[0];
-
-    expect(generate(dep)).toBe("['count']");
+    const body = emitted(p).p.children[1];
+    const div = body.children[0];
+    const foo = div.children[0];
+    const textValue = prop(foo, 'values')['text$0'];
+    expect(prop(textValue, 'deps')[0]).toEqual(['count']);
   });
 });
 

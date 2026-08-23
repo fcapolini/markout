@@ -5,6 +5,7 @@ import { afterAll, assert, beforeAll, describe, it } from 'vitest';
 import { Compiler } from '../../../src/compiler/index';
 import { NodeType } from '../../../src/html/dom';
 import { WebContext } from '../../../src/runtime/web/web-context';
+import { loadProps } from '../../../src/render/props';
 
 /**
  * A custom-tag usage written INSIDE an imported library, given slotted
@@ -63,9 +64,9 @@ describe('a slot filled at a usage site inside an imported library', () => {
       []
     );
 
-    const root = new Function(`return (${page.propsString});`)();
+    const { root, exps } = loadProps(page.propsString);
     const errors: string[] = [];
-    const ctx: any = new WebContext({ root, doc: page.source.doc });
+    const ctx: any = new WebContext({ root, exps, doc: page.source.doc });
     // the symptom reaches the page as a missing element and nothing else;
     // the diagnosis only ever shows up here
     const inherited = ctx.onError.bind(ctx);
