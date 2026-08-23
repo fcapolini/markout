@@ -71,7 +71,32 @@ export function createSite(props: SiteProps): Express {
 
   // ------------------------------------------------------------ the pages
   app.use(markout({ docroot: props.docroot, dev: props.dev }));
-  app.use(express.static(props.docroot));
+
+  // ----------------------------------------------------------- the assets
+  //
+  // Everything markout declined: the favicons, the social card, the demos'
+  // stylesheets and the JSON files Orbit reads. `express.static` says
+  // `max-age=0` unless told otherwise, so each of them cost a conditional
+  // request per page view to be told nothing had changed.
+  //
+  // The ceiling here is set by what these are NOT: content-hashed. The
+  // runtime can be kept for a year because its URL names its bytes (see
+  // core's runtimeSrcFor); none of these can say that, so the lifetime is
+  // however long a wrong answer is worth tolerating after a deploy. An icon
+  // that is a week stale is nothing; a stylesheet a week out of step with
+  // markup that is never cached is a broken page, so those get an hour.
+  //
+  // The application's own layer rather than markout's, deliberately: the
+  // middleware hands on what it does not serve precisely so that a site
+  // keeps its static layer and the policy that goes with it.
+  app.use(
+    express.static(props.docroot, {
+      setHeaders: (res, filePath) => {
+        const forever = /\.(ico|png|jpg|jpeg|svg|webp|avif|woff2?)$/i.test(filePath);
+        res.setHeader('Cache-Control', `public, max-age=${forever ? 604800 : 3600}`);
+      },
+    })
+  );
   return app;
 }
 
