@@ -63,7 +63,7 @@ describe('dev mode: runtime error reporting', () => {
       expect(res.status).toBe(200);
       expect(res.text).not.toContain(DOM_ERRORS_ID);
       // a failing expression must not cost a production page its runtime
-      expect(res.text).toContain(CLIENT_CODE_REQ);
+      expect(res.text).toMatch(/src="\/markout-runtime\.[\w-]+\.js"/);
     });
 
     it('does not tell the browser runtime to surface them either', async () => {
@@ -111,7 +111,7 @@ describe('dev mode: runtime error reporting', () => {
       const res = await request(devServer.app!).get('/onclick.html');
       expect(res.status).toBe(200);
       expect(res.text).toContain('__MARKOUT_DEV = true');
-      expect(res.text).toContain(CLIENT_CODE_REQ);
+      expect(res.text).toMatch(/src="\/markout-runtime\.[\w-]+\.js"/);
       expect(res.text).not.toContain(DOM_ERRORS_ID);
     });
   });

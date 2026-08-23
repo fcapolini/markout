@@ -49,10 +49,25 @@ describe('markout() on an application\'s own express app', () => {
   });
 
   it('serves the browser runtime the page asks for', async () => {
-    const res = await request(app).get(CLIENT_CODE_REQ);
+    // asked for by the page rather than by a path this test knows: the URL
+    // carries a hash of the bundle, which is what lets it be cached forever
+    const page = await request(app).get('/');
+    const src = page.text.match(/src="(\/markout-runtime\.[\w-]+\.js)"/)?.[1];
+    expect(src).toBeTruthy();
+
+    const res = await request(app).get(src!);
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toMatch(/javascript/);
     expect(res.text.length).toBeGreaterThan(0);
+    // the whole reason the URL carries a hash: a browser never asks twice
+    expect(res.headers['cache-control']).toBe('public, max-age=31536000, immutable');
+  });
+
+  it('does not answer the unhashed path, which names no particular bytes', async () => {
+    // one URL for one bundle. The old fixed path had no cache lifetime it
+    // could safely be given, and two URLs for the same bytes is the
+    // arrangement `/npm/` is refused for
+    expect((await request(app).get('/markout-runtime.js')).status).toBe(404);
   });
 
   it('passes anything that is not a page to the next handler', async () => {

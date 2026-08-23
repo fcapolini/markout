@@ -10,6 +10,8 @@ import {
   formatRuntimeError,
   loadClientCode,
   NPM_PREFIX,
+  RUNTIME_CACHE_CONTROL,
+  runtimeSrcFor,
   PageError,
   publishablePath,
   renderPage,
@@ -22,6 +24,18 @@ import { defaultLogger, MarkoutLogger } from "./logger";
 import { createReloader, RELOAD_REQ, Reloader, withReloadScript } from "./livereload";
 import { TreeWatcher, watchTree } from "./watcher";
 
+/**
+ * The path the runtime bundle is served at, as this middleware answers it.
+ *
+ * Content-hashed rather than fixed, which is what lets it be cached for a
+ * year instead of revalidated on every visit -- see core's `runtimeSrcFor`.
+ * Computed once per mount from the bundle it is about to serve, so the URL
+ * a page asks for and the bytes behind it cannot come apart.
+ *
+ * `DEFAULT_RUNTIME_SRC` remains what the compiler falls back to when nobody
+ * tells it otherwise, which is the case for a page compiled outside any
+ * server. Here somebody does.
+ */
 export const CLIENT_CODE_REQ = DEFAULT_RUNTIME_SRC;
 
 /** see handleNonPageRequests, and build.ts's SERVABLE_DOTFILES */
@@ -278,14 +292,16 @@ export function markout(props: MarkoutProps) {
     logger('info', `[markout] kit ${kit.name} at ${kit.root}`)
   );
   const resolver = new Resolver(docroot, discovered.kits);
+  const clientCode = loadClientCode();
+  const clientSrc = runtimeSrcFor(clientCode);
   const compiler = new Compiler({
     docroot,
     dev,
     kits: discovered.kits,
     generator: props.generator,
+    runtimeSrc: clientSrc,
     serverGlobals: globals ? Object.keys(globals) : undefined,
   });
-  const clientCode = loadClientCode();
   // Dev only: nothing about this reaches a build, which has no server to
   // stream from. See ./livereload.
   const reloader = dev ? createReloader() : undefined;
@@ -414,10 +430,15 @@ export function markout(props: MarkoutProps) {
   // file of the same name is unreachable -- and silently so, which is the
   // whole cost of the runtime no longer being dot-prefixed. Said once at
   // startup rather than per request, and only when there is something to say.
-  if (fs.existsSync(path.join(docroot, CLIENT_CODE_REQ))) {
+  //
+  // Vanishingly unlikely to fire now that the path carries a content hash:
+  // nobody writes `markout-runtime.PjLuNGki.js` by hand. Kept because
+  // "unreachable, and nothing said" is what it exists to prevent, and the
+  // check costs one `existsSync` at startup.
+  if (fs.existsSync(path.join(docroot, clientSrc))) {
     logger(
       'warn',
-      `[markout] "${CLIENT_CODE_REQ}" in the docroot is shadowed by the runtime ` +
+      `[markout] "${clientSrc}" in the docroot is shadowed by the runtime ` +
         `served at that path, and will never be reached`
     );
   }
@@ -441,7 +462,7 @@ export function markout(props: MarkoutProps) {
       return;
     }
 
-    if (handleNonPageRequests(req, res, i, extname, clientCode, next)) {
+    if (handleNonPageRequests(req, res, i, extname, clientCode, clientSrc, next)) {
       return;
     }
 
@@ -640,10 +661,16 @@ function handleNonPageRequests(
   _i: number,
   extname: string,
   clientCode: string,
+  clientSrc: string,
   next: NextFunction
 ) {
-  if (req.path === CLIENT_CODE_REQ) {
+  if (req.path === clientSrc) {
     res.header('Content-Type', 'text/javascript;charset=UTF-8');
+    // the URL names the bytes, so it can never come to mean different ones
+    // and a browser never has to ask again. It used to carry no
+    // `Cache-Control` at all, which spent a conditional request per visit
+    // to be told the bundle had not changed
+    res.header('Cache-Control', RUNTIME_CACHE_CONTROL);
     res.send(clientCode);
     return true;
   }

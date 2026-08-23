@@ -50,4 +50,4 @@ export { DOM_ERRORS_ID } from './runtime/web/web-context';
 // server-side rendering, and the browser bundle a rendered page asks for
 export { renderPage } from './render/render';
 export { loadProps } from './render/props';
-export { loadClientCode, RUNTIME_BUNDLE_PATH } from './render/runtime-bundle';
+export { loadClientCode, runtimeSrcFor, RUNTIME_CACHE_CONTROL, RUNTIME_BUNDLE_PATH } from './render/runtime-bundle';

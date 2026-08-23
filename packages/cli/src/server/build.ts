@@ -7,6 +7,7 @@ import {
   DEFAULT_RUNTIME_SRC,
   discoverKits,
   loadClientCode,
+  runtimeSrcFor,
   renderPage,
   Resolver,
   RUNTIME_BUNDLE_PATH,
@@ -204,7 +205,12 @@ export async function build(props: BuildProps): Promise<BuildResult> {
   const discovered = props.kits
     ? { kits: props.kits, errors: [] }
     : discoverKits(docroot, [__dirname]);
-  const runtimeSrc = props.runtimeSrc ?? DEFAULT_RUNTIME_SRC;
+  // content-hashed, so the built pages point at a URL that can only ever
+  // mean these bytes -- which is what lets a host cache it forever, and what
+  // keeps a page from finding a runtime it was not compiled against. Nothing
+  // to hash when there is no bundle, which is `--classes-only`
+  const runtimeSrc =
+    props.runtimeSrc ?? (clientCode ? runtimeSrcFor(clientCode) : DEFAULT_RUNTIME_SRC);
   const compiler = new Compiler({
     docroot,
     runtimeSrc,

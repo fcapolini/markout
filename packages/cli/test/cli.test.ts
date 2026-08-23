@@ -1,12 +1,13 @@
 import { execFile, spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import net, { type AddressInfo } from 'node:net';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
+import { loadClientCode, runtimeSrcFor } from '@markout-lang/core';
 
 const root = path.resolve(__dirname, '..');
 const entry = path.join(root, 'src/cli.ts');
@@ -200,7 +201,7 @@ describe('CLI', () => {
       const built = await readFile(path.join(cwd, 'dist', 'index.html'), 'utf8');
       expect(built).toContain('hi ');
       expect(built).toContain('world');
-      expect(existsSync(path.join(cwd, 'dist', 'markout-runtime.js'))).toBe(true);
+      expect(readdirSync(path.join(cwd, 'dist')).some(f => /^markout-runtime\.[\w-]+\.js$/.test(f))).toBe(true);
     } finally {
       await rm(cwd, { recursive: true, force: true });
     }
@@ -291,9 +292,11 @@ describe('CLI build', () => {
       // a non-dot path, which is why DEFAULT_RUNTIME_SRC is not dot-prefixed
       // any more: static hosts drop dotfiles, so the runtime would 404 on
       // every page of exactly the hosts this mode exists for
-      expect(html).toContain('src="/markout-runtime.js"');
-      expect((await readFile(path.join(outdir, 'markout-runtime.js'), 'utf8')).length)
-        .toBeGreaterThan(0);
+      // content-hashed: the URL names these bytes and no others, which is
+      // what lets a host cache it forever
+      const src = html.match(/src="\/(markout-runtime\.[\w-]+\.js)"/)?.[1];
+      expect(src).toBeTruthy();
+      expect((await readFile(path.join(outdir, src!), 'utf8')).length).toBeGreaterThan(0);
     } finally {
       await cleanup();
     }
@@ -342,7 +345,7 @@ describe('CLI build', () => {
       await expect(readFile(path.join(outdir, 'one.html'), 'utf8')).resolves.toContain('one');
       await expect(readFile(path.join(outdir, 'two.html'), 'utf8')).rejects.toThrow();
       // the runtime is written even so: a page without it is not a page
-      await expect(readFile(path.join(outdir, 'markout-runtime.js'), 'utf8')).resolves.toBeTruthy();
+      expect(readdirSync(outdir).some(f => /^markout-runtime\.[\w-]+\.js$/.test(f))).toBe(true);
       await expect(readFile(path.join(outdir, 'site.css'), 'utf8')).rejects.toThrow();
     } finally {
       await cleanup();
@@ -431,8 +434,14 @@ describe('CLI build', () => {
       await writeFile(path.join(docroot, 'index.html'), '<html><body>x</body></html>');
       // the runtime is written first and the assets copied over it, so this
       // used to replace the runtime and report success -- every page in the
-      // output broken by the one file nobody would think to suspect
-      await writeFile(path.join(docroot, 'markout-runtime.js'), 'console.log("mine")');
+      // output broken by the one file nobody would think to suspect.
+      //
+      // Named from the bundle, because the runtime's own name now carries a
+      // hash of it: nobody collides with this by accident any more, which is
+      // most of why the refusal matters less than it did -- but it is still
+      // the difference between a broken deploy and a message
+      const collides = runtimeSrcFor(loadClientCode()).slice(1);
+      await writeFile(path.join(docroot, collides), 'console.log("mine")');
 
       const result = await run([docroot, outdir]);
 

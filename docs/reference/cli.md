@@ -197,14 +197,25 @@ write over its own sources), and a docroot file named like the runtime — that
 one used to be copied over the runtime after it was written, leaving every page
 in the output broken and the build reporting success.
 
-Every page, served or built, loads the runtime from `/markout-runtime.js`. It is
-deliberately not dot-prefixed: a served page has that path *answered* by the
-middleware, so it is never a file, but a built page makes it a real file on
+Every page, served or built, loads the runtime from
+`/markout-runtime.<hash>.js` — a hash of the bundle itself, so the URL changes
+exactly when the bytes do. That is what lets it be served
+`Cache-Control: public, max-age=31536000, immutable`: a browser keeps it for a
+year and never asks again, where a fixed path had to be revalidated on every
+visit and could never safely be given a lifetime at all. It also means a page
+can only ever load the runtime it was compiled against, which matters on the
+day a props format changes.
+
+It is deliberately not dot-prefixed: a served page has that path *answered* by
+the middleware, so it is never a file, but a built page makes it a real file on
 somebody else's host — and a dot is what hosts use to decide a file is not for
 publishing. GitHub Pages runs Jekyll, which drops dotfiles unless a `.nojekyll`
-sits beside them, and denying dot-paths is common server hardening. The cost of
-the plain name is that a docroot file at that path is shadowed when serving,
-which `markout()` warns about at startup.
+sits beside them, and denying dot-paths is common server hardening.
+
+A docroot file at the runtime's path is shadowed when serving, which
+`markout()` warns about at startup — vanishingly unlikely now that the name
+carries a hash, and kept because "unreachable, and nothing said" is what the
+warning exists to prevent.
 
 ## A CSS build step beside it
 

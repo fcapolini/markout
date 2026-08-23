@@ -119,10 +119,15 @@ describe("Middleware", () => {
   });
 
   // Test client code request
-  it("should return client code for /markout-runtime.js", async () => {
-    const res = await request(app).get("/markout-runtime.js");
+  it("should return client code at the hashed runtime path", async () => {
+    const page = await request(app).get('/index.html');
+    const src = page.text.match(/src="(\/markout-runtime\.[\w-]+\.js)"/)?.[1];
+    expect(src).toBeTruthy();
+
+    const res = await request(app).get(src!);
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toContain('text/javascript');
+    expect(res.headers['cache-control']).toContain('immutable');
   });
 
   // Test 404 for non-existent files
