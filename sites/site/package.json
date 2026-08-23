@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "@markout-lang/bootstrap-kit": "^0.2.0",
-    "@markout-lang/express": "^0.3.0",
+    "@markout-lang/express": "^0.4.0",
     "@markout-lang/std-kit": "^0.2.0",
     "compression": "^1.8.1",
     "express": "^5.2.1"

@@ -1,6 +1,6 @@
 {
   "name": "@markout-lang/express",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Markout as Express middleware: render markout pages from an application that already has a server",
   "repository": {
     "type": "git",
@@ -56,7 +56,7 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "@markout-lang/core": "^0.3.0"
+    "@markout-lang/core": "^0.4.0"
   },
   "publishConfig": {
     "access": "public"
