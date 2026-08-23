@@ -74,25 +74,29 @@ export function stage4resolve(page: Page) {
   // whole tree a second time -- harmless for `deps`, which get reassigned, but
   // it reported every error twice
   indexLexicalChildren(page.global);
+  // decided over the whole page before any value is resolved: whether a
+  // function's body is a dependency turns on what the REST of the page does
+  // with it, which no single value can see
+  const lazy = collectLazyFunctions(page);
   for (const child of page.global.children) {
-    resolveScope(child, page);
+    resolveScope(child, page, lazy);
   }
   return page;
 }
 
-function resolveScope(scope: Scope, page: Page) {
+function resolveScope(scope: Scope, page: Page, lazy: Set<Value>) {
   for (const [name, value] of scope.values) {
-    resolveValue(name, value, page);
+    resolveValue(name, value, page, lazy);
   }
   for (const [name, value] of scope.textValues) {
-    resolveValue(name, value, page);
+    resolveValue(name, value, page, lazy);
   }
   for (const child of scope.children) {
-    resolveScope(child, page);
+    resolveScope(child, page, lazy);
   }
 }
 
-function resolveValue(name: string, value: Value, page: Page) {
+function resolveValue(name: string, value: Value, page: Page, lazy: Set<Value>) {
   const expression = value.value;
   if (!expression || typeof expression === 'string') {
     // a static literal has no dependencies
@@ -123,6 +127,16 @@ function resolveValue(name: string, value: Value, page: Page) {
     value.deps = [];
     return;
   }
+  if (lazy.has(value)) {
+    // the same licence, reached the long way round: collectLazyFunctions has
+    // established that nothing in this page can consume what this value
+    // holds, so there is no caller for its body to leave stale. Validated
+    // and discarded for the same reason as above -- a name that is nowhere
+    // in here is still a typo
+    validate(ast, value, page);
+    value.deps = [];
+    return;
+  }
   // `:handle-x` is that same callback, wrapped by stage1 in a call that
   // passes `x`. The call runs on every evaluation, so the argument IS a
   // dependency -- but the body still isn't, and picking references out of it
@@ -141,7 +155,9 @@ function resolveValue(name: string, value: Value, page: Page) {
     return;
   }
   // Everything else keeps the references inside its function bodies, and
-  // that is deliberate rather than an oversight worth optimising away.
+  // that is deliberate rather than an oversight worth optimising away --
+  // except where collectLazyFunctions has PROVED there is no one to be
+  // wrong for, which is the branch above.
   //
   // A value holding a function -- `:fmt=${(n) => n + suffix}` -- is consumed
   // by being CALLED, and its result then depends on `suffix`. But whatever
@@ -159,8 +175,12 @@ function resolveValue(name: string, value: Value, page: Page) {
   //    (`items.map(n => n + offset)`) are genuine dependencies for the
   //    ordinary reason, and the two cases are indistinguishable from here.
   //
-  // So this over-approximates: a consumer that merely stores the function
-  // gets re-notified for nothing. That is the cheap direction to be wrong in.
+  // So this over-approximates, and deliberately: a consumer that merely
+  // stores the function gets re-notified for nothing, which is the cheap
+  // direction to be wrong in. Cheap is not free -- ten thousand cards
+  // holding one `:buy=${add}` made it the benchmark's dominant cost -- and
+  // collectLazyFunctions buys back the cases where the page itself shows
+  // that nobody is listening.
   value.deps = collectDeps(ast, value, page);
 }
 
@@ -457,6 +477,120 @@ function addError(page: Page, msg: string, loc: Value['node']['loc']) {
  * about a dependency this stage cannot follow, and a body has no
  * dependencies to follow in the first place.
  */
+/**
+ * The function values whose bodies are safe to leave untracked.
+ *
+ * `:add=${(item) => cart = [...cart, item]}` reads `cart` only when it is
+ * CALLED, and it reads it through the live scope -- so re-evaluating the
+ * value when `cart` moves buys nothing but a new closure identity. That
+ * identity is not free: everything holding the function re-evaluates too,
+ * which on the catalog benchmark is ten thousand `:buy=${add}` values per
+ * click, all of them arriving at a function that behaves identically.
+ *
+ * The identity IS load-bearing wherever something consumes the function:
+ * `${fmt(count)}` recomputes only because `fmt` became a different object
+ * (test/function-values.test.ts pins the whole chain). So a body can be
+ * dropped exactly when nothing in the page can consume it, which is what
+ * this works out, over the page rather than over one value:
+ *
+ *  - a reference that is a value's WHOLE expression (`:buy=${add}`) hands
+ *    the function on untouched and consumes nothing itself -- but whatever
+ *    it flows into has to come out clear as well
+ *  - a reference anywhere else (`fmt(x)`, `rows.map(fmt)`, `[fmt]`) may
+ *    call it while another value is being evaluated, and THAT value's
+ *    result is what would then go stale
+ *  - a reference inside a callback body consumes nothing either: those
+ *    bodies are already untracked, so they can no more go stale than the
+ *    callback itself can
+ *
+ * Names are matched across the whole page rather than per scope. Two
+ * unrelated `fmt`s therefore tar each other -- which costs a missed
+ * optimisation and never a wrong answer, the direction this has to be
+ * wrong in.
+ */
+function collectLazyFunctions(page: Page): Set<Value> {
+  const consumed = new Set<string>();
+  // `:buy=${add}` -- what `add` flows into, so consumption can be traced
+  // back through the hand-off
+  const flows = new Map<string, string[]>();
+  const fns: { value: Value; name: string; body: string[] }[] = [];
+
+  eachValue(page, (name, value) => {
+    const ast = astOf(value);
+    if (!ast || isCallbackValue(name, ast)) {
+      return;
+    }
+    if (ast.type === 'ArrowFunctionExpression' || ast.type === 'FunctionExpression') {
+      // its body is the question, not evidence about it
+      fns.push({ value, name, body: referencedNames(ast) });
+      return;
+    }
+    const chain = chainSegments(ast);
+    if (chain?.length === 1) {
+      flows.set(chain[0].name, [...(flows.get(chain[0].name) ?? []), name]);
+      return;
+    }
+    referencedNames(ast).forEach(n => consumed.add(n));
+  });
+
+  // a fixpoint rather than one pass: a function that turns out to be
+  // consumed keeps its body, and the names in that body are consumed in
+  // turn -- which can reach a function already decided about this round
+  for (let moved = true; moved; ) {
+    moved = false;
+    const mark = (n: string) => {
+      if (!consumed.has(n)) {
+        consumed.add(n);
+        moved = true;
+      }
+    };
+    flows.forEach((into, from) => into.some(n => consumed.has(n)) && mark(from));
+    fns.forEach(fn => consumed.has(fn.name) && fn.body.forEach(mark));
+  }
+
+  return new Set(fns.filter(fn => !consumed.has(fn.name)).map(fn => fn.value));
+}
+
+/** every scope name an expression mentions, chains included (`a.b` -> both) */
+function referencedNames(ast: Node): string[] {
+  const names: string[] = [];
+  estraverse.traverse(ast, {
+    enter(node) {
+      const segments = chainSegments(node);
+      if (!segments) {
+        return;
+      }
+      // consumed whole, exactly as collectDeps does it
+      this.skip();
+      segments.forEach(s => names.push(s.name));
+    },
+  });
+  return names;
+}
+
+function astOf(value: Value): Node | undefined {
+  const expression = value.value;
+  return !expression || typeof expression === 'string'
+    ? undefined
+    : (expression as unknown as Node);
+}
+
+function isCallbackValue(name: string, ast: Node): boolean {
+  return (
+    CALLBACK_VALUE_PREFIXES.some(p => name.startsWith(p)) &&
+    (ast.type === 'ArrowFunctionExpression' || ast.type === 'FunctionExpression')
+  );
+}
+
+function eachValue(page: Page, visit: (name: string, value: Value) => void) {
+  const walk = (scope: Scope) => {
+    scope.values.forEach((value, name) => visit(name, value));
+    scope.textValues.forEach((value, name) => visit(name, value));
+    scope.children.forEach(walk);
+  };
+  page.global.children.forEach(walk);
+}
+
 function validate(ast: Node, value: Value, page: Page): void {
   collectDeps(ast, value, page, true);
 }

@@ -159,15 +159,47 @@ describe('stage4-resolve', () => {
     expect(value.deps).toStrictEqual([]);
   });
 
-  it('should record dependencies for a value that HOLDS a function', () => {
+  it('should record dependencies for a value that HOLDS a function someone calls', () => {
     // deliberately not treated like a callback, even though it looks like
-    // one. Whatever calls `fmt` can observe `suffix` through it, and cannot
-    // depend on `suffix` itself -- re-evaluating `fmt` is the only path.
-    // See the note in stage4-resolve.ts, and function-values.test.ts for
-    // what breaks when this is "optimised"
+    // one. `${fmt(n)}` can observe `suffix` through the call and cannot
+    // depend on `suffix` itself -- re-evaluating `fmt`, so that it becomes a
+    // different object, is the only path from one to the other. See the note
+    // in stage4-resolve.ts, and function-values.test.ts for what breaks when
+    // this is "optimised"
+    const scope = new Scope(page, page.global);
+    addValue(scope, 'suffix', null);
+    addValue(scope, 'n', null);
+    const value = addValue(scope, 'fmt', '(n) => n + $.suffix');
+    addValue(scope, 'label', '$.fmt($.n)');
+
+    stage4resolve(page);
+    expect(value.deps).toStrictEqual([{ key: 'suffix' }]);
+  });
+
+  it('should drop the body of a function value nothing can consume', () => {
+    // the same function, with no caller anywhere in the page: there is no
+    // result that could go stale, so the closure identity it would churn on
+    // every `suffix` change buys nothing. `:buy=${add}` hands it on without
+    // consuming it, which is the shape this exists for -- on the catalog
+    // benchmark it is ten thousand bindings that no longer re-evaluate
     const scope = new Scope(page, page.global);
     addValue(scope, 'suffix', null);
     const value = addValue(scope, 'fmt', '(n) => n + $.suffix');
+    addValue(scope, 'passedAlong', '$.fmt');
+
+    stage4resolve(page);
+    expect(value.deps).toStrictEqual([]);
+  });
+
+  it('should keep the body when a hand-off ends somewhere that calls it', () => {
+    // consumption traced back THROUGH the pass-through: `held` is what gets
+    // called, but `fmt` is what has to keep re-evaluating for the call to
+    // see a new `suffix`
+    const scope = new Scope(page, page.global);
+    addValue(scope, 'suffix', null);
+    const value = addValue(scope, 'fmt', '(n) => n + $.suffix');
+    addValue(scope, 'held', '$.fmt');
+    addValue(scope, 'label', '$.held(1)');
 
     stage4resolve(page);
     expect(value.deps).toStrictEqual([{ key: 'suffix' }]);
