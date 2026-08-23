@@ -124,6 +124,6 @@ describe('registration', () => {
       `/${name}`
     );
     expect(plain.errors).toStrictEqual([]);
-    expect(withGlobals.propsString).toBe(plain.propsString);
+    expect(withGlobals.props).toStrictEqual(plain.props);
   });
 });

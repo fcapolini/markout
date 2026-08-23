@@ -38,7 +38,7 @@ describe('the default reader', () => {
   it('reads the disk', async () => {
     const page = await new Compiler({ docroot }).compile('/index.html');
     expect(page.errors.map(e => e.msg)).toStrictEqual([]);
-    expect(page.propsString).toContain('on disk');
+    expect(page.props!.exps).toContain('on disk');
   });
 
   it('reports a file that is not there', async () => {
@@ -62,8 +62,8 @@ describe('a reader of the caller\'s own', () => {
     const page = await new Compiler({ docroot, readFile }).compile('/index.html');
     expect(page.errors.map(e => e.msg)).toStrictEqual([]);
     // the buffer's expression, not the file's
-    expect(page.propsString).toContain('unsaved');
-    expect(page.propsString).not.toContain('on disk');
+    expect(page.props!.exps).toContain('unsaved');
+    expect(page.props!.exps).not.toContain('on disk');
   });
 
   it('reaches imported fragments too, not just the page', async () => {

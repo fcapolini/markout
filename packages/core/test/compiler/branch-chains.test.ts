@@ -38,7 +38,7 @@ async function shown(branches: string) {
   expect(await renderPage(page)).toStrictEqual([]);
   const html = page.source.doc.toString();
   return html
-    .slice(html.indexOf('<body'), html.indexOf('<script>window.'))
+    .slice(html.indexOf('<body'), html.indexOf('<script'))
     .replace(/<!--.*?-->/g, '')
     .replace(/ data-markout="[^"]*"| class=""/g, '')
     .replace(/<\/?body>/g, '');

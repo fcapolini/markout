@@ -106,7 +106,7 @@ async function run(page: string, files?: Record<string, string>): Promise<Probe>
   const errors = await renderPage(compiled);
   expect(errors).toStrictEqual([]);
   const ctx = new WebContext({
-    ...loadProps(compiled.propsString),
+    ...loadProps(compiled.props!),
     doc: compiled.source.doc,
     onError: e => {
       throw new Error(`${e.phase}/${e.key}: ${e.message}`);
@@ -135,7 +135,7 @@ async function runInBrowser(page: string) {
   window.document.write(compiled.source.doc.toString());
   const errors: RuntimeError[] = [];
   new WebContext({
-    ...loadProps(compiled.propsString),
+    ...loadProps(compiled.props!),
     doc: window.document as any,
     onError: e => errors.push(e),
   }).refresh();

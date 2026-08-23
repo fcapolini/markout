@@ -13,6 +13,7 @@ import { ServerAttribute, ServerDocument, SourceLocation } from '../../src/html/
 import { Source, parse } from '../../src/html/parser';
 import { NodeType } from '../../src/html/dom';
 import { renderPage } from '../../src/render/render';
+import { loadProps } from '../../src/render/props';
 
 const LOC: SourceLocation = {
   start: { line: 0, column: 0 },
@@ -34,12 +35,13 @@ function parseExpr(source: string): acorn.Expression {
  * The props as a loader gets them: the expression array and the tree that
  * refers to it by index.
  *
- * Loaded from `propsString` rather than read off an intermediate, so what
- * these assertions see is the source the page carries -- including that it
- * parses at all, which is the one thing an AST could never tell us.
+ * Loaded from what the page carries rather than off an intermediate, so
+ * these assertions see the artifacts themselves -- including that they
+ * parse at all, which is the one thing an AST could never tell us.
  */
 function emitted(page: Page): { e: ((s: any) => any)[]; p: any } {
-  return new Function(`return (${page.propsString});`)();
+  const { root, exps } = loadProps(page.props!);
+  return { e: exps as any, p: root };
 }
 
 /** a scope's or value's property, and the expression an `exp` index names */
@@ -77,7 +79,8 @@ describe('stage7-generate', () => {
     expect(loaded.p.name).toBe('page');
     expect(Array.isArray(loaded.e)).toBe(true);
     // the tree arrives as data rather than as evaluated JavaScript
-    expect(page.propsString).toContain('JSON.parse(');
+    // the tree is data, and stays data: JSON that never becomes JavaScript
+    expect(() => JSON.parse(page.props!.data)).not.toThrow();
   });
 
   it('should compile a literal value into an exp function returning that constant', async () => {
@@ -205,10 +208,23 @@ describe('stage7-generate bootstrap scripts', () => {
     return p;
   }
 
+  /** the scripts markout injected that are actually script */
   function bodyScripts(p: Page) {
     return p.source.doc.body!.childNodes.filter(
-      (n: any) => n.nodeType === NodeType.ELEMENT && n.tagName === 'SCRIPT'
+      (n: any) =>
+        n.nodeType === NodeType.ELEMENT &&
+        n.tagName === 'SCRIPT' &&
+        // the props data block is a `type="application/json"` script that
+        // the browser stores as text and never runs -- see emitProps
+        n.getAttribute('type') === null
     ) as any[];
+  }
+
+  /** the props tree, carried as JSON beside them */
+  function dataScript(p: Page) {
+    return p.source.doc.body!.childNodes.find(
+      (n: any) => n.nodeType === NodeType.ELEMENT && n.getAttribute?.('type') === 'application/json'
+    ) as any;
   }
 
   it('should append a props script and an async runtime script to the end of body', async () => {
@@ -253,13 +269,17 @@ describe('stage7-generate bootstrap scripts', () => {
 
     expect(text).toContain('new RegExp(');
     expect(text).not.toContain('/<');
+    // run it the way a page does: the script reads the tree out of the
+    // data block beside it, so the stub answers with that element's text
+    const json = (dataScript(p).childNodes[0] as any).textContent as string;
+    const fakeDocument = { querySelector: () => ({ textContent: json }) };
     // the whole point: it runs
     // eslint-disable-next-line no-new-func
-    expect(() => new Function('window', text)({})).not.toThrow();
+    expect(() => new Function('window', 'document', text)({}, fakeDocument)).not.toThrow();
     // and still says what the author wrote
     const window: any = {};
     // eslint-disable-next-line no-new-func
-    new Function('window', text)(window);
+    new Function('window', 'document', text)(window, fakeDocument);
     const { e, p: scope } = window.__MARKOUT_PROPS;
     const hit = scope.values['hit'] ?? scope.children[0]?.values['hit'];
     expect(e[hit.exp]({})).toBe(false);

@@ -296,7 +296,7 @@ function check(binding: (typeof BINDINGS)[number], container: (typeof CONTAINERS
   // 2. server rendering raises nothing -- including the unbound-binding
   //    report, which is what catches a value whose DOM target went missing
   const ssrErrors: RuntimeError[] = [];
-  const { root, exps } = loadProps(page.propsString);
+  const { root, exps } = loadProps(page.props!);
   const ctx = new WebContext({
     root,
     exps,
@@ -330,7 +330,7 @@ function check(binding: (typeof BINDINGS)[number], container: (typeof CONTAINERS
   const rehydrated = parse(served, 'matrix.html');
   const hydrationErrors: RuntimeError[] = [];
   new WebContext({
-    ...loadProps(page.propsString),
+    ...loadProps(page.props!),
     doc: rehydrated.doc,
     onError: e => hydrationErrors.push(e),
   }).refresh();
@@ -429,7 +429,7 @@ describe('$id across containers', () => {
 
       const errors: RuntimeError[] = [];
       new WebContext({
-        ...loadProps(page.propsString),
+        ...loadProps(page.props!),
         doc: page.source.doc,
         onError: e => errors.push(e),
       }).refresh();

@@ -45,7 +45,7 @@ function render(html: string) {
   // and reported again, which turns one failure into a cascade
   const errors: string[] = [];
   const ctx = new WebContext({
-    ...loadProps(page.propsString),
+    ...loadProps(page.props!),
     doc: page.source.doc,
     onError: e => errors.push(`${e.phase}/${e.key}: ${e.message}`),
   }).refresh();

@@ -14,7 +14,7 @@ import {
   ServerText,
 } from '../../html/server-dom';
 import { NodeType } from '../../html/dom';
-import { DEV_GLOBAL, PROPS_GLOBAL } from '../../runtime/core/core-context';
+import { DEV_GLOBAL, PROPS_DATA_ATTR, PROPS_GLOBAL } from '../../runtime/core/core-context';
 import {
   EVENT_VALUE_PREFIX,
   REGION_STENCIL_MARKER,
@@ -27,7 +27,7 @@ import {
   DOM_STENCIL_ONCE_ATTR,
   DOM_USE_MARKER,
 } from '../../runtime/web/web-context';
-import type { Page } from '../ir/Page';
+import type { CompiledProps, Page } from '../ir/Page';
 import type { Scope } from '../ir/Scope';
 import { RT_SCOPE_PARAM } from './stage3-qualify';
 import type { Value, ValueDepRef } from '../ir/Value';
@@ -92,7 +92,7 @@ export function stage7generate(
   tidyBlankLines(page);
   const root = page.global.children[0];
   if (root) {
-    page.propsString = emitProps(root, false, dev);
+    page.props = emitProps(root, false, dev);
     // The browser gets a different copy, with every `:server-` expression
     // taken out of it. Two reasons, and the first is the serious one:
     //
@@ -110,9 +110,7 @@ export function stage7generate(
     // Only generated a second time when there is something to take out, so a
     // page with no server value pays nothing and produces what it always did.
     const hasServerValues = [...page.values.values()].some(v => v.serverOnly);
-    page.clientPropsString = hasServerValues
-      ? emitProps(root, true, dev)
-      : page.propsString;
+    page.clientProps = hasServerValues ? emitProps(root, true, dev) : page.props;
     injectBootstrapScripts(page, runtimeSrc, dev);
   }
   return page;
@@ -477,15 +475,27 @@ function injectClassManifest(page: Page) {
 function injectBootstrapScripts(page: Page, runtimeSrc: string, dev: boolean) {
   const doc = page.source.doc;
   const body = doc.body;
-  if (!body || !page.clientPropsString) {
+  if (!body || !page.clientProps) {
     return;
   }
+
+  // the scope tree, as data. `type="application/json"` is not script: the
+  // browser stores it as text and never hands it to the JavaScript parser,
+  // which is the whole reason it is here rather than escaped into the line
+  // below
+  const dataScript = doc.createElement('script');
+  dataScript.setAttribute('type', 'application/json', body.loc);
+  dataScript.setAttribute(PROPS_DATA_ATTR, null, body.loc);
+  dataScript.appendChild(new ServerText(doc, page.clientProps.data, body.loc, false));
+  body.appendChild(dataScript);
+  page.bootstrapScripts.push(dataScript);
 
   const propsScript = doc.createElement('script');
   propsScript.appendChild(
     new ServerText(
       doc,
-      `window.${PROPS_GLOBAL} = ${escapeScriptClose(page.clientPropsString)};` +
+      `window.${PROPS_GLOBAL} = {e:${escapeScriptClose(page.clientProps.exps)},` +
+        `p:JSON.parse(document.querySelector('[${PROPS_DATA_ATTR}]').textContent)};` +
         // tells the browser runtime to surface expression errors in the page
         // the same way SSR just did, instead of only logging them
         (dev ? `window.${DEV_GLOBAL} = true;` : ''),
@@ -608,20 +618,22 @@ function regexAsConstructor(node: unknown): NewExpression | undefined {
  * pre-scans a function body and compiles it when it is first called, so
  * that half costs almost nothing -- 0.03ms of the 1.0.
  *
- * The JSON travels as a JavaScript string literal, which is what the second
- * `JSON.stringify` makes of the first one's output. The two sequences that
- * could end the script element early -- `</script` and `<!--` -- are taken
- * out downstream by `escapeScriptClose`, which every byte this stage emits
- * into the page already passes through.
+ * The JSON is never made into JavaScript, which is the point of keeping it
+ * separate: it travels as the text of a `<script type="application/json">`,
+ * where a quote is a quote. Escaping it into a string literal cost a byte
+ * for every one of them, and there are two per key.
+ *
+ * `<` is escaped to `\u003c` -- a valid JSON escape, and the only thing that
+ * could end that element early, since `</script` and `<!--` both need one.
  */
-function emitProps(root: Scope, forClient: boolean, dev: boolean): string {
+function emitProps(root: Scope, forClient: boolean, dev: boolean): CompiledProps {
   const exps = new Expressions();
   const data = generateScope(root, forClient, exps, dev);
   const gap = dev ? '\n' : '';
-  return (
-    `{e:[${gap}${exps.texts.join(`,${gap}`)}${gap}],` +
-    `p:JSON.parse(${JSON.stringify(JSON.stringify(data))})}`
-  );
+  return {
+    exps: `[${gap}${exps.texts.join(`,${gap}`)}${gap}]`,
+    data: JSON.stringify(data, null, dev ? 1 : undefined).replace(/</g, '\\u003c'),
+  };
 }
 
 /**

@@ -49,11 +49,11 @@ export async function renderPage(
   // scripts stage7 gave it, and one served under a policy needs them stamped
   applyNonce(page, props?.nonce);
   restoreStencils(page);
-  if (!page.propsString) {
+  if (!page.props) {
     return [];
   }
   const errors: RuntimeError[] = [];
-  const { root, exps } = loadProps(page.propsString);
+  const { root, exps } = loadProps(page.props);
   const ctx = new WebContext({
     root,
     exps,

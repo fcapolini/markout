@@ -49,7 +49,7 @@ function run(html: string) {
   }
   stage7generate(page);
   const ctx = new WebContext({
-    ...loadProps(page.propsString),
+    ...loadProps(page.props!),
     doc: page.source.doc,
     onError: (e: RuntimeError) => runtime.push(e),
   }).refresh();

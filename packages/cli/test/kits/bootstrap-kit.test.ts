@@ -168,12 +168,13 @@ describe('components with a parameter left out', () => {
     const { errors, runtime, markup } = await compile(docroot, `/${file}`);
     expect(errors).toStrictEqual([]);
     expect(runtime).toStrictEqual([]);
-    // the served <body> alone, without the props script: every class name
-    // this asserts on also appears in there, as the expression that would
-    // produce it, so the whole document is the wrong thing to search
+    // the served <body> alone, without the props: every class name this
+    // asserts on also appears in there, as the expression that would produce
+    // it, so the whole document is the wrong thing to search. The props data
+    // block is the first thing markout appends
     const shown = live(markup);
     return shown
-      .slice(shown.indexOf('<body'), shown.indexOf('<script>window'))
+      .slice(shown.indexOf('<body'), shown.indexOf('<script type="application/json"'))
       .replace(/ data-markout="[^"]*"/g, '');
   }
 

@@ -64,7 +64,7 @@ describe('a slot filled at a usage site inside an imported library', () => {
       []
     );
 
-    const { root, exps } = loadProps(page.propsString);
+    const { root, exps } = loadProps(page.props!);
     const errors: string[] = [];
     const ctx: any = new WebContext({ root, exps, doc: page.source.doc });
     // the symptom reaches the page as a missing element and nothing else;

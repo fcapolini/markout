@@ -23,9 +23,14 @@ function compile(html: string) {
   return p;
 }
 
+/** the scripts markout injected that are actually script: the props data
+ *  block is a `type="application/json"` element the browser never runs */
 function bodyScripts(p: Page) {
   return p.source.doc.body!.childNodes.filter(
-    (n: any) => n.nodeType === NodeType.ELEMENT && n.tagName === 'SCRIPT'
+    (n: any) =>
+      n.nodeType === NodeType.ELEMENT &&
+      n.tagName === 'SCRIPT' &&
+      n.getAttribute('type') === null
   ) as any[];
 }
 
@@ -89,8 +94,8 @@ describe('stage7-generate: :server-', () => {
   it('emits the mark in the props', () => {
     const p = compile('<html :server-t=${1}><body>${t}</body></html>');
     expect(p.errors).toStrictEqual([]);
-    // in the data half, which is JSON now
-    expect(p.propsString).toContain('serverOnly\\":true');
+    // in the data half, which is JSON and no longer escaped into a string
+    expect(p.props!.data).toContain('"serverOnly":true');
   });
 
   it('reserves a state script for the server to fill', () => {

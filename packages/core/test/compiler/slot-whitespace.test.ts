@@ -35,7 +35,7 @@ function render(html: string): string {
     'expected the page to compile cleanly'
   );
   stage7generate(page);
-  const { root, exps } = loadProps(page.propsString);
+  const { root, exps } = loadProps(page.props!);
   new WebContext({ root, exps, doc: page.source.doc }).refresh();
   const body = findByTag(page.source.doc, 'BODY');
   const out = body

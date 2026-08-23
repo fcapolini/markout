@@ -200,7 +200,7 @@ describe('destructuring: a binding or a target', () => {
     stage4resolve(page);
     stage7generate(page);
     expect(page.errors.map(e => e.msg)).toStrictEqual([]);
-    const props = page.propsString ?? '';
+    const props = page.props?.exps ?? '';
     // the generated props have to BE JavaScript, which is what a bad
     // qualification costs: `({ n } = o)` cannot keep its shorthand once its
     // target is an expression rather than the bare name

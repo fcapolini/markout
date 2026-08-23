@@ -44,7 +44,7 @@ function readState(page: Page): PageState | undefined {
 /** a client rehydrating the served page: the props the BROWSER is given --
  *  not the server's -- plus whatever state came with them */
 function rehydrate(page: Page, state?: PageState) {
-  return new CoreContext({ ...loadProps(page.clientPropsString!), state }).refresh();
+  return new CoreContext({ ...loadProps(page.clientProps!), state }).refresh();
 }
 
 /** the replicas of the page's one `:for-each`, wherever it sits in the tree */
@@ -100,8 +100,8 @@ describe(':server- end to end', () => {
         '<body>${r}</body></html>'
     );
     await renderPage(page);
-    expect(page.propsString).toContain('/internal/q');
-    expect(page.clientPropsString).not.toContain('/internal/q');
+    expect(page.props!.exps).toContain('/internal/q');
+    expect(page.clientProps!.exps).not.toContain('/internal/q');
     expect(page.source.doc.toString()).not.toContain('/internal/q');
   });
 

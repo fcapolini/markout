@@ -11,12 +11,16 @@ import os from "os";
 // server actually ran the compiler, not just that it returned 200
 function extractProps(html: string): any {
   const match = html.match(/window\.__MARKOUT_PROPS = ([\s\S]*?);<\/script>/);
-  if (!match) {
-    throw new Error('could not find window.__MARKOUT_PROPS in served HTML');
+  const data = html.match(
+    /<script type="application\/json" data-markout-props>([\s\S]*?)<\/script>/
+  );
+  if (!match || !data) {
+    throw new Error('could not find the props in served HTML');
   }
-  // two halves as the page carries them: `e` the expressions, `p` the tree
-  // that names them by index
-  const { e, p } = new Function(`return (${match[1]});`)();
+  // two halves as the page carries them: the expressions in a script, the
+  // tree in a data block beside it, which the script reads by selector
+  const document = { querySelector: () => ({ textContent: data[1] }) };
+  const { e, p } = new Function('document', `return (${match[1]});`)(document);
   return { exps: e, ...p };
 }
 

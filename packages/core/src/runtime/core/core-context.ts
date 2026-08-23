@@ -3,6 +3,14 @@ import { CoreScope, CoreScopeProps } from './core-scope';
 import { CoreValue, CoreValueProps, ValueExp } from './core-value';
 
 export const PROPS_GLOBAL = '__MARKOUT_PROPS';
+/**
+ * Marks the `<script type="application/json">` carrying a page's scope tree.
+ *
+ * An attribute rather than an id, because an id would be a name taken out of
+ * the page author's namespace -- the same reason everything else the
+ * compiler leaves behind is a `data-markout` attribute or a comment.
+ */
+export const PROPS_DATA_ATTR = 'data-markout-props';
 /** set alongside PROPS_GLOBAL when the page was compiled in dev mode */
 export const DEV_GLOBAL = '__MARKOUT_DEV';
 

@@ -33,9 +33,10 @@ async function compile(source: string) {
   const page = await new Compiler({ docroot }).compile(`/${name}`);
   expect(page.errors.map(e => e.msg)).toStrictEqual([]);
   // cut at the bootstrap rather than at the first <script>, which a page
-  // under test is entitled to have written itself
+  // under test is entitled to have written itself. The props data block is
+  // the first thing markout appends
   const html = page.source.doc.toString();
-  const bootstrap = html.indexOf('<script>window.');
+  const bootstrap = html.indexOf('<script type="application/json"');
   return bootstrap < 0 ? html : html.slice(0, bootstrap);
 }
 

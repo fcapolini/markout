@@ -95,7 +95,7 @@ describe('docs/reference/syntax.md', () => {
     const page = compile(html);
     expect(page.errors.map(e => e.msg)).toStrictEqual([]);
     const ctx = new WebContext({
-      ...loadProps(page.propsString),
+      ...loadProps(page.props!),
       doc: page.source.doc,
       server: true,
       onError: e => {
@@ -170,7 +170,7 @@ describe('docs/reference/syntax.md', () => {
     );
     expect(page.errors.map(e => e.msg)).toStrictEqual([]);
     const ctx = new WebContext({
-      ...loadProps(page.propsString),
+      ...loadProps(page.props!),
       doc: page.source.doc,
       onError: e => {
         throw new Error(e.message);

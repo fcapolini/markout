@@ -38,9 +38,13 @@ describe('CSP nonce', () => {
     const page = compile(WITH_SERVER_VALUE);
     await renderPage(page, { nonce: 'abc123' });
 
-    // props, state and runtime -- all three, or the policy has to name the
-    // ones left out some other way, which is what having a nonce was for
-    expect(scriptNonces(page)).toStrictEqual(['abc123', 'abc123', 'abc123']);
+    // the props data, the props, the state and the runtime -- all four, or
+    // the policy has to name the ones left out some other way, which is what
+    // having a nonce was for. The data block is not executed and so should
+    // not need one; it is stamped anyway, because being wrong about that
+    // takes the whole page down under a strict policy and a spare nonce on
+    // an element nobody runs costs nothing
+    expect(scriptNonces(page)).toStrictEqual(['abc123', 'abc123', 'abc123', 'abc123']);
     expect(page.source.doc.toString()).toContain('nonce="abc123"');
   });
 
@@ -59,7 +63,7 @@ describe('CSP nonce', () => {
     const page = compile(WITH_SERVER_VALUE);
     await renderPage(page, { nonce: 'first' });
     await renderPage(page, { nonce: 'second' });
-    expect(scriptNonces(page)).toStrictEqual(['second', 'second', 'second']);
+    expect(scriptNonces(page)).toStrictEqual(['second', 'second', 'second', 'second']);
 
     await renderPage(page);
     expect(scriptNonces(page).every(n => n === null)).toBe(true);

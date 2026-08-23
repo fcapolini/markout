@@ -174,7 +174,7 @@ describe('<:define tag="x:logic">', () => {
     expect(page.errors).toStrictEqual([]);
     await renderPage(page);
     const ctx = new WebContext({
-      ...loadProps(page.propsString),
+      ...loadProps(page.props!),
       doc: page.source.doc,
       server: true,
     }).refresh() as any;

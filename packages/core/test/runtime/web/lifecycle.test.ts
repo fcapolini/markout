@@ -42,7 +42,7 @@ async function run(html: string) {
   const atServe = [...log];
   log.length = 0;
   const ctx = new WebContext({
-    ...loadProps(page.propsString),
+    ...loadProps(page.props!),
     doc: page.source.doc,
     onError: (e: RuntimeError) => log.push(`ERROR ${e.message}`),
   }).refresh();

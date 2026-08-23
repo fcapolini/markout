@@ -86,7 +86,7 @@ describe(':when-used', () => {
   it('costs the element no scope, so it weighs nothing at runtime', async () => {
     const { markup, page } = await build('<x-used>hi</x-used>');
     expect(markup).not.toMatch(/<style data-markout/);
-    expect(page.propsString ?? '').not.toContain('when-used');
+    expect(page.props?.data ?? '').not.toContain('when-used');
     expect(markup).not.toContain('when-used');
   });
 

@@ -68,11 +68,13 @@ they exist purely as extension points for layers built on top of it.
 
 ## Values: static vs. reactive
 
-The props a page carries arrive in two halves. Everything a scope holds is
-data except the expressions, which have to be JavaScript — so those are
-lifted into one array (`CoreContextProps.exps`) and a value's `exp` is an
-index into it, which lets the whole tree be `JSON.parse`d rather than
-evaluated as a JavaScript object literal. About five times faster on a page
+The props a page carries arrive in two halves, and travel as two elements.
+Everything a scope holds is data except the expressions, which have to be
+JavaScript — so those are lifted into one array (`CoreContextProps.exps`)
+and a value's `exp` is an index into it, which lets the whole tree be
+`JSON.parse`d rather than evaluated as a JavaScript object literal. The tree
+is carried as the text of a `<script type="application/json">`, where the
+browser stores it without parsing it as anything. About five times faster on a page
 of any size, since the structure never reaches the JavaScript parser at
 all; and identical expressions are emitted once, which most of a page's are
 as soon as a component has more than one instance.

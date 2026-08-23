@@ -31,7 +31,7 @@ async function build(html: string) {
   const page = await new Compiler({ docroot }).compile(`/${name}`);
   const errors = page.errors.map(e => e.msg);
   if (!errors.length) await renderPage(page);
-  return { page, errors, props: page.propsString ?? '', markup: page.source.doc.toString() };
+  return { page, errors, props: (page.props?.exps ?? '') + (page.props?.data ?? ''), markup: page.source.doc.toString() };
 }
 
 describe('stage5-comptime', () => {

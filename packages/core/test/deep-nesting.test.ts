@@ -35,7 +35,7 @@ function render(html: string) {
   const ctx = page.errors.length
     ? undefined
     : new WebContext({
-        ...loadProps(page.propsString),
+        ...loadProps(page.props!),
         doc: page.source.doc,
         onError: e => runtime.push(e),
       }).refresh();
