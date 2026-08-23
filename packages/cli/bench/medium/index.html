@@ -46,6 +46,12 @@
       :pageSize=${24}
       :cart=${[]}
 
+      // the cart's ids, as a set, because every card asks whether it is in
+      // there -- a linear scan per card would be the app's own cost rather
+      // than the runtime's, and the React and Svelte ports both derive the
+      // same set for the same reason
+      :inCartIds=${new Set(cart.map(line => line.id))}
+
       // actions
       :add=${(item) => cart = cart.some(line => line.id === item.id)
         ? cart
@@ -120,7 +126,7 @@
             <mk-card :for-each=${shown}
                      :for-key=${data.id}
                      :item=${data}
-                     :inCart=${cart.some(line => line.id === data.id)}
+                     :inCart=${inCartIds.has(data.id)}
                      :buy=${add}></mk-card>
           </div>
           <mk-pager :current=${page} :count=${pages}>
