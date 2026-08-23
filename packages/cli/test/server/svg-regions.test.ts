@@ -34,11 +34,13 @@ describe('a region inside inline SVG', () => {
           <svg viewBox="0 0 10 10" width="10" height="10">
             <circle id="dot" :if=\${on} cx="5" cy="5" r="4" />
             <rect :for-each=\${dots} x=\${data} y="1" width="1" height="1" />
+            <path :for-each=\${dots} d=\${'M' + data} />
             <foreignObject x="0" y="0" width="4" height="4">
               <b id="html" :if=\${on}>html again</b>
             </foreignObject>
           </svg>
           <button :on-click=\${() => on = !on}>flip</button>
+          <button id="more" :on-click=\${() => dots = [...dots, 3, 4]}>more</button>
         </body>
       </html>`
     );
@@ -72,6 +74,37 @@ describe('a region inside inline SVG', () => {
       expect(document.querySelector('#html')?.namespaceURI).toBe(
         'http://www.w3.org/1999/xhtml'
       );
+    } finally {
+      await browser.close();
+    }
+  });
+
+  it('gives an element to a replica the server never rendered', async () => {
+    // issue #26. The list grows past the length SSR produced, so the new
+    // replicas have nothing already in the page to be found by and have to
+    // be stamped out of the stencil -- which, when that stencil sat inside
+    // the <svg>, was not an HTML `<template>` at all: no `.content` to
+    // clone, no element for the replica, and every binding on it reporting
+    // itself unbound while the page drew the wrong picture
+    const browser = new Browser({ settings: { enableJavaScriptEvaluation: true } });
+    try {
+      const page = browser.newPage();
+      await page.goto(`http://127.0.0.1:${server.port}/svg.html`);
+      await page.waitUntilComplete();
+      const document = page.mainFrame.document;
+      const ds = () => [...document.querySelectorAll('path')].map(p => p.getAttribute('d'));
+
+      expect(ds()).toEqual(['M2', 'M5', 'M8']);
+      document
+        .querySelector('#more')!
+        .dispatchEvent(new page.mainFrame.window.MouseEvent('click'));
+
+      expect(ds()).toEqual(['M2', 'M5', 'M8', 'M3', 'M4']);
+      expect(
+        [...document.querySelectorAll('path')].every(
+          p => p.namespaceURI === 'http://www.w3.org/2000/svg'
+        )
+      ).toBe(true);
     } finally {
       await browser.close();
     }

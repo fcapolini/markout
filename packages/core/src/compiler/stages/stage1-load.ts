@@ -247,16 +247,25 @@ function linkElseChains(page: Page): void {
     ...(page.rehomedScopes.get(scope) ?? []),
   ];
   for (const [branch, previous] of page.elseChains) {
+    // the scope each side is compiled AS, which for a custom tag is the
+    // instance and not the scope the loader built. Both directions, and
+    // that symmetry is the whole of it: `elseOf` mapped and `elseNext` did
+    // not, so a chain whose next branch was a custom tag pointed forward at
+    // the id of a scope that had been detached and reaches no output -- and
+    // the runtime, finding no such sibling, showed no branch at all
     const before = page.usageInstances.get(previous) ?? previous;
-    // pointed at the ORIGINAL, deliberately, even from a copy. What is
-    // emitted is the id, copies keep the id they were made from, and the
-    // runtime looks a neighbour up among its own siblings -- so an id
-    // resolves within whichever set of them this instance holds
+    const after = page.usageInstances.get(branch) ?? branch;
+    // pointed at the instance, and otherwise at the ORIGINAL even from a
+    // copy: what is emitted is the id, a COPY keeps the id it was made from
+    // (see Scope's `Carried`), and the runtime looks a neighbour up among
+    // its own siblings -- so that id resolves within whichever set of them
+    // this instance holds. An instance is the one stand-in with an id of
+    // its own, which is why it has to be named here
     for (const self of standIns(branch)) {
       self.elseOf = before;
     }
     for (const back of standIns(previous)) {
-      back.elseNext = branch;
+      back.elseNext = after;
     }
   }
 }
@@ -936,25 +945,73 @@ function expandCustomTagUsages(page: Page): void {
   // childNodes walk, which is how usages in there used to be skipped in
   // silence -- leaving the custom tag itself in the served markup, rendering
   // nothing, with no error to explain it
-  const collect = (e: ServerElement) => {
+  // which definition's body each usage sits in, if any. An instance takes a
+  // COPY of its definition's children when it is built, so any usage inside
+  // that definition has to have become an instance by then -- see expand()
+  const inside = new Map<ServerElement, string>();
+  const owners = new Map<ServerElement, string>();
+  for (const [tag, stencil] of page.defineStencils) {
+    owners.set(stencil, tag);
+  }
+  const collect = (e: ServerElement, owner?: string) => {
     const container: ServerContainerNode =
       e.tagName === 'TEMPLATE' ? (e as ServerTemplateElement).content : e;
+    const within = owners.get(e) ?? owner;
     for (const child of [...container.childNodes]) {
       if (child.nodeType !== NodeType.ELEMENT) continue;
       const el = child as ServerElement;
       if (page.customTags.has(el.tagName.toLowerCase())) {
         usages.push(el);
+        within !== undefined && inside.set(el, within);
       }
       // descends into a usage site too: its children are slotted content,
       // which can name custom tags of its own. Document order matters -- an
       // outer usage is expanded first, moving these nodes into its stencil,
       // and the inner one is then found wherever they landed
-      collect(el);
+      collect(el, within);
     }
   };
   collect(page.source.doc.documentElement!);
 
-  for (const usageEl of usages) {
+  /**
+   * Usages a definition's own body holds, in document order.
+   *
+   * The order the whole list is expanded in is document order and cannot
+   * be: expanding `<x-outer/>` copies `x-outer`'s children onto the
+   * instance, so a `<x-inner/>` still sitting unexpanded in that body
+   * arrives on the copy as the scope the LOADER built -- which is spliced
+   * out of the tree a moment later, when its own turn comes, and the copy
+   * goes on pointing at it. The marker it left behind is then what the page
+   * serves: a lost subtree, with nothing reported. Declaring the
+   * definitions leaf-first happened to work, which is what made it read as
+   * an ordering rule rather than a bug.
+   */
+  const held = new Map<string, ServerElement[]>();
+  for (const [el, owner] of inside) {
+    (held.get(owner) ?? held.set(owner, []).get(owner)!).push(el);
+  }
+
+  // depth-first, so a definition's body is fully expanded before anything
+  // instantiates it. `visiting` is for a definition whose body reaches
+  // itself: that recursion has no bottom, and stopping at the second visit
+  // leaves the ordinary case unchanged
+  const ordered: ServerElement[] = [];
+  const queued = new Set<ServerElement>();
+  const visiting = new Set<string>();
+  const order = (el: ServerElement) => {
+    if (queued.has(el)) return;
+    queued.add(el);
+    const tag = el.tagName.toLowerCase();
+    if (!visiting.has(tag)) {
+      visiting.add(tag);
+      (held.get(tag) ?? []).forEach(order);
+      visiting.delete(tag);
+    }
+    ordered.push(el);
+  };
+  usages.forEach(order);
+
+  for (const usageEl of ordered) {
     const tagName = usageEl.tagName.toLowerCase();
     page.usedTags.add(tagName);
     const defScope = page.customTags.get(tagName)!;
