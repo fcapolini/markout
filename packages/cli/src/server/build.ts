@@ -72,7 +72,7 @@ export interface BuildProps {
    */
   classManifest?: boolean;
   /**
-   * Say what built the pages: `<meta name="generator" content="Markout">`,
+   * Say what built the pages: `<meta name="generator" content="Markout 0.4.0">`,
    * appended to a page's `<head>` unless it already names a generator.
    *
    * On by default. A built site is where this matters most -- it is the

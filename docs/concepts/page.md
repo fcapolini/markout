@@ -36,13 +36,14 @@ nothing:
   `<head>`, holding the markup that is not currently in the page.
 - **Two `<script>`s** at the end of `<body>`: the compiled props, and the
   browser runtime.
-- **`<meta name="generator" content="Markout">`** at the end of `<head>`,
-  unless the page already names a generator of its own — anywhere in the
-  document, however it is spelled, and including one a region renders. No version: a
-  version names the release to look up advisories for, which is a thing to
-  hand an attacker rather than to publish. Turn it off with
-  `markout build --no-generator`, `markout --no-generator`, or
-  `generator: false` on the middleware or the compiler.
+- **`<meta name="generator" content="Markout 0.4.0">`** at the end of
+  `<head>`, unless the page already names a generator of its own — anywhere
+  in the document, however it is spelled, and including one a region renders.
+  The version is the compiler's own, so the page says which release built it.
+  Turn the whole thing off with `markout build --no-generator`,
+  `markout --no-generator`, or `generator: false` on the middleware or the
+  compiler — which is the answer for a deployment that would rather say
+  nothing.
 
 And one thing it takes away. An `<:import>`, a `<:define>`, a `<:logic>` or
 a region's markup leaves the tree, and the whitespace that was indenting it

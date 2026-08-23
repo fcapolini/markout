@@ -95,7 +95,7 @@ export interface CompilerProps {
    */
   classManifest?: boolean;
   /**
-   * Say what built the page: `<meta name="generator" content="Markout">`,
+   * Say what built the page: `<meta name="generator" content="Markout 0.4.0">`,
    * appended to `<head>` unless the page already names a generator.
    *
    * On by default, and off is a supported answer rather than a thing to

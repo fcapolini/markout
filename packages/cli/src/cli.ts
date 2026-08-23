@@ -87,7 +87,7 @@ async function main() {
     // them unless a deployment would rather they did not
     .option(
       '--no-generator',
-      'omit <meta name="generator" content="Markout"> from the built pages'
+      'omit the <meta name="generator"> naming Markout and its version'
     )
     .action(async (pathname: string | undefined, outdir: string | undefined, options: { page: string[]; origin?: string; classManifest?: boolean; classesOnly?: boolean; generator?: boolean }) => {
       const docroot = path.resolve(process.cwd(), pathname ?? DEFAULT_DOCROOT);
@@ -146,7 +146,7 @@ async function main() {
     )
     .option(
       '--no-generator',
-      'omit <meta name="generator" content="Markout"> from the served pages'
+      'omit the <meta name="generator"> naming Markout and its version'
     )
     .action((pathname, options) => {
       pathname = pathname ?? DEFAULT_DOCROOT;

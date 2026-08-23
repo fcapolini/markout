@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { generate } from 'escodegen';
 import type {
   Expression,
@@ -230,7 +232,32 @@ function collapse(run: ServerText[]): void {
 export const GENERATOR_NAME = 'Markout';
 
 /**
- * `<meta name="generator" content="Markout">`, at the end of `<head>`.
+ * The compiler's own version, for the generator meta to carry.
+ *
+ * Read from the package rather than baked in, the same way the CLI reads it
+ * for `--version`: one number, in the file that already holds it, so a
+ * release cannot move one and leave the other behind.
+ *
+ * Absent if it cannot be read -- a bundler that dropped the manifest, or a
+ * layout this does not expect. A page that says only `Markout` is a page
+ * that says slightly less; one that fails to compile because a version
+ * string could not be found would be absurd.
+ */
+function generatorVersion(): string | undefined {
+  if (version === undefined) {
+    try {
+      const manifest = path.join(__dirname, '../../../package.json');
+      version = JSON.parse(fs.readFileSync(manifest, 'utf8')).version as string;
+    } catch {
+      version = '';
+    }
+  }
+  return version || undefined;
+}
+let version: string | undefined;
+
+/**
+ * `<meta name="generator" content="Markout 0.4.0">`, at the end of `<head>`.
  *
  * How a generator has said what it is since long before this one: a site
  * carries the name of the thing that built it, and everything that counts
@@ -242,11 +269,16 @@ export const GENERATOR_NAME = 'Markout';
  * inserted at the TOP of a head pushes a late-declared one towards that
  * edge. Appending cannot.
  *
- * **No version.** A version names the release to look up advisories for,
- * which is a thing to hand an attacker rather than a thing to publish -- the
- * same reasoning that gives this server CSP nonces and a page limit. It
- * would also rewrite every built page on every release, for a fact nobody
- * reading the page can use.
+ * **With the version.** `Markout 0.4.0` rather than `Markout`, which is what
+ * every other generator says and what makes the meta answer a question worth
+ * asking: not just what built this page but which release of it, for a bug
+ * report, a compatibility check, or a survey of what the web is running.
+ *
+ * It costs the two things that argued against it, and they are the honest
+ * price rather than an oversight: every built page's bytes change on every
+ * release, and a reader learns which version to look up advisories for.
+ * `generator: false` remains the answer for a deployment that would rather
+ * say nothing at all -- which is the reason that switch exists.
  *
  * **Not if the page already says.** An author who wrote their own generator
  * meta has said something deliberate about what made this page, and a
@@ -271,8 +303,9 @@ function injectGenerator(page: Page) {
     return;
   }
   const meta = doc.createElement('meta');
+  const said = generatorVersion();
   meta.setAttribute('name', 'generator', head.loc);
-  meta.setAttribute('content', GENERATOR_NAME, head.loc);
+  meta.setAttribute('content', said ? `${GENERATOR_NAME} ${said}` : GENERATOR_NAME, head.loc);
   head.appendChild(meta);
 }
 

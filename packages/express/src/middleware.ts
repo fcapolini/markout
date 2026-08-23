@@ -64,7 +64,7 @@ export interface MarkoutProps {
   dev?: boolean;
   logger?: MarkoutLogger;
   /**
-   * Say what built the pages: `<meta name="generator" content="Markout">`,
+   * Say what built the pages: `<meta name="generator" content="Markout 0.4.0">`,
    * appended to a page's `<head>` unless it already names a generator.
    *
    * On by default. Off is a supported answer for a deployment that would

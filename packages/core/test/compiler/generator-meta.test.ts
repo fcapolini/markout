@@ -7,10 +7,10 @@ import { Compiler } from '../../src/compiler';
 /**
  * What a compiled page says built it.
  *
- * `<meta name="generator" content="Markout">`, appended to `<head>`, which
+ * `<meta name="generator" content="Markout 0.4.0">`, appended to `<head>`, which
  * is how a generator has identified itself since long before this one and
  * what everything counting the web reads. See stage7-generate's
- * injectGenerator for why it goes at the END, why it carries no version,
+ * injectGenerator for why it goes at the END, why it carries the version,
  * and why a page that already names a generator keeps its own.
  */
 let docroot: string;
@@ -42,7 +42,7 @@ describe('the generator meta', () => {
     const out = await head(
       '<html><head><meta charset="utf-8"><title>t</title></head><body>b</body></html>'
     );
-    expect(out).toContain('<meta name="generator" content="Markout">');
+    expect(out).toMatch(/<meta name="generator" content="Markout [^"]+">/);
     expect(out.indexOf('charset')).toBeLessThan(out.indexOf('generator'));
     expect(out.indexOf('<title>')).toBeLessThan(out.indexOf('generator'));
   });
@@ -54,11 +54,15 @@ describe('the generator meta', () => {
     expect(out.indexOf('generator')).toBeLessThan(out.indexOf('data-markout-stencil'));
   });
 
-  it('carries no version', async () => {
-    // a version names the release to look up advisories for, and would
-    // rewrite every built page on every one of them
-    expect(await head('<html><head></head><body>b</body></html>')).toMatch(
-      /content="Markout"/
+  it('names the version that compiled the page', async () => {
+    // which release built this, for a bug report or a compatibility check.
+    // Read from the package rather than baked in, so it cannot drift from
+    // what was published
+    const version = (
+      await import('../../package.json', { with: { type: 'json' } })
+    ).default.version;
+    expect(await head('<html><head></head><body>b</body></html>')).toContain(
+      `content="Markout ${version}"`
     );
   });
 
