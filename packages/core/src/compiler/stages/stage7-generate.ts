@@ -88,6 +88,7 @@ export function stage7generate(
   generator && injectGenerator(page);
   relocateStencils(page);
   classManifest && injectClassManifest(page);
+  tidyBlankLines(page);
   const root = page.global.children[0];
   if (root) {
     page.propsAST = generateScope(root, false);
@@ -139,6 +140,98 @@ export function stage7generate(
  */
 function codegenOptions(dev: boolean) {
   return dev ? undefined : { format: { compact: true } };
+}
+
+/**
+ * Elements whose whitespace is their content, and must not be touched.
+ *
+ * `<pre>` and `<textarea>` render it; `<script>` and `<style>` are somebody
+ * else's language, where a removed line moves every line number after it and
+ * a template literal is text a page can see.
+ */
+const WHITESPACE_KEPT_TAGS = new Set([
+  'PRE',
+  'TEXTAREA',
+  'SCRIPT',
+  'STYLE',
+  'LISTING',
+  'PLAINTEXT',
+  'XMP',
+]);
+
+/**
+ * Closes up the blank lines compiling a page leaves behind.
+ *
+ * An `<:import>`, a `<:define>`, a `<:logic>` or a region's markup is taken
+ * out of the tree, and the whitespace that was indenting it stays -- so a
+ * head with four imports in it serves four lines holding nothing but
+ * spaces, and the ones either side of a removed element arrive as SEPARATE
+ * text nodes, which is why they stack rather than merge.
+ *
+ * The rule is one sentence: **where nothing but whitespace lies between two
+ * nodes, at most one line break survives**, and the indentation of the line
+ * that follows is kept. Runs of adjacent whitespace-only text nodes are
+ * considered together, because that is the shape a removal leaves.
+ *
+ * It cannot change what a page renders. Between block elements this is
+ * invisible; between inline ones a run of whitespace has always collapsed to
+ * one space and it still does, because a break is left. The exception is
+ * `white-space: pre` on ordinary markup, which is CSS and so is not
+ * something this can see -- the HTML elements that preserve whitespace are
+ * skipped by name.
+ *
+ * Static whitespace only. An interpolation's text node holds an expression
+ * rather than a string until something renders it, which is exactly what
+ * tells the two apart here.
+ */
+function tidyBlankLines(page: Page) {
+  const walk = (e: ServerElement) => {
+    if (WHITESPACE_KEPT_TAGS.has(e.tagName)) {
+      return;
+    }
+    const container =
+      e.tagName === 'TEMPLATE' ? (e as ServerTemplateElement).content : e;
+    const nodes = [...container.childNodes] as ServerNode[];
+    let run: ServerText[] = [];
+    const close = () => {
+      if (run.length) {
+        collapse(run);
+        run = [];
+      }
+    };
+    for (const n of nodes) {
+      if (n.nodeType === NodeType.TEXT && isBlankText(n as ServerText)) {
+        run.push(n as ServerText);
+        continue;
+      }
+      close();
+      n.nodeType === NodeType.ELEMENT && walk(n as ServerElement);
+    }
+    close();
+  };
+  page.source.doc.documentElement && walk(page.source.doc.documentElement);
+}
+
+/** whitespace the compiler put there or the author indented with, never a value */
+function isBlankText(n: ServerText): boolean {
+  return typeof n.textContent === 'string' && n.textContent.trim() === '';
+}
+
+/**
+ * One text node where there were several, holding one break at most.
+ *
+ * The first node of the run keeps the whole thing, so nothing has to be
+ * constructed and every other node simply goes.
+ */
+function collapse(run: ServerText[]): void {
+  const whole = run.map(n => n.textContent as string).join('');
+  const breaks = whole.split('\n');
+  if (breaks.length < 3) {
+    // one break or none: ordinary indentation, and nothing to close up
+    return;
+  }
+  run[0].textContent = `\n${breaks[breaks.length - 1]}`;
+  run.slice(1).forEach(n => n.unlink());
 }
 
 /** what a compiled page says built it, when it does not already say */

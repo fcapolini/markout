@@ -44,6 +44,20 @@ nothing:
   `markout build --no-generator`, `markout --no-generator`, or
   `generator: false` on the middleware or the compiler.
 
+And one thing it takes away. An `<:import>`, a `<:define>`, a `<:logic>` or
+a region's markup leaves the tree, and the whitespace that was indenting it
+would otherwise stay behind as a line holding nothing — so where only
+whitespace lies between two nodes, at most one line break survives, and the
+indentation of the line that follows is kept. Blank lines you wrote go the
+same way; your indentation does not.
+
+It cannot change what a page renders: between block elements this is
+invisible, and between inline ones a run of whitespace has always collapsed
+to a single space and still does, since a break is left. `<pre>`,
+`<textarea>`, `<script>` and `<style>` are left exactly as written. The one
+case to know about is `white-space: pre` applied by CSS to ordinary markup,
+which the compiler cannot see.
+
 ## Default scopes
 
 The root HTML elements have built-in names:
