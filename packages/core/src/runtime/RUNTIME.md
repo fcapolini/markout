@@ -73,9 +73,17 @@ A `CoreValueProps<T>` is one of:
 - a plain value (`val`): set once, or updated later via `set()`;
 - an expression (`exp` + `deps`): `exp` is evaluated (with the owning
   scope's `proxy` as `this`) to derive the value, and `deps` is the
-  explicit, precompiled list of dependency accessors used to build the
-  dependency graph — each `dep` is called (again with the scope's `proxy` as
-  `this`) to resolve the `CoreValue` it points at.
+  explicit, precompiled list of dependencies used to build the dependency
+  graph. Each entry is the **path** to what it names — `[...via, key]`,
+  where every segment before the last is a property of the scope proxy
+  (`$parent`, `$host`, or a named scope's `:aka`) and the last is the
+  value's key there. `CoreValue.resolveDep()` walks it.
+
+  Data rather than an accessor, which is what it used to be: one
+  `function () { return this.$value('total'); }` per edge, allocated at
+  mount and called once. On a page of any size those were the largest
+  single thing the props carried — a fifth of them on this repository's
+  biggest page.
 
 `CoreValue.link()`/`unlink()` build/tear down the `src`/`dst` edges between a
 value and its declared dependencies. `link()` is called for every value in a
@@ -194,8 +202,8 @@ execution. Concretely, the compiler is responsible for:
   that value's `deps`;
 - fully qualifying every such reference with `this.`, so it's resolved
   through the owning scope's `proxy`/`lookup()` rather than captured as a
-  raw closure variable — this is what lets `exp`/`deps` functions be handed
-  a different `this` (the scope's `proxy`) via `.apply()`;
+  raw closure variable — this is what lets an `exp` function be handed a
+  different `this` (the scope's `proxy`) via `.apply()`;
 - reserving identifiers starting with `$` (e.g. `$value`, `$parent`) for
   system-level values, and rejecting their use in application code, so they
   can never be shadowed or collide with user-defined values;

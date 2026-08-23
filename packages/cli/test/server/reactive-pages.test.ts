@@ -61,7 +61,9 @@ describe("Reactive page compilation", () => {
 
     const fakeScope = { count: 5, $value: () => ({}) };
     expect(body.values['text$0'].exp.apply(fakeScope)).toBe(5);
-    expect(body.values['text$0'].deps[0].apply({ $value: (key: string) => key })).toBe('count');
+    // the path the dependency names, walked by the runtime rather than by a
+    // closure the props had to carry
+    expect(body.values['text$0'].deps[0]).toEqual(['count']);
   });
 
   it('should server-render the actual interpolated value into the markup, not a blank gap', async () => {

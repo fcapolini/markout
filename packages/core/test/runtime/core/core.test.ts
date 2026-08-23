@@ -65,10 +65,7 @@ it(`adds dependency (1)`, () => {
             return this.v0;
           },
           deps: [
-            function () {
-              // @ts-ignore
-              return this.$value('v0');
-            },
+            ['v0'],
           ],
         },
       },
@@ -95,10 +92,7 @@ it(`adds dependency (2)`, () => {
             return this.v0;
           },
           deps: [
-            function () {
-              // @ts-ignore
-              return this.$value('v0');
-            },
+            ['v0'],
           ],
         },
       },
@@ -149,10 +143,7 @@ it(`can see outer value`, () => {
                 return this.v0;
               },
               deps: [
-                function () {
-                  // @ts-ignore
-                  return this.$value('v0');
-                },
+                ['v0'],
               ],
             },
           },
@@ -192,10 +183,7 @@ it(`should call value callback (2)`, () => {
             return this.v0;
           },
           deps: [
-            function () {
-              // @ts-ignore
-              return this.$value('v0');
-            },
+            ['v0'],
           ],
         },
       },
@@ -229,10 +217,7 @@ it(`should call value callback (2)`, () => {
                 return this.v0;
               },
               deps: [
-                function () {
-                  // @ts-ignore
-                  return this.$value('v0');
-                },
+                ['v0'],
               ],
             },
           },
@@ -389,10 +374,7 @@ it(`settles both arms of a diamond before evaluating what reads them`, () => {
   // short arm -- through `rows` re-evaluating to a fresh array -- while
   // `page` is still mid-evaluation on the long one, and `shown` used to
   // settle for the cycle against the page number it was about to stop having
-  const dep = (name: string) =>
-    function (this: any) {
-      return this.$value(name);
-    };
+  const dep = (name: string) => [name];
   const context = new CoreContext({
     root: {
       id: '0',
@@ -432,10 +414,7 @@ it(`settles both arms of a diamond before evaluating what reads them`, () => {
 });
 
 it(`orders a propagation by how far a value is from what it depends on`, () => {
-  const dep = (name: string) =>
-    function (this: any) {
-      return this.$value(name);
-    };
+  const dep = (name: string) => [name];
   const context = new CoreContext({
     root: {
       id: '0',

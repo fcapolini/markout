@@ -1,8 +1,25 @@
 import { CoreScope } from './core-scope';
 
 export type ValueExp<T> = () => T;
-export type ValueDep = () => CoreValue<any>;
+/**
+ * A dependency, as the path to it: `[...via, key]`.
+ *
+ * Data rather than a thunk, which is what it used to be -- one
+ * `function () { return this.$value('total'); }` per edge, to say what
+ * `'total'` says. On a page of any size those closures were the single
+ * largest thing the props shipped, and every one of them was allocated at
+ * mount to be called once. The runtime already knew how to walk a
+ * scope path; now it walks this one.
+ *
+ * Every segment before the last is a property of the scope proxy --
+ * `$parent`, `$host`, or a named scope's `:aka` -- and the last is the
+ * value's key on whatever that arrives at.
+ */
+export type ValueDep = string[];
 export type ValueCallback<T> = (s: CoreScope, v: T | undefined) => void;
+
+/** the scope property a dependency may legitimately arrive nowhere through */
+const RT_HOST_KEY = '$host';
 
 export interface CoreValueProps<T> {
   val?: T;
@@ -122,7 +139,7 @@ export class CoreValue<T = any> {
       this.scope.ctx.maybes.add(this);
       this.props.maybeDeps.forEach(dep => {
         try {
-          const o = dep.apply(this.scope.proxy);
+          const o = this.resolveDep(dep, true);
           if (o) {
             o.dst.add(this);
             this.src.add(o);
@@ -134,7 +151,7 @@ export class CoreValue<T = any> {
     }
     this.props.deps?.forEach(dep => {
       try {
-        const o = dep.apply(this.scope.proxy);
+        const o = this.resolveDep(dep, false);
         if (!o) {
           // the compiler guarantees every dep resolves to a real value (see
           // RUNTIME.md's compiler contract). Reaching here means it emitted one
@@ -148,6 +165,35 @@ export class CoreValue<T = any> {
         this.scope.ctx.onError('link', err, this);
       }
     });
+  }
+
+  /**
+   * Walks a dependency's path from this value's own scope.
+   *
+   * `maybe` says the scopes along the way are allowed not to be there: the
+   * page wrote `?.` at a crossing into a region, and while that region is
+   * away the path simply arrives nowhere. Otherwise only the last step is
+   * forgiving, and answering nothing there is the compiler bug link()
+   * reports -- a path that cannot be walked at all still throws, which is
+   * how it always behaved.
+   *
+   * `$host` is the one navigation that legitimately arrives nowhere even
+   * outside a region: a component standing on its own has no enclosing
+   * instance. It falls back to `$host` itself, which is on every scope and
+   * never changes -- so inside a host the value depends on what it reads,
+   * and outside one it depends on a constant, which is what "there is
+   * nothing there to watch" should cost.
+   */
+  private resolveDep(dep: ValueDep, maybe: boolean): CoreValue<any> | undefined {
+    const last = dep.length - 1;
+    let scope: any = this.scope.proxy;
+    for (let i = 0; i < last && scope != null; i++) {
+      scope = maybe || dep[i] === RT_HOST_KEY ? scope?.[dep[i]] : scope[dep[i]];
+    }
+    const found = scope?.$value(dep[last]);
+    return !found && !maybe && dep.indexOf(RT_HOST_KEY) >= 0
+      ? (this.scope.proxy as any).$value(RT_HOST_KEY)
+      : found;
   }
 
   /**

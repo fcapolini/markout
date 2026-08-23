@@ -112,9 +112,7 @@ describe('dependencies', () => {
               return this.a + 1;
             },
             deps: [
-              function (this: any) {
-                return this.$value('a');
-              },
+              ['a'],
             ],
           },
         },
@@ -142,9 +140,7 @@ describe('dependencies', () => {
               return this.a + 1;
             },
             deps: [
-              function (this: any) {
-                return this.$value('a');
-              },
+              ['a'],
             ],
           },
         },
@@ -166,11 +162,7 @@ describe('dependencies', () => {
         values: {
           v: {
             val: 1,
-            deps: [
-              function (this: any) {
-                return this.$value('nonexistent').whatever;
-              },
-            ],
+            deps: [['nonexistent']],
           },
         },
       },
@@ -260,9 +252,7 @@ describe('chained propagation', () => {
               return this.a + 1;
             },
             deps: [
-              function (this: any) {
-                return this.$value('a');
-              },
+              ['a'],
             ],
           },
           c: {
@@ -270,9 +260,7 @@ describe('chained propagation', () => {
               return this.b + 1;
             },
             deps: [
-              function (this: any) {
-                return this.$value('b');
-              },
+              ['b'],
             ],
           },
         },

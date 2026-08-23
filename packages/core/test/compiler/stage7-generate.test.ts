@@ -123,7 +123,7 @@ describe('stage7-generate', () => {
     expect(exp.apply({ count: 21 })).toBe(42);
   });
 
-  it('should compile deps into functions resolving via $value/$parent.$value', async () => {
+  it('should compile deps into the path each one names', async () => {
     addValue(root, 'count', null);
     addValue(page.global, 'count', null);
     addValue(root, 'doubled', parseExpr('this.count * 2'));
@@ -146,17 +146,20 @@ describe('stage7-generate', () => {
       },
     };
 
+    // the path to the value, not a closure that walks it: everything before
+    // the last segment is a scope navigation and the last is the key. The
+    // runtime does the walking (CoreValue.resolveDep), which is what took
+    // one allocated-and-called-once function per edge out of the props
     const values = prop(page.propsAST, 'values');
-    const ownDep = evalExpr(prop(values, 'doubled').properties.find((p: any) => p.key.name === 'deps').value.elements[0]);
-    expect(ownDep.apply(fakeScope)).toBe('own-value');
+    const depsOf = (name: string) =>
+      evalExpr(
+        prop(values, name).properties.find((p: any) => p.key.name === 'deps').value
+      );
 
-    const parentDep = evalExpr(prop(values, 'fromParent').properties.find((p: any) => p.key.name === 'deps').value.elements[0]);
-    expect(parentDep.apply(fakeScope)).toBe('parent-value');
-
-    expect(seen).toEqual([
-      { viaParent: false, key: 'count' },
-      { viaParent: true, key: 'count' },
-    ]);
+    expect(depsOf('doubled')).toEqual([['count']]);
+    expect(depsOf('fromParent')).toEqual([['$parent', 'count']]);
+    void fakeScope;
+    void seen;
   });
 
   it('should translate compiled key prefixes to the ones WebScope expects', async () => {
@@ -289,7 +292,7 @@ describe('stage7-generate full pipeline: dependency codegen', () => {
     return p;
   }
 
-  it('compiles a same-scope reference from a plain child element into this.$value(key)', async () => {
+  it('compiles a same-scope reference from a plain child element into a bare key', async () => {
     // :count and ${count} end up on the same scope: <p> has no special
     // attribute of its own, so it doesn't get a scope and the
     // interpolation attaches to the enclosing <div>'s
@@ -304,10 +307,10 @@ describe('stage7-generate full pipeline: dependency codegen', () => {
     ).value;
     const dep = prop(textValue, 'deps').elements[0];
 
-    expect(generate(dep)).toContain("this.$value('count')");
+    expect(generate(dep)).toBe("['count']");
   });
 
-  it('still compiles to this.$value(key) when the reference lives in its own nested (:aka) scope', async () => {
+  it('still compiles to the same path when the reference lives in its own nested (:aka) scope', async () => {
     // ${count} qualifies to `this.count` regardless of which scope actually
     // owns it -- the scope-chain walk happens at runtime, in lookup(),
     // never at compile time -- so this must compile exactly like the
@@ -324,7 +327,7 @@ describe('stage7-generate full pipeline: dependency codegen', () => {
     ).value;
     const dep = prop(textValue, 'deps').elements[0];
 
-    expect(generate(dep)).toContain("this.$value('count')");
+    expect(generate(dep)).toBe("['count']");
   });
 });
 

@@ -16,7 +16,7 @@ describe('runtime error reporting', () => {
         n: { val: { x: 1 } as any },
         out: {
           exp: function (this: any) { return this.n.x; },
-          deps: [function (this: any) { return this.$value('n'); }],
+          deps: [['n']],
         },
       },
     });
@@ -52,7 +52,7 @@ describe('runtime error reporting', () => {
           exp: function (this: any) { return this.count * 2; },
           // nothing declares "nope": only a compiler bug produces this, and
           // its sole symptom would otherwise be a binding that never updates
-          deps: [function (this: any) { return this.$value('nope'); }],
+          deps: [['nope']],
         },
       },
     });

@@ -690,7 +690,7 @@ function generateValueProps(
     property('deps', arrayExpression(value.deps.filter(d => !d.maybe).map(makeDep))),
   ];
   if (maybes.length) {
-    props.push(property('maybeDeps', arrayExpression(maybes.map(makeMaybeDep))));
+    props.push(property('maybeDeps', arrayExpression(maybes.map(makeDep))));
   }
   // written at a custom-tag usage site: evaluated against the scope the tag
   // was written in, not against the instance (see CoreScope.newValue)
@@ -714,84 +714,25 @@ function generateExpBody(value: Value): Expression {
   return expression as unknown as Expression;
 }
 
-const RT_HOST_KEY = '$host';
-
-function makeDep(dep: ValueDepRef): Expression {
-  // `function () { return this.$value("key"); }` or, through one or more
-  // scope navigations, `function () { return this.<via>...$value("key"); }`
-  // -- each `via` segment is a plain property (either $parent, $host, or a
-  // named child scope's :aka name), unlike $value which is called with the key
-  let scope: Expression = { type: 'ThisExpression' } as unknown as Expression;
-  for (const segment of dep.via ?? []) {
-    scope = memberExpression(scope, identifier(segment));
-  }
-  const target = memberExpression(scope, identifier('$value'));
-  const call = callExpression(target, [literal(dep.key)]);
-  if (!dep.via?.includes(RT_HOST_KEY)) {
-    return functionExpression(call);
-  }
-  // `$host` is the one navigation that legitimately arrives nowhere: a
-  // component standing on its own has no enclosing instance. The runtime
-  // treats a dependency that resolves to nothing as a compiler bug, and it
-  // is right to -- so this one falls back to `$host` itself, which is on
-  // every scope and never changes. Inside a host it depends on what it
-  // reads; outside one it depends on a constant, which is what "there is
-  // nothing there to watch" should cost
-  return functionExpression(
-    logicalExpression(
-      '??',
-      optionalCall(scope, dep.key),
-      callExpression(
-        memberExpression({ type: 'ThisExpression' } as unknown as Expression, identifier('$value')),
-        [literal(RT_HOST_KEY)]
-      )
-    )
-  );
-}
-
 /**
- * The same, for a reference that walked into a region: optional at every step.
+ * A dependency, emitted as the path to it: `["$parent", "total"]`.
  *
- * `function () { return this?.a?.b?.$value("key"); }` -- so a scope that is
- * not there while its region is away answers `undefined` rather than throwing
- * on the way to it. The page wrote `?.` to be allowed this; the codegen is
- * that `?.`, applied to the navigation the author never sees.
+ * Data rather than the closure this used to be. Every edge was a
+ * `function () { return this.$value('total'); }` -- thirty-five characters
+ * to say what nine say, allocated at mount and called once -- and on a page
+ * of any size they were the largest single thing the props carried. The
+ * runtime walks the path instead (CoreValue.resolveDep); `ValueDepRef`
+ * already WAS this pair, and stage7 used to turn it back into a function.
+ *
+ * Every segment but the last is a property of the scope proxy -- `$parent`,
+ * `$host`, or a named scope's `:aka` -- and the last is the key. The two
+ * flavours the runtime tells apart by which array they arrive in, exactly
+ * as before: a `deps` entry must resolve, a `maybeDeps` one is allowed not
+ * to while the region it reaches into is away. `$host` keeps its fallback,
+ * which moved to the runtime with the walk.
  */
-function makeMaybeDep(dep: ValueDepRef): Expression {
-  let scope: Expression = { type: 'ThisExpression' } as unknown as Expression;
-  for (const segment of dep.via ?? []) {
-    scope = {
-      type: 'MemberExpression',
-      object: scope,
-      property: identifier(segment),
-      computed: false,
-      optional: true,
-    } as unknown as Expression;
-  }
-  return functionExpression(optionalCall(scope, dep.key));
-}
-
-/** `<scope>?.$value("key")` */
-function optionalCall(scope: Expression, key: string): Expression {
-  return {
-    type: 'ChainExpression',
-    expression: {
-      type: 'CallExpression',
-      callee: {
-        type: 'MemberExpression',
-        object: scope,
-        property: identifier('$value'),
-        computed: false,
-        optional: true,
-      },
-      arguments: [literal(key)],
-      optional: false,
-    },
-  } as unknown as Expression;
-}
-
-function logicalExpression(operator: string, left: Expression, right: Expression): Expression {
-  return { type: 'LogicalExpression', operator, left, right } as unknown as Expression;
+function makeDep(dep: ValueDepRef): Expression {
+  return arrayExpression([...(dep.via ?? []), dep.key].map(segment => literal(segment)));
 }
 
 function toRuntimeKey(name: string): string {
