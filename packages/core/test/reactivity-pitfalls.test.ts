@@ -212,6 +212,49 @@ describe('a derived that builds a new object every time', () => {
   });
 });
 
+describe('a derived list feeding a keyed loop', () => {
+  it('keeps its items\' identity when nothing it reads has moved', () => {
+    // The chain that cost the catalog benchmark its sort, minimised.
+    //
+    // `items` builds fresh objects, so re-deriving it hands the loop a set
+    // of items that are equal by key and different by identity. Keyed
+    // reconciliation then matches each row to "its" item, assigns it, and
+    // the assignment counts as a change -- at push level, so each one opens
+    // another cycle, which invites the next re-derive. A reorder that
+    // touches none of `items`' sources went round that loop once per row.
+    //
+    // The assertion is on identity, not on the rendered rows: every version
+    // of this renders "a, b, c" correctly, and differs only in how much it
+    // did to get there
+    const p = render(
+      '<html><body :seed=${[1, 2, 3]} ' +
+        ':items=${' + counted('items', "seed.map(n => ({ id: 'i' + n }))") + '} ' +
+        ':flip=${false} :shown=${flip ? [...items].reverse() : items}>' +
+        '<p :for-each=${shown} :for-key=${data.id}>${data.id}</p></body></html>'
+    );
+    expect(p.texts('p')).toStrictEqual(['i1', 'i2', 'i3']);
+    const before = p.evals('items');
+
+    p.state.flip = true;
+
+    expect(p.texts('p')).toStrictEqual(['i3', 'i2', 'i1']);
+    expect(p.evals('items') - before).toBe(0);
+  });
+
+  it('does rebuild, and re-keys, when its own source moves', () => {
+    const p = render(
+      '<html><body :seed=${[1, 2]} ' +
+        ':items=${seed.map(n => ({ id: "i" + n }))}>' +
+        '<p :for-each=${items} :for-key=${data.id}>${data.id}</p></body></html>'
+    );
+    expect(p.texts('p')).toStrictEqual(['i1', 'i2']);
+
+    p.state.seed = [3, 1];
+
+    expect(p.texts('p')).toStrictEqual(['i3', 'i1']);
+  });
+});
+
 describe('a row that arrives mid-cascade', () => {
   it('reads the page it arrived into, not the page as it was', () => {
     // a replica's values evaluate for the FIRST time inside someone else's
