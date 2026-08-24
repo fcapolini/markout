@@ -3,7 +3,7 @@
 Status: **done except the extension.** Six workspaces:
 [`@markout-lang/core`](../../packages/core/),
 [`@markout-lang/express`](../../packages/express/) and
-[`markout`](../../packages/cli/) for the code;
+[`@markout-lang/cli`](../../packages/cli/) for the code;
 [`@markout-lang/bootstrap-kit`](../../kits/bootstrap-kit/) and
 [`@markout-lang/std-kit`](../../kits/std-kit/) for the kits; and
 [`@markout-lang/site`](../../sites/site/), private, for the homepage and the demos.
@@ -17,7 +17,7 @@ The repository has to produce five things:
 
 | Deliverable | Published as |
 | --- | --- |
-| the CLI | `markout` on npm |
+| the CLI | `@markout-lang/cli` on npm, installing a `markout` bin |
 | the middleware, for Express applications | `@markout-lang/express` on npm |
 | the Bootstrap kit | `@markout-lang/bootstrap-kit` on npm |
 | the homepage, with a demos section | a site |
@@ -105,8 +105,19 @@ Each boundary exists because some consumer must not see what is above it:
   logger, the watcher, the reloader. Depends on core, with express as a
   *peer* dependency, since an application that mounts middleware already has
   one and two copies of express in a tree is its own kind of bug.
-- **`markout`** — the bin, the `Server` class, `build`. Depends on both, plus
-  commander and compression.
+- **`@markout-lang/cli`** — the `markout` bin, the `Server` class, `build`.
+  Depends on both, plus commander and compression.
+
+  **The package is scoped and the command is not**, which is the one naming
+  call this table cannot make on its own: `markout` unscoped is somebody
+  else's package on npm — a 0.0.1 from 2018 — so the scope is not a
+  preference. `bin` is unaffected by it, so what a reader types is still
+  `markout`, and every install line in the documentation says
+  `@markout-lang/cli`. The extension's project detection accepts the
+  unscoped name anyway, deliberately: it is what this project would use if
+  that ever came free, and a project depending on the dead 0.0.1 is not a
+  false positive worth designing around. See
+  [diagnostics.ts](../../packages/vscode/src/diagnostics.ts).
 
   **`Server` stays in the CLI rather than moving to the middleware package**,
   which is the one placement call step 4 had to make. Listening on a port,
