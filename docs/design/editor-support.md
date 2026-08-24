@@ -8,13 +8,18 @@ on `<:import src>`, highlighting, and HTML's own features through
 [packages/vscode/](../../packages/vscode/); the core change it needed
 ([`readFile`](../../packages/core/src/html/preprocessor.ts)) has landed.
 
-Not yet verified: the extension has never been loaded into a running VS Code
-window. The language server is tested over real LSP, but `activate`, the
-grammar's injection into `text.html.basic` and the language contribution are
-between this and an editor, and only F5 proves them. Press it — the launch
-configuration is at [.vscode/launch.json](../../.vscode/launch.json) and it
-opens [the fixture](../../packages/vscode/fixture/README.md), which is a
-project with no package.json in it at all.
+Verified in the way that counts: it is published to the Marketplace as
+`markout.markout-vscode`, installed from there, and in daily use writing this
+repository. That covers the three things the suite structurally cannot —
+`activate`, the grammar's injection into `text.html.basic`, and the language
+contribution — and covers them on the packaged artifact a user installs
+rather than on a development host running from the source tree, which is the
+distinction the bundling section below exists for.
+
+For working ON it, F5 is still the loop: the launch configuration is at
+[.vscode/launch.json](../../.vscode/launch.json) and it opens
+[the fixture](../../packages/vscode/fixture/README.md), which is a project
+with no package.json in it at all.
 
 ## The problem
 
