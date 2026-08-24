@@ -5,7 +5,7 @@
   <!---
     A toast, shown by setting a value rather than by calling anything:
 
-      <bs-toast :aka="saved" :title="Saved">Your changes are safe.</bs-toast>
+      <bs-toast :aka="saved" ::title="Saved">Your changes are safe.</bs-toast>
       <bs-button :on-click=${() => saved.open = true}>Save</bs-button>
 
     `:handle-open` turns that value into the `show()` / `hide()` the plugin
@@ -20,13 +20,13 @@
     aria-atomic="true"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :title=${null}
-    :time=${null}
-    :variant=${null}
-    :open=${false}
-    :autohide=${true}
-    :delay=${5000}
+    ::extra=${null}      // extra classes for this instance
+    ::title=${null}
+    ::time=${null}
+    ::variant=${null}
+    ::open=${false}
+    ::autohide=${true}
+    ::delay=${5000}
 
     // private
     :_class=${['toast', variant ? `text-bg-${variant} border-0` : '', extra]
@@ -60,7 +60,7 @@
       <strong class="me-auto">${title}</strong>
       <small class="text-body-secondary"
         :if=${time}>${time}</small>
-      <bs-close :dismiss="toast" :label="Close notification" />
+      <bs-close ::dismiss="toast" ::label="Close notification" />
     </div>
 
     <!---
@@ -79,9 +79,9 @@
         <:slot />
       </div>
 
-      <bs-close :dismiss="toast"
-        :label="Close notification"
-        :extra="me-2 m-auto"
+      <bs-close ::dismiss="toast"
+        ::label="Close notification"
+        ::extra="me-2 m-auto"
         :if=${!title} />
     </div>
   </:define>
@@ -93,8 +93,8 @@
   <:define tag="bs-toast-container:div"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :placement=${'bottom-end'}   // 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end' | 'top-center'
+    ::extra=${null}      // extra classes for this instance
+    ::placement=${'bottom-end'}   // 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end' | 'top-center'
 
     // private
     :_class=${[

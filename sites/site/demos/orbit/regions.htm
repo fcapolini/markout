@@ -25,12 +25,12 @@
   -->
   <:define tag="orbit-sidebar:div"
     class="col-lg-2 d-none d-lg-block dash-side"
-    :requests=${0}>
-    <bs-nav :vertical
-      :variant="pills"
-      :extra="mb-4"
+    ::requests=${0}>
+    <bs-nav ::vertical
+      ::variant="pills"
+      ::extra="mb-4"
       id="dash-side-nav"
-      :items=${[
+      ::items=${[
         { name: 'Overview', link: '#overview' },
         { name: 'Traffic', link: '#traffic' },
         { name: 'Services', link: '#services' },
@@ -40,28 +40,28 @@
         { name: 'Settings', link: '#settings' },
       ]} />
 
-    <dash-panel :heading="Plan usage">
+    <dash-panel ::heading="Plan usage">
       <div class="small text-body-secondary d-flex justify-content-between">
         <span>Requests</span>
         <span>${fmt.compact(requests)} / 2M</span>
       </div>
-      <bs-progress :value=${Math.min(100, (requests / 2000000) * 100)}
-        :height="0.5rem"
-        :name="Request quota"
-        :extra="mb-3" />
+      <bs-progress ::value=${Math.min(100, (requests / 2000000) * 100)}
+        ::height="0.5rem"
+        ::name="Request quota"
+        ::extra="mb-3" />
 
       <div class="small text-body-secondary d-flex justify-content-between">
         <span>Seats</span>
         <span>18 / 25</span>
       </div>
-      <bs-progress :value=${72}
-        :variant="info"
-        :height="0.5rem"
-        :name="Seats used" />
+      <bs-progress ::value=${72}
+        ::variant="info"
+        ::height="0.5rem"
+        ::name="Seats used" />
 
-      <bs-link :href="#settings"
-        :variant="primary"
-        :extra="small d-inline-block mt-3">Manage plan</bs-link>
+      <bs-link ::href="#settings"
+        ::variant="primary"
+        ::extra="small d-inline-block mt-3">Manage plan</bs-link>
     </dash-panel>
   </:define>
 
@@ -75,15 +75,15 @@
   -->
   <:define tag="orbit-header:div"
     class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4"
-    :healthy=${0}
-    :total=${0}
-    :span=${24}
-    :live=${false}
-    :setSpan=${(n) => n}
-    :onExport=${() => undefined}>
+    ::healthy=${0}
+    ::total=${0}
+    ::span=${24}
+    ::live=${false}
+    ::setSpan=${(n) => n}
+    ::onExport=${() => undefined}>
     <div>
-      <bs-breadcrumb :extra="small"
-        :items=${[
+      <bs-breadcrumb ::extra="small"
+        ::items=${[
           { name: 'Orbit', link: '#overview' },
           { name: 'Production', link: '#overview' },
           { name: 'Console' },
@@ -103,39 +103,39 @@
         figure and chart is an expression over it, so this is the
         whole implementation of "change the range".
       -->
-      <bs-button-group :label="Window" :size="sm">
+      <bs-button-group ::label="Window" ::size="sm">
         <bs-button :for-each=${[6, 12, 24]}
           :for-as="n"
-          :variant="secondary"
-          :outline
-          :active=${span === n}
+          ::variant="secondary"
+          ::outline
+          ::active=${span === n}
           :on-click=${() => setSpan(n)}>${n}h</bs-button>
       </bs-button-group>
 
-      <bs-dropdown :label="Export"
-        :variant="secondary"
-        :outline
-        :size="sm"
-        :align="end"
-        :items=${[
+      <bs-dropdown ::label="Export"
+        ::variant="secondary"
+        ::outline
+        ::size="sm"
+        ::align="end"
+        ::items=${[
           { name: 'Download CSV', select: () => onExport() },
           { name: 'Copy API query', select: () => onExport() },
           { divider: true },
           { name: 'Schedule a report', disabled: true },
         ]} />
 
-      <bs-button :size="sm"
-        :toggle="modal"
-        :target="#dash-new-deploy">New deployment</bs-button>
+      <bs-button ::size="sm"
+        ::toggle="modal"
+        ::target="#dash-new-deploy">New deployment</bs-button>
     </div>
   </:define>
 
   <!--- What the page adds up to, in one line. -->
   <:define tag="orbit-footer:footer"
     class="border-top mt-4"
-    :services=${[]}
-    :deploys=${[]}
-    :requests=${0}>
+    ::services=${[]}
+    ::deploys=${[]}
+    ::requests=${0}>
     <div class="container-fluid px-3 px-lg-4 py-4 small text-body-secondary d-flex flex-wrap justify-content-between gap-2">
       <span>
         Orbit — a demo application for the
@@ -158,8 +158,8 @@
     this is the one region that wraps rather than replaces what was there.
   -->
   <:define tag="orbit-banner:div"
-    :incidents=${[]}
-    :acknowledge=${() => undefined}>
+    ::incidents=${[]}
+    ::acknowledge=${() => undefined}>
     <!---
       An optional region: `:for-data` renders once if its value is there
       and not at all otherwise, and binds it as `data`. That is what
@@ -169,16 +169,16 @@
       incident panel all go at once.
     -->
     <bs-alert :for-data=${incidents[0]}
-      :variant="danger"
-      :extra="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      ::variant="danger"
+      ::extra="d-flex flex-wrap justify-content-between align-items-center gap-3">
       <span>
         <strong>${incidents.length} open incident${incidents.length === 1 ? '' : 's'}.</strong>
         ${data.title}, ${fmt.ago(data.since)}.
       </span>
       <span class="d-flex gap-2">
-        <bs-link :href="#incidents" :button :variant="light" :size="sm">Details</bs-link>
-        <bs-button :variant="danger"
-          :size="sm"
+        <bs-link ::href="#incidents" ::button ::variant="light" ::size="sm">Details</bs-link>
+        <bs-button ::variant="danger"
+          ::size="sm"
           :on-click=${() => acknowledge()}>Acknowledge</bs-button>
       </span>
     </bs-alert>
@@ -194,57 +194,57 @@
   <:define tag="orbit-kpis:section"
     class="dash-section"
     id="overview"
-    :span=${24}
-    :services=${[]}
-    :healthy=${0}
-    :requests=${0}
-    :requestsDelta=${0}
-    :requestsTrend=${[]}
-    :errorRate=${0}
-    :faultsNow=${[]}
-    :faultsDelta=${0}
-    :latency=${0}
-    :latencyNow=${[]}
-    :latencyDelta=${0}
-    :uptime=${0}>
+    ::span=${24}
+    ::services=${[]}
+    ::healthy=${0}
+    ::requests=${0}
+    ::requestsDelta=${0}
+    ::requestsTrend=${[]}
+    ::errorRate=${0}
+    ::faultsNow=${[]}
+    ::faultsDelta=${0}
+    ::latency=${0}
+    ::latencyNow=${[]}
+    ::latencyDelta=${0}
+    ::uptime=${0}>
     <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-4">
       <div class="col">
-        <dash-stat :caption="Requests"
-          :figure=${fmt.compact(requests)}
-          :delta=${requestsDelta}
-          :trend=${requestsTrend}>
+        <dash-stat ::caption="Requests"
+          ::figure=${fmt.compact(requests)}
+          ::delta=${requestsDelta}
+          ::trend=${requestsTrend}>
           vs. the ${span} readings before
         </dash-stat>
       </div>
 
       <div class="col">
-        <dash-stat :caption="Error rate"
-          :figure=${errorRate.toFixed(2)}
-          :unit="%"
-          :tone=${errorRate > 0.5 ? 'danger' : 'success'}
-          :delta=${faultsDelta}
-          :trend=${faultsNow}>
+        <dash-stat ::caption="Error rate"
+          ::figure=${errorRate.toFixed(2)}
+          ::unit="%"
+          ::tone=${errorRate > 0.5 ? 'danger' : 'success'}
+          ::delta=${faultsDelta}
+          ::trend=${faultsNow}>
           ${fmt.num(calc.sum(faultsNow))} failed requests
         </dash-stat>
       </div>
 
       <div class="col">
-        <dash-stat :caption="p50 latency"
-          :figure=${Math.round(latency)}
-          :unit="ms"
-          :delta=${latencyDelta}
-          :tone=${latency > 140 ? 'warning' : 'success'}
-          :trend=${latencyNow}>
+        <dash-stat ::caption="p50 latency"
+          ::figure=${Math.round(latency)}
+          ::unit="ms"
+          ::delta=${latencyDelta}
+          ::tone=${latency > 140 ? 'warning' : 'success'}
+          ::trend=${latencyNow}>
           budget is 150ms
         </dash-stat>
       </div>
 
       <div class="col">
-        <dash-stat :caption="Availability"
-          :figure=${uptime.toFixed(2)}
-          :unit="%"
-          :trend=${services.map(s => s.uptime)}
-          :tone=${uptime > 99.9 ? 'success' : 'warning'}>
+        <dash-stat ::caption="Availability"
+          ::figure=${uptime.toFixed(2)}
+          ::unit="%"
+          ::trend=${services.map(s => s.uptime)}
+          ::tone=${uptime > 99.9 ? 'success' : 'warning'}>
           ${healthy}/${services.length} services in budget
         </dash-stat>
       </div>
@@ -255,30 +255,30 @@
   <:define tag="orbit-traffic:section"
     class="dash-section"
     id="traffic"
-    :live=${false}
-    :setLive=${(v) => v}
-    :errorRate=${0}
-    :requestsTrend=${[]}
-    :faultsNow=${[]}
-    :latencyNow=${[]}
-    :zones=${[]}
-    :forecast=${null}
-    :latency=${0}
-    :requests=${0}
+    ::live=${false}
+    ::setLive=${(v) => v}
+    ::errorRate=${0}
+    ::requestsTrend=${[]}
+    ::faultsNow=${[]}
+    ::latencyNow=${[]}
+    ::zones=${[]}
+    ::forecast=${null}
+    ::latency=${0}
+    ::requests=${0}
   >
     <div class="row g-4">
       <div class="col-xl-8">
-        <dash-panel :heading="Traffic"
-          :note="Every series below is the same window, read three ways.">
+        <dash-panel ::heading="Traffic"
+          ::note="Every series below is the same window, read three ways.">
           <div :slot="tools" class="d-flex align-items-center gap-3">
-            <bs-check :type="switch"
-              :label="Live"
-              :checked=${live}
-              :extra="mb-0"
+            <bs-check ::type="switch"
+              ::label="Live"
+              ::checked=${live}
+              ::extra="mb-0"
               :on-change=${ev => setLive(ev.target.checked)} />
-            <bs-tooltip :title="A new reading arrives every two seconds while this is on.">
-              <bs-badge :variant=${live ? 'success' : 'secondary'}
-                :pill>${live ? 'streaming' : 'paused'}</bs-badge>
+            <bs-tooltip ::title="A new reading arrives every two seconds while this is on.">
+              <bs-badge ::variant=${live ? 'success' : 'secondary'}
+                ::pill>${live ? 'streaming' : 'paused'}</bs-badge>
             </bs-tooltip>
           </div>
 
@@ -287,18 +287,18 @@
             writes the id wiring between the nav and the panes. Here
             they hold one chart component over three arrays.
           -->
-          <bs-nav :variant="underline"
-            :extra="mb-3"
-            :toggle="tab"
-            :items=${[
+          <bs-nav ::variant="underline"
+            ::extra="mb-3"
+            ::toggle="tab"
+            ::items=${[
               { name: 'Requests', target: '#dash-pane-requests', active: true },
               { name: 'Errors', target: '#dash-pane-errors' },
               { name: 'Latency', target: '#dash-pane-latency' },
             ]} />
 
           <bs-tab-content>
-            <bs-tab-pane :name="dash-pane-requests" :active>
-              <dash-chart :points=${requestsTrend} :tall />
+            <bs-tab-pane ::name="dash-pane-requests" ::active>
+              <dash-chart ::points=${requestsTrend} ::tall />
               <div class="d-flex justify-content-between small text-body-secondary mt-2">
                 <span>${fmt.num(Math.min(...requestsTrend))} low</span>
                 <span>${fmt.num(Math.round(calc.mean(requestsTrend)))} mean</span>
@@ -306,10 +306,10 @@
               </div>
             </bs-tab-pane>
 
-            <bs-tab-pane :name="dash-pane-errors">
-              <dash-chart :points=${faultsNow}
-                :tall
-                :stroke="var(--bs-danger)" />
+            <bs-tab-pane ::name="dash-pane-errors">
+              <dash-chart ::points=${faultsNow}
+                ::tall
+                ::stroke="var(--bs-danger)" />
               <div class="d-flex justify-content-between small text-body-secondary mt-2">
                 <span>${Math.min(...faultsNow)} low</span>
                 <span>${errorRate.toFixed(2)}% of all requests</span>
@@ -317,10 +317,10 @@
               </div>
             </bs-tab-pane>
 
-            <bs-tab-pane :name="dash-pane-latency">
-              <dash-chart :points=${latencyNow}
-                :tall
-                :stroke="var(--bs-warning)" />
+            <bs-tab-pane ::name="dash-pane-latency">
+              <dash-chart ::points=${latencyNow}
+                ::tall
+                ::stroke="var(--bs-warning)" />
               <div class="d-flex justify-content-between small text-body-secondary mt-2">
                 <span>${Math.min(...latencyNow)}ms low</span>
                 <span>${Math.round(latency)}ms mean</span>
@@ -333,7 +333,7 @@
 
       <div class="col-xl-4">
         <div class="dash-rows">
-          <dash-panel :heading="Traffic by region">
+          <dash-panel ::heading="Traffic by region">
             <!---
               One track, three bars, and a legend, from one array.
 
@@ -347,10 +347,10 @@
               <bs-progress :for-each=${zones}
                 :for-as="zone"
                 :style-width="${zone.share}%"
-                :value=${100}
-                :variant=${zone.tone}
-                :name="${zone.name}, ${zone.share}%"
-                :label="${zone.share}%" />
+                ::value=${100}
+                ::variant=${zone.tone}
+                ::name="${zone.name}, ${zone.share}%"
+                ::label="${zone.share}%" />
             </bs-progress-stacked>
 
             <div class="d-flex flex-wrap gap-3 mt-3 small">
@@ -368,12 +368,12 @@
             and is filled a moment after the page comes up. Nothing
             in the second region is evaluated until it is.
           -->
-          <dash-panel :heading="Cost forecast"
-            :note=${forecast ? 'Billing period ends in ' + forecast.days + ' days' : 'Loading…'}>
+          <dash-panel ::heading="Cost forecast"
+            ::note=${forecast ? 'Billing period ends in ' + forecast.days + ' days' : 'Loading…'}>
             <div :if=${!forecast}>
-              <bs-placeholder :cols=${8} /><br>
-              <bs-placeholder :cols=${5} /><br>
-              <bs-placeholder :cols=${11} />
+              <bs-placeholder ::cols=${8} /><br>
+              <bs-placeholder ::cols=${5} /><br>
+              <bs-placeholder ::cols=${11} />
             </div>
 
             <div :for-data=${forecast}>
@@ -381,11 +381,11 @@
                 <span class="dash-figure">$${fmt.num(data.spend)}</span>
                 <span class="text-body-secondary small">of $${fmt.num(data.budget)}</span>
               </div>
-              <bs-progress :value=${(data.spend / data.budget) * 100}
-                :variant=${data.projected > data.budget ? 'danger' : 'success'}
-                :height="0.5rem"
-                :name="Spend against budget"
-                :extra="mt-2 mb-2" />
+              <bs-progress ::value=${(data.spend / data.budget) * 100}
+                ::variant=${data.projected > data.budget ? 'danger' : 'success'}
+                ::height="0.5rem"
+                ::name="Spend against budget"
+                ::extra="mt-2 mb-2" />
               <p class="small text-body-secondary mb-0">
                 Projected $${fmt.num(data.projected)} —
                 ${data.projected > data.budget ? 'over' : 'under'} budget.
@@ -401,18 +401,18 @@
   <:define tag="orbit-services:section"
     class="dash-section"
     id="services"
-    :services=${[]}
-    :endpoints=${[]}
-    :healthy=${0}
+    ::services=${[]}
+    ::endpoints=${[]}
+    ::healthy=${0}
   >
     <div class="row g-4">
       <div class="col-xl-7">
-        <dash-panel :heading="Services"
-          :note="Sorted by the tightest error budget first."
-          :flush>
+        <dash-panel ::heading="Services"
+          ::note="Sorted by the tightest error budget first."
+          ::flush>
           <div :slot="tools">
-            <bs-badge :variant=${healthy === services.length ? 'success' : 'warning'}
-              :pill>${healthy}/${services.length} healthy</bs-badge>
+            <bs-badge ::variant=${healthy === services.length ? 'success' : 'warning'}
+              ::pill>${healthy}/${services.length} healthy</bs-badge>
           </div>
 
           <!---
@@ -438,17 +438,17 @@
                 :for-as="svc"
                 :for-key=${svc.id}>
                 <td>
-                  <dash-dot :state=${svc.state} :quiet />
+                  <dash-dot ::state=${svc.state} ::quiet />
                   <span class="ms-2 fw-semibold">${svc.name}</span>
                 </td>
                 <td class="text-body-secondary">${svc.owner}</td>
                 <td class="text-end">${svc.latency ? svc.latency + 'ms' : '—'}</td>
                 <td class="text-end d-none d-md-table-cell">${fmt.compact(svc.rps)}/s</td>
                 <td style="min-width: 8rem">
-                  <bs-progress :value=${Math.max(2, 100 - svc.errors * 40)}
-                    :variant=${theme.tone(svc.state)}
-                    :height="0.4rem"
-                    :name="Error budget for ${svc.name}" />
+                  <bs-progress ::value=${Math.max(2, 100 - svc.errors * 40)}
+                    ::variant=${theme.tone(svc.state)}
+                    ::height="0.4rem"
+                    ::name="Error budget for ${svc.name}" />
                   <span class="small text-body-secondary">${svc.errors.toFixed(2)}% errors</span>
                 </td>
               </tr>
@@ -458,22 +458,22 @@
       </div>
 
       <div class="col-xl-5">
-        <dash-panel :heading="Top endpoints"
-          :note="Numbers only, so the component does the repeating.">
+        <dash-panel ::heading="Top endpoints"
+          ::note="Numbers only, so the component does the repeating.">
           <!---
             Here `bs-table` is exactly right: one shape repeated over
             a list, and every cell is text. The rows are built by an
             expression over the same array the bars below read.
           -->
-          <bs-table :small
-            :hover
-            :extra="mb-3"
-            :columns=${[
+          <bs-table ::small
+            ::hover
+            ::extra="mb-3"
+            ::columns=${[
               { key: 'path', name: 'Path' },
               { key: 'calls', name: 'Calls', class: 'text-end' },
               { key: 'share', name: 'Share', class: 'text-end' },
             ]}
-            :rows=${endpoints.map(e => ({
+            ::rows=${endpoints.map(e => ({
               path: e.path,
               calls: fmt.compact(e.calls),
               share: `${e.share}%`,
@@ -481,12 +481,12 @@
 
           <bs-progress :for-each=${endpoints}
             :for-as="ep"
-            :value=${ep.share}
-            :max=${40}
-            :variant=${ep.tone}
-            :height="0.35rem"
-            :name=${ep.path}
-            :extra="mb-2" />
+            ::value=${ep.share}
+            ::max=${40}
+            ::variant=${ep.tone}
+            ::height="0.35rem"
+            ::name=${ep.path}
+            ::extra="mb-2" />
         </dash-panel>
       </div>
     </div>
@@ -510,15 +510,15 @@
   <:define tag="orbit-deployments:section"
     class="dash-section"
     id="deployments"
-    :deploys=${[]}
-    :failed=${0}
-    :chosen=${null}
-    :choose=${(row) => row}
+    ::deploys=${[]}
+    ::failed=${0}
+    ::chosen=${null}
+    ::choose=${(row) => row}
 
     // the table's own state: which column, which way, which page
-    :sortKey=${'ago'}
-    :sortDir=${'asc'}
-    :pageNo=${1}
+    ::sortKey=${'ago'}
+    ::sortDir=${'asc'}
+    ::pageNo=${1}
 
     /*
       Sorting is two values and one function that flips them; the
@@ -542,13 +542,13 @@
       writing all three values itself, which is the component's
       state leaking back out one assignment at a time.
     */
-    :showNewest=${() => {
+    ::showNewest=${() => {
       pageNo = 1;
       sortKey = 'ago';
       sortDir = 'asc';
     }}
   >
-    <dash-panel :heading="Deployments" :flush>
+    <dash-panel ::heading="Deployments" ::flush>
       <div :slot="tools" class="small text-body-secondary">
         ${failed} failed in the last 24h
       </div>
@@ -557,34 +557,34 @@
         <div class="row g-2 align-items-end">
           <div class="col-md-4">
             <bs-input :aka="hunt"
-              :label="Search"
-              :size="sm"
-              :extra="mb-0"
-              :placeholder="service, commit or author" />
+              ::label="Search"
+              ::size="sm"
+              ::extra="mb-0"
+              ::placeholder="service, commit or author" />
           </div>
           <div class="col-6 col-md-3">
             <bs-select :aka="envPick"
-              :label="Environment"
-              :size="sm"
-              :extra="mb-0"
-              :placeholder="All"
-              :options=${['production', 'staging']} />
+              ::label="Environment"
+              ::size="sm"
+              ::extra="mb-0"
+              ::placeholder="All"
+              ::options=${['production', 'staging']} />
           </div>
           <div class="col-6 col-md-3">
             <bs-select :aka="statePick"
-              :label="Status"
-              :size="sm"
-              :extra="mb-0"
-              :placeholder="Any"
-              :options=${['shipped', 'running', 'queued', 'failed']} />
+              ::label="Status"
+              ::size="sm"
+              ::extra="mb-0"
+              ::placeholder="Any"
+              ::options=${['shipped', 'running', 'queued', 'failed']} />
           </div>
           <div class="col-md-2">
             <bs-select :aka="pageSize"
-              :label="Per page"
-              :size="sm"
-              :extra="mb-0"
-              :value=${'6'}
-              :options=${['6', '10', '20']} />
+              ::label="Per page"
+              ::size="sm"
+              ::extra="mb-0"
+              ::value=${'6'}
+              ::options=${['6', '10', '20']} />
           </div>
         </div>
       </div>
@@ -633,9 +633,9 @@
                   { key: 'ago', name: 'When' },
                 ]}
                 :for-as="col">
-                <bs-button :variant="link"
-                  :size="sm"
-                  :extra="p-0 text-decoration-none fw-semibold text-body"
+                <bs-button ::variant="link"
+                  ::size="sm"
+                  ::extra="p-0 text-decoration-none fw-semibold text-body"
                   :on-click=${() => _sortBy(col.key)}>${col.name}${_mark(col.key)}</bs-button>
               </th>
               <th scope="col"><span class="visually-hidden">Actions</span></th>
@@ -650,7 +650,7 @@
               :on-click=${() => choose(row)}>
               <td class="fw-semibold">${row.service}</td>
               <td>
-                <bs-badge :variant=${row.env === 'production' ? 'dark' : 'secondary'}>
+                <bs-badge ::variant=${row.env === 'production' ? 'dark' : 'secondary'}>
                   ${row.env}
                 </bs-badge>
               </td>
@@ -659,18 +659,18 @@
               <td>
                 <span class="d-inline-flex align-items-center gap-2">
                   <bs-spinner :if=${row.state === 'running'}
-                    :small
-                    :variant="info"
-                    :label="Deploying" />
-                  <dash-dot :state=${row.state} />
+                    ::small
+                    ::variant="info"
+                    ::label="Deploying" />
+                  <dash-dot ::state=${row.state} />
                 </span>
               </td>
               <td>${row.secs ? fmt.secs(row.secs) : '—'}</td>
               <td class="text-body-secondary">${fmt.ago(row.ago)}</td>
               <td class="text-end">
-                <bs-button :size="sm"
-                  :variant="secondary"
-                  :outline
+                <bs-button ::size="sm"
+                  ::variant="secondary"
+                  ::outline
                   :on-click=${() => choose(row)}>Open</bs-button>
               </td>
             </tr>
@@ -693,11 +693,11 @@
               >(${deploys.length} unfiltered)</span>
           </span>
 
-          <bs-pagination :current=${_page}
-            :pages=${_pages}
-            :size="sm"
-            :label="Deployment pages"
-            :select=${(n) => pageNo = n} />
+          <bs-pagination ::current=${_page}
+            ::pages=${_pages}
+            ::size="sm"
+            ::label="Deployment pages"
+            ::select=${(n) => pageNo = n} />
         </div>
       </div>
     </dash-panel>
@@ -707,26 +707,26 @@
   <:define tag="orbit-incidents:section"
     class="dash-section"
     id="incidents"
-    :incidents=${[]}
-    :resolve=${(id) => id}
+    ::incidents=${[]}
+    ::resolve=${(id) => id}
   >
     <div class="row g-4">
       <div class="col-xl-7">
-        <dash-panel :heading="Incidents"
-          :note="An accordion item asks the accordion it was slotted into for its id — nothing here carries one.">
+        <dash-panel ::heading="Incidents"
+          ::note="An accordion item asks the accordion it was slotted into for its id — nothing here carries one.">
           <bs-accordion>
             <bs-accordion-item :for-each=${incidents}
               :for-as="inc"
               :for-key=${inc.id}
-              :title="#${inc.id} — ${inc.title}">
+              ::title="#${inc.id} — ${inc.title}">
               <p>${inc.detail}</p>
               <p class="small text-body-secondary mb-3">
                 Open for ${fmt.ago(inc.since)} · severity
-                <bs-badge :variant=${inc.tone}>${inc.tone === 'danger' ? 'high' : 'medium'}</bs-badge>
+                <bs-badge ::variant=${inc.tone}>${inc.tone === 'danger' ? 'high' : 'medium'}</bs-badge>
               </p>
-              <bs-button :size="sm"
-                :variant="secondary"
-                :outline
+              <bs-button ::size="sm"
+                ::variant="secondary"
+                ::outline
                 :on-click=${() => resolve(inc.id)}>Mark resolved</bs-button>
             </bs-accordion-item>
           </bs-accordion>
@@ -742,22 +742,22 @@
       </div>
 
       <div class="col-xl-5">
-        <dash-panel :heading="Runbook"
-          :note="A nav and a scrolling region, tied together by scrollspy.">
-          <bs-nav :vertical
-            :variant="underline"
-            :extra="mb-2"
+        <dash-panel ::heading="Runbook"
+          ::note="A nav and a scrolling region, tied together by scrollspy.">
+          <bs-nav ::vertical
+            ::variant="underline"
+            ::extra="mb-2"
             id="dash-runbook-nav"
-            :items=${[
+            ::items=${[
               { name: 'Roll back', link: '#dash-run-rollback' },
               { name: 'Drain a region', link: '#dash-run-drain' },
               { name: 'Page the owner', link: '#dash-run-page' },
             ]} />
 
-          <bs-scrollspy :target="#dash-runbook-nav"
-            :height=${170}
-            :smooth
-            :extra="border rounded p-3">
+          <bs-scrollspy ::target="#dash-runbook-nav"
+            ::height=${170}
+            ::smooth
+            ::extra="border rounded p-3">
             <h6 id="dash-run-rollback">Roll back</h6>
             <p class="small text-body-secondary">
               Find the last deployment with a <code>shipped</code> status for
@@ -788,21 +788,21 @@
   <:define tag="orbit-activity:section"
     class="dash-section"
     id="activity"
-    :feed=${[]}
-    :todos=${[]}
-    :doneTodos=${0}
-    :setTodos=${(next) => next}
+    ::feed=${[]}
+    ::todos=${[]}
+    ::doneTodos=${0}
+    ::setTodos=${(next) => next}
   >
     <div class="row g-4">
       <div class="col-xl-6">
-        <dash-panel :heading="Activity" :flush>
+        <dash-panel ::heading="Activity" ::flush>
           <div :slot="tools">
-            <bs-badge :variant="secondary" :pill>${feed.length}</bs-badge>
+            <bs-badge ::variant="secondary" ::pill>${feed.length}</bs-badge>
           </div>
 
           <!--- a list group's API is its array, so the feed is one expression -->
-          <bs-list-group :flush
-            :items=${feed.map(f => ({
+          <bs-list-group ::flush
+            ::items=${feed.map(f => ({
               name: `${f.who} ${f.what}`,
               text: fmt.ago(f.ago),
               badge: { name: f.kind, variant: f.kind },
@@ -811,16 +811,16 @@
       </div>
 
       <div class="col-xl-6">
-        <dash-panel :heading="Today">
+        <dash-panel ::heading="Today">
           <div :slot="tools" class="small text-body-secondary">
             ${doneTodos}/${todos.length} done
           </div>
 
-          <bs-progress :value=${todos.length ? (doneTodos / todos.length) * 100 : 0}
-            :variant="success"
-            :height="0.4rem"
-            :name="Tasks completed"
-            :extra="mb-3" />
+          <bs-progress ::value=${todos.length ? (doneTodos / todos.length) * 100 : 0}
+            ::variant="success"
+            ::height="0.4rem"
+            ::name="Tasks completed"
+            ::extra="mb-3" />
 
           <!---
             A checkbox that writes back into the array it came from:
@@ -832,27 +832,27 @@
           -->
           <div :for-each=${todos} :for-as="task" :for-key=${task.id}>
             <div class="d-flex justify-content-between align-items-center gap-2">
-              <bs-check :label=${task.text}
-                :checked=${task.done}
-                :extra=${task.done ? 'text-decoration-line-through opacity-50' : null}
+              <bs-check ::label=${task.text}
+                ::checked=${task.done}
+                ::extra=${task.done ? 'text-decoration-line-through opacity-50' : null}
                 :on-change=${ev => setTodos(todos.map(t =>
                   t.id === task.id ? { ...t, done: ev.target.checked } : t))} />
-              <bs-badge :variant=${task.due === 'today' ? 'warning' : 'secondary'}
-                :pill>${task.due}</bs-badge>
+              <bs-badge ::variant=${task.due === 'today' ? 'warning' : 'secondary'}
+                ::pill>${task.due}</bs-badge>
             </div>
           </div>
 
           <div class="d-flex gap-2 mt-3">
-            <bs-button :size="sm"
-              :variant="secondary"
-              :outline
-              :disabled=${doneTodos === 0}
+            <bs-button ::size="sm"
+              ::variant="secondary"
+              ::outline
+              ::disabled=${doneTodos === 0}
               :on-click=${() => setTodos(todos.filter(t => !t.done))}>
               Clear ${doneTodos} done
             </bs-button>
-            <bs-button :size="sm"
-              :variant="secondary"
-              :outline
+            <bs-button ::size="sm"
+              ::variant="secondary"
+              ::outline
               :on-click=${() => setTodos(todos.map(t => ({ ...t, done: false })))}>
               Reset
             </bs-button>
@@ -880,13 +880,13 @@
   <:define tag="orbit-settings:section"
     class="dash-section"
     id="settings"
-    :swatches=${[]}
-    :accent=${''}
-    :setAccent=${(hex) => hex}
-    :dense=${false}
-    :setDense=${(on) => on}
-    :errorRate=${0}
-    :onSave=${() => undefined}
+    ::swatches=${[]}
+    ::accent=${''}
+    ::setAccent=${(hex) => hex}
+    ::dense=${false}
+    ::setDense=${(on) => on}
+    ::errorRate=${0}
+    ::onSave=${() => undefined}
 
     /*
       What the panel offers back. An `:aka` name is the definition's
@@ -894,12 +894,12 @@
       of the interface -- so the address the toasts quote is a value
       declared here, and the control behind it stays private.
     */
-    :address=${contact.value}
+    ::address=${contact.value}
   >
     <div class="row g-4">
       <div class="col-xl-6">
-        <dash-panel :heading="Appearance"
-          :note="Both of these are page-level values, which is how the stylesheet can read them.">
+        <dash-panel ::heading="Appearance"
+          ::note="Both of these are page-level values, which is how the stylesheet can read them.">
           <div class="mb-3">
             <div class="form-label">Accent</div>
             <div class="d-flex gap-2">
@@ -910,8 +910,8 @@
               -->
               <bs-button :for-each=${swatches}
                 :for-as="hex"
-                :variant=${null}
-                :extra="dash-swatch"
+                ::variant=${null}
+                ::extra="dash-swatch"
                 :class-dash-picked=${accent === hex}
                 :style-background-color=${hex}
                 :on-click=${() => setAccent(hex)}
@@ -919,10 +919,10 @@
             </div>
           </div>
 
-          <bs-check :type="switch"
-            :label="Compact rows"
-            :help="Sets the cell padding used by both tables."
-            :checked=${dense}
+          <bs-check ::type="switch"
+            ::label="Compact rows"
+            ::help="Sets the cell padding used by both tables."
+            ::checked=${dense}
             :on-change=${ev => setDense(ev.target.checked)} />
 
           <hr>
@@ -937,46 +937,46 @@
       </div>
 
       <div class="col-xl-6">
-        <dash-panel :heading="Notifications"
-          :note="An ordinary form: every control names itself, and the summary reads them.">
+        <dash-panel ::heading="Notifications"
+          ::note="An ordinary form: every control names itself, and the summary reads them.">
           <div class="row g-3">
             <div class="col-md-6">
               <bs-input :aka="contact"
-                :label="Alert address"
-                :type="email"
-                :value="ops@orbit.dev"
-                :check=${(v) => v.includes('@') && v.includes('.')}
-                :message="That doesn't look like an email address."
-                :extra="mb-0" />
+                ::label="Alert address"
+                ::type="email"
+                ::value="ops@orbit.dev"
+                ::check=${(v) => v.includes('@') && v.includes('.')}
+                ::message="That doesn't look like an email address."
+                ::extra="mb-0" />
             </div>
             <div class="col-md-6">
               <bs-select :aka="quiet"
-                :label="Quiet hours"
-                :value=${'22:00 – 07:00'}
-                :options=${['Never', '22:00 – 07:00', 'Weekends']}
-                :extra="mb-0" />
+                ::label="Quiet hours"
+                ::value=${'22:00 – 07:00'}
+                ::options=${['Never', '22:00 – 07:00', 'Weekends']}
+                ::extra="mb-0" />
             </div>
           </div>
 
           <bs-range :aka="threshold"
-            :label="Page me above this error rate"
-            :showValue
-            :min=${0}
-            :max=${5}
-            :step=${0.1}
-            :value=${1.5}
-            :extra="mt-3 mb-2" />
+            ::label="Page me above this error rate"
+            ::showValue
+            ::min=${0}
+            ::max=${5}
+            ::step=${0.1}
+            ::value=${1.5}
+            ::extra="mt-3 mb-2" />
 
           <bs-check-group :aka="channels"
-            :legend="Deliver to"
-            :type="checkbox"
-            :inline
-            :value=${'Slack'}
-            :options=${['Email', 'Slack', 'SMS']} />
+            ::legend="Deliver to"
+            ::type="checkbox"
+            ::inline
+            ::value=${'Slack'}
+            ::options=${['Email', 'Slack', 'SMS']} />
 
           <!--- not kept up to date — derived: it reads the controls above -->
-          <bs-alert :variant=${contact._invalid ? 'danger' : 'secondary'}
-            :extra="mb-3">
+          <bs-alert ::variant=${contact._invalid ? 'danger' : 'secondary'}
+            ::extra="mb-3">
             <span :if=${contact._invalid}>
               Fix the alert address before saving.
             </span>
@@ -990,7 +990,7 @@
             </span>
           </bs-alert>
 
-          <bs-button :disabled=${contact._invalid}
+          <bs-button ::disabled=${contact._invalid}
             :on-click=${() => onSave()}>Save settings</bs-button>
         </dash-panel>
       </div>

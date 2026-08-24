@@ -7,7 +7,7 @@
     given, which is the kit's general shape — a caller writes what the card
     HAS, not the markup that produces it.
 
-      <bs-card :title="Card title" :footer="2 days ago">
+      <bs-card ::title="Card title" ::footer="2 days ago">
         <p class="card-text">Some quick example text.</p>
       </bs-card>
 
@@ -19,18 +19,18 @@
   <:define tag="bs-card:div"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :bodyExtra=${null}  // extra classes for the body: `p-0`, `p-4`, `d-flex`
-    :title=${null}
-    :subtitle=${null}
-    :header=${null}
-    :footer=${null}
-    :image=${null}
-    :imageAlt=${''}
-    :imageBottom=${false}
-    :variant=${null}       // colours the whole card, e.g. 'primary'
-    :border=${null}        // colours only the border
-    :align=${null}         // 'center' | 'end'
+    ::extra=${null}      // extra classes for this instance
+    ::bodyExtra=${null}  // extra classes for the body: `p-0`, `p-4`, `d-flex`
+    ::title=${null}
+    ::subtitle=${null}
+    ::header=${null}
+    ::footer=${null}
+    ::image=${null}
+    ::imageAlt=${''}
+    ::imageBottom=${false}
+    ::variant=${null}       // colours the whole card, e.g. 'primary'
+    ::border=${null}        // colours only the border
+    ::align=${null}         // 'center' | 'end'
 
     // private
     :_class=${[
@@ -84,10 +84,10 @@
   <:define tag="bs-card-group:div"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :cols=${3}
-    :gap=${4}
-    :attached=${false}     // a seamless strip instead of separate cards
+    ::extra=${null}      // extra classes for this instance
+    ::cols=${3}
+    ::gap=${4}
+    ::attached=${false}     // a seamless strip instead of separate cards
 
     // private
     :_class=${attached

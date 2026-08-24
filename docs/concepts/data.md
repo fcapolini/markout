@@ -88,7 +88,7 @@ Where the data outside the page comes in:
 [`std-data`](../../kits/std-kit/parts/data.htm), in the standard kit.
 
 ```html
-<std-data :aka="rows" :url="/api/tracks" />
+<std-data :aka="rows" ::url="/api/tracks" />
 
 <li :for-each=${rows.data ?? []}>${data.title}</li>
 ```

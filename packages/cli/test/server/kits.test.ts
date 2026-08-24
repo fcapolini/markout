@@ -40,7 +40,7 @@ beforeAll(async () => {
   fs.writeFileSync(path.join(kit, 'all.htm'), '<lib><:include src="./parts/badge.htm"/></lib>');
   fs.writeFileSync(
     path.join(kit, 'parts', 'badge.htm'),
-    '<lib><:define tag="kit-badge:span" :label=${\'none\'} class=${`badge ${label}`}><:slot/></:define></lib>'
+    '<lib><:define tag="kit-badge:span" ::label=${\'none\'} class=${`badge ${label}`}><:slot/></:define></lib>'
   );
   fs.writeFileSync(path.join(kit, 'res', 'logo.png'), 'PNG');
   fs.writeFileSync(path.join(kit, 'res', 'kit.css'), '.badge { color: red }');
@@ -53,7 +53,7 @@ beforeAll(async () => {
     path.join(docroot, 'index.html'),
     '<html><head><:import src="/npm/@markout-lang/bootstrap-kit/all.htm"/></head>' +
       '<body><img src="/bootstrap-kit/res/logo.png">' +
-      '<kit-badge :label="ok">shipped</kit-badge></body></html>'
+      '<kit-badge ::label="ok">shipped</kit-badge></body></html>'
   );
 
   server = new Server({ docroot, logger: () => {} });

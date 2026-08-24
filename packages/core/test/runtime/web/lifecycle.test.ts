@@ -53,7 +53,7 @@ const NOTE = (what: string) =>
   `\${() => { globalThis.LIFECYCLE_LOG.push("${what} " + tag); }}`;
 
 const PROBE =
-  '<:define tag="my-probe:i" :tag=${""} ' +
+  '<:define tag="my-probe:i" ::tag=${""} ' +
   `:did-init=${NOTE('init')} ` +
   `:did-attach=${NOTE('attach')} ` +
   `:will-detach=${NOTE('detach')} ` +
@@ -62,7 +62,7 @@ const PROBE =
 describe('lifecycle callbacks', () => {
   it('announces a scope and its markup, in that order', async () => {
     const { errors, log } = await run(
-      `<html><head>${PROBE}</head><body><my-probe :tag="a" /></body></html>`
+      `<html><head>${PROBE}</head><body><my-probe ::tag="a" /></body></html>`
     );
     expect(errors).toStrictEqual([]);
     expect(log).toStrictEqual(['init a', 'attach a']);
@@ -72,7 +72,7 @@ describe('lifecycle callbacks', () => {
     // browser-only, like `:handle-`: a served page has no view to drive, and
     // a timer started here would run on the server
     const { atServe } = await run(
-      `<html><head>${PROBE}</head><body><my-probe :tag="a" /></body></html>`
+      `<html><head>${PROBE}</head><body><my-probe ::tag="a" /></body></html>`
     );
     expect(atServe).toStrictEqual([]);
   });
@@ -80,7 +80,7 @@ describe('lifecycle callbacks', () => {
   it('detaches before disposing when a replica is dropped', async () => {
     const { ctx, log } = await run(
       `<html :rows=${'${["a", "b"]}'}><head>${PROBE}</head>` +
-        '<body><my-probe :for-each=${rows} :tag=${data} /></body></html>'
+        '<body><my-probe :for-each=${rows} ::tag=${data} /></body></html>'
     );
     expect(log).toStrictEqual(['init a', 'attach a', 'init b', 'attach b']);
 
@@ -95,7 +95,7 @@ describe('lifecycle callbacks', () => {
     // component that only had `:will-dispose` would never hear about this
     const { ctx, log } = await run(
       `<html :on=${'${true}'}><head>${PROBE}</head>` +
-        '<body><div :for-data=${on}><my-probe :tag="r" /></div></body></html>'
+        '<body><div :for-data=${on}><my-probe ::tag="r" /></div></body></html>'
     );
     expect(log).toStrictEqual(['init r', 'attach r']);
 
@@ -113,7 +113,7 @@ describe('lifecycle callbacks', () => {
     // of its values, and for the same reason reports none of its lifetime
     const { log } = await run(
       `<html><head>${PROBE}</head>` +
-        '<body><my-probe :for-each=${[]} :tag="never" /></body></html>'
+        '<body><my-probe :for-each=${[]} ::tag="never" /></body></html>'
     );
     expect(log).toStrictEqual([]);
   });
@@ -121,12 +121,12 @@ describe('lifecycle callbacks', () => {
   it('takes a subtree apart deepest first, and builds it parents first', async () => {
     const { ctx, log } = await run(
       '<html :on=${true}><head>' +
-        '<:define tag="my-outer:div" :tag=${""} ' +
+        '<:define tag="my-outer:div" ::tag=${""} ' +
         `:did-attach=${NOTE('attach')} :will-detach=${NOTE('detach')}><:slot /></:define>` +
-        '<:define tag="my-inner:i" :tag=${""} ' +
+        '<:define tag="my-inner:i" ::tag=${""} ' +
         `:did-attach=${NOTE('attach')} :will-detach=${NOTE('detach')}>x</:define>` +
-        '</head><body><div :for-data=${on}>' +
-        '<my-outer :tag="out"><my-inner :tag="in" /></my-outer>' +
+        '</head>><body><div :for-data=${on}>' +
+        '<my-outer ::tag="out"><my-inner ::tag="in" /></my-outer>' +
         '</div></body></html>'
     );
     expect(log).toStrictEqual(['attach out', 'attach in']);

@@ -60,8 +60,8 @@ describe('a definition parameter, read in the definition body', () => {
       [
         '<lib>',
         '  <:define tag="x-card:div"',
-        '           :title=${\'Untitled\'}',
-        '           :tone=${\'plain\'}>',
+        '           ::title=${\'Untitled\'}',
+        '           ::tone=${\'plain\'}>',
         '    <h2>${title}</h2>',
         '  </:define>',
         '</lib>',
@@ -78,8 +78,8 @@ describe('a definition parameter, read in the definition body', () => {
       [
         '<lib>',
         '  <:define tag="x-card:div"',
-        '           :title=${\'Untitled\'}',
-        '           :tone=${\'plain\'}>',
+        '           ::title=${\'Untitled\'}',
+        '           ::tone=${\'plain\'}>',
         '    <h2>${title}</h2>',
         '    <p class=${tone}>x</p>',
         '  </:define>',
@@ -95,7 +95,7 @@ describe('a definition parameter, read in the definition body', () => {
       [
         '<lib>',
         '  <:define tag="x-card:div"',
-        '           :tone=${\'plain\'}',
+        '           ::tone=${\'plain\'}',
         '           :class-warm=${tone === \'warm\'}>',
         '    <:slot />',
         '  </:define>',
@@ -221,7 +221,7 @@ describe('a custom tag', () => {
   const LIB = [
     '<lib>',
     '  <:define tag="x-card:div"',
-    "           :title=${'Untitled'}>",
+    "           ::title=${'Untitled'}>",
     '    <h2>${title}</h2>',
     '  </:define>',
     '</lib>',
@@ -267,15 +267,15 @@ describe("a custom tag's attributes", () => {
   const LIB = [
     '<lib>',
     '  <:define tag="x-card:div"',
-    "           :title=${'Untitled'}",
-    "           :tone=${'plain'}>${title}</:define>",
+    "           ::title=${'Untitled'}",
+    "           ::tone=${'plain'}>${title}</:define>",
     '</lib>',
   ].join('\n');
   const PAGE = [
     '<html :n=${1}>',
     '<head><:import src="/lib.htm" /></head>',
     '<body>',
-    "  <x-card :title=${'Hi'} :aka=\"c\" class=\"wide\" />",
+    "  <x-card ::title=${'Hi'} :aka=\"c\" class=\"wide\" />",
     '</body>',
     '</html>',
   ].join('\n');
@@ -322,7 +322,7 @@ describe('an :aka on a custom tag', () => {
     // is the values the usage WROTE, and the compiler says which those are
     write(
       'lib.htm',
-      '<lib>\n  <:define tag="x-card:div" :title=${\'d\'}>${title}</:define>\n</lib>'
+      '<lib>\n  <:define tag="x-card:div" ::title=${\'d\'}>${title}</:define>\n</lib>'
     );
     const text = write(
       'index.html',
@@ -330,7 +330,7 @@ describe('an :aka on a custom tag', () => {
         '<html>',
         '<head><:import src="/lib.htm" /></head>',
         '<body>',
-        "  <x-card :title=${'Hi'} :aka=\"intro\" />",
+        "  <x-card ::title=${'Hi'} :aka=\"intro\" />",
         '  <p>${intro.title}</p>',
         '</body>',
         '</html>',
@@ -345,7 +345,7 @@ describe('an :aka on a custom tag', () => {
   it('reads a value of that instance as the usage wrote it', async () => {
     write(
       'lib.htm',
-      '<lib>\n  <:define tag="x-card:div" :title=${\'d\'}>${title}</:define>\n</lib>'
+      '<lib>\n  <:define tag="x-card:div" ::title=${\'d\'}>${title}</:define>\n</lib>'
     );
     const text = write(
       'index.html',
@@ -353,7 +353,7 @@ describe('an :aka on a custom tag', () => {
         '<html>',
         '<head><:import src="/lib.htm" /></head>',
         '<body>',
-        "  <x-card :title=${'Hi'} :aka=\"intro\" />",
+        "  <x-card ::title=${'Hi'} :aka=\"intro\" />",
         '  <p>${intro.title}</p>',
         '</body>',
         '</html>',

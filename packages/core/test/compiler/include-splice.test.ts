@@ -32,19 +32,19 @@ describe('an included file behaves like the same markup inline', () => {
     fs.mkdirSync(path.join(dir, 'lib'));
     fs.writeFileSync(
       path.join(dir, 'lib/defs.htm'),
-      '<lib><:define tag="my-src:span" :n=${1} :doubled=${n * 2} /></lib>'
+      '<lib><:define tag="my-src:span" ::n=${1} ::doubled=${n * 2} /></lib>'
     );
     fs.writeFileSync(
       path.join(dir, 'lib/logic-defs.htm'),
-      '<lib><:define tag="my-logic:logic" :n=${1} :doubled=${n * 2} /></lib>'
+      '<lib><:define tag="my-logic:logic" ::n=${1} ::doubled=${n * 2} /></lib>'
     );
     fs.writeFileSync(
       path.join(dir, 'sources.htm'),
-      '<lib><my-src :aka="a" :n=${21} /><my-src :aka="b" :n=${5} /></lib>'
+      '<lib><my-src :aka="a" ::n=${21} /><my-src :aka="b" ::n=${5} /></lib>'
     );
     fs.writeFileSync(
       path.join(dir, 'logic-sources.htm'),
-      '<lib><my-logic :aka="a" :n=${21} /></lib>'
+      '<lib><my-logic :aka="a" ::n=${21} /></lib>'
     );
   });
 
@@ -81,7 +81,7 @@ describe('an included file behaves like the same markup inline', () => {
     const inline = await compile(
       'inline.html',
       '<html><head><:import src="/lib/defs.htm" /></head><body>' +
-        '<my-src :aka="a" :n=${21} /><my-src :aka="b" :n=${5} />' +
+        '<my-src :aka="a" ::n=${21} /><my-src :aka="b" ::n=${5} />' +
         '<i>${a.doubled}/${b.doubled}</i></body></html>'
     );
     const included = await compile(

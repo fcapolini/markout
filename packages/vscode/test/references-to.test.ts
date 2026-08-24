@@ -112,8 +112,8 @@ describe('what a text search would get wrong', () => {
       'lib.htm',
       [
         '<lib>',
-        '  <:define tag="x-a:div" :title=${1}>${title}</:define>',
-        '  <:define tag="x-b:div" :title=${2}>${title} ${title}</:define>',
+        '  <:define tag="x-a:div" ::title=${1}>${title}</:define>',
+        '  <:define tag="x-b:div" ::title=${2}>${title} ${title}</:define>',
         '</lib>',
       ].join('\n')
     );
@@ -130,7 +130,7 @@ describe('across files', () => {
   it('finds a definition parameter read inside its own fragment', async () => {
     write(
       'lib.htm',
-      '<lib>\n  <:define tag="x-a:div" :title=${1}>\n    <h2>${title}</h2>\n  </:define>\n</lib>'
+      '<lib>\n  <:define tag="x-a:div" ::title=${1}>\n    <h2>${title}</h2>\n  </:define>\n</lib>'
     );
     const text = fs.readFileSync(path.join(docroot, 'lib.htm'), 'utf8');
     const found = await sitesFrom('lib.htm', text, '${title}');

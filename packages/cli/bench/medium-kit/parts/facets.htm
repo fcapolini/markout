@@ -3,10 +3,10 @@
   <:define tag="mk-facet:div" class="facet"
 
            // parameters
-           :label=""
-           :options=${[]}
-           :active=""
-           :pick=${(value) => value}>
+           ::label=""
+           ::options=${[]}
+           ::active=""
+           ::pick=${(value) => value}>
     <p class="facet-label">${label}</p>
     <div class="facet-options">
       <button :for-each=${options}
@@ -19,10 +19,10 @@
   <:define tag="mk-search:label" class="search"
 
            // parameters
-           :label="Search"
-           :value=""
-           :hits=${0}
-           :change=${(value) => value}
+           ::label="Search"
+           ::value=""
+           ::hits=${0}
+           ::change=${(value) => value}
 
            // private
            :_id="search-${$id}">

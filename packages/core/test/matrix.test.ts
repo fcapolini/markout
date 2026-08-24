@@ -132,7 +132,7 @@ const CONTAINERS = [
   {
     name: 'in slotted content',
     wrap: (m: string) => ({
-      head: '<:define tag="my-box:div" :v="SHADOW"><:slot /></:define>',
+      head: '<:define tag="my-box:div" ::v="SHADOW"><:slot /></:define>',
       body: `<em>\${v}</em><my-box>${m}</my-box><em>\${v}</em>`,
     }),
     count: 1,
@@ -140,7 +140,7 @@ const CONTAINERS = [
   {
     name: 'in slotted content inside :for-each',
     wrap: (m: string) => ({
-      head: '<:define tag="my-box:div" :v="SHADOW"><:slot /></:define>',
+      head: '<:define tag="my-box:div" ::v="SHADOW"><:slot /></:define>',
       body: `<i :for-each=${'${[1, 2]}'}><my-box>${m}</my-box></i>`,
     }),
     count: 2,
@@ -150,16 +150,16 @@ const CONTAINERS = [
     // evaluates at the call site while living on the instance
     name: 'via a component parameter',
     wrap: (m: string) => ({
-      head: `<:define tag="my-p:div" :v="SHADOW">${m}</:define>`,
-      body: '<em :w=${v}><my-p :v=${w} /></em>',
+      head: `<:define tag="my-p:div" ::v="SHADOW">${m}</:define>`,
+      body: '<em :w=${v}><my-p ::v=${w} /></em>',
     }),
     count: 1,
   },
   {
     name: 'via a component parameter inside :for-each',
     wrap: (m: string) => ({
-      head: `<:define tag="my-p:div" :v="SHADOW">${m}</:define>`,
-      body: `<i :for-each=${'${[v, v]}'}><my-p :v=${'${data}'} /></i>`,
+      head: `<:define tag="my-p:div" ::v="SHADOW">${m}</:define>`,
+      body: `<i :for-each=${'${[v, v]}'}><my-p ::v=${'${data}'} /></i>`,
     }),
     count: 2,
   },
@@ -171,8 +171,8 @@ const CONTAINERS = [
     // every other slotted cell here uses an attribute-less usage
     name: 'in slotted content, usage carrying an attribute',
     wrap: (m: string) => ({
-      head: `<:define tag="my-box:div" :v="SHADOW" :n=${'${0}'}><:slot /></:define>`,
-      body: `<my-box :n=${'${1}'}>${m}</my-box>`,
+      head: `<:define tag="my-box:div" ::v="SHADOW" ::n=${'${0}'}><:slot /></:define>`,
+      body: `<my-box ::n=${'${1}'}>${m}</my-box>`,
     }),
     count: 1,
   },
@@ -182,7 +182,7 @@ const CONTAINERS = [
     // definition's own values reaching it too
     name: 'in slotted content of a replicated component',
     wrap: (m: string) => ({
-      head: '<:define tag="my-box:div" :v="SHADOW"><:slot /></:define>',
+      head: '<:define tag="my-box:div" ::v="SHADOW"><:slot /></:define>',
       body: `<my-box :for-each=${'${[1, 2]}'}>${m}</my-box>`,
     }),
     count: 2,
@@ -190,8 +190,8 @@ const CONTAINERS = [
   {
     name: 'via a parameter of a replicated component',
     wrap: (m: string) => ({
-      head: `<:define tag="my-p:div" :v="SHADOW">${m}</:define>`,
-      body: `<my-p :for-each=${'${[v, v]}'} :v=${'${data}'} />`,
+      head: `<:define tag="my-p:div" ::v="SHADOW">${m}</:define>`,
+      body: `<my-p :for-each=${'${[v, v]}'} ::v=${'${data}'} />`,
     }),
     count: 2,
   },
@@ -199,7 +199,7 @@ const CONTAINERS = [
     name: 'in a named slot',
     wrap: (m: string) => ({
       head:
-        '<:define tag="my-box:div" :v="SHADOW">' +
+        '<:define tag="my-box:div" ::v="SHADOW">' +
         '<u><:slot name="s"><i :class-fallback>${v}</i></:slot></u></:define>',
       body: `<my-box><b :slot="s">${m}</b></my-box>`,
     }),
@@ -244,7 +244,7 @@ const CONTAINERS = [
     name: 'in a named slot inside a definition that branches',
     wrap: (m: string) => ({
       head:
-        '<:define tag="my-box:div" :v="SHADOW">' +
+        '<:define tag="my-box:div" ::v="SHADOW">' +
         `<i :if=${'${v}'}><:slot name="on" /></i>` +
         '<i :else><:slot name="off" /></i></:define>',
       body:
@@ -383,7 +383,7 @@ const WRAPPERS = [
   {
     name: 'slotted into a component',
     wrap: (head: string, body: string) => ({
-      head: `${head}<:define tag="wrap-box:div" :v="SHADOW"><:slot /></:define>`,
+      head: `${head}<:define tag="wrap-box:div" ::v="SHADOW"><:slot /></:define>`,
       body: `<wrap-box>${body}</wrap-box>`,
     }),
     count: 1,

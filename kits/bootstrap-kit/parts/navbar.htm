@@ -17,19 +17,19 @@
   <:define tag="bs-navbar:nav"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :items=${[
+    ::extra=${null}      // extra classes for this instance
+    ::items=${[
       { name: 'Home', link: '#', active: true },
       { name: 'Features', link: '#' },
       { name: 'Pricing', link: '#' },
     ]}
-    :brand=${'#'}
-    :expand=${'lg'}
-    :container=${'container'}   // 'container' | 'container-fluid' | ...
-    :sticky=${false}
-    :fixed=${false}
-    :theme=${null}              // 'light' | 'dark' — independent of the page
-    :bg=${'body-tertiary'}
+    ::brand=${'#'}
+    ::expand=${'lg'}
+    ::container=${'container'}   // 'container' | 'container-fluid' | ...
+    ::sticky=${false}
+    ::fixed=${false}
+    ::theme=${null}              // 'light' | 'dark' — independent of the page
+    ::bg=${'body-tertiary'}
 
     // private
     :_id=${`bs-navbar-${$id}`}

@@ -5,24 +5,24 @@
     A select whose options come from an array. An entry is either a string or
     `{ name, value, disabled }`, so the quick case stays quick:
 
-      <bs-select :label="Size" :options=${['S', 'M', 'L']} />
+      <bs-select ::label="Size" ::options=${['S', 'M', 'L']} />
   -->
   <:define tag="bs-select:div"
     class="mb-3 ${extra ?? ''}"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :label=${null}
-    :name=${null}
-    :options=${[]}
-    :value=${null}
-    :placeholder=${null}
-    :help=${null}
-    :size=${null}          // 'sm' | 'lg'
-    :multiple=${false}
-    :disabled=${false}
-    :required=${false}
-    :floating=${false}
+    ::extra=${null}      // extra classes for this instance
+    ::label=${null}
+    ::name=${null}
+    ::options=${[]}
+    ::value=${null}
+    ::placeholder=${null}
+    ::help=${null}
+    ::size=${null}          // 'sm' | 'lg'
+    ::multiple=${false}
+    ::disabled=${false}
+    ::required=${false}
+    ::floating=${false}
 
     // private
     :_id=${`bs-select-${$id}`}

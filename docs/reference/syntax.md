@@ -69,6 +69,7 @@ NOTE: "on its own" is literal — whitespace is text like any other, so
 | Syntax | Meaning |
 | --- | --- |
 | `:name=${expr}` | Declares a reactive value on the current scope. |
+| `::name=${expr}` | On a `<:define>`, declares a **parameter**; on a usage site, passes one. Reserved at every usage of that tag — see [a usage site is a call, and an element](#a-usage-site-is-a-call-and-an-element). |
 | `:server-name=${expr}` | Declares value `name`, but the expression runs on the **server only** — the client is handed its result. Server-only. |
 | `:const-name=${expr}` | A **compile-time constant**: computed while the page is built and written into every expression that reads it. Nothing of it reaches the runtime. |
 | `:aka="name"` | Names the current scope so descendants can reference it. A literal, not an expression. |
@@ -531,8 +532,8 @@ their tag, and the closing `>` goes back at the tag's own indent.
   role="alert"
 
   // parameters
-  :variant=${'primary'}
-  :dismissible=${false}
+  ::variant=${'primary'}
+  ::dismissible=${false}
 
   class=${_class}
   :class-fade=${dismissible}
@@ -560,16 +561,20 @@ component reads, and stays yours.
 
 ### A usage site is a call, and an element
 
-`<bs-alert :variant="danger">` is two things written as one. It is a **call**,
-whose attributes are arguments; and it is an **element in your markup**, which
-can hold state of its own the way any native element can. The definition
-decides which each attribute is, and it decides by what it declares:
+`<bs-alert ::variant="danger">` is two things written as one. It is a
+**call**, whose attributes are arguments; and it is an **element in your
+markup**, which can hold state of its own the way any native element can.
+`::` is which:
 
 ```html
-<:define tag="bs-alert:div" :variant=${'primary'} :heading=${null}>…</:define>
+<:define tag="bs-alert:div"
+  ::variant=${'primary'}    // the interface: what a usage may set
+  ::heading=${null}
+  :_cls=${'alert alert-' + variant}   // private; no usage can reach it
+>…</:define>
 
-<bs-alert :variant="danger"     // an ARGUMENT: the tag takes a `variant`
-          :count=${0}           // a LOCAL: it does not, so this one is yours
+<bs-alert ::variant="danger"    // an ARGUMENT: `bs-alert` takes a `variant`
+          :count=${0}           // a LOCAL: yours, and the component never sees it
           :on-click=${() => count++}>${count}</bs-alert>
 ```
 
@@ -578,25 +583,32 @@ definition's body reads it, and its own expression resolves out at the call
 site — which is what makes the pass-through idiom mean what it looks like:
 
 ```html
-<bs-badge :variant=${variant} />   <!-- the `variant` from out HERE -->
+<bs-badge ::variant=${variant} />   <!-- the `variant` from out HERE -->
 ```
 
 A **local** stays where it was written. It is a value on the usage site, so
 the attributes beside it see it, the tag's slotted content sees it, and a
 handler can write to it — everything that is true of `:count` on a `<span>`.
-What it is not is the component's: a name it declares is reachable from
-nowhere inside the definition, and cannot shade one the definition reads.
+It is per **replica**, so `<my-row :for-each=${rows} :draft=${''} />` gives
+each row its own with no wrapper element to hold it.
 
-That division is what makes both halves safe. Neither namespace can reach
-into the other, so a component gains a parameter in a later version without
-capturing a caller's local of the same name, and a caller hangs whatever it
-likes on a tag without knowing what the component calls things inside.
+**A definition's interface is what it says, and a tag reserves it.** Only
+`::` names are settable, so a plain `:` on a define root — `:_cls` above — is
+the component's own, and a usage may declare a local of that very name
+without either one knowing. And at a usage site the two spellings are not
+interchangeable: `:variant` where the tag takes a `variant` is a compile
+error, and so is `::varient` where it takes no such thing. One says the name
+is yours and the other says it is the component's, and only one of them is
+true.
 
-Two consequences worth knowing. A local is per **replica**, so
-`<my-row :for-each=${rows} :draft=${''} />` gives each row its own `draft`
-with no wrapper element to hold it. And a name is a local *because* the tag
-takes no parameter for it — so a misspelled `:varient="danger"` is a
-perfectly good local that simply nothing reads, and the alert stays primary.
+The reservation is per tag, not global: `<bs-alert :count=${0}>` is fine
+while `bs-alert` declares no `count`, whatever some other tag declares.
+
+It also means a component gaining a parameter is a change its callers are
+**told** about. A kit that adds `::label` in a later version turns a caller's
+existing `:label` local into an error naming the tag and the name, fixed by
+renaming that local — rather than quietly taking a name someone was already
+using.
 
 Everything else on a usage site is unchanged, being neither: `:if`,
 `:for-each`, `:aka` and `:slot` name no value, and `:class-`, `:style-`,
@@ -654,9 +666,9 @@ The same idea as `<:logic>`, one level up: that one is a scope with no
 element, this is a tag whose *instances* are.
 
 ```html
-<:define tag="std-data:logic" :url="" :data=${null} … />
+<:define tag="std-data:logic" ::url="" ::data=${null} … />
 
-<std-data :aka="rows" :url="/api/rows" />
+<std-data :aka="rows" ::url="/api/rows" />
 <p>${rows.data?.length ?? 0} rows</p>
 ```
 

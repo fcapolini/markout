@@ -12,13 +12,13 @@
 
   <:define tag="app-email:div"
     // what the page reads to gate its own controls
-    :valid=${input.valid}>
+    ::valid=${input.valid}>
     <bs-input :aka="input"
-      :label="Email address"
-      :type="email"
-      :placeholder="you@example.com"
-      :check=${v => v.includes('@')}
-      :message="That doesn't look like an email address." />
+      ::label="Email address"
+      ::type="email"
+      ::placeholder="you@example.com"
+      ::check=${v => v.includes('@')}
+      ::message="That doesn't look like an email address." />
   </:define>
 
 </lib>

@@ -82,8 +82,8 @@ describe('a :for-each host does not evaluate its subtree', () => {
     // the host is an instance as well as a stencil, so skipping its subtree
     // must not skip the instance's own body for the clones
     const { errors, runtime, body } = run(
-      '<html><head><:define tag="my-tag:span" :label="">[${label}]</:define></head>' +
-        '<body><my-tag :for-each=${["a", "b"]} :label=${data} /></body></html>'
+      '<html><head><:define tag="my-tag:span" ::label="">[${label}]</:define></head>' +
+        '<body><my-tag :for-each=${["a", "b"]} ::label=${data} /></body></html>'
     );
 
     expect(errors).toStrictEqual([]);
@@ -97,9 +97,9 @@ describe('a :for-each host does not evaluate its subtree', () => {
     // a <template> is the one case that reaches outside the page entirely
     const { ctx, errors, runtime, body } = run(
       '<html :seen=${[]}><head>' +
-        '<:define tag="my-tag:span" :label="" :handle-label=${(v) => { page.seen.push(v); }}>' +
+        '<:define tag="my-tag:span" ::label="" :handle-label=${(v) => { page.seen.push(v); }}>' +
         '${label}</:define></head>' +
-        '<body><my-tag :for-each=${["a", "b"]} :label=${data} /></body></html>'
+        '<body><my-tag :for-each=${["a", "b"]} ::label=${data} /></body></html>'
     );
 
     expect(errors).toStrictEqual([]);

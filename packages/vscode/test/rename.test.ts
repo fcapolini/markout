@@ -50,7 +50,7 @@ async function edits(rel: string, at: string, within?: string) {
 
 const LIB = [
   '<lib>',
-  '  <:define tag="x-card:div" :title=${\'d\'}>',
+  '  <:define tag="x-card:div" ::title=${\'d\'}>',
   '    <h2>${title}</h2>',
   '  </:define>',
   '</lib>',
@@ -61,11 +61,11 @@ describe('a definition parameter', () => {
     write('lib.htm', LIB);
     write(
       'a.html',
-      '<html><head><:import src="/lib.htm" /></head>\n<body><x-card :title=${\'A\'} /></body></html>'
+      '<html><head><:import src="/lib.htm" /></head>\n<body><x-card ::title=${\'A\'} /></body></html>'
     );
     write(
       'b.html',
-      '<html><head><:import src="/lib.htm" /></head>\n<body><x-card :title=${\'B\'} /></body></html>'
+      '<html><head><:import src="/lib.htm" /></head>\n<body><x-card ::title=${\'B\'} /></body></html>'
     );
   });
 
@@ -76,9 +76,9 @@ describe('a definition parameter', () => {
     // alone would stop the parameter being passed, silently, in a file
     // nobody had open
     expect(await edits('lib.htm', ':title=')).toStrictEqual([
-      '/a.html:2:16',
-      '/b.html:2:16',
-      '/lib.htm:2:30',
+      '/a.html:2:17',
+      '/b.html:2:17',
+      '/lib.htm:2:31',
       '/lib.htm:3:11',
     ]);
   });
@@ -119,8 +119,8 @@ describe('an ordinary value', () => {
       'lib.htm',
       [
         '<lib>',
-        '  <:define tag="x-a:div" :title=${1}>${title}</:define>',
-        '  <:define tag="x-b:div" :title=${2}>${title}</:define>',
+        '  <:define tag="x-a:div" ::title=${1}>${title}</:define>',
+        '  <:define tag="x-b:div" ::title=${2}>${title}</:define>',
         '</lib>',
       ].join('\n')
     );
@@ -149,7 +149,7 @@ describe('applying it', () => {
       [
         '<html><head><:import src="/lib.htm" /></head>',
         '<body>',
-        '  <x-card :title=${\'A\'} :aka="intro" />',
+        '  <x-card ::title=${\'A\'} :aka="intro" />',
         '  <p>${intro.title}</p>',
         '</body></html>',
       ].join('\n')

@@ -49,12 +49,12 @@ A definition's own values are its parameters, and what it declares is the
 default. A usage site overrides them the same way it would set any value:
 
 ```html
-<:define tag="my-card:div" class="card" :title="Untitled">
+<:define tag="my-card:div" class="card" ::title="Untitled">
   <h5>${title}</h5>
 </:define>
 
-<my-card :title="Hello" />
-<my-card :title=${post.name} />
+<my-card ::title="Hello" />
+<my-card ::title=${post.name} />
 ```
 
 Plain attributes work the same way — `<my-card class="card wide" />` replaces
@@ -101,15 +101,15 @@ tags, a usage can appear inside a `:for-each`, and slotted content can name
 custom tags of its own:
 
 ```html
-<:define tag="my-badge:span" class="badge" :label="">${label}</:define>
-<:define tag="my-card:div" class="card" :title="Untitled">
+<:define tag="my-badge:span" class="badge" ::label="">${label}</:define>
+<:define tag="my-card:div" class="card" ::title="Untitled">
   <h5>${title}</h5>
   <div class="body"><:slot /></div>
 </:define>
 
 <ul>
   <li :for-each=${posts}>
-    <my-card :title=${data.title}><my-badge :label=${data.tag} /></my-card>
+    <my-card ::title=${data.title}><my-badge ::label=${data.tag} /></my-card>
   </li>
 </ul>
 ```
@@ -133,7 +133,7 @@ even though they end up inside the instance.
 
 ```html
 <html :label=${'page'}>
-  <:define tag="my-box:div" :label=${'definition'}><:slot /></:define>
+  <:define tag="my-box:div" ::label=${'definition'}><:slot /></:define>
   ...
   <my-box>${label}</my-box>   <!-- 'page': written in the page -->
 </html>

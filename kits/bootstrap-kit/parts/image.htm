@@ -8,12 +8,12 @@
   <:define tag="bs-image:img"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :src=${null}
-    :alt=${''}
-    :fluid=${true}
-    :thumbnail=${false}
-    :rounded=${false}
+    ::extra=${null}      // extra classes for this instance
+    ::src=${null}
+    ::alt=${''}
+    ::fluid=${true}
+    ::thumbnail=${false}
+    ::rounded=${false}
 
     class=${extra}
     src=${src}
@@ -28,11 +28,11 @@
     class="figure ${extra ?? ''}"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :src=${null}
-    :alt=${''}
-    :caption=${null}
-    :align=${null}      // 'center' | 'end'
+    ::extra=${null}      // extra classes for this instance
+    ::src=${null}
+    ::alt=${''}
+    ::caption=${null}
+    ::align=${null}      // 'center' | 'end'
   >
     <img class="figure-img img-fluid rounded"
       src=${src}

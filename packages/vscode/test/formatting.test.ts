@@ -31,7 +31,7 @@ describe('a fragment indents like code', () => {
           '<lib>',
           '  <:define tag="bs-alert:div"',
           '           role="alert"',
-          '           :variant=${1}',
+          '           ::variant=${1}',
           '  >',
           '  </:define>',
           '</lib>',
@@ -42,7 +42,7 @@ describe('a fragment indents like code', () => {
         '<lib>',
         '  <:define tag="bs-alert:div"',
         '    role="alert"',
-        '    :variant=${1}',
+        '    ::variant=${1}',
         '  >',
         '  </:define>',
         '</lib>',
@@ -188,7 +188,7 @@ describe('what it will not touch', () => {
   });
 
   it('answers with nothing when there is nothing to do', () => {
-    const source = ['  <:define tag="x:div"', '    :a=${1}', '  >', '  </:define>'].join('\n');
+    const source = ['  <:define tag="x:div"', '    ::a=${1}', '  >', '  </:define>'].join('\n');
     expect(formatEdits({ text: source, pathname: 'x.htm' })).toStrictEqual([]);
   });
 });
@@ -210,8 +210,8 @@ describe('as an editor uses it', () => {
   it('changes only leading whitespace', () => {
     const source = [
       '  <:define tag="x:div"',
-      '           :a=${1}',
-      "           :b=${'>'}",
+      '           ::a=${1}',
+      "           ::b=${'>'}",
       '  >text</:define>',
     ].join('\n');
     expect(formatted(source).replace(/^\s+/gm, '')).toBe(source.replace(/^\s+/gm, ''));

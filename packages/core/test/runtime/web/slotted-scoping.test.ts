@@ -101,7 +101,7 @@ function tryFind(scope: CoreScope, name: string): CoreScope | undefined {
 // alongside whatever it was handed
 const DEFS =
   '<:define tag="mk-box:div"><:slot /></:define>' +
-  '<:define tag="mk-probe:span" :count=${0}>${count}<:slot /></:define>';
+  '<:define tag="mk-probe:span" ::count=${0}>${count}<:slot /></:define>';
 
 function page(inner: string) {
   return `<html><body>${DEFS}${inner}</body></html>`;
@@ -112,7 +112,7 @@ describe('values declared inside slotted content', () => {
     const { page: p, ctx, errors } = run(
       page(
         '<main :aka="app" :x=${3}>' +
-          '<mk-box><div :total=${x * 2}><mk-probe :count=${total}></mk-probe></div></mk-box>' +
+          '<mk-box><div :total=${x * 2}><mk-probe ::count=${total}></mk-probe></div></mk-box>' +
           '</main>'
       )
     );
@@ -147,7 +147,7 @@ describe('values declared inside slotted content', () => {
       page(
         '<main :aka="app" :x=${3}>' +
           '<mk-box><mk-box>' +
-          '<div :total=${x * 2}><mk-probe :count=${total}></mk-probe></div>' +
+          '<div :total=${x * 2}><mk-probe ::count=${total}></mk-probe></div>' +
           '</mk-box></mk-box>' +
           '</main>'
       )
@@ -186,7 +186,7 @@ describe('values declared inside slotted content', () => {
       page(
         '<main :aka="app" :x=${3}>' +
           '<mk-box><div :total=${x * 2}>' +
-          '<mk-probe :count=${total}>/${total}</mk-probe>' +
+          '<mk-probe ::count=${total}>/${total}</mk-probe>' +
           '</div></mk-box>' +
           '</main>'
       )
@@ -203,7 +203,7 @@ describe('values declared inside slotted content', () => {
     // the case the nesting fix must not take away: with nothing in between,
     // the instance is written at the call site and reads its values there
     const { page: p, ctx, errors } = run(
-      page('<main :aka="app" :x=${3}><mk-box><mk-probe :count=${x}></mk-probe></mk-box></main>')
+      page('<main :aka="app" :x=${3}><mk-box><mk-probe ::count=${x}></mk-probe></mk-box></main>')
     );
     const probe = findInBody(p.source.doc, 'SPAN');
     assert.deepEqual(errors, []);
@@ -221,8 +221,8 @@ describe('values declared inside slotted content', () => {
     const { page: p, ctx, errors } = run(
       '<html><body>' +
         '<:define tag="mk-box:div"><:slot /></:define>' +
-        '<:define tag="mk-probe:span" :count=${0}>${count}</:define>' +
-        '<main><mk-box><mk-probe :aka="inner" :count=${7} /></mk-box>' +
+        '<:define tag="mk-probe:span" ::count=${0}>${count}</:define>' +
+        '<main><mk-box><mk-probe :aka="inner" ::count=${7} /></mk-box>' +
         '<i>${inner.count}</i></main>' +
         '</body></html>'
     );
@@ -244,7 +244,7 @@ describe('values declared inside slotted content', () => {
     // id" while its sibling rendered fine
     const { page: p, errors } = run(
       '<html><body>' +
-        '<:define tag="mk-panel:div" :caption=${"fallback"}>' +
+        '<:define tag="mk-panel:div" ::caption=${"fallback"}>' +
         '<i :aka="head"><:slot name="cap">${caption}</:slot></i><:slot />' +
         '</:define>' +
         '<main><mk-panel><b :slot="cap">filled</b>one</mk-panel>' +
@@ -267,7 +267,7 @@ describe('values declared inside slotted content', () => {
     // neither and render blank -- silently, which is how it survived
     const { page: p, ctx, errors } = run(
       '<html><body>' +
-        '<:define tag="mk-panel:div" :pad=${1}>' +
+        '<:define tag="mk-panel:div" ::pad=${1}>' +
         '<i :aka="inner" :class-p=${pad}><:slot /></i>' +
         '</:define>' +
         '<main :aka="app" :x=${3}><mk-panel>[${x}]</mk-panel></main>' +
@@ -293,7 +293,7 @@ describe('values declared inside slotted content', () => {
     // there rendered nothing at all, which reports nothing at all
     const { ctx, errors } = run(
       '<html><body :rows=${["a", "b"]}>' +
-        '<:define tag="mk-panel:div" class="panel" :flush=${false}>' +
+        '<:define tag="mk-panel:div" class="panel" ::flush=${false}>' +
         '<div class="body" :class-p-0=${flush}><:slot /></div>' +
         '</:define>' +
         '<mk-panel><i :for-each=${rows} :for-as="row">[${row}]</i></mk-panel>' +
@@ -318,9 +318,9 @@ describe('values declared inside slotted content', () => {
     // rather than reading the definition's own names
     const p = compile(
       '<html><body>' +
-        '<:define tag="mk-vault:div" :secret=${"leaked"}><:slot /></:define>' +
-        '<:define tag="mk-probe:span" :count=${0}>${count}</:define>' +
-        '<main><mk-vault><div :total=${1}><mk-probe :count=${secret}></mk-probe></div></mk-vault></main>' +
+        '<:define tag="mk-vault:div" ::secret=${"leaked"}><:slot /></:define>' +
+        '<:define tag="mk-probe:span" ::count=${0}>${count}</:define>' +
+        '<main><mk-vault><div :total=${1}><mk-probe ::count=${secret}></mk-probe></div></mk-vault></main>' +
         '</body></html>'
     );
     assert.deepEqual(

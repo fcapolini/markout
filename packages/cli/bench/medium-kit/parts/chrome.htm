@@ -3,9 +3,9 @@
   <:define tag="mk-header:header" class="app-header"
 
            // parameters
-           :brand="Markout"
-           :count=${0}
-           :total=${0}>
+           ::brand="Markout"
+           ::count=${0}
+           ::total=${0}>
     <div class="brand-block">
       <span class="brand">${brand}</span>
       <span class="tagline"><:slot name="tagline" /></span>
@@ -19,8 +19,8 @@
   <:define tag="mk-section:section" class="panel"
 
            // parameters
-           :kicker=""
-           :heading="">
+           ::kicker=""
+           ::heading="">
     <header class="panel-head">
       <div><p class="kicker">${kicker}</p><h2>${heading}</h2></div>
       <div class="panel-actions"><:slot name="actions" /></div>
@@ -31,9 +31,9 @@
   <:define tag="mk-stat:div" class="stat"
 
            // parameters
-           :label=""
-           :value=""
-           :hint="">
+           ::label=""
+           ::value=""
+           ::hint="">
     <span class="stat-label">${label}</span>
     <strong class="stat-value">${value}</strong>
     <span class="stat-hint">${hint}</span>
@@ -42,8 +42,8 @@
   <:define tag="mk-pager:nav" class="pager"
 
            // parameters
-           :current=${1}
-           :count=${1}>
+           ::current=${1}
+           ::count=${1}>
     <:slot name="prev" />
     <span class="pager-label">Page ${current} of ${count}</span>
     <:slot name="next" />

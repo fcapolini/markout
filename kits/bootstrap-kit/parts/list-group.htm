@@ -14,14 +14,14 @@
   <:define tag="bs-list-group:div"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :items=${[
+    ::extra=${null}      // extra classes for this instance
+    ::items=${[
       { name: 'An item', active: true },
       { name: 'A second item' },
       { name: 'A disabled item', disabled: true },
     ]}
-    :flush=${false}
-    :horizontal=${false}
+    ::flush=${false}
+    ::horizontal=${false}
 
     // private
     :_class=${[
@@ -49,8 +49,8 @@
           :if=${item.text}>${item.text}</span>
       </span>
 
-      <bs-badge :variant=${item.badge?.variant ?? 'secondary'}
-        :pill
+      <bs-badge ::variant=${item.badge?.variant ?? 'secondary'}
+        ::pill
         :if=${item.badge}>${item.badge?.name ?? item.badge}</bs-badge>
     </a>
   </:define>

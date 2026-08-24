@@ -180,10 +180,10 @@
 <:define tag="dash-panel:div"
 
   // parameters
-  :extra=${null}       // extra classes for this instance
-  :heading=${''}
-  :note=${null}        // a line of explanation under the heading
-  :flush=${false}      // no body padding, for a table or a list
+  ::extra=${null}       // extra classes for this instance
+  ::heading=${''}
+  ::note=${null}        // a line of explanation under the heading
+  ::flush=${false}      // no body padding, for a table or a list
 
   // private
   :_class=${['card h-100', extra].filter(s => s).join(' ')}
@@ -222,11 +222,11 @@
   class="dash-chart ${extra ?? ''}"
 
   // parameters
-  :extra=${null}       // extra classes for this instance
-  :points=${[]}
-  :stroke=${'var(--dash-accent)'}
-  :fill=${true}
-  :tall=${false}
+  ::extra=${null}       // extra classes for this instance
+  ::points=${[]}
+  ::stroke=${'var(--dash-accent)'}
+  ::fill=${true}
+  ::tall=${false}
 
   /*
     private: the plot box, in the chart's own coordinates. A tall
@@ -297,13 +297,13 @@
   class="card dash-stat h-100 ${extra ?? ''}"
 
   // parameters
-  :extra=${null}       // extra classes for this instance
-  :caption=${''}
-  :figure=${''}
-  :unit=${null}
-  :delta=${null}       // a number: the change, in percent
-  :trend=${[]}
-  :tone=${null}        // overrides the sign-derived colour
+  ::extra=${null}       // extra classes for this instance
+  ::caption=${''}
+  ::figure=${''}
+  ::unit=${null}
+  ::delta=${null}       // a number: the change, in percent
+  ::trend=${[]}
+  ::tone=${null}        // overrides the sign-derived colour
 
   // private
   :_tone=${tone ?? (delta == null ? 'secondary' : delta >= 0 ? 'success' : 'danger')}
@@ -312,8 +312,8 @@
   <div class="card-body">
     <div class="d-flex justify-content-between align-items-start gap-2">
       <div class="text-body-secondary small text-uppercase">${caption}</div>
-      <bs-badge :variant=${_tone}
-        :pill
+      <bs-badge ::variant=${_tone}
+        ::pill
         :for-data=${delta}>${_arrow} ${Math.abs(delta).toFixed(1)}%</bs-badge>
     </div>
 
@@ -322,7 +322,7 @@
         :for-data=${unit}> ${unit}</span></div>
 
     <div class="mt-2">
-      <dash-chart :points=${trend} />
+      <dash-chart ::points=${trend} />
     </div>
 
     <div class="small text-body-secondary">
@@ -340,9 +340,9 @@
   class="d-inline-flex align-items-center gap-2 ${extra ?? ''}"
 
   // parameters
-  :extra=${null}       // extra classes for this instance
-  :state=${'ok'}
-  :quiet=${false}      // the dot alone, without the word
+  ::extra=${null}       // extra classes for this instance
+  ::state=${'ok'}
+  ::quiet=${false}      // the dot alone, without the word
 
   // private
   :_tone=${theme.tone(state)}

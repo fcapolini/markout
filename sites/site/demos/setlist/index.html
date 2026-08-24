@@ -24,11 +24,11 @@
   <header class="app-header"><span class="brand">Setlist</span><span class="tally">${tracks.length} songs / ${tracks.reduce((total, t) => total + t.minutes, 0)} min</span></header>
   <main class="app-shell">
     <p class="lede">Reorder the set and each row is moved, not rebuilt. A cue note belongs to its song and travels with it.</p>
-    <rig-panel :kicker="Thursday rehearsal" :heading="Running order">
+    <rig-panel ::kicker="Thursday rehearsal" ::heading="Running order">
       <button :slot="actions" class="ghost" :on-click=${() => tracks = [...tracks].reverse()}>Reverse</button>
       <ol class="rows"><rig-row :for-each=${tracks} :for-key=${data.id}
-          :position=${tracks.indexOf(data) + 1} :label=${data.name} :meta=${data.players + ' / ' + data.minutes + ' min'}>
-          <rig-note :caption=${'Cue for ' + data.name}><input placeholder="stage note" value=${data.note}
+          ::position=${tracks.indexOf(data) + 1} ::label=${data.name} ::meta=${data.players + ' / ' + data.minutes + ' min'}>
+          <rig-note ::caption=${'Cue for ' + data.name}><input placeholder="stage note" value=${data.note}
             :on-input=${e => tracks = tracks.map(t => t.id === data.id ? { ...t, note: e.target.value } : t)}></rig-note>
           <button :slot="actions" :on-click=${() => move(data.id, -1)} :attr-disabled=${tracks.indexOf(data) === 0} aria-label=${'Move ' + data.name + ' earlier'}>↑</button>
           <button :slot="actions" :on-click=${() => move(data.id, 1)} :attr-disabled=${tracks.indexOf(data) === tracks.length - 1} aria-label=${'Move ' + data.name + ' later'}>↓</button>

@@ -251,13 +251,13 @@ describe('docs/concepts/scope.md', () => {
 
 describe('docs/concepts/kits.md', () => {
   const CARD =
-    '<:define tag="my-card:div" class="card" :title="Untitled">' +
+    '<:define tag="my-card:div" class="card" ::title="Untitled">' +
     '<h5>${title}</h5></:define>';
 
   it('renders the parameters-and-defaults example', async () => {
     const result = await render(
       `<html :post=\${{ name: "From data" }}><head>${CARD}</head><body>` +
-        '<my-card /><my-card :title="Hello" /><my-card :title=${post.name} />' +
+        '<my-card /><my-card ::title="Hello" /><my-card ::title=${post.name} />' +
         '</body></html>'
     );
 
@@ -283,7 +283,7 @@ describe('docs/concepts/kits.md', () => {
 
   it('renders the named-slot example', async () => {
     const result = await render(
-      '<html><head><:define tag="my-panel:section" :title="T">' +
+      '<html><head><:define tag="my-panel:section" ::title="T">' +
         '<header><:slot name="header">${title}</:slot></header>' +
         '<div class="body"><:slot /></div>' +
         '</:define></head><body>' +
@@ -300,11 +300,11 @@ describe('docs/concepts/kits.md', () => {
   it('renders the composing example', async () => {
     const result = await render(
       '<html :posts=${[{ title: "One", tag: "a" }, { title: "Two", tag: "b" }]}>' +
-        '<head><:define tag="my-badge:span" class="badge" :label="">${label}</:define>' +
-        '<:define tag="my-card:div" class="card" :title="Untitled">' +
+        '<head><:define tag="my-badge:span" class="badge" ::label="">${label}</:define>' +
+        '<:define tag="my-card:div" class="card" ::title="Untitled">' +
         '<h5>${title}</h5><div class="body"><:slot /></div></:define>' +
         '</head><body><ul><li :for-each=${posts}>' +
-        '<my-card :title=${data.title}><my-badge :label=${data.tag} /></my-card>' +
+        '<my-card ::title=${data.title}><my-badge ::label=${data.tag} /></my-card>' +
         '</li></ul></body></html>'
     );
 
@@ -320,7 +320,7 @@ describe('docs/concepts/kits.md', () => {
   it('renders the resolves-where-written example', async () => {
     const result = await render(
       '<html :label=${"page"}><head>' +
-        '<:define tag="my-box:div" :label=${"definition"}><:slot /></:define>' +
+        '<:define tag="my-box:div" ::label=${"definition"}><:slot /></:define>' +
         '</head><body><my-box>${label}</my-box></body></html>'
     );
 

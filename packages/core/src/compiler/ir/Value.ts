@@ -37,6 +37,14 @@ export class Value {
    * client is handed its result instead of re-deriving it.
    */
   serverOnly = false;
+  /**
+   * Declared `::name`: this name belongs to a component's interface.
+   *
+   * On a `<:define>` root it declares a parameter; on a custom-tag usage it
+   * passes one. Nowhere else does it mean anything, and stage1 refuses it
+   * there rather than letting it read as decoration.
+   */
+  parameter?: boolean;
   /** declared `:const-name`: computed while the page is built and substituted
    *  into every reader, so nothing of it reaches the runtime */
   comptime = false;

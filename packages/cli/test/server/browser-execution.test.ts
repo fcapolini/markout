@@ -59,7 +59,7 @@ describe("Browser execution (happy-dom)", () => {
 
     fs.writeFileSync(
       path.join(tempDir, "cards.htm"),
-      `<lib><:define tag="my-card:div" class="card" :label="none" :_id=\${$id}>` +
+      `<lib><:define tag="my-card:div" class="card" ::label="none" :_id=\${$id}>` +
         `<span data-card="\${label}" data-cid="\${_id}">\${label}</span>` +
         `</:define></lib>`
     );
@@ -68,7 +68,7 @@ describe("Browser execution (happy-dom)", () => {
       `<html :items=\${['a', 'b']}>
         <head><:import src="cards.htm" /></head>
         <body>
-          <ul><li :for-each=\${items}><my-card :label=\${data} /></li></ul>
+          <ul><li :for-each=\${items}><my-card ::label=\${data} /></li></ul>
           <button :on-click=\${() => items = [...items, 'c']}>grow</button>
         </body>
       </html>`
@@ -77,7 +77,7 @@ describe("Browser execution (happy-dom)", () => {
     fs.writeFileSync(
       path.join(tempDir, "slots.htm"),
       `<lib>` +
-        `<:define tag="my-badge:span" class="badge" :label="B">\${label}</:define>` +
+        `<:define tag="my-badge:span" class="badge" ::label="B">\${label}</:define>` +
         `<:define tag="my-card:div" class="card"><:slot /></:define>` +
         `</lib>`
     );
@@ -86,7 +86,7 @@ describe("Browser execution (happy-dom)", () => {
       `<html :who=\${'world'}>
         <head><:import src="slots.htm" /></head>
         <body>
-          <my-card><my-badge :label=\${who} /><b>\${who}</b></my-card>
+          <my-card><my-badge ::label=\${who} /><b>\${who}</b></my-card>
           <button :on-click=\${() => who = 'again'}>go</button>
         </body>
       </html>`
@@ -138,7 +138,7 @@ describe("Browser execution (happy-dom)", () => {
     // keyed, with an <input> so the DOM holds state the data never sees
     fs.writeFileSync(
       path.join(tempDir, "rows.htm"),
-      `<lib><:define tag="my-row:div" class="row" :label="none" :note="Notes">` +
+      `<lib><:define tag="my-row:div" class="row" ::label="none" ::note="Notes">` +
         `<span class="label">\${label}</span><label class="note">\${note}<input></label>` +
         `</:define></lib>`
     );
@@ -148,7 +148,7 @@ describe("Browser execution (happy-dom)", () => {
         <head><:import src="rows.htm" /></head>
         <body>
           <div class="list"><my-row :for-each=\${rows} :for-key=\${data.id}
-            :label=\${data.n} :note=\${'Notes for ' + data.n} /></div>
+            ::label=\${data.n} ::note=\${'Notes for ' + data.n} /></div>
           <button id="rot" :on-click=\${() => rows = [rows[2], rows[0], rows[1]]}>rotate</button>
         </body>
       </html>`

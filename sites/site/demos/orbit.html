@@ -44,7 +44,7 @@
     orbit/api/*.json      the data itself
 
   A region is a component rather than an included chunk, and the difference
-  is the parameter list: `<orbit-sidebar :requests=${app._requests} />`
+  is the parameter list: `<orbit-sidebar ::requests=${app._requests} />`
   says what that part of the page reads, so this file still shows where its
   state goes. An include would splice markup that reaches in for whatever
   it likes, with nothing recording what it touched.
@@ -267,11 +267,11 @@
   />
 
   <!--- ================================================== navigation bar -->
-  <bs-navbar :sticky
-             :bg="body"
-             :extra="border-bottom"
-             :container="container-fluid"
-             :items=${[
+  <bs-navbar ::sticky
+             ::bg="body"
+             ::extra="border-bottom"
+             ::container="container-fluid"
+             ::items=${[
                { name: 'Overview', link: '#overview' },
                { name: 'Services', link: '#services' },
                { name: 'Deployments', link: '#deployments' },
@@ -281,26 +281,26 @@
 
     <div :slot="end" class="d-flex align-items-center gap-2">
       <!--- one list: the count, the menu and the banner below all read it -->
-      <bs-dropdown :label="Alerts ${app.incidents.length ? `(${app.incidents.length})` : ''}"
-                   :variant="secondary"
-                   :outline
-                   :size="sm"
-                   :align="end"
-                   :items=${[
+      <bs-dropdown ::label="Alerts ${app.incidents.length ? `(${app.incidents.length})` : ''}"
+                   ::variant="secondary"
+                   ::outline
+                   ::size="sm"
+                   ::align="end"
+                   ::items=${[
                      { header: app.incidents.length ? 'Open incidents' : 'Nothing open' },
                      ...app.incidents.map(i => ({ name: `#${i.id} — ${i.title}`, link: '#incidents' })),
                      { divider: true },
                      { name: 'Acknowledge all', select: () => app.incidents = [] },
                    ]} />
 
-      <bs-button :size="sm"
-                 :variant="secondary"
-                 :outline
-                 :extra="d-lg-none"
-                 :toggle="offcanvas"
-                 :target="#dash-menu">Menu</bs-button>
+      <bs-button ::size="sm"
+                 ::variant="secondary"
+                 ::outline
+                 ::extra="d-lg-none"
+                 ::toggle="offcanvas"
+                 ::target="#dash-menu">Menu</bs-button>
 
-      <bs-theme-toggle :size="sm" />
+      <bs-theme-toggle ::size="sm" />
     </div>
   </bs-navbar>
 
@@ -308,54 +308,54 @@
     <div class="row g-4">
 
       <!--- ============================================== sidebar (wide) -->
-      <orbit-sidebar :requests=${app._requests} />
+      <orbit-sidebar ::requests=${app._requests} />
 
       <!--- ================================================ main content -->
       <div class="col-lg-10">
 
         <!--- ---------------------------------------------- page header -->
-        <orbit-header :healthy=${app._healthy}
-                      :total=${app.services.length}
-                      :span=${app.span}
-                      :live=${app.liveFeed}
-                      :setSpan=${(n) => app.span = n}
-                      :onExport=${() => toasts.exported.open = true} />
+        <orbit-header ::healthy=${app._healthy}
+                      ::total=${app.services.length}
+                      ::span=${app.span}
+                      ::live=${app.liveFeed}
+                      ::setSpan=${(n) => app.span = n}
+                      ::onExport=${() => toasts.exported.open = true} />
 
-        <orbit-banner :incidents=${app.incidents}
-                      :acknowledge=${() => app.incidents = []} />
+        <orbit-banner ::incidents=${app.incidents}
+                      ::acknowledge=${() => app.incidents = []} />
         <div class="dash-rows">
 
           <!--- ------------------------------------------------- the KPIs -->
-          <orbit-kpis :span=${app.span}
-                      :services=${app.services}
-                      :healthy=${app._healthy}
-                      :requests=${app._requests}
-                      :requestsDelta=${app._requestsDelta}
-                      :requestsTrend=${app._now}
-                      :errorRate=${app._errorRate}
-                      :faultsNow=${app._faultsNow}
-                      :faultsDelta=${calc.change(calc.sum(app._faultsNow), calc.sum(app.faults.slice(-app.span * 2, -app.span)))}
-                      :latency=${app._latency}
-                      :latencyNow=${app._latencyNow}
-                      :latencyDelta=${calc.change(calc.mean(app._latencyNow), calc.mean(app.latencies.slice(-app.span * 2, -app.span)))}
-                      :uptime=${app._uptime} />
+          <orbit-kpis ::span=${app.span}
+                      ::services=${app.services}
+                      ::healthy=${app._healthy}
+                      ::requests=${app._requests}
+                      ::requestsDelta=${app._requestsDelta}
+                      ::requestsTrend=${app._now}
+                      ::errorRate=${app._errorRate}
+                      ::faultsNow=${app._faultsNow}
+                      ::faultsDelta=${calc.change(calc.sum(app._faultsNow), calc.sum(app.faults.slice(-app.span * 2, -app.span)))}
+                      ::latency=${app._latency}
+                      ::latencyNow=${app._latencyNow}
+                      ::latencyDelta=${calc.change(calc.mean(app._latencyNow), calc.mean(app.latencies.slice(-app.span * 2, -app.span)))}
+                      ::uptime=${app._uptime} />
 
           <!--- ------------------------------------------- traffic + mix -->
-          <orbit-traffic :live=${app.liveFeed}
-                         :setLive=${(v) => app.liveFeed = v}
-                         :errorRate=${app._errorRate}
-                         :requestsTrend=${app._now}
-                         :faultsNow=${app._faultsNow}
-                         :latencyNow=${app._latencyNow}
-                         :zones=${app.zones}
-                         :forecast=${app.forecast}
-                         :latency=${app._latency}
-                         :requests=${app._requests} />
+          <orbit-traffic ::live=${app.liveFeed}
+                         ::setLive=${(v) => app.liveFeed = v}
+                         ::errorRate=${app._errorRate}
+                         ::requestsTrend=${app._now}
+                         ::faultsNow=${app._faultsNow}
+                         ::latencyNow=${app._latencyNow}
+                         ::zones=${app.zones}
+                         ::forecast=${app.forecast}
+                         ::latency=${app._latency}
+                         ::requests=${app._requests} />
 
           <!--- ---------------------------------------------- services -->
-          <orbit-services :services=${app.services}
-                          :endpoints=${app.endpoints}
-                          :healthy=${app._healthy} />
+          <orbit-services ::services=${app.services}
+                          ::endpoints=${app.endpoints}
+                          ::healthy=${app._healthy} />
 
           <!--- ------------------------------------------- deployments -->
           <!---
@@ -364,23 +364,23 @@
             also reads, and the one call that moves the selection on.
           -->
           <orbit-deployments :aka="table"
-                             :deploys=${app.deploys}
-                             :failed=${app._failedDeploys}
-                             :chosen=${app.chosen}
-                             :choose=${(row) => { app.chosen = row; detail.open = true; }} />
+                             ::deploys=${app.deploys}
+                             ::failed=${app._failedDeploys}
+                             ::chosen=${app.chosen}
+                             ::choose=${(row) => { app.chosen = row; detail.open = true; }} />
 
           <!--- ---------------------------------------------- incidents -->
-          <orbit-incidents :incidents=${app.incidents}
-                           :resolve=${(id) => {
+          <orbit-incidents ::incidents=${app.incidents}
+                           ::resolve=${(id) => {
                              app.incidents = app.incidents.filter(x => x.id !== id);
                              toasts.resolved.open = true;
                            }} />
 
           <!--- ------------------------------------ activity and tasks -->
-          <orbit-activity :feed=${app.feed}
-                          :todos=${app.todos}
-                          :doneTodos=${app._doneTodos}
-                          :setTodos=${(next) => app.todos = next} />
+          <orbit-activity ::feed=${app.feed}
+                          ::todos=${app.todos}
+                          ::doneTodos=${app._doneTodos}
+                          ::setTodos=${(next) => app.todos = next} />
 
           <!--- ----------------------------------------------- settings -->
           <!---
@@ -390,13 +390,13 @@
             which quote the alert address it publishes.
           -->
           <orbit-settings :aka="prefs"
-                          :swatches=${app.swatches}
-                          :accent=${theme.accent}
-                          :setAccent=${(hex) => theme.accent = hex}
-                          :dense=${theme.dense}
-                          :setDense=${(on) => theme.dense = on}
-                          :errorRate=${app._errorRate}
-                          :onSave=${() => toasts.saved.open = true} />
+                          ::swatches=${app.swatches}
+                          ::accent=${theme.accent}
+                          ::setAccent=${(hex) => theme.accent = hex}
+                          ::dense=${theme.dense}
+                          ::setDense=${(on) => theme.dense = on}
+                          ::errorRate=${app._errorRate}
+                          ::onSave=${() => toasts.saved.open = true} />
 
         </div>
       </div>
@@ -413,10 +413,10 @@
   -->
 
   <!--- ------------------------------------------ the mobile navigation -->
-  <bs-offcanvas :name="dash-menu" :title="Orbit" :placement="start">
-    <bs-nav :vertical
-            :variant="pills"
-            :items=${[
+  <bs-offcanvas ::name="dash-menu" ::title="Orbit" ::placement="start">
+    <bs-nav ::vertical
+            ::variant="pills"
+            ::items=${[
               { name: 'Overview', link: '#overview' },
               { name: 'Traffic', link: '#traffic' },
               { name: 'Services', link: '#services' },
@@ -435,23 +435,23 @@
     selection.
   -->
   <bs-offcanvas :aka="detail"
-                :title=${app.chosen ? `Deployment ${app.chosen.id}` : 'Deployment'}
-                :placement="end"
-                :scroll>
+                ::title=${app.chosen ? `Deployment ${app.chosen.id}` : 'Deployment'}
+                ::placement="end"
+                ::scroll>
     <div :for-data=${app.chosen}>
       <div class="d-flex align-items-center gap-2 mb-3">
-        <dash-dot :state=${data.state} />
-        <bs-badge :variant=${data.env === 'production' ? 'dark' : 'secondary'}>${data.env}</bs-badge>
+        <dash-dot ::state=${data.state} />
+        <bs-badge ::variant=${data.env === 'production' ? 'dark' : 'secondary'}>${data.env}</bs-badge>
       </div>
 
-      <bs-table :small
-                :borderless
-                :extra="mb-3"
-                :columns=${[
+      <bs-table ::small
+                ::borderless
+                ::extra="mb-3"
+                ::columns=${[
                   { key: 'field', name: 'Field' },
                   { key: 'detail', name: 'Value', class: 'text-end' },
                 ]}
-                :rows=${[
+                ::rows=${[
                   { field: 'Service', detail: data.service },
                   { field: 'Commit', detail: data.commit },
                   { field: 'Author', detail: data.author },
@@ -459,9 +459,9 @@
                   { field: 'Started', detail: fmt.ago(data.ago) },
                 ]} />
 
-      <bs-alert :variant=${theme.tone(data.state)}
-                :heading=${data.state === 'failed' ? 'This deployment failed' : null}
-                :extra="small">
+      <bs-alert ::variant=${theme.tone(data.state)}
+                ::heading=${data.state === 'failed' ? 'This deployment failed' : null}
+                ::extra="small">
         <span :if=${data.state === 'failed'}>
           The rollout was stopped after health checks failed on two nodes. The
           previous commit is still serving traffic.
@@ -482,11 +482,11 @@
       ].join('\n')}</pre>
 
       <div class="d-flex gap-2">
-        <bs-button :variant="secondary"
-                   :outline
+        <bs-button ::variant="secondary"
+                   ::outline
                    :on-click=${() => { detail.open = false; }}>Close</bs-button>
-        <bs-button :variant="danger"
-                   :outline
+        <bs-button ::variant="danger"
+                   ::outline
                    :on-click=${() => {
                      app.deploys = app.deploys.filter(x => x.id !== data.id);
                      app.chosen = null;
@@ -506,39 +506,39 @@
     over two of the controls, which is all of the form's validation.
   -->
   <bs-modal :aka="newDeploy"
-            :name="dash-new-deploy"
-            :title="New deployment"
-            :centered>
+            ::name="dash-new-deploy"
+            ::title="New deployment"
+            ::centered>
     <bs-select :aka="service"
-               :label="Service"
-               :placeholder="Choose a service…"
-               :options=${app.services.map(s => s.name)} />
+               ::label="Service"
+               ::placeholder="Choose a service…"
+               ::options=${app.services.map(s => s.name)} />
 
     <bs-select :aka="env"
-               :label="Environment"
-               :value=${'staging'}
-               :options=${['staging', 'production']} />
+               ::label="Environment"
+               ::value=${'staging'}
+               ::options=${['staging', 'production']} />
 
     <bs-input :aka="commit"
-              :label="Commit"
-              :placeholder="9f3c1ab"
-              :help="Seven hexadecimal characters."
-              :check=${(v) => /^[0-9a-f]{7}$/.test(v)}
-              :message="A commit is seven hexadecimal characters." />
+              ::label="Commit"
+              ::placeholder="9f3c1ab"
+              ::help="Seven hexadecimal characters."
+              ::check=${(v) => /^[0-9a-f]{7}$/.test(v)}
+              ::message="A commit is seven hexadecimal characters." />
 
     <bs-textarea :aka="notes"
-                 :label="Release notes"
-                 :rows=${2}
-                 :placeholder="What is going out?" />
+                 ::label="Release notes"
+                 ::rows=${2}
+                 ::placeholder="What is going out?" />
 
     <bs-check :aka="migrate"
-              :type="switch"
-              :label="Run migrations first"
-              :help="Migrations run before the first node is replaced." />
+              ::type="switch"
+              ::label="Run migrations first"
+              ::help="Migrations run before the first node is replaced." />
 
     <div :slot="footer" class="d-flex gap-2">
-      <bs-button :variant="secondary" :dismiss="modal">Cancel</bs-button>
-      <bs-button :disabled=${!newDeploy.service.value || newDeploy.commit._invalid || !newDeploy.commit.value}
+      <bs-button ::variant="secondary" ::dismiss="modal">Cancel</bs-button>
+      <bs-button ::disabled=${!newDeploy.service.value || newDeploy.commit._invalid || !newDeploy.commit.value}
                  :on-click=${() => {
                    app.deploys = [{
                      id: `d-${2482 + app.deploys.length}`,
@@ -572,32 +572,32 @@
     `toasts.saved` and `toasts.shipped` rather than five more names on a
     page that already has plenty.
   -->
-  <bs-toast-container :aka="toasts" :placement="bottom-end">
-    <bs-toast :aka="shipped" :title="Deployment queued" :time="just now" :variant="success">
+  <bs-toast-container :aka="toasts" ::placement="bottom-end">
+    <bs-toast :aka="shipped" ::title="Deployment queued" ::time="just now" ::variant="success">
       It is at the top of the table, and in the activity feed.
     </bs-toast>
 
-    <bs-toast :aka="saved" :title="Settings saved" :time="just now">
+    <bs-toast :aka="saved" ::title="Settings saved" ::time="just now">
       Alerts will go to ${prefs.address}.
     </bs-toast>
 
-    <bs-toast :aka="resolved" :title="Incident resolved" :time="just now">
+    <bs-toast :aka="resolved" ::title="Incident resolved" ::time="just now">
       ${app.incidents.length} still open.
     </bs-toast>
 
-    <bs-toast :aka="removed" :title="Record deleted" :time="just now" :variant="warning">
+    <bs-toast :aka="removed" ::title="Record deleted" ::time="just now" ::variant="warning">
       ${app.deploys.length} deployments left.
     </bs-toast>
 
-    <bs-toast :aka="exported" :title="Export started" :time="just now">
+    <bs-toast :aka="exported" ::title="Export started" ::time="just now">
       The file will be mailed to ${prefs.address} when it is ready.
     </bs-toast>
   </bs-toast-container>
 
   <!--- ==================================================== the footer -->
-  <orbit-footer :services=${app.services}
-                :deploys=${app.deploys}
-                :requests=${app._requests} />
+  <orbit-footer ::services=${app.services}
+                ::deploys=${app.deploys}
+                ::requests=${app._requests} />
 
 </body>
 

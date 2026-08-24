@@ -3,8 +3,8 @@
   <:define tag="mk-rating:span" class="rating"
 
            // parameters
-           :score=${0}
-           :count=${0}>
+           ::score=${0}
+           ::count=${0}>
     <span class="star" :for-each=${[1, 2, 3, 4, 5]} :class-star-on=${data <= score}>&#9733;</span>
     <span class="rating-count">${(score || 0).toFixed(1)} (${count})</span>
   </:define>
@@ -12,9 +12,9 @@
   <:define tag="mk-card:article" class="card"
 
            // parameters
-           :item=${{}}
-           :inCart=${false}
-           :buy=${(item) => item}>
+           ::item=${{}}
+           ::inCart=${false}
+           ::buy=${(item) => item}>
     <div class="card-media">
       <img src=${item.image} alt=${item.name} loading="lazy">
       <span class="card-tag">${item.category}</span>
@@ -22,7 +22,7 @@
     <div class="card-body">
       <p class="card-brand">${item.brand}</p>
       <h3 class="card-title">${item.name}</h3>
-      <mk-rating :score=${item.rating} :count=${item.reviews}></mk-rating>
+      <mk-rating ::score=${item.rating} ::count=${item.reviews}></mk-rating>
       <ul class="card-specs"><li :for-each=${item.specs}>${data}</li></ul>
       <p class="card-stock" :class-card-stock-low=${item.stock < 8}>${item.stock === 0 ? 'Back-ordered' : item.stock + ' in stock'}</p>
       <div class="card-foot">

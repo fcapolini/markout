@@ -143,7 +143,7 @@
     resolves where it is written, and these are siblings.
   -->
   <std-data :aka="listSrc"
-            :url=${apiBase + '/tickets?q=' + encodeURIComponent(query)} />
+            ::url=${apiBase + '/tickets?q=' + encodeURIComponent(query)} />
 
   <:logic :aka="ui"
           /*
@@ -162,14 +162,14 @@
     what "no ticket matched" has to mean here.
   -->
   <std-data :aka="threadSrc"
-            :url=${ui.openId ? apiBase + '/tickets/' + ui.openId : ''} />
+            ::url=${ui.openId ? apiBase + '/tickets/' + ui.openId : ''} />
 
   <!---
     `:client`, so the server renders nothing for it and the browser fetches
     it on arrival. This is the one value on the page that must not be
     published: a served value is written into the markup as plain text.
   -->
-  <std-data :aka="meSrc" :client :url=${apiBase + '/me'} />
+  <std-data :aka="meSrc" ::client ::url=${apiBase + '/me'} />
 
   <!--- minutes into something a person reads -->
   <:logic :aka="fmt"

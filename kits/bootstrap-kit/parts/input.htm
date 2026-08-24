@@ -9,8 +9,8 @@
     typed, so a page can name the instance and read it from anywhere else on
     the page —
 
-      <bs-input :aka="email" :label="Email" :type="email" />
-      <bs-button :disabled=${!email.value}>Send</bs-button>
+      <bs-input :aka="email" ::label="Email" ::type="email" />
+      <bs-button ::disabled=${!email.value}>Send</bs-button>
 
     — which is `:aka` doing what it does everywhere else, not a mechanism
     special to forms.
@@ -21,8 +21,8 @@
 
     `:valid` is the other side of that, and what a form's own controls read —
 
-      <bs-input :aka="email" :label="Email" :check=${v => v.includes('@')} />
-      <bs-button :disabled=${!email.valid}>Send</bs-button>
+      <bs-input :aka="email" ::label="Email" ::check=${v => v.includes('@')} />
+      <bs-button ::disabled=${!email.valid}>Send</bs-button>
 
     It is deliberately NOT the negation of the error state, which is the one
     thing about it worth knowing. An untouched field is not wrong — that is
@@ -38,20 +38,20 @@
     class="mb-3 ${extra ?? ''}"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :label=${null}
-    :type=${'text'}
-    :name=${null}
-    :value=${''}
-    :placeholder=${''}
-    :help=${null}
-    :size=${null}            // 'sm' | 'lg'
-    :disabled=${false}
-    :readonly=${false}
-    :required=${false}
-    :floating=${false}
-    :check=${(v) => true}
-    :message=${'Please check this value.'}
+    ::extra=${null}      // extra classes for this instance
+    ::label=${null}
+    ::type=${'text'}
+    ::name=${null}
+    ::value=${''}
+    ::placeholder=${''}
+    ::help=${null}
+    ::size=${null}            // 'sm' | 'lg'
+    ::disabled=${false}
+    ::readonly=${false}
+    ::required=${false}
+    ::floating=${false}
+    ::check=${(v) => true}
+    ::message=${'Please check this value.'}
 
     // private
     :_id=${`bs-input-${$id}`}
@@ -62,7 +62,7 @@
               .filter(s => s).join(' ')}
 
     // read from outside: is there a value, and does it pass?
-    :valid=${!_empty && check(value)}
+    ::valid=${!_empty && check(value)}
   >
     <!--- plain layout: label, control, feedback -->
     <div :if=${!floating}>
@@ -119,18 +119,18 @@
     class="mb-3 ${extra ?? ''}"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :label=${null}
-    :name=${null}
-    :value=${''}
-    :placeholder=${''}
-    :rows=${3}
-    :help=${null}
-    :disabled=${false}
-    :readonly=${false}
-    :required=${false}
-    :check=${(v) => true}
-    :message=${'Please check this value.'}
+    ::extra=${null}      // extra classes for this instance
+    ::label=${null}
+    ::name=${null}
+    ::value=${''}
+    ::placeholder=${''}
+    ::rows=${3}
+    ::help=${null}
+    ::disabled=${false}
+    ::readonly=${false}
+    ::required=${false}
+    ::check=${(v) => true}
+    ::message=${'Please check this value.'}
 
     // private
     :_id=${`bs-textarea-${$id}`}
@@ -139,7 +139,7 @@
     :_invalid=${_empty ? required : !check(value)}
 
     // read from outside, as bs-input's is
-    :valid=${!_empty && check(value)}
+    ::valid=${!_empty && check(value)}
   >
     <label class="form-label"
       for=${_id}
@@ -172,10 +172,10 @@
   <:define tag="bs-input-group:div"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :prefix=${null}
-    :suffix=${null}
-    :size=${null}
+    ::extra=${null}      // extra classes for this instance
+    ::prefix=${null}
+    ::suffix=${null}
+    ::size=${null}
 
     // private
     :_class=${['input-group', size ? `input-group-${size}` : '', extra]

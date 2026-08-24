@@ -182,7 +182,7 @@ describe('components with a parameter left out', () => {
     // `:autohide=${false}` and no `:title` is a toast that stays until it is
     // dismissed, and the close button used to live only in the header
     const out = await render(
-      '<bs-toast :autohide=${false}>headerless</bs-toast>'
+      '<bs-toast ::autohide=${false}>headerless</bs-toast>'
     );
     expect(out).not.toContain('toast-header');
     expect(out).toMatch(/<div class="d-flex">/);
@@ -190,14 +190,14 @@ describe('components with a parameter left out', () => {
   });
 
   it('a titled toast keeps the header, and only one close button', async () => {
-    const out = await render('<bs-toast :title="Saved">titled</bs-toast>');
+    const out = await render('<bs-toast ::title="Saved">titled</bs-toast>');
     expect(out).toContain('toast-header');
     expect(out).not.toContain('d-flex');
     expect(out.match(/btn-close/g)).toHaveLength(1);
   });
 
   it('a range shows its value with no label to hang it on', async () => {
-    const out = await render('<bs-range :showValue=${true} />');
+    const out = await render('<bs-range ::showValue=${true} />');
     expect(out).toContain('<span class="text-body-secondary">50</span>');
     // pushed to the right the way it sits beside a label, which needs the
     // justification SWAPPED: Bootstrap emits `justify-content-end` before
@@ -209,7 +209,7 @@ describe('components with a parameter left out', () => {
   });
 
   it('a range with a label keeps the pair apart', async () => {
-    const out = await render('<bs-range :label="Size" :showValue=${true} />');
+    const out = await render('<bs-range ::label="Size" ::showValue=${true} />');
     expect(out).toContain('justify-content-between');
     expect(out).not.toContain('justify-content-end');
     expect(out).toMatch(/<label for="[^"]*">Size<\/label>/);
@@ -621,20 +621,20 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
       <title>at work</title>
     </head>
     <body :page=\${1}>
-      <bs-input :aka="email" :label="Email" :check=\${(v) => v.includes('@')} />
-      <bs-check :aka="terms" :label="Agree" />
-      <bs-range :aka="amount" :label="Amount" :value=\${10} />
+      <bs-input :aka="email" ::label="Email" ::check=\${(v) => v.includes('@')} />
+      <bs-check :aka="terms" ::label="Agree" />
+      <bs-range :aka="amount" ::label="Amount" ::value=\${10} />
       <p id="echo">\${email.value}|\${terms.checked}|\${amount.value}</p>
 
       <button id="submit" :attr-disabled=\${!email.valid}>submit</button>
 
-      <bs-pagination :current=\${page} :pages=\${3} :select=\${(n) => page = n} />
+      <bs-pagination ::current=\${page} ::pages=\${3} ::select=\${(n) => page = n} />
       <p id="paged">page \${page}</p>
 
-      <bs-table :columns=\${[{ key: 'n', name: 'N' }]}
-                :rows=\${[{ n: page }, { n: page * 2 }]} />
+      <bs-table ::columns=\${[{ key: 'n', name: 'N' }]}
+                ::rows=\${[{ n: page }, { n: page * 2 }]} />
 
-      <bs-modal :aka="dialog" :name="dlg" :title="Hi">body</bs-modal>
+      <bs-modal :aka="dialog" ::name="dlg" ::title="Hi">body</bs-modal>
       <button id="open" :on-click=\${() => dialog.open = true}>open</button>
     </body>
   </html>`;

@@ -50,14 +50,14 @@ function run(html: string) {
   };
 }
 
-const GROUP = '<:define tag="my-group:div" class="group" :label="G"><:slot /></:define>';
+const GROUP = '<:define tag="my-group:div" class="group" ::label="G"><:slot /></:define>';
 const ITEM = '<:define tag="my-item:i" data-seen=${$host ? $host.label : "none"}>x</:define>';
 
 describe('$host', () => {
   it('is the instance a component was slotted into', () => {
     const { errors, runtime, markup } = run(
       `<html><head>${GROUP}${ITEM}</head>` +
-        '<body><my-group :label="outer"><my-item /></my-group></body></html>'
+        '<body><my-group ::label="outer"><my-item /></my-group></body></html>'
     );
     expect(errors).toStrictEqual([]);
     expect(runtime).toStrictEqual([]);
@@ -80,8 +80,8 @@ describe('$host', () => {
     // definition, evaluated against whichever instance each usage sits in
     const { markup } = run(
       `<html><head>${GROUP}${ITEM}</head>` +
-        '<body><my-group :label="one"><my-item /></my-group>' +
-        '<my-group :label="two"><my-item /></my-group></body></html>'
+        '<body><my-group ::label="one"><my-item /></my-group>' +
+        '<my-group ::label="two"><my-item /></my-group></body></html>'
     );
     expect(markup()).toContain('data-seen="one"');
     expect(markup()).toContain('data-seen="two"');
@@ -90,7 +90,7 @@ describe('$host', () => {
   it('keeps up with what it reads', () => {
     const { ctx, markup } = run(
       `<html><head>${GROUP}${ITEM}</head>` +
-        '<body><my-group :aka="g" :label="before"><my-item /></my-group></body></html>'
+        '<body><my-group :aka="g" ::label="before"><my-item /></my-group></body></html>'
     );
     expect(markup()).toContain('data-seen="before"');
 
@@ -105,7 +105,7 @@ describe('$host', () => {
     // so its `$host` is the box. Swap the answers and both are wrong
     const { errors, runtime, markup } = run(
       '<html><head>' +
-        '<:define tag="my-box:div" class="box" :who="box"><:slot /></:define>' +
+        '<:define tag="my-box:div" class="box" ::who="box"><:slot /></:define>' +
         '<:define tag="my-probe:i" data-host=${$host ? $host.who : "-"}>x</:define>' +
         '</head>' +
         '<body><main :aka="app" :who="page">' +
@@ -128,7 +128,7 @@ describe('$host', () => {
     // was written as a `:for-each` rather than one tag per row
     const { errors, runtime, markup } = run(
       `<html><head>${GROUP}${ITEM}</head>` +
-        '<body :rows=${[1, 2]}><my-group :label="outer">' +
+        '<body :rows=${[1, 2]}><my-group ::label="outer">' +
         '<my-item :for-each=${rows} :for-as="row" />' +
         '</my-group></body></html>'
     );
@@ -141,8 +141,8 @@ describe('$host', () => {
   it('composes, like $parent does', () => {
     const { errors, runtime, markup } = run(
       '<html><head>' +
-        '<:define tag="my-outer:div" class="outer" :depth="1"><:slot /></:define>' +
-        '<:define tag="my-inner:div" class="inner" :depth="2"><:slot /></:define>' +
+        '<:define tag="my-outer:div" class="outer" ::depth="1"><:slot /></:define>' +
+        '<:define tag="my-inner:div" class="inner" ::depth="2"><:slot /></:define>' +
         '<:define tag="my-leaf:i" data-up=${$host.$host ? $host.$host.depth : "-"}>x</:define>' +
         '</head>' +
         '<body><my-outer><my-inner><my-leaf /></my-inner></my-outer></body></html>'

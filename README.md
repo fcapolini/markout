@@ -177,7 +177,7 @@ fragments, the same thing is:
 </head>
 
 <body>
-  <bs-navbar :items=${[
+  <bs-navbar ::items=${[
     { name: 'Services', link: '#services' },
     { name: 'Our work', link: '#work' },
     { name: 'Insights', link: '#insights' },

@@ -12,18 +12,18 @@
   <:define tag="bs-nav:ul"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :items=${[
+    ::extra=${null}      // extra classes for this instance
+    ::items=${[
       { name: 'Active', link: '#', active: true },
       { name: 'Link', link: '#' },
       { name: 'Disabled', link: '#', disabled: true },
     ]}
-    :variant=${null}      // 'tabs' | 'pills' | 'underline'
-    :fill=${false}
-    :justified=${false}
-    :vertical=${false}
-    :align=${'start'}     // 'start' | 'center' | 'end'
-    :toggle=${null}       // 'tab' | 'pill' — for tabbed panes
+    ::variant=${null}      // 'tabs' | 'pills' | 'underline'
+    ::fill=${false}
+    ::justified=${false}
+    ::vertical=${false}
+    ::align=${'start'}     // 'start' | 'center' | 'end'
+    ::toggle=${null}       // 'tab' | 'pill' — for tabbed panes
 
     // private
     :_class=${[
@@ -74,9 +74,9 @@
     role="tabpanel"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :name=${null}
-    :active=${false}
+    ::extra=${null}      // extra classes for this instance
+    ::name=${null}
+    ::active=${false}
 
     id=${name}
     :class-show=${active}

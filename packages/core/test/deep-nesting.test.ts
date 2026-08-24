@@ -70,8 +70,8 @@ function texts(doc: any): string[] {
   return probes(doc).map(textOf);
 }
 
-const BADGE = '<:define tag="my-badge:span" :v="BADGE">${v}</:define>';
-const BOX = '<:define tag="my-box:div" :v="BOX"><:slot /></:define>';
+const BADGE = '<:define tag="my-badge:span" ::v="BADGE">${v}</:define>';
+const BOX = '<:define tag="my-box:div" ::v="BOX"><:slot /></:define>';
 
 describe('three deep', () => {
   it('resolves a component parameter through a slot inside a loop', () => {
@@ -81,7 +81,7 @@ describe('three deep', () => {
     const { errors, runtime, page } = render(
       `<html :v=\${'PAGE'}><head>${BADGE}${BOX}</head><body>` +
         '<i :for-each=${["x", "y"]}>' +
-        '<my-box><b data-p="1"><my-badge :v=${data} /></b></my-box>' +
+        '<my-box><b data-p="1"><my-badge ::v=${data} /></b></my-box>' +
         '</i></body></html>'
     );
 
@@ -94,7 +94,7 @@ describe('three deep', () => {
     // doubly slotted: neither instance's own `v` may capture it
     const { errors, runtime, page } = render(
       `<html :v=\${'PAGE'}><head>${BOX}` +
-        '<:define tag="my-outer:div" :v="OUTER"><:slot /></:define>' +
+        '<:define tag="my-outer:div" ::v="OUTER"><:slot /></:define>' +
         '</head><body>' +
         '<my-outer><my-box><b data-p="1">${v}</b></my-box></my-outer>' +
         '</body></html>'
@@ -124,7 +124,7 @@ describe('three deep', () => {
     // own :for-each, stamped out inside each replica of the page's
     const { errors, runtime, page } = render(
       '<html :v=${"PAGE"}><head>' +
-        '<:define tag="my-list:u" :v="LIST" :items=${["a", "b"]}>' +
+        '<:define tag="my-list:u" ::v="LIST" ::items=${["a", "b"]}>' +
         '<b data-p="1" :for-each=${items}>${data}</b></:define>' +
         '</head><body><i :for-each=${[1, 2]}><my-list /></i></body></html>'
     );
@@ -154,7 +154,7 @@ describe('three deep', () => {
     const { errors, runtime, page, ctx } = render(
       `<html :v=\${'PAGE'}><head>${BADGE}${BOX}</head><body>` +
         '<i :for-each=${[1, 2]}>' +
-        '<my-box><b data-p="1"><my-badge :v=${v + "-" + data} /></b></my-box>' +
+        '<my-box><b data-p="1"><my-badge ::v=${v + "-" + data} /></b></my-box>' +
         '</i></body></html>'
     );
 

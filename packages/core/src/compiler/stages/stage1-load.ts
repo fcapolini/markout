@@ -59,6 +59,7 @@ import {
   PROP_VALUE_PREFIX,
   SERVER_VALUE_ATTR_PREFIX,
   COMPTIME_VALUE_ATTR_PREFIX,
+  PARAMETER_MARKER,
 } from '../ir/Page';
 import { COMPTIME_MARKER } from './stage5-comptime';
 import { NodeType } from '../../html/dom';
@@ -95,6 +96,7 @@ export function stage1load(page: Page) {
   checkSlotNames(page);
   checkStraySlots(page);
   rejectDerivedDefines(page) || expandCustomTagUsages(page);
+  rejectStrayParameters(page);
   linkElseChains(page);
   checkLogicPlacement(page);
   // after every usage has had its chance to clone a stencil with the slot
@@ -1071,7 +1073,7 @@ function expandCustomTagUsages(page: Page): void {
       // silently resolved slotted text against its own values instead of the
       // call site's, which is the one thing slotting must never do
       scope.callSiteValues ??= new Set();
-      const declared = usageDeclarations(loadedUsageScope, defScope);
+      const declared = usageDeclarations(page, loadedUsageScope, defScope, tagName);
       for (const [name, value] of loadedUsageScope.values) {
         if (declared.has(name)) {
           // the usage's OWN name, not the instance's: kept off `scope.values`
@@ -1084,13 +1086,13 @@ function expandCustomTagUsages(page: Page): void {
         // deliberately NOT reassigned to `scope`: `value.scope` is what both
         // stage3/stage4 and the runtime resolve an expression against, and
         // this one was written at the usage site, so it keeps resolving
-        // there -- `<my-card :title=${data.t} />` inside a :for-each has to
+        // there -- `<my-card ::title=${data.t} />` inside a :for-each has to
         // see that loop's `data`
         scope.values.set(name, value);
         scope.callSiteValues.add(name);
         // an ARGUMENT, and so not a name the usage site itself holds: taken
         // out of the scope those expressions resolve from, so that
-        // `<bs-badge :variant=${variant} />` goes on meaning "the variant
+        // `<bs-badge ::variant=${variant} />` goes on meaning "the variant
         // from out here" rather than resolving to itself. The instance keeps
         // it -- that is what makes it a parameter
         loadedUsageScope.values.delete(name);
@@ -1132,6 +1134,39 @@ function expandCustomTagUsages(page: Page): void {
 }
 
 /**
+ * Refuses `::` where there is no interface for it to be part of.
+ *
+ * The mark says a name belongs to a component: a `<:define>` declares one,
+ * a usage of that tag passes one, and both are consumed before this runs.
+ * What is left is `::` on an ordinary element -- `<div ::x=${1}>` -- where
+ * there is no component and so nothing the name could belong to. Left alone
+ * it would declare an ordinary value and read as though it had said
+ * something, which is the shape of mistake this language reports rather
+ * than absorbs.
+ */
+function rejectStrayParameters(page: Page): void {
+  const walk = (scope: Scope) => {
+    // a definition's own root declares the interface, and an instance holds
+    // the arguments a usage passed into it: both are `::` doing its job
+    if (!page.definitionScopes.has(scope) && scope.usesTemplate === undefined) {
+      for (const [name, value] of scope.values) {
+        value.parameter &&
+          addError(
+            page,
+            `"${PARAMETER_MARKER}${name}" is not a parameter of anything: ` +
+              `"${PARAMETER_MARKER}" marks a name a component takes, and ` +
+              `<${scope.e?.tagName.toLowerCase() ?? 'this element'}> is not one. ` +
+              `Write "${SPECIAL_ATTR_PREFIX}${name}" for a value of your own`,
+            value.node.loc
+          );
+      }
+    }
+    scope.children.forEach(walk);
+  };
+  page.main && walk(page.main);
+}
+
+/**
  * Which of a usage site's values it DECLARES rather than passes.
  *
  * A custom tag's usage is a call and an element in the caller's markup at
@@ -1143,20 +1178,54 @@ function expandCustomTagUsages(page: Page): void {
  *
  * Two kinds are never arguments whatever the definition declares. The
  * per-item alias a `:for-each` on the tag introduces is a declaration by
- * construction: `<std-data :for-each=${urls} :url=${data} />` binds `data`
+ * construction: `<std-data :for-each=${urls} ::url=${data} />` binds `data`
  * here, and routing it into a `std-data` that happens to declare `:data`
  * would hand the component its caller's loop item. And the `$`-keyed
  * families are element-facing (`class$x`, `event$click`) or the runtime's
  * own bookkeeping (`for$each`) -- they apply to the instance's element and
  * are never read by name, so they stay where they have always been.
  */
-function usageDeclarations(usage: Scope, defScope: Scope): Set<string> {
+function usageDeclarations(
+  page: Page,
+  usage: Scope,
+  defScope: Scope,
+  tagName: string
+): Set<string> {
   const declared = new Set<string>();
+  const parameters = defScope.parameters;
   if (usage.values.has(FOR_EACH_VALUE) || usage.values.has(FOR_DATA_VALUE)) {
     declared.add((usage.values.get(FOR_AS_VALUE)?.value as string) || FOR_DATA_DEFAULT_NAME);
   }
-  for (const name of usage.values.keys()) {
-    if (name.includes('$') || defScope.values.has(name)) continue;
+  for (const [name, value] of usage.values) {
+    if (name.includes('$') || declared.has(name)) continue;
+    const isParameter = !!parameters?.has(name);
+    if (value.parameter) {
+      // `::name` here says "the component's", so it has to be one
+      isParameter ||
+        addError(
+          page,
+          `<${tagName}> has no parameter "${name}"` +
+            (parameters?.size
+              ? `: it takes ${[...parameters].map(p => `"${p}"`).join(', ')}`
+              : ` -- it declares none`),
+          value.node.loc
+        );
+      continue;
+    }
+    if (isParameter) {
+      // and a plain `:name` says "mine", which this one is not: the tag
+      // RESERVES what it declares, so that a component gaining a parameter
+      // is a change a caller is told about rather than one that quietly
+      // takes a name they were already using
+      addError(
+        page,
+        `"${name}" is a parameter of <${tagName}>: write ` +
+          `"${PARAMETER_MARKER}${name}" to pass it, or pick another name for ` +
+          `a value of your own`,
+        value.node.loc
+      );
+      continue;
+    }
     declared.add(name);
   }
   return declared;
@@ -1760,6 +1829,15 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
       continue;
     }
     let name = attr.name.slice(SPECIAL_ATTR_PREFIX.length);
+    // `::name` is the parameter mark, and the one thing that is not about
+    // this value's own nature: it says the name belongs to a component's
+    // interface. On a `<:define>` it DECLARES one, on a usage site it PASSES
+    // one, and it means nothing anywhere else -- see rejectStrayParameters
+    let parameter = false;
+    if (name.startsWith(SPECIAL_ATTR_PREFIX)) {
+      parameter = true;
+      name = name.slice(SPECIAL_ATTR_PREFIX.length);
+    }
     // `:const-` and `:server-` are MODIFIERS, not families of their own:
     // stripped up front so the rest of the name parses exactly as it would
     // without them, and what they mark stays an ordinary value, declared and
@@ -1940,6 +2018,31 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
       );
       continue;
     }
+    // a parameter is a name a component's interface has, and the families
+    // name things outside markout entirely -- a CSS class, a DOM event --
+    // which no interface can take
+    if (parameter && (compiledPrefix || SERVER_REJECTED_ATTRS.has(name))) {
+      addError(
+        page,
+        `"${SPECIAL_ATTR_PREFIX}${SPECIAL_ATTR_PREFIX}${name}" is not a value: ` +
+          `"${PARAMETER_MARKER}" marks a name a component takes`,
+        loc
+      );
+      continue;
+    }
+    // a constant is substituted into its readers, and a definition's readers
+    // are one body shared by every instance -- so there is nothing a
+    // per-usage override could substitute into, at either end
+    if (parameter && comptime) {
+      addError(
+        page,
+        `"${suffix}" cannot be both a parameter and compile-time: a ` +
+          `"${COMPTIME_MARKER}" value is substituted into readers every ` +
+          `instance shares, so no usage site could give it one of its own`,
+        loc
+      );
+      continue;
+    }
     // a compile-time value is substituted into its readers by stage5 and
     // never reaches the runtime as a cell, so there is nothing left for the
     // server to send
@@ -1969,6 +2072,11 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     const value = new Value(name, attr, scope, page.createValueId());
     value.serverOnly = serverOnly;
     value.comptime = comptime;
+    value.parameter = parameter;
+    // a definition's interface, stated rather than inferred: what is NOT
+    // here is private to the component, which is what a usage site may
+    // neither set nor collide with (see usageDeclarations)
+    parameter && page.definitionScopes.has(scope) && (scope.parameters ??= new Set()).add(name);
     scope.values.set(name, value);
   }
   // both families are now scope values: leaving them behind would serialize

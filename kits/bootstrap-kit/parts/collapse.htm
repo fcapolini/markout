@@ -6,8 +6,8 @@
     anything can open a collapse, and often several things do — so the region
     takes a `:name` and a `bs-button` points at it:
 
-      <bs-button :toggle="collapse" :target="#details">Details</bs-button>
-      <bs-collapse :name="details">…</bs-collapse>
+      <bs-button ::toggle="collapse" ::target="#details">Details</bs-button>
+      <bs-collapse ::name="details">…</bs-collapse>
 
     `:horizontal` collapses width instead of height, in which case Bootstrap
     needs the content to have a width of its own.
@@ -16,10 +16,10 @@
     class="collapse ${extra ?? ''}"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :name=${null}
-    :open=${false}
-    :horizontal=${false}
+    ::extra=${null}      // extra classes for this instance
+    ::name=${null}
+    ::open=${false}
+    ::horizontal=${false}
 
     id=${name}
     :class-show=${open}

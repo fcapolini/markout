@@ -202,7 +202,7 @@ function resolveValue(name: string, value: Value, page: Page, lazy: Set<Value>) 
  *
  * The arguments have already been taken out of that map by stage1, so a
  * name the tag accepts is NOT found here and goes on meaning what it means
- * at the call site -- which is what keeps `<bs-badge :variant=${variant} />`
+ * at the call site -- which is what keeps `<bs-badge ::variant=${variant} />`
  * a pass-through rather than a self-reference.
  */
 function resolvesFrom(value: Value): Scope {

@@ -12,6 +12,7 @@ type Carried =
   | 'attributes'
   | 'callSiteValues'
   | 'usageValues'
+  | 'parameters'
   | 'slotted'
   | 'lexicalParent';
 
@@ -67,6 +68,15 @@ export class Scope {
   textCount: number;
   e?: ServerElement;
   name?: string;
+  /**
+   * A definition's interface: the names its root marked `::`.
+   *
+   * Set on a `<:define>`'s own scope and read at every usage of that tag.
+   * What is not in here is the component's own -- a `:_cls` on the same root
+   * is private, settable from no usage site, and free to share a name with
+   * whatever a caller declares for itself.
+   */
+  parameters?: Set<string>;
   /** set for a custom-tag usage scope: the id of the <:define> scope it instantiates from */
   usesTemplate?: string;
   /**
@@ -84,7 +94,7 @@ export class Scope {
   attributes?: Map<string, string | null>;
   /**
    * Names in `values` that were written at the usage site rather than in the
-   * <:define> body (`<my-card :title=${data.t} />`). They live here so the
+   * <:define> body (`<my-card ::title=${data.t} />`). They live here so the
    * definition can read them, but an expression evaluates where it was
    * written -- this one has to see the call site's `data`, while the
    * definition's own expressions must not see the call site at all.
@@ -180,6 +190,7 @@ export class Scope {
     copy.attributes = this.attributes;
     copy.callSiteValues = this.callSiteValues && new Set(this.callSiteValues);
     copy.usageValues = this.usageValues;
+    copy.parameters = this.parameters;
     copy.slotted = this.slotted;
     copy.lexicalParent = this.lexicalParent;
     return copy;

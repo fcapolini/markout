@@ -162,11 +162,11 @@ describe(':else-if / :else', () => {
     // than across the page
     const r = run(
       '<html :bump=${0}><body>' +
-        '<:define tag="my-badge:span" :n=${0}>' +
+        '<:define tag="my-badge:span" ::n=${0}>' +
         '<i :if=${n + bump === 0}>none</i><i :else-if=${n + bump === 1}>one</i>' +
         '<i :else>lots</i>' +
         '</:define>' +
-        '<my-badge :n=${1} /><my-badge :n=${5} /><my-badge />' +
+        '<my-badge ::n=${1} /><my-badge ::n=${5} /><my-badge />' +
         '</body></html>'
     );
     expect(r.errors).toStrictEqual([]);
@@ -244,8 +244,8 @@ describe(':else-if / :else', () => {
     // has to be re-pointed at the instance or it names nothing
     const r = run(
       '<html :n=${1}><body>' +
-        '<:define tag="my-box:div" :label="box">${label}</:define>' +
-        '<my-box :if=${n === 1} :label=${"first"} />' +
+        '<:define tag="my-box:div" ::label="box">${label}</:define>' +
+        '<my-box :if=${n === 1} ::label=${"first"} />' +
         '<p :else>other</p>' +
         '</body></html>'
     );

@@ -98,7 +98,7 @@ describe('a bare name', () => {
 describe('in markup rather than in an expression', () => {
   const LIB = [
     '<lib>',
-    '  <:define tag="x-card:div" :title=${1} :tone=${2} :_inner=${3}>',
+    '  <:define tag="x-card:div" ::title=${1} ::tone=${2} :_inner=${3}>',
     '    <:slot />',
     '  </:define>',
     '  <:define tag="x-note:p">n</:define>',

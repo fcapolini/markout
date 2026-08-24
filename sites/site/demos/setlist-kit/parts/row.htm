@@ -1,11 +1,11 @@
 <lib>
-  <:define tag="rig-row:li" class="row" :position="" :label="" :meta="">
+  <:define tag="rig-row:li" class="row" ::position="" ::label="" ::meta="">
     <span class="pos">${position}</span>
     <div class="row-main"><h3>${label}</h3><p class="meta">${meta}</p><:slot /></div>
     <div class="row-actions"><:slot name="actions" /></div>
   </:define>
 
-  <:define tag="rig-note:label" class="note" :caption="Notes">
+  <:define tag="rig-note:label" class="note" ::caption="Notes">
     <span class="note-caption">${caption}</span><:slot />
   </:define>
 </lib>

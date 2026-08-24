@@ -62,8 +62,8 @@
       :drop=${(id) => cart = cart.filter(line => line.id !== id)}
       :reset=${() => { query = ''; activeCategory = 'All'; activeBrand = 'All'; sort = 'Featured'; page = 1; }}>
 
-  <mk-header :count=${cart.reduce((total, line) => total + line.qty, 0)}
-             :total=${cart.reduce((total, line) => total + line.price * line.qty, 0)}>
+  <mk-header ::count=${cart.reduce((total, line) => total + line.qty, 0)}
+             ::total=${cart.reduce((total, line) => total + line.price * line.qty, 0)}>
     <span :slot="tagline">${catalog.length} items, one page, no framework</span>
     <button class="ghost" :on-click=${() => reset()}>Reset view</button>
   </mk-header>
@@ -84,16 +84,16 @@
         :shown=${sorted.slice((page - 1) * pageSize, page * pageSize)}>
 
     <section class="board">
-      <mk-stat :label="Catalog" :value=${catalog.length} :hint="items generated at load"></mk-stat>
-      <mk-stat :label="Matching" :value=${matches.length} :hint="after filters"></mk-stat>
-      <mk-stat :label="Average price"
-               :value=${'$' + (matches.length === 0 ? 0 : (matches.reduce((t, i) => t + i.price, 0) / matches.length) | 0)}
-               :hint="across the current filter"></mk-stat>
-      <mk-stat :label="Low stock" :value=${matches.filter(item => item.stock < 8).length} :hint="fewer than 8 left"></mk-stat>
+      <mk-stat ::label="Catalog" ::value=${catalog.length} ::hint="items generated at load"></mk-stat>
+      <mk-stat ::label="Matching" ::value=${matches.length} ::hint="after filters"></mk-stat>
+      <mk-stat ::label="Average price"
+               ::value=${'$' + (matches.length === 0 ? 0 : (matches.reduce((t, i) => t + i.price, 0) / matches.length) | 0)}
+               ::hint="across the current filter"></mk-stat>
+      <mk-stat ::label="Low stock" ::value=${matches.filter(item => item.stock < 8).length} ::hint="fewer than 8 left"></mk-stat>
     </section>
 
     <div class="layout">
-      <mk-section class="catalog" :kicker="Inventory" :heading="Browse the catalog">
+      <mk-section class="catalog" ::kicker="Inventory" ::heading="Browse the catalog">
 
         <div :slot="actions" class="sizes">
           <button :for-each=${[12, 24, 48, 300]}
@@ -103,21 +103,21 @@
         </div>
 
         <div class="filters">
-          <mk-search :value=${query}
-                     :hits=${matches.length}
-                     :change=${(value) => { query = value; page = 1; }}></mk-search>
-          <mk-facet :label="Category"
-                    :options=${['All', ...categories]}
-                    :active=${activeCategory}
-                    :pick=${(value) => { activeCategory = value; page = 1; }}></mk-facet>
-          <mk-facet :label="Brand"
-                    :options=${['All', ...brands]}
-                    :active=${activeBrand}
-                    :pick=${(value) => { activeBrand = value; page = 1; }}></mk-facet>
-          <mk-facet :label="Sort"
-                    :options=${['Featured', 'Price up', 'Price down', 'Rating', 'Name']}
-                    :active=${sort}
-                    :pick=${(value) => sort = value}></mk-facet>
+          <mk-search ::value=${query}
+                     ::hits=${matches.length}
+                     ::change=${(value) => { query = value; page = 1; }}></mk-search>
+          <mk-facet ::label="Category"
+                    ::options=${['All', ...categories]}
+                    ::active=${activeCategory}
+                    ::pick=${(value) => { activeCategory = value; page = 1; }}></mk-facet>
+          <mk-facet ::label="Brand"
+                    ::options=${['All', ...brands]}
+                    ::active=${activeBrand}
+                    ::pick=${(value) => { activeBrand = value; page = 1; }}></mk-facet>
+          <mk-facet ::label="Sort"
+                    ::options=${['Featured', 'Price up', 'Price down', 'Rating', 'Name']}
+                    ::active=${sort}
+                    ::pick=${(value) => sort = value}></mk-facet>
         </div>
 
         <div class="catalog-body">
@@ -125,22 +125,22 @@
           <div class="grid">
             <mk-card :for-each=${shown}
                      :for-key=${data.id}
-                     :item=${data}
-                     :inCart=${inCartIds.has(data.id)}
-                     :buy=${add}></mk-card>
+                     ::item=${data}
+                     ::inCart=${inCartIds.has(data.id)}
+                     ::buy=${add}></mk-card>
           </div>
-          <mk-pager :current=${page} :count=${pages}>
+          <mk-pager ::current=${page} ::count=${pages}>
             <button :slot="prev" class="ghost" :attr-disabled=${page <= 1} :on-click=${() => page = page - 1}>Previous</button>
             <button :slot="next" class="ghost" :attr-disabled=${page >= pages} :on-click=${() => page = page + 1}>Next</button>
           </mk-pager>
         </div>
       </mk-section>
 
-      <mk-cart :lines=${cart}
-               :total=${cart.reduce((total, line) => total + line.price * line.qty, 0)}
-               :step=${bump}
-               :remove=${drop}
-               :clear=${() => cart = []}></mk-cart>
+      <mk-cart ::lines=${cart}
+               ::total=${cart.reduce((total, line) => total + line.price * line.qty, 0)}
+               ::step=${bump}
+               ::remove=${drop}
+               ::clear=${() => cart = []}></mk-cart>
     </div>
   </main>
 </body>

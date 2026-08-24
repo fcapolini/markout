@@ -6,22 +6,22 @@
     An offcanvas panel: the same shape as `bs-modal`, opened by a trigger
     naming it or by the `:open` value.
 
-      <bs-button :toggle="offcanvas" :target="#menu">Menu</bs-button>
-      <bs-offcanvas :name="menu" :title="Menu">…</bs-offcanvas>
+      <bs-button ::toggle="offcanvas" ::target="#menu">Menu</bs-button>
+      <bs-offcanvas ::name="menu" ::title="Menu">…</bs-offcanvas>
   -->
   <:define tag="bs-offcanvas:div"
     class="offcanvas"
     tabindex="-1"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :name=${null}
-    :title=${''}
-    :placement=${'start'}   // 'start' | 'end' | 'top' | 'bottom'
-    :backdrop=${true}
-    :scroll=${false}
-    :responsive=${null}     // 'lg' — an offcanvas below this breakpoint only
-    :open=${false}
+    ::extra=${null}      // extra classes for this instance
+    ::name=${null}
+    ::title=${''}
+    ::placement=${'start'}   // 'start' | 'end' | 'top' | 'bottom'
+    ::backdrop=${true}
+    ::scroll=${false}
+    ::responsive=${null}     // 'lg' — an offcanvas below this breakpoint only
+    ::open=${false}
 
     // private
     :_labelId=${`bs-offcanvas-title-${$id}`}
@@ -79,7 +79,7 @@
   >
     <div class="offcanvas-header">
       <h5 class="offcanvas-title" id=${_labelId}>${title}</h5>
-      <bs-close :dismiss="offcanvas" />
+      <bs-close ::dismiss="offcanvas" />
     </div>
 
     <div class="offcanvas-body">

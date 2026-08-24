@@ -71,9 +71,9 @@ describe('definitions using one another', () => {
     // the instances are real scopes rather than merely present markup
     const out = await body(
       '<html><head>' +
-        '<:define tag="d-outer:div"><d-mid :n=${2}/></:define>' +
-        '<:define tag="d-mid:div" :n=${0}><d-leaf :n=${n * 3}/></:define>' +
-        '<:define tag="d-leaf:span" :n=${0}>${n}</:define>' +
+        '<:define tag="d-outer:div"><d-mid ::n=${2}/></:define>' +
+        '<:define tag="d-mid:div" ::n=${0}><d-leaf ::n=${n * 3}/></:define>' +
+        '<:define tag="d-leaf:span" ::n=${0}>${n}</:define>' +
         '</head><body><d-outer/></body></html>'
     );
     expect(out).toContain('>6<');

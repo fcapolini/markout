@@ -261,11 +261,11 @@
     convinced wants the demos, the docs, or the extension, and those are
     the three places this page can't take them by scrolling.
   -->
-  <bs-navbar :sticky
-             :brand="#top"
-             :extra="border-bottom"
-             :expand="md"
-             :items=${[
+  <bs-navbar ::sticky
+             ::brand="#top"
+             ::extra="border-bottom"
+             ::expand="md"
+             ::items=${[
                { name: 'Demos', link: '/demos/' },
                { name: 'Docs', link: 'https://github.com/fcapolini/markout/blob/main/docs/reference/syntax.md' },
                { name: 'VS Code extension', link: 'https://marketplace.visualstudio.com/items?itemName=markout.markout-vscode' },
@@ -290,12 +290,12 @@
     </span>
 
     <bs-theme-toggle :slot="end"
-                     :size="sm" />
+                     ::size="sm" />
 
     <bs-link :slot="end"
-             :button
-             :variant="primary"
-             :href="https://github.com/fcapolini/markout">GitHub</bs-link>
+             ::button
+             ::variant="primary"
+             ::href="https://github.com/fcapolini/markout">GitHub</bs-link>
   </bs-navbar>
 
   <!--- Hero -->
@@ -306,7 +306,7 @@
       <div class="row align-items-center gy-5 gx-0 gx-sm-5">
 
         <div class="col-lg-7">
-          <page-eyebrow :extra="mb-3">Bootstrap + Markout</page-eyebrow>
+          <page-eyebrow ::extra="mb-3">Bootstrap + Markout</page-eyebrow>
 
           <h1 class="display-4 fw-bold lh-1 mb-4">
             Add application logic directly to your Bootstrap&nbsp;page.
@@ -324,28 +324,28 @@
           </p>
 
           <div class="d-flex flex-wrap gap-2">
-            <bs-link :href="#boilerplate"
-                     :button
-                     :variant="primary"
-                     :size="lg">See it on a real page</bs-link>
+            <bs-link ::href="#boilerplate"
+                     ::button
+                     ::variant="primary"
+                     ::size="lg">See it on a real page</bs-link>
 
-            <bs-link :href="#kit"
-                     :button
-                     :variant="secondary"
-                     :outline
-                     :size="lg">Explore the Bootstrap Kit</bs-link>
+            <bs-link ::href="#kit"
+                     ::button
+                     ::variant="secondary"
+                     ::outline
+                     ::size="lg">Explore the Bootstrap Kit</bs-link>
           </div>
         </div>
 
         <div class="col-lg-5">
-          <code-card :title="examples/counter.html"
-                     :label="HTML"
-                     :note>
+          <code-card ::title="examples/counter.html"
+                     ::label="HTML"
+                     ::note>
 <pre class="mb-0"
      data-lang="html"><:include src="/examples/counter.html" as="code" escaping /></pre>
             <code-preview :slot="preview"
-                          :src="/examples/counter.html"
-                          :height="5.5rem" />
+                          ::src="/examples/counter.html"
+                          ::height="5.5rem" />
             <p :slot="note"
                class="mb-0">
               A Bootstrap button that declares its own value and updates it.
@@ -381,23 +381,23 @@
       <div class="row justify-content-center">
         <div class="col-lg-10">
 
-          <bs-nav :variant="pills"
-                  :align="center"
-                  :toggle="pill"
-                  :extra="gap-2 mb-4"
-                  :items=${[
+          <bs-nav ::variant="pills"
+                  ::align="center"
+                  ::toggle="pill"
+                  ::extra="gap-2 mb-4"
+                  ::items=${[
                     { name: 'Plain Bootstrap', target: '#plain', active: true },
                     { name: 'With the Bootstrap Kit', target: '#kitted' },
                   ]} />
 
           <bs-tab-content>
 
-            <bs-tab-pane :name="plain"
-                         :active>
+            <bs-tab-pane ::name="plain"
+                         ::active>
 
-              <code-card :title="index-plain.html"
-                         // :label="28 lines"
-                         :note>
+              <code-card ::title="index-plain.html"
+                         // ::label="28 lines"
+                         ::note>
 <pre class="mb-0"><code data-lang="html">&lt;head&gt;
   &lt;meta charset="utf-8"&gt;
   &lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;
@@ -437,11 +437,11 @@
               </code-card>
             </bs-tab-pane>
 
-            <bs-tab-pane :name="kitted">
+            <bs-tab-pane ::name="kitted">
 
-              <code-card :title="index.html"
-                         // :label="12 lines"
-                         :note>
+              <code-card ::title="index.html"
+                         // ::label="12 lines"
+                         ::note>
 <pre class="mb-0"><code data-lang="html">&lt;head&gt;
   &lt;:import src="/npm/@markout-lang/bootstrap-kit/all.htm" /&gt;
   &lt;title&gt;Northstar Studio&lt;/title&gt;
@@ -489,7 +489,7 @@
       <div class="row align-items-center gy-5 gx-0 gx-sm-5">
 
         <div class="col-lg-6">
-          <page-eyebrow :extra="mb-3">Bootstrap Kit</page-eyebrow>
+          <page-eyebrow ::extra="mb-3">Bootstrap Kit</page-eyebrow>
 
           <h2 class="display-6 fw-bold mb-3">
             Components that are just HTML fragments
@@ -513,8 +513,8 @@
             beyond the markup itself.
           </p>
 
-          <bs-card :extra="bg-body-tertiary mt-4"
-                   :bodyExtra="p-4">
+          <bs-card ::extra="bg-body-tertiary mt-4"
+                   ::bodyExtra="p-4">
             <p class="mb-0">
               Every component is a <code class="rule-code">bs-</code> tag
               carrying Bootstrap's own concepts. Reach for one the way you'd
@@ -524,18 +524,18 @@
           </bs-card>
 
           <div class="d-flex flex-wrap gap-2 mt-4">
-            <bs-link :href="/demos/kitchen-sink.html"
-                     :button
-                     :variant="primary">See every component</bs-link>
+            <bs-link ::href="/demos/kitchen-sink.html"
+                     ::button
+                     ::variant="primary">See every component</bs-link>
 
-            <bs-link :href="/demos/"
-                     :button
-                     :variant="secondary"
-                     :outline>Browse the demos</bs-link>
+            <bs-link ::href="/demos/"
+                     ::button
+                     ::variant="secondary"
+                     ::outline>Browse the demos</bs-link>
 
-            <bs-link :href="https://github.com/fcapolini/markout/tree/main/kits/bootstrap-kit"
-                     :button
-                     :variant="link">Read the kit source</bs-link>
+            <bs-link ::href="https://github.com/fcapolini/markout/tree/main/kits/bootstrap-kit"
+                     ::button
+                     ::variant="link">Read the kit source</bs-link>
           </div>
         </div>
 
@@ -578,8 +578,8 @@
             work in the before/after above.
           </p>
 
-          <bs-card :extra="h-100 bg-body-tertiary"
-                   :border="primary-subtle">
+          <bs-card ::extra="h-100 bg-body-tertiary"
+                   ::border="primary-subtle">
             <span class="fw-semibold">…and the next one you write</span>
             <p class="text-body-secondary small mb-0 mt-2">
               Adding a component means writing a fragment and giving it a
@@ -596,9 +596,9 @@
       <div class="row justify-content-center mt-5 pt-lg-3">
         <div class="col-lg-10">
 
-          <code-card :title="bootstrap-kit/parts/button.htm"
-                     :label="the whole component"
-                     :note>
+          <code-card ::title="bootstrap-kit/parts/button.htm"
+                     ::label="the whole component"
+                     ::note>
 <pre class="mb-0"><code data-lang="html">&lt;:define tag="bs-button:a"
 
          // parameters
@@ -658,11 +658,11 @@
       <div class="row g-4 align-items-start">
 
         <div class="col-lg-6">
-          <code-card :title="bootstrap-kit/parts/input.htm"
-                     :label="the component"
-                     :variant="primary"
-                     :extra="h-100"
-                     :note>
+          <code-card ::title="bootstrap-kit/parts/input.htm"
+                     ::label="the component"
+                     ::variant="primary"
+                     ::extra="h-100"
+                     ::note>
 <pre class="mb-0"><code data-lang="html">&lt;:define tag="bs-input:div"
   class="mb-3"
 
@@ -703,16 +703,16 @@
         </div>
 
         <div class="col-lg-6">
-          <code-card :title="examples/validation.html"
-                     :label="using it"
-                     :extra="h-100"
-                     :note>
+          <code-card ::title="examples/validation.html"
+                     ::label="using it"
+                     ::extra="h-100"
+                     ::note>
 <pre class="mb-0"
      data-lang="html"><:include src="/examples/validation.html" as="code" escaping /></pre>
             <code-preview :slot="preview"
-                          :src="/examples/validation.html"
-                          :height="19.5rem"
-                          :label="the result — type into it" />
+                          ::src="/examples/validation.html"
+                          ::height="19.5rem"
+                          ::label="the result — type into it" />
             <p :slot="note"
                class="mb-0">
               Each <code class="rule-code">&lt;bs-input&gt;</code> keeps its own
@@ -787,9 +787,9 @@
       <div class="row g-4 align-items-start justify-content-center">
 
         <div class="col-lg-6">
-          <code-card :title="a chain of branches"
-                     :extra="h-100"
-                     :note>
+          <code-card ::title="a chain of branches"
+                     ::extra="h-100"
+                     ::note>
 <pre class="mb-0"><code data-lang="html">&lt;bs-spinner :if=${loading} /&gt;
 
 &lt;bs-alert :else-if=${error}
@@ -867,11 +867,11 @@
       <div class="row g-4 align-items-start">
 
         <div class="col-lg-7">
-          <code-card :title="examples/app-kit.htm"
-                     :label="your kit"
-                     :variant="primary"
-                     :extra="h-100"
-                     :note>
+          <code-card ::title="examples/app-kit.htm"
+                     ::label="your kit"
+                     ::variant="primary"
+                     ::extra="h-100"
+                     ::note>
 <pre class="mb-0"
      data-lang="html"><:include src="/examples/app-kit.htm" as="code" escaping /></pre>
             <p :slot="note"
@@ -884,13 +884,13 @@
         </div>
 
         <div class="col-lg-5">
-          <code-card :title="examples/design-system.html"
-                     :label="every page">
+          <code-card ::title="examples/design-system.html"
+                     ::label="every page">
 <pre class="mb-0"
      data-lang="html"><:include src="/examples/design-system.html" as="code" escaping /></pre>
             <code-preview :slot="preview"
-                          :src="/examples/design-system.html"
-                          :height="12.5rem" />
+                          ::src="/examples/design-system.html"
+                          ::height="12.5rem" />
           </code-card>
         </div>
 
@@ -940,9 +940,9 @@
 
       <div class="row justify-content-center mt-4">
         <div class="col-lg-10">
-          <bs-card :extra="bg-body-tertiary"
-                   :align="center"
-                   :bodyExtra="p-4">
+          <bs-card ::extra="bg-body-tertiary"
+                   ::align="center"
+                   ::bodyExtra="p-4">
             <p class="mb-0">
               Shared tokens, shared components, one place to change them —
               and nothing to install, compile, or keep in sync. The whole
@@ -977,8 +977,8 @@
       <div class="row g-4">
 
         <div class="col-md-6">
-          <page-step :n="01"
-                     :heading="HTML is the syntax">
+          <page-step ::n="01"
+                     ::heading="HTML is the syntax">
             <p class="text-body-secondary mb-0">
               Anything without a <code class="rule-code">${…}</code> or a
               <code class="rule-code">:</code> is plain markup, and stays
@@ -988,8 +988,8 @@
         </div>
 
         <div class="col-md-6">
-          <page-step :n="02"
-                     :heading="One expression syntax">
+          <page-step ::n="02"
+                     ::heading="One expression syntax">
             <p class="text-body-secondary mb-0">
               <code class="rule-code">${…}</code> is plain JavaScript, in
               text, attributes and CSS alike. Whatever holds one is reactive.
@@ -998,8 +998,8 @@
         </div>
 
         <div class="col-md-6">
-          <page-step :n="03"
-                     :heading="One prefix for everything else">
+          <page-step ::n="03"
+                     ::heading="One prefix for everything else">
             <p class="text-body-secondary mb-0">
               <code class="rule-code">:</code> names what HTML has no name
               for, always as <code class="rule-code">:family-name</code> —
@@ -1012,8 +1012,8 @@
         </div>
 
         <div class="col-md-6">
-          <page-step :n="04"
-                     :heading="Scopes nest lexically">
+          <page-step ::n="04"
+                     ::heading="Scopes nest lexically">
             <p class="text-body-secondary mb-0">
               A value is visible to every descendant, with no separate
               wiring. An expression resolves where it was written — which is
@@ -1026,19 +1026,19 @@
 
       <div class="row justify-content-center mt-5">
         <div class="col-lg-9">
-          <bs-card :extra="bg-body-tertiary"
-                   :align="center"
-                   :bodyExtra="p-4">
+          <bs-card ::extra="bg-body-tertiary"
+                   ::align="center"
+                   ::bodyExtra="p-4">
             <p class="mb-3">
               No rule above has a convenient exception. A shortcut that saves
               a few characters at the call site but makes every future reader
               remember a special case isn't a simplification — it's deferred
               complexity.
             </p>
-            <bs-link :href="https://github.com/fcapolini/markout/blob/main/docs/reference/syntax.md"
-                     :button
-                     :variant="primary"
-                     :outline>The full syntax, on one page</bs-link>
+            <bs-link ::href="https://github.com/fcapolini/markout/blob/main/docs/reference/syntax.md"
+                     ::button
+                     ::variant="primary"
+                     ::outline>The full syntax, on one page</bs-link>
           </bs-card>
         </div>
       </div>
@@ -1055,8 +1055,8 @@
       <div class="row align-items-center gy-5 gx-0 gx-sm-5">
 
         <div class="col-lg-6">
-          <page-eyebrow :variant="success"
-                        :extra="mb-3">Isomorphic by design</page-eyebrow>
+          <page-eyebrow ::variant="success"
+                        ::extra="mb-3">Isomorphic by design</page-eyebrow>
 
           <h2 class="display-6 fw-bold mb-3">
             The same page runs on the server and in the browser
@@ -1079,8 +1079,8 @@
         </div>
 
         <div class="col-lg-6">
-          <bs-card :extra="shadow-sm"
-                   :bodyExtra="p-4">
+          <bs-card ::extra="shadow-sm"
+                   ::bodyExtra="p-4">
 
             <div class="border rounded p-3 text-center fw-semibold mb-3">
               index.html
@@ -1150,9 +1150,9 @@
 
       <div class="row justify-content-center mt-4">
         <div class="col-lg-9">
-          <bs-card :extra="bg-body-tertiary"
-                   :align="center"
-                   :bodyExtra="p-4">
+          <bs-card ::extra="bg-body-tertiary"
+                   ::align="center"
+                   ::bodyExtra="p-4">
             <p class="mb-0">
               Markout around Bootstrap, Tailwind or Shoelace keeps both
               choices open: change how the page is put together without
@@ -1305,8 +1305,8 @@
             </table>
           </div>
 
-          <bs-alert :variant="secondary"
-                    :extra="mt-4 mb-0 pb-1">
+          <bs-alert ::variant="secondary"
+                    ::extra="mt-4 mb-0 pb-1">
             <p><strong class="d-block mb-1">And the honest costs.</strong></p>
             <p>
               Alpine is mature, and its ecosystem, community and documentation
@@ -1408,14 +1408,14 @@
           </p>
 
           <div class="d-flex justify-content-center flex-wrap gap-2 mt-4">
-            <bs-link :href="https://marketplace.visualstudio.com/items?itemName=markout.markout-vscode"
-                     :button
-                     :variant="primary">Install for VS Code</bs-link>
+            <bs-link ::href="https://marketplace.visualstudio.com/items?itemName=markout.markout-vscode"
+                     ::button
+                     ::variant="primary">Install for VS Code</bs-link>
 
-            <bs-link :href="https://github.com/fcapolini/markout/tree/main/packages/vscode"
-                     :button
-                     :variant="secondary"
-                     :outline>What it does, in full</bs-link>
+            <bs-link ::href="https://github.com/fcapolini/markout/tree/main/packages/vscode"
+                     ::button
+                     ::variant="secondary"
+                     ::outline>What it does, in full</bs-link>
           </div>
         </div>
       </div>
@@ -1435,9 +1435,9 @@
           puts it under the paragraph above rather than beside nothing.
         -->
         <div class="col-lg-8">
-          <code-card :title="settings.json"
-                     :label="json"
-                     :note>
+          <code-card ::title="settings.json"
+                     ::label="json"
+                     ::note>
 <pre class="mb-0"><code data-lang="json">"[html]": { "editor.defaultFormatter": "markout.markout-vscode" }</code></pre>
             <p :slot="note"
                class="mb-0">
@@ -1480,19 +1480,19 @@
           <div class="row g-3 text-start mb-5">
 
             <div class="col-12">
-              <code-card :title="Install"
-                         :mono=${false}
-                         :label="shell">
+              <code-card ::title="Install"
+                         ::mono=${false}
+                         ::label="shell">
 <pre class="mb-0"><code data-lang="sh">npm install -g @markout-lang/cli @markout-lang/bootstrap-kit</code></pre>
               </code-card>
             </div>
 
             <div class="col-md-6">
-              <code-card :title="Serve a directory"
-                         :mono=${false}
-                         :label="shell"
-                         :extra="h-100"
-                         :note>
+              <code-card ::title="Serve a directory"
+                         ::mono=${false}
+                         ::label="shell"
+                         ::extra="h-100"
+                         ::note>
 <pre class="mb-0"><code data-lang="sh">markout ./my-site</code></pre>
                 <p :slot="note"
                    class="mb-0">
@@ -1503,11 +1503,11 @@
             </div>
 
             <div class="col-md-6">
-              <code-card :title="Work on it"
-                         :mono=${false}
-                         :label="shell"
-                         :extra="h-100"
-                         :note>
+              <code-card ::title="Work on it"
+                         ::mono=${false}
+                         ::label="shell"
+                         ::extra="h-100"
+                         ::note>
 <pre class="mb-0"><code data-lang="sh">markout ./my-site --dev</code></pre>
                 <p :slot="note"
                    class="mb-0">
@@ -1524,10 +1524,10 @@
               ends with nothing running at all.
             -->
             <div class="col-12">
-              <code-card :title="Ship it static"
-                         :mono=${false}
-                         :label="shell"
-                         :note>
+              <code-card ::title="Ship it static"
+                         ::mono=${false}
+                         ::label="shell"
+                         ::note>
 <pre class="mb-0"><code data-lang="sh">markout build ./my-site ./dist</code></pre>
                 <p :slot="note"
                    class="mb-0">
@@ -1542,16 +1542,16 @@
           </div>
 
           <div class="d-flex justify-content-center flex-wrap gap-2">
-            <bs-link :href="https://github.com/fcapolini/markout"
-                     :button
-                     :variant="primary"
-                     :size="lg">View on GitHub</bs-link>
+            <bs-link ::href="https://github.com/fcapolini/markout"
+                     ::button
+                     ::variant="primary"
+                     ::size="lg">View on GitHub</bs-link>
 
-            <bs-link :href="https://github.com/fcapolini/markout/blob/main/docs/reference/syntax.md"
-                     :button
-                     :variant="light"
-                     :outline
-                     :size="lg">Read the syntax reference</bs-link>
+            <bs-link ::href="https://github.com/fcapolini/markout/blob/main/docs/reference/syntax.md"
+                     ::button
+                     ::variant="light"
+                     ::outline
+                     ::size="lg">Read the syntax reference</bs-link>
           </div>
 
         </div>

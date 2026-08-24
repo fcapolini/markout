@@ -22,10 +22,10 @@
     role="alert"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :variant=${'primary'}
-    :heading=${null}
-    :dismissible=${false}
+    ::extra=${null}      // extra classes for this instance
+    ::variant=${'primary'}
+    ::heading=${null}
+    ::dismissible=${false}
 
     // private
     :_class=${['alert', `alert-${variant}`, extra].filter(s => s).join(' ')}
@@ -40,8 +40,8 @@
 
     <:slot />
 
-    <bs-close :dismiss="alert"
-      :label="Close alert"
+    <bs-close ::dismiss="alert"
+      ::label="Close alert"
       :if=${dismissible} />
   </:define>
 

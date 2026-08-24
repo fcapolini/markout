@@ -44,15 +44,15 @@
   browser asks for nothing. That is the property to check by viewing source
   rather than taking on faith: every row, bar and figure is in the markup.
 -->
-<std-data :aka="servicesSrc"  :url=${apiBase + '/services.json'} />
-<std-data :aka="deploysSrc"   :url=${apiBase + '/deploys.json'} />
-<std-data :aka="activitySrc"  :url=${apiBase + '/activity.json'} />
-<std-data :aka="todosSrc"     :url=${apiBase + '/todos.json'} />
-<std-data :aka="trafficSrc"   :url=${apiBase + '/metrics/traffic.json'} />
-<std-data :aka="faultsSrc"    :url=${apiBase + '/metrics/faults.json'} />
-<std-data :aka="latenciesSrc" :url=${apiBase + '/metrics/latencies.json'} />
-<std-data :aka="endpointsSrc" :url=${apiBase + '/metrics/endpoints.json'} />
-<std-data :aka="zonesSrc"     :url=${apiBase + '/metrics/zones.json'} />
+<std-data :aka="servicesSrc"  ::url=${apiBase + '/services.json'} />
+<std-data :aka="deploysSrc"   ::url=${apiBase + '/deploys.json'} />
+<std-data :aka="activitySrc"  ::url=${apiBase + '/activity.json'} />
+<std-data :aka="todosSrc"     ::url=${apiBase + '/todos.json'} />
+<std-data :aka="trafficSrc"   ::url=${apiBase + '/metrics/traffic.json'} />
+<std-data :aka="faultsSrc"    ::url=${apiBase + '/metrics/faults.json'} />
+<std-data :aka="latenciesSrc" ::url=${apiBase + '/metrics/latencies.json'} />
+<std-data :aka="endpointsSrc" ::url=${apiBase + '/metrics/endpoints.json'} />
+<std-data :aka="zonesSrc"     ::url=${apiBase + '/metrics/zones.json'} />
 <!---
   Every open incident, rather than the ones that matter here.
 
@@ -68,5 +68,5 @@
   price of having no server. The chained version lives in the demo that has
   one.
 -->
-<std-data :aka="incidentsSrc" :url=${apiBase + '/incidents.json'} />
+<std-data :aka="incidentsSrc" ::url=${apiBase + '/incidents.json'} />
 </lib>

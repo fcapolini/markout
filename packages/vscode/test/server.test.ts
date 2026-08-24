@@ -343,7 +343,7 @@ describe('the server, over stdio', () => {
     const text = [
       '<lib>',
       '  <:define tag="x-card:div"',
-      "           :title=${'Untitled'}>",
+      "           ::title=${'Untitled'}>",
       '    <h2>${title}</h2>',
       '  </:define>',
       '</lib>',
@@ -563,7 +563,7 @@ describe('the server, over stdio', () => {
     // change -- its IMPORT does. Without the invalidation in server.ts this
     // answers with the errors from before the edit, forever.
     const fragment = path.join(docroot, 'markout/parts.htm');
-    const whole = '<lib>\n  <:define tag="x-part:div" :title=${1}>${title}</:define>\n</lib>';
+    const whole = '<lib>\n  <:define tag="x-part:div" ::title=${1}>${title}</:define>\n</lib>';
     fs.writeFileSync(fragment, whole);
     const fragmentUri = `file://${fragment}`;
     notify('textDocument/didOpen', {

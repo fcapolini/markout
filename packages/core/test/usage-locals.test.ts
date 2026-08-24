@@ -37,7 +37,7 @@ function render(html: string) {
 }
 
 const BUTTON =
-  '<:define tag="bs-button:button" :variant=${\'primary\'} class=${\'btn btn-\' + variant}>' +
+  '<:define tag="bs-button:button" ::variant=${\'primary\'} class=${\'btn btn-\' + variant}>' +
   '<:slot /></:define>';
 
 describe('a name the tag takes no parameter for', () => {
@@ -67,7 +67,7 @@ describe('a name the tag takes no parameter for', () => {
     // shade it, which is what the routing exists to prevent
     const p = render(
       '<html><body>' +
-      '<:define tag="x-box:div" :tone=${"warm"}>${tone}</:define>' +
+      '<:define tag="x-box:div" ::tone=${"warm"}>${tone}</:define>' +
       '<x-box :tone2=${"cold"} />' +
       '</body></html>'
     );
@@ -78,7 +78,7 @@ describe('a name the tag takes no parameter for', () => {
   it('cannot shade a private the definition reads', () => {
     const p = render(
       '<html><body>' +
-      '<:define tag="x-box:div" :label=${"hi"} :_cls=${"box " + label} class=${_cls}>' +
+      '<:define tag="x-box:div" ::label=${"hi"} :_cls=${"box " + label} class=${_cls}>' +
       '${label}</:define>' +
       '<x-box :_other=${"mine"} />' +
       '</body></html>'
@@ -93,7 +93,7 @@ describe('a name the tag does take', () => {
     // the pass-through idiom: `variant` on the right is the caller's
     const p = render(
       '<html><body :variant=${"danger"}>' + BUTTON +
-      '<bs-button :variant=${variant}>go</bs-button>' +
+      '<bs-button ::variant=${variant}>go</bs-button>' +
       '</body></html>'
     );
     expect(p.errors).toStrictEqual([]);
@@ -102,7 +102,7 @@ describe('a name the tag does take', () => {
 
   it('overrides the definition\'s default', () => {
     const p = render(
-      '<html><body>' + BUTTON + '<bs-button :variant=${"success"}>go</bs-button></body></html>'
+      '<html><body>' + BUTTON + '<bs-button ::variant=${"success"}>go</bs-button></body></html>'
     );
     expect(p.errors).toStrictEqual([]);
     expect(p.body()).toContain('btn btn-success');
@@ -126,8 +126,8 @@ describe('a replicated usage', () => {
     // component must keep its own
     const p = render(
       '<html><body :urls=${["a", "b"]}>' +
-      '<:define tag="x-src:div" :data=${"none"} :url=${""}>${data}:${url}</:define>' +
-      '<x-src :for-each=${urls} :url=${data} />' +
+      '<:define tag="x-src:div" ::data=${"none"} ::url=${""}>${data}:${url}</:define>' +
+      '<x-src :for-each=${urls} ::url=${data} />' +
       '</body></html>'
     );
     expect(p.errors).toStrictEqual([]);
@@ -140,7 +140,7 @@ describe('the shapes that used to be "Unknown reference"', () => {
   const cases: [string, string][] = [
     ['slot text reads a local', '<bs-button :count=${0}>${count}</bs-button>'],
     ['a handler reads one', '<bs-button :count=${0} :on-click=${() => count++} />'],
-    ['an argument reads one', '<bs-button :count=${0} :variant=${count ? "a" : "b"} />'],
+    ['an argument reads one', '<bs-button :count=${0} ::variant=${count ? "a" : "b"} />'],
     ['a class toggle reads one', '<bs-button :hot=${true} :class-on=${hot} />'],
     ['a plain attribute reads one', '<bs-button :n=${2} id=${"b" + n} />'],
   ];
@@ -172,5 +172,77 @@ describe('what a usage site still cannot do', () => {
       '</body></html>'
     );
     expect(p.errors).toStrictEqual(['Unknown reference: "extra"']);
+  });
+});
+
+describe('a definition states its interface, and the tag reserves it', () => {
+  const BOX =
+    '<:define tag="x-box:div" ::tone=${"warm"} :_cls=${"box " + tone} class=${_cls}>' +
+    '${tone}</:define>';
+
+  it('refuses a plain `:` on a name the tag takes', () => {
+    // not ceremony: `:` claims the name for the CALLER, and this one is not
+    // the caller's to claim
+    const p = render('<html><body>' + BOX + '<x-box :tone=${"cold"} /></body></html>');
+    expect(p.errors).toStrictEqual([
+      '"tone" is a parameter of <x-box>: write "::tone" to pass it, or pick ' +
+        'another name for a value of your own',
+    ]);
+  });
+
+  it('refuses a `::` on a name it does not', () => {
+    const p = render('<html><body>' + BOX + '<x-box ::tonne=${"cold"} /></body></html>');
+    expect(p.errors).toStrictEqual(['<x-box> has no parameter "tonne": it takes "tone"']);
+  });
+
+  it('says so plainly when the tag takes none at all', () => {
+    const p = render(
+      '<html><body><:define tag="x-p:p">hi</:define><x-p ::title="t" /></body></html>'
+    );
+    expect(p.errors).toStrictEqual(['<x-p> has no parameter "title" -- it declares none']);
+  });
+
+  it('leaves a plain `:` on the define root PRIVATE, and free to be reused', () => {
+    // `_cls` is the component's own and is not in the interface, so the same
+    // name at a usage site is simply a local -- it collides with nothing and
+    // the component keeps its computed class
+    const p = render(
+      '<html><body>' +
+        '<:define tag="x-slotbox:div" ::tone=${"warm"} :_cls=${"box " + tone} ' +
+        'class=${_cls}><:slot /></:define>' +
+        '<x-slotbox :_cls=${"mine"}>${_cls}</x-slotbox>' +
+        '</body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+    expect(p.body()).toContain('class="box warm"');
+    expect(p.body()).toContain('mine');
+  });
+
+  it('refuses setting a private through the interface mark', () => {
+    const p = render('<html><body>' + BOX + '<x-box ::_cls=${"mine"} /></body></html>');
+    expect(p.errors).toStrictEqual(['<x-box> has no parameter "_cls": it takes "tone"']);
+  });
+});
+
+describe('`::` where there is no interface', () => {
+  it('is refused on an ordinary element', () => {
+    const p = render('<html><body><div ::x=${1}>${x}</div></body></html>');
+    expect(p.errors[0]).toContain('"::x" is not a parameter of anything');
+  });
+
+  it('is refused on a family, which names something outside markout', () => {
+    const p = render(
+      '<html><body><:define tag="x-q:div" ::class-on=${true}>q</:define></body></html>'
+    );
+    expect(p.errors[0]).toContain('is not a value');
+  });
+
+  it('cannot also be compile-time', () => {
+    // a constant is substituted into readers every instance shares, so there
+    // is nothing a per-usage override could substitute into
+    const p = render(
+      '<html><body><:define tag="x-r:div" ::const-w=${4}>r</:define></body></html>'
+    );
+    expect(p.errors[0]).toContain('cannot be both a parameter and compile-time');
   });
 });

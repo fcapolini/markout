@@ -20,7 +20,7 @@
 </head>
 
 <body>
-  <std-data :aka="people" :url="/people.json" />
+  <std-data :aka="people" ::url="/people.json" />
 
   <h1>${people.data?.title ?? 'Loading…'}</h1>
 

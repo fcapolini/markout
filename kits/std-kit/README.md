@@ -7,7 +7,7 @@ It ships with the compiler, so a page has it already:
 
 ```html
 <body>
-  <std-data :url="/api/rows" :aka="rows" />
+  <std-data ::url="/api/rows" :aka="rows" />
 </body>
 ```
 
@@ -57,7 +57,7 @@ lifetime and somewhere to keep state, and that is what a kit part is for.
 Fetch a URL, hand the page what came back.
 
 ```html
-<std-data :aka="people" :url="/people.json" />
+<std-data :aka="people" ::url="/people.json" />
 
 <table :for-data=${people.data}>
   <tr :for-each=${data.rows}>
@@ -118,7 +118,7 @@ A URL that *changes* refetches, in the browser, since that is where the
 change happened:
 
 ```html
-<std-data :aka="people" :url=${`/people/${page}.json`} />
+<std-data :aka="people" ::url=${`/people/${page}.json`} />
 ```
 
 The first evaluation is the one that differs between the modes. A served
@@ -134,7 +134,7 @@ another user's row — belongs behind `:client`, which leaves the render alone
 and fetches on arrival:
 
 ```html
-<std-data :aka="mine" :client :url="/api/me" />
+<std-data :aka="mine" ::client ::url="/api/me" />
 <p>${mine.loading ? 'Loading…' : mine.data?.name}</p>
 ```
 

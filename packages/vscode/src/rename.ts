@@ -99,7 +99,7 @@ export async function renameEdits(props: RenameProps): Promise<Edit[]> {
     // where it is read
     addReferences(page, target);
     // And, for a definition's parameter, where it is PASSED -- plus what
-    // reads it through the instance. `<x-card :aka="intro" :title=…>` gives
+    // reads it through the instance. `<x-card :aka="intro" ::title=…>` gives
     // the page an `intro.title` to read, and that read resolves to the value
     // the USAGE declared rather than to the parameter, so it is a second
     // target rather than another reference to the first. Missing it renamed

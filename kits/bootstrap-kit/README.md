@@ -71,7 +71,7 @@ kit overrides. So every component takes `:extra` for the utility classes a
 caller wants on top:
 
 ```html
-<bs-alert :variant="warning" :extra="mb-0">Careful</bs-alert>
+<bs-alert ::variant="warning" ::extra="mb-0">Careful</bs-alert>
 ```
 
 **Comments in a tag: `//` for one line, `/* … */` for more.** Both are
@@ -100,8 +100,8 @@ and the page's scroll lock behind.
 anywhere:
 
 ```html
-<bs-input :aka="email" :label="Email" :type="email" />
-<bs-button :disabled=${!email.value}>Send</bs-button>
+<bs-input :aka="email" ::label="Email" ::type="email" />
+<bs-button ::disabled=${!email.value}>Send</bs-button>
 ```
 
 That holds however deeply the component sits: a `bs-toast :aka="saved"`
@@ -112,8 +112,8 @@ written inside a `bs-toast-container` is still named where you wrote it, so
 and does it pass `check`? -- which is what a submit button needs:
 
 ```html
-<bs-input :aka="email" :label="Email" :check=${v => v.includes('@')} />
-<bs-button :disabled=${!email.valid}>Send</bs-button>
+<bs-input :aka="email" ::label="Email" ::check=${v => v.includes('@')} />
+<bs-button ::disabled=${!email.valid}>Send</bs-button>
 ```
 
 It is not the negation of the error state. An empty field is not marked

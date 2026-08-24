@@ -6,17 +6,17 @@
 <body class="p-4">
   <form>
     <bs-input :aka="email"
-              :label="Email address"
-              :type="email"
-              :placeholder="you@example.com"
-              :check=${v => v.includes('@')}
-              :message="That doesn't look like an email address." />
+              ::label="Email address"
+              ::type="email"
+              ::placeholder="you@example.com"
+              ::check=${v => v.includes('@')}
+              ::message="That doesn't look like an email address." />
 
     <bs-input :aka="password"
-              :label="Password"
-              :type="password"
-              :check=${v => v.length >= 8}
-              :message="Use at least 8 characters." />
+              ::label="Password"
+              ::type="password"
+              ::check=${v => v.length >= 8}
+              ::message="Use at least 8 characters." />
 
     <button class="btn btn-primary"
             :attr-disabled=${!(email.valid && password.valid)}>

@@ -133,7 +133,7 @@ describe('std-data: the served mode', () => {
   }
 
   it('renders what the server fetched', async () => {
-    const r = await renderInline(':url="http://x.test/d.json"', '<i>${d.data.title}</i>');
+    const r = await renderInline('::url="http://x.test/d.json"', '<i>${d.data.title}</i>');
     expect(r.errors).toStrictEqual([]);
     expect(live(r.markup)).toContain('<i>Example data 1</i>');
   });
@@ -151,7 +151,7 @@ describe('std-data: the served mode', () => {
     // has to reach the page. Reported as a runtime error it would land in a
     // server log the visitor never sees, and the page would render blank
     stubFetch(null, { ok: false, status: 404 });
-    const r = await renderInline(':url="http://x.test/missing.json"', '<i>${d.error}</i>');
+    const r = await renderInline('::url="http://x.test/missing.json"', '<i>${d.error}</i>');
     expect(r.errors).toStrictEqual([]);
     expect(r.runtime).toStrictEqual([]);
     expect(live(r.markup)).toContain('<i>404 Not Found</i>');
@@ -159,14 +159,14 @@ describe('std-data: the served mode', () => {
 
   it('carries a network failure back the same way', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
-    const r = await renderInline(':url="http://x.test/d.json"', '<i>${d.error}</i>');
+    const r = await renderInline('::url="http://x.test/d.json"', '<i>${d.error}</i>');
     expect(r.runtime).toStrictEqual([]);
     expect(live(r.markup)).toContain('ECONNREFUSED');
   });
 
   it('leaves the render alone in :client mode', async () => {
     const calls = stubFetch(PAYLOAD);
-    const r = await renderInline(':client :url="/d.json"', '<i>${d.data ?? "none"}</i>');
+    const r = await renderInline('::client ::url="/d.json"', '<i>${d.data ?? "none"}</i>');
     expect(r.errors).toStrictEqual([]);
     expect(calls).toStrictEqual([]);
     expect(live(r.markup)).toContain('<i>none</i>');
@@ -181,7 +181,7 @@ describe('std-data: the served mode', () => {
       // fetch happens, and resolving `/d.json` against an absent origin threw
       const calls = stubFetch(PAYLOAD);
       const r = await renderInline(
-        ':client :url="/d.json"',
+        '::client ::url="/d.json"',
         '<i>${d.data ?? "none"}</i>',
         null
       );
@@ -193,7 +193,7 @@ describe('std-data: the served mode', () => {
 
     it('says why a relative url cannot be fetched, as a server failure', async () => {
       const calls = stubFetch(PAYLOAD);
-      const r = await renderInline(':url="/d.json"', '<i>${d.data ?? "none"}</i>', null);
+      const r = await renderInline('::url="/d.json"', '<i>${d.data ?? "none"}</i>', null);
 
       expect(calls).toStrictEqual([]);
       expect(r.raw).toHaveLength(1);
@@ -209,7 +209,7 @@ describe('std-data: the served mode', () => {
       // markup is static site generation, and worth keeping
       const calls = stubFetch(PAYLOAD);
       const r = await renderInline(
-        ':url="http://x.test/d.json"',
+        '::url="http://x.test/d.json"',
         '<i>${d.data.title}</i>',
         null
       );

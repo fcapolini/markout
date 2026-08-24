@@ -198,7 +198,7 @@ Important rules:
 element needed:
 
 ```html
-<my-card :for-each=${rows} :for-key=${data.id} :title=${data.name} />
+<my-card :for-each=${rows} :for-key=${data.id} ::title=${data.name} />
 ```
 
 This works because `:for-each` *declares* a name rather than passing a
@@ -210,7 +210,7 @@ Markup **slotted into** the tag is written at the usage site too, so it
 reads that name as well:
 
 ```html
-<my-card :for-each=${rows} :for-key=${data.id} :title=${data.name}>
+<my-card :for-each=${rows} :for-key=${data.id} ::title=${data.name}>
   <button :on-click=${() => remove(data.id)}>Drop</button>
 </my-card>
 ```

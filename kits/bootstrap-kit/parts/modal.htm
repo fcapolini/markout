@@ -5,8 +5,8 @@
   <!---
     A modal. Opened the Bootstrap way, by a trigger naming it:
 
-      <bs-button :toggle="modal" :target="#signup">Sign up</bs-button>
-      <bs-modal :name="signup" :title="Sign up">…</bs-modal>
+      <bs-button ::toggle="modal" ::target="#signup">Sign up</bs-button>
+      <bs-modal ::name="signup" ::title="Sign up">…</bs-modal>
 
     The footer is a named slot with a working default, so a modal that only
     needs a Close button doesn't have to say so. That is also why it isn't an
@@ -23,15 +23,15 @@
     tabindex="-1"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :name=${null}
-    :title=${''}
-    :size=${null}          // 'sm' | 'lg' | 'xl'
-    :centered=${false}
-    :scrollable=${false}
-    :fullscreen=${null}    // true | 'sm-down' | 'md-down' | ...
-    :staticBackdrop=${false}
-    :open=${false}
+    ::extra=${null}      // extra classes for this instance
+    ::name=${null}
+    ::title=${''}
+    ::size=${null}          // 'sm' | 'lg' | 'xl'
+    ::centered=${false}
+    ::scrollable=${false}
+    ::fullscreen=${null}    // true | 'sm-down' | 'md-down' | ...
+    ::staticBackdrop=${false}
+    ::open=${false}
 
     // private
     :_labelId=${`bs-modal-title-${$id}`}
@@ -100,7 +100,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h1 class="modal-title fs-5" id=${_labelId}>${title}</h1>
-          <bs-close :dismiss="modal" />
+          <bs-close ::dismiss="modal" />
         </div>
 
         <div class="modal-body">
@@ -109,7 +109,7 @@
 
         <div class="modal-footer">
           <:slot name="footer">
-            <bs-button :variant="secondary" :dismiss="modal">Close</bs-button>
+            <bs-button ::variant="secondary" ::dismiss="modal">Close</bs-button>
           </:slot>
         </div>
       </div>

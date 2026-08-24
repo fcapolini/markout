@@ -12,16 +12,16 @@
   <:define tag="bs-check:div"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :label=${null}
-    :type=${'checkbox'}   // 'checkbox' | 'radio' | 'switch'
-    :name=${null}
-    :value=${null}
-    :checked=${false}
-    :inline=${false}
-    :reverse=${false}
-    :disabled=${false}
-    :help=${null}
+    ::extra=${null}      // extra classes for this instance
+    ::label=${null}
+    ::type=${'checkbox'}   // 'checkbox' | 'radio' | 'switch'
+    ::name=${null}
+    ::value=${null}
+    ::checked=${false}
+    ::inline=${false}
+    ::reverse=${false}
+    ::disabled=${false}
+    ::help=${null}
 
     // private
     :_id=${`bs-check-${$id}`}
@@ -62,13 +62,13 @@
     role="group"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :legend=${null}
-    :type=${'radio'}
-    :options=${[]}
-    :value=${null}
-    :inline=${false}
-    :disabled=${false}
+    ::extra=${null}      // extra classes for this instance
+    ::legend=${null}
+    ::type=${'radio'}
+    ::options=${[]}
+    ::value=${null}
+    ::inline=${false}
+    ::disabled=${false}
 
     // private
     :_name=${`bs-check-group-${$id}`}
@@ -113,15 +113,15 @@
     class="mb-3 ${extra ?? ''}"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :label=${null}
-    :name=${null}
-    :min=${0}
-    :max=${100}
-    :step=${1}
-    :value=${50}
-    :disabled=${false}
-    :showValue=${false}
+    ::extra=${null}      // extra classes for this instance
+    ::label=${null}
+    ::name=${null}
+    ::min=${0}
+    ::max=${100}
+    ::step=${1}
+    ::value=${50}
+    ::disabled=${false}
+    ::showValue=${false}
 
     // private
     :_id=${`bs-range-${$id}`}

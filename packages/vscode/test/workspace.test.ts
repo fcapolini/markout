@@ -51,7 +51,7 @@ describe('a project nobody has opened', () => {
     // got it wrong in
     write(
       'lib.htm',
-      '<lib>\n  <:define tag="x-a:div" :title=${1}>\n    <h2>${titel}</h2>\n  </:define>\n</lib>'
+      '<lib>\n  <:define tag="x-a:div" ::title=${1}>\n    <h2>${titel}</h2>\n  </:define>\n</lib>'
     );
     write('index.html', '<html><head><:import src="/lib.htm" /></head>\n<body><x-a /></body></html>');
     const { problems } = await diagnoseWorkspace({ workspaceFolders: [root] });

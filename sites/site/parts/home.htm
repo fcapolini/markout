@@ -70,12 +70,12 @@
     data-bs-theme="dark"
 
     // parameters
-    :extra=${null}       // extra classes for this instance
-    :title=${''}         // what the header says: a file name, or a heading
-    :mono=${true}        // a file name is monospaced, a heading is not
-    :label=${null}       // the badge beside it
-    :variant=${'secondary'}
-    :note=${false}       // is there a line of explanation under the sample?
+    ::extra=${null}       // extra classes for this instance
+    ::title=${''}         // what the header says: a file name, or a heading
+    ::mono=${true}        // a file name is monospaced, a heading is not
+    ::label=${null}       // the badge beside it
+    ::variant=${'secondary'}
+    ::note=${false}       // is there a line of explanation under the sample?
 
     // private
     :_class=${['card shadow-sm overflow-hidden', extra].filter(s => s).join(' ')}
@@ -86,7 +86,7 @@
       <span class="small"
         :class-font-monospace=${mono}>${title}</span>
 
-      <bs-badge :variant=${variant}
+      <bs-badge ::variant=${variant}
         :if=${label}>${label}</bs-badge>
     </div>
 
@@ -126,9 +126,9 @@
   <:define tag="code-preview:div"
 
     // parameters
-    :src=${''}                 // the example page, served like any other
-    :height=${'10rem'}         // the frame's own height, sample by sample
-    :label=${'the result'}
+    ::src=${''}                 // the example page, served like any other
+    ::height=${'10rem'}         // the frame's own height, sample by sample
+    ::label=${'the result'}
 
     class="border-top"
   >
@@ -156,8 +156,8 @@
   <:define tag="page-eyebrow:span"
 
     // parameters
-    :extra=${null}       // extra classes for this instance
-    :variant=${'primary'}
+    ::extra=${null}       // extra classes for this instance
+    ::variant=${'primary'}
 
     // private
     :_class=${[
@@ -192,8 +192,8 @@
     class="d-flex gap-3"
 
     // parameters
-    :n=${''}
-    :heading=${''}
+    ::n=${''}
+    ::heading=${''}
   >
     <span class="fs-4 fw-bold step-number">${n}</span>
 

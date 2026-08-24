@@ -252,7 +252,7 @@ describe(':server- on a name a usage site declares', () => {
     sequence(0.25, 0.75);
     const page = compile(
       '<html><body>' +
-        '<:define tag="x-box:div" :tone=${"warm"}><:slot /></:define>' +
+        '<:define tag="x-box:div" ::tone=${"warm"}><:slot /></:define>' +
         '<x-box :server-r=${Math.random()}>${r}</x-box>' +
         '</body></html>'
     );

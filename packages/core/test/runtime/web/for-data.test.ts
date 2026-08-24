@@ -159,10 +159,10 @@ describe(':for-data', () => {
     // copy it will ever have, and the scopes behind the slot have nobody to
     // fight with
     const { errors, runtime, markup } = run(
-      '<html><head><:define tag="my-card:div" :header=${null}>' +
+      '<html><head><:define tag="my-card:div" ::header=${null}>' +
         '<i :for-data=${header}><:slot name="head" /></i>' +
         '<:slot /></:define></head>' +
-        '<body><my-card :header="H"><b :slot="head">Rich</b>body</my-card></body></html>'
+        '<body><my-card ::header="H"><b :slot="head">Rich</b>body</my-card></body></html>'
     );
     expect(errors).toStrictEqual([]);
     expect(runtime).toStrictEqual([]);
@@ -171,7 +171,7 @@ describe(':for-data', () => {
 
   it('still keeps the region out when the value is absent, slot or no slot', () => {
     const { errors, runtime, markup } = run(
-      '<html><head><:define tag="my-card:div" :header=${null}>' +
+      '<html><head><:define tag="my-card:div" ::header=${null}>' +
         '<i :for-data=${header}><:slot name="head" /></i>' +
         '<:slot /></:define></head>' +
         '<body><my-card>body</my-card></body></html>'

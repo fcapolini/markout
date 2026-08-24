@@ -12,16 +12,16 @@
     class="progress ${extra ?? ''}"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :value=${0}
-    :min=${0}
-    :max=${100}
-    :label=${null}
-    :variant=${null}
-    :striped=${false}
-    :animated=${false}
-    :height=${null}
-    :name=${'Progress'}
+    ::extra=${null}      // extra classes for this instance
+    ::value=${0}
+    ::min=${0}
+    ::max=${100}
+    ::label=${null}
+    ::variant=${null}
+    ::striped=${false}
+    ::animated=${false}
+    ::height=${null}
+    ::name=${'Progress'}
 
     // private
     :_percent=${Math.max(0, Math.min(100, ((value - min) / (max - min || 1)) * 100))}

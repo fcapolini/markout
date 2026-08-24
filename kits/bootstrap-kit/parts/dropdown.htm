@@ -15,21 +15,21 @@
   <:define tag="bs-dropdown:div"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :label=${'Dropdown'}
-    :items=${[
+    ::extra=${null}      // extra classes for this instance
+    ::label=${'Dropdown'}
+    ::items=${[
       { name: 'Action', link: '#' },
       { name: 'Another action', link: '#' },
       { divider: true },
       { name: 'Something else here', link: '#' },
     ]}
-    :variant=${'primary'}
-    :outline=${false}
-    :size=${null}
-    :split=${false}
-    :direction=${'down'}   // 'down' | 'up' | 'start' | 'end'
-    :align=${'start'}      // 'start' | 'end'
-    :dark=${false}
+    ::variant=${'primary'}
+    ::outline=${false}
+    ::size=${null}
+    ::split=${false}
+    ::direction=${'down'}   // 'down' | 'up' | 'start' | 'end'
+    ::align=${'start'}      // 'start' | 'end'
+    ::dark=${false}
 
     // private
     :_id=${`bs-dropdown-${$id}`}

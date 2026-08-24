@@ -141,11 +141,11 @@ describe('<:define tag="x:logic">', () => {
   // this is a tag whose instances are. std-data was the case that asked for
   // it -- a datasource is a source, not a sight, and was paying for a
   // `<span hidden>` per usage to say so
-  const SRC = '<:define tag="my-src:logic" :n=${1} :doubled=${n * 2} />';
+  const SRC = '<:define tag="my-src:logic" ::n=${1} ::doubled=${n * 2} />';
 
   it('instantiates, and leaves nothing in the page', async () => {
     const html = await render(
-      `<html><head>${SRC}</head><body><my-src :aka="a" :n=\${21} />` +
+      `<html><head>${SRC}</head><body><my-src :aka="a" ::n=\${21} />` +
         '<i>${a.doubled}</i></body></html>'
     );
     expect(html).toContain('42');
@@ -157,7 +157,7 @@ describe('<:define tag="x:logic">', () => {
   it('gives each instance its own values', async () => {
     const html = await render(
       `<html><head>${SRC}</head><body>` +
-        '<my-src :aka="a" :n=${1} /><my-src :aka="b" :n=${5} />' +
+        '<my-src :aka="a" ::n=${1} /><my-src :aka="b" ::n=${5} />' +
         '<i>${a.doubled}/${b.doubled}</i></body></html>'
     );
     expect(html).toContain('2/10');
@@ -169,7 +169,7 @@ describe('<:define tag="x:logic">', () => {
     // exercises it, so without this it would ship untested
     const page = compile(
       `<html><head>${SRC}</head><body>` +
-        '<my-src :for-each=${[1, 2, 3]} :for-as="k" :n=${k * 10} /></body></html>'
+        '<my-src :for-each=${[1, 2, 3]} :for-as="k" ::n=${k * 10} /></body></html>'
     );
     expect(page.errors).toStrictEqual([]);
     await renderPage(page);
@@ -209,7 +209,7 @@ describe('<:define tag="x:logic">', () => {
     // written deliberately, so one per item is exactly what was asked for
     const page = compile(
       `<html><head>${SRC}</head><body><div :for-each=\${[1, 2]}>` +
-        '<my-src :n=${3} /></div></body></html>'
+        '<my-src ::n=${3} /></div></body></html>'
     );
     expect(page.errors).toStrictEqual([]);
   });

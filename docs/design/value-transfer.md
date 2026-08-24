@@ -311,7 +311,7 @@ The server walks its server values, finds the thenables, waits, and replaces
 each with what it resolved to. So the datasource is:
 
 ```html
-<:define tag="std-data:span" :src="" :server-data=${fetch(src).then(r => r.json())} />
+<:define tag="std-data:span" ::src="" :server-data=${fetch(src).then(r => r.json())} />
 ```
 
 with no new page-facing syntax at all. And it generalizes the way the registry

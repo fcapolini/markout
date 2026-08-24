@@ -36,7 +36,7 @@ function write(rel: string, text: string) {
 const KIT = [
   '<lib>',
   '  <:import src="/base.htm" />',
-  '  <:define tag="x-card:div" :title=${1}>',
+  '  <:define tag="x-card:div" ::title=${1}>',
   '    <h2>${title}</h2>',
   '  </:define>',
   '</lib>',
@@ -104,7 +104,7 @@ describe('a host page with mistakes of its own', () => {
    * Found by opening lib.htm in the fixture and being told about
    * broken.html, which imports it and is broken on purpose.
    */
-  const LIB = '<lib>\n  <:define tag="x-a:div" :title=${1}>${title}</:define>\n</lib>';
+  const LIB = '<lib>\n  <:define tag="x-a:div" ::title=${1}>${title}</:define>\n</lib>';
 
   it('keeps the page\u2019s errors off the fragment', async () => {
     write('lib.htm', LIB);

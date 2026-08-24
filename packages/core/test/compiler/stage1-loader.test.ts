@@ -879,7 +879,7 @@ describe('stage1-loader', () => {
       // worked. A definition is a tag, and a name on a tag would answer for
       // every instance of it at once
       const page = runLoaderFromMarkup(
-        `<html><head><:define tag="my-box:div" :aka="boxy" :n=\${7}><:slot /></:define></head>` +
+        `<html><head><:define tag="my-box:div" :aka="boxy" ::n=\${7}><:slot /></:define></head>` +
         `<body><my-box /></body></html>`
       );
       expect(page.errors).toHaveLength(1);
@@ -888,7 +888,7 @@ describe('stage1-loader', () => {
 
     it('still takes an :aka on a usage site, and inside a body', () => {
       const page = runLoaderFromMarkup(
-        `<html><head><:define tag="my-box:div" :n=\${7}>` +
+        `<html><head><:define tag="my-box:div" ::n=\${7}>` +
         `<span :aka="inner" :k=\${1}></span></:define></head>` +
         `<body><my-box :aka="mine" /></body></html>`
       );

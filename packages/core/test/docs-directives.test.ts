@@ -190,6 +190,17 @@ const CASES: Record<string, Case> = {
       expect(p.body()).toContain('<i>42</i>');
     },
   },
+  '::name=${expr}': {
+    works: async () => {
+      // a declaration on the definition and a passing at the usage, which are
+      // the only two places the mark means anything
+      const p = await run(
+        '<html><body><:define tag="d-box:div" ::tone=${"warm"}>${tone}</:define>' +
+          '<d-box ::tone=${"cold"} /></body></html>'
+      );
+      expect(p.body()).toContain('cold');
+    },
+  },
   ':const-name=${expr}': {
     works: async () => {
       const p = await run('<html :const-accent="#6f42c1"><body><i>${accent}</i></body></html>');
@@ -479,8 +490,8 @@ const CASES: Record<string, Case> = {
   '<:define tag="x-y:button">...</:define>': {
     works: async () => {
       const p = await run(
-        '<html><head><:define tag="my-b:i" :label="L">${label}</:define></head>' +
-          '<body><my-b :label=${"defined"} /></body></html>'
+        '<html><head><:define tag="my-b:i" ::label="L">${label}</:define></head>' +
+          '<body><my-b ::label=${"defined"} /></body></html>'
       );
       expect(p.body()).toContain('defined');
       expect(p.body()).not.toContain('<my-b');
@@ -500,8 +511,8 @@ const CASES: Record<string, Case> = {
   '<:define tag="x-y:logic">': {
     works: async () => {
       const p = await run(
-        '<html><head><:define tag="my-src:logic" :n=${1} :doubled=${n * 2} /></head>' +
-          '<body><my-src :aka="a" :n=${21} /><i>${a.doubled}</i></body></html>'
+        '<html><head><:define tag="my-src:logic" ::n=${1} ::doubled=${n * 2} /></head>' +
+          '<body><my-src :aka="a" ::n=${21} /><i>${a.doubled}</i></body></html>'
       );
       expect(p.body()).toContain('42');
       // instances of it are scopes and nothing else
@@ -575,7 +586,7 @@ const CASES: Record<string, Case> = {
       // the instance the markup ended up INSIDE, as opposed to $parent's
       // "where it was written" -- and nothing at all outside one
       const p = await run(
-        '<html><head><:define tag="d-box:div" :who="box"><:slot /></:define>' +
+        '<html><head><:define tag="d-box:div" ::who="box"><:slot /></:define>' +
           '<:define tag="d-probe:i">${$host ? $host.who : "none"}</:define></head>' +
           '<body><d-box><d-probe /></d-box><d-probe /></body></html>'
       );

@@ -33,7 +33,7 @@ import { loadProps } from '../src/render/props';
  */
 
 /** the box every slotted case is written into; its own `open` is the decoy */
-const BOX = '<:define tag="my-box:div" :open=${"WRONG"}><:slot /></:define>';
+const BOX = '<:define tag="my-box:div" ::open=${"WRONG"}><:slot /></:define>';
 
 function run(html: string) {
   const page = new Page(parse(html, 'names.html'));
@@ -118,7 +118,7 @@ describe('a name the page can reach', () => {
   it('names the instance itself, and reads what the usage set on it', () => {
     reaches(
       `<html><head>${BOX}</head><body>` +
-        '<my-box :aka="boxy" :open=${"RIGHT"} />' +
+        '<my-box :aka="boxy" ::open=${"RIGHT"} />' +
         '<i>${boxy.open}</i></body></html>'
     );
   });

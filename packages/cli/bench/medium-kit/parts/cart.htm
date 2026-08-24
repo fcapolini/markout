@@ -3,9 +3,9 @@
   <:define tag="mk-cart-line:li" class="cart-line"
 
            // parameters
-           :line=${{}}
-           :bump=${(id, step) => id}
-           :drop=${(id) => id}>
+           ::line=${{}}
+           ::bump=${(id, step) => id}
+           ::drop=${(id) => id}>
     <div class="cart-line-main">
       <span class="cart-line-name">${line.name}</span>
       <span class="cart-line-meta">${line.brand} &middot; $${line.price} each</span>
@@ -22,11 +22,11 @@
   <:define tag="mk-cart:aside" class="cart"
 
            // parameters
-           :lines=${[]}
-           :total=${0}
-           :step=${(id, by) => id}
-           :remove=${(id) => id}
-           :clear=${() => 0}>
+           ::lines=${[]}
+           ::total=${0}
+           ::step=${(id, by) => id}
+           ::remove=${(id) => id}
+           ::clear=${() => 0}>
     <header class="cart-head">
       <h2>Cart</h2>
       <button class="ghost" :attr-disabled=${lines.length === 0} :on-click=${() => clear()}>Clear</button>
@@ -34,9 +34,9 @@
     <p class="cart-empty" :for-each=${lines.length === 0 ? [0] : []}>Nothing yet &mdash; add something from the catalog.</p>
     <ul class="cart-lines"><mk-cart-line :for-each=${lines}
                                          :for-key=${data.id}
-                                         :line=${data}
-                                         :bump=${step}
-                                         :drop=${remove}></mk-cart-line></ul>
+                                         ::line=${data}
+                                         ::bump=${step}
+                                         ::drop=${remove}></mk-cart-line></ul>
     <footer class="cart-foot"><span>Total</span><strong>$${total}</strong></footer>
   </:define>
 

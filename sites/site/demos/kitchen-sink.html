@@ -59,14 +59,14 @@
       ]}
 >
 
-  <bs-navbar :sticky
-             :items=${[
+  <bs-navbar ::sticky
+             ::items=${[
                { name: 'Content', link: '#content' },
                { name: 'Forms', link: '#forms' },
                { name: 'Components', link: '#components' },
              ]}>
     Bootstrap Kit
-    <bs-theme-toggle :slot="end" :size="sm" />
+    <bs-theme-toggle :slot="end" ::size="sm" />
   </bs-navbar>
 
   <!--
@@ -82,9 +82,9 @@
       <!-- ================================================== index -->
       <div class="col-lg-3 d-none d-lg-block">
         <nav class="kit-index">
-          <bs-nav :vertical
-                  :variant="pills"
-                  :items=${[
+          <bs-nav ::vertical
+                  ::variant="pills"
+                  ::items=${[
                     { name: 'Typography', link: '#typography' },
                     { name: 'Images & figures', link: '#images' },
                     { name: 'Tables', link: '#tables' },
@@ -150,12 +150,12 @@
           <div class="kit-example">
             <div class="row g-4 align-items-start">
               <div class="col-sm-6">
-                <bs-image :src=${slide('#6f42c1')} :alt="A purple placeholder" :rounded />
+                <bs-image ::src=${slide('#6f42c1')} ::alt="A purple placeholder" ::rounded />
               </div>
               <div class="col-sm-6">
-                <bs-figure :src=${slide('#20c997')}
-                           :alt="A teal placeholder"
-                           :caption="A figure, with its caption as one thing." />
+                <bs-figure ::src=${slide('#20c997')}
+                           ::alt="A teal placeholder"
+                           ::caption="A figure, with its caption as one thing." />
               </div>
             </div>
           </div>
@@ -164,21 +164,21 @@
         <section class="kit-section mb-5" id="tables">
           <h3 class="h5 mb-3">Tables</h3>
           <div class="kit-example">
-            <bs-table :striped :hover :responsive
-                      :caption="Sorted by ${sort}"
-                      :columns=${[
+            <bs-table ::striped ::hover ::responsive
+                      ::caption="Sorted by ${sort}"
+                      ::columns=${[
                         { key: 'name', name: 'Name' },
                         { key: 'role', name: 'Role' },
                         { key: 'joined', name: 'Joined' },
                       ]}
-                      :rows=${[...people].sort((a, b) => a[sort] < b[sort] ? -1 : 1)} />
+                      ::rows=${[...people].sort((a, b) => a[sort] < b[sort] ? -1 : 1)} />
 
-            <bs-button-group :label="Sort by" :size="sm">
-              <bs-button :variant="secondary" :outline
-                         :active=${sort === 'name'}
+            <bs-button-group ::label="Sort by" ::size="sm">
+              <bs-button ::variant="secondary" ::outline
+                         ::active=${sort === 'name'}
                          :on-click=${() => sort = 'name'}>By name</bs-button>
-              <bs-button :variant="secondary" :outline
-                         :active=${sort === 'joined'}
+              <bs-button ::variant="secondary" ::outline
+                         ::active=${sort === 'joined'}
                          :on-click=${() => sort = 'joined'}>By year</bs-button>
             </bs-button-group>
           </div>
@@ -196,32 +196,32 @@
             <div class="row g-3">
               <div class="col-md-6">
                 <bs-input :aka="email"
-                          :label="Email"
-                          :type="email"
-                          :placeholder="name@example.com"
-                          :help="We only use it to reply."
-                          :check=${(v) => v.includes('@')}
-                          :message="That doesn't look like an email address." />
+                          ::label="Email"
+                          ::type="email"
+                          ::placeholder="name@example.com"
+                          ::help="We only use it to reply."
+                          ::check=${(v) => v.includes('@')}
+                          ::message="That doesn't look like an email address." />
 
-                <bs-input :label="Password" :type="password" :value="hunter2" />
+                <bs-input ::label="Password" ::type="password" ::value="hunter2" />
 
-                <bs-select :label="Size"
-                           :placeholder="Choose…"
-                           :options=${['Small', 'Medium', 'Large']} />
+                <bs-select ::label="Size"
+                           ::placeholder="Choose…"
+                           ::options=${['Small', 'Medium', 'Large']} />
               </div>
 
               <div class="col-md-6">
-                <bs-input :label="Floating label" :floating :placeholder=" " />
+                <bs-input ::label="Floating label" ::floating ::placeholder=" " />
 
-                <bs-textarea :label="Notes" :rows=${3}
-                             :placeholder="Anything else we should know?" />
+                <bs-textarea ::label="Notes" ::rows=${3}
+                             ::placeholder="Anything else we should know?" />
 
-                <bs-range :label="Budget" :showValue :value=${amount}
+                <bs-range ::label="Budget" ::showValue ::value=${amount}
                           :aka="budget" />
               </div>
             </div>
 
-            <bs-alert :variant="secondary" :extra="mb-0">
+            <bs-alert ::variant="secondary" ::extra="mb-0">
               Email is <strong>${email.value || '(empty)'}</strong> and
               it is ${email._invalid ? 'invalid' : 'fine'};
               budget is <strong>${budget.value}</strong>.
@@ -239,17 +239,17 @@
           <div class="kit-example">
             <div class="row g-4">
               <div class="col-md-6">
-                <bs-check :label="I agree to the terms"
-                          :checked=${agreed}
+                <bs-check ::label="I agree to the terms"
+                          ::checked=${agreed}
                           :on-change=${ev => agreed = ev.target.checked} />
-                <bs-check :label="Dark mode" :type="switch" />
-                <bs-check :label="Disabled" :disabled />
+                <bs-check ::label="Dark mode" ::type="switch" />
+                <bs-check ::label="Disabled" ::disabled />
               </div>
               <div class="col-md-6">
-                <bs-check-group :legend="Plan"
+                <bs-check-group ::legend="Plan"
                                 :aka="plan"
-                                :options=${['Free', 'Pro', 'Team']}
-                                :value=${'Pro'} />
+                                ::options=${['Free', 'Pro', 'Team']}
+                                ::value=${'Pro'} />
               </div>
             </div>
             <p class="mb-0 text-body-secondary">
@@ -262,11 +262,11 @@
         <section class="kit-section mb-5" id="input-groups">
           <h3 class="h5 mb-3">Input groups</h3>
           <div class="kit-example">
-            <bs-input-group :prefix="@" :extra="mb-3">
+            <bs-input-group ::prefix="@" ::extra="mb-3">
               <input class="form-control" placeholder="Username">
             </bs-input-group>
 
-            <bs-input-group :prefix="$" :suffix=".00">
+            <bs-input-group ::prefix="$" ::suffix=".00">
               <input class="form-control" type="number" value="0">
             </bs-input-group>
           </div>
@@ -278,15 +278,15 @@
           <h3 class="h5 mb-3">Accordion</h3>
           <div class="kit-example">
             <bs-accordion>
-              <bs-accordion-item :title="What is in the kit?" :open>
+              <bs-accordion-item ::title="What is in the kit?" ::open>
                 Every component on Bootstrap's own cheatsheet, as a tag.
               </bs-accordion-item>
-              <bs-accordion-item :title="How does an item find its accordion?">
+              <bs-accordion-item ::title="How does an item find its accordion?">
                 It asks for <code>$host</code> — the instance it was slotted
                 into, as opposed to <code>$parent</code>, which is the scope
                 it was written in. Nothing here carries an id.
               </bs-accordion-item>
-              <bs-accordion-item :title="And on its own?">
+              <bs-accordion-item ::title="And on its own?">
                 An item outside an accordion has no host, and opens and
                 closes independently.
               </bs-accordion-item>
@@ -297,11 +297,11 @@
         <section class="kit-section mb-5" id="alerts">
           <h3 class="h5 mb-3">Alerts</h3>
           <div class="kit-example">
-            <bs-alert :variant=${'primary'}>A simple primary alert.</bs-alert>
-            <bs-alert :variant="success" :heading="Well done">
+            <bs-alert ::variant=${'primary'}>A simple primary alert.</bs-alert>
+            <bs-alert ::variant="success" ::heading="Well done">
               You read the whole message, and it has a heading.
             </bs-alert>
-            <bs-alert :variant="warning" :dismissible :extra="mb-0">
+            <bs-alert ::variant="warning" ::dismissible ::extra="mb-0">
               This one can be dismissed.
             </bs-alert>
           </div>
@@ -312,15 +312,15 @@
           <div class="kit-example d-flex flex-wrap gap-2 align-items-center">
             <bs-badge :for-each=${['primary', 'secondary', 'success', 'danger',
                                    'warning', 'info', 'light', 'dark']}
-                      :variant=${data}>${data}</bs-badge>
-            <bs-badge :variant="danger" :pill>99+</bs-badge>
+                      ::variant=${data}>${data}</bs-badge>
+            <bs-badge ::variant="danger" ::pill>99+</bs-badge>
           </div>
         </section>
 
         <section class="kit-section mb-5" id="breadcrumb">
           <h3 class="h5 mb-3">Breadcrumb</h3>
           <div class="kit-example">
-            <bs-breadcrumb :items=${[
+            <bs-breadcrumb ::items=${[
               { name: 'Home', link: '#' },
               { name: 'Kits', link: '#' },
               { name: 'Bootstrap' },
@@ -334,27 +334,27 @@
             <div class="d-flex flex-wrap gap-2 mb-3">
               <bs-button :for-each=${['primary', 'secondary', 'success', 'danger',
                                       'warning', 'info', 'light', 'dark']}
-                         :variant=${data}>${data}</bs-button>
+                         ::variant=${data}>${data}</bs-button>
             </div>
 
             <div class="d-flex flex-wrap gap-2 mb-3">
               <bs-button :for-each=${['primary', 'secondary', 'success', 'danger']}
-                         :variant=${data} :outline>${data}</bs-button>
+                         ::variant=${data} ::outline>${data}</bs-button>
             </div>
 
             <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
-              <bs-button :size="sm">Small</bs-button>
+              <bs-button ::size="sm">Small</bs-button>
               <bs-button>Default</bs-button>
-              <bs-button :size="lg">Large</bs-button>
-              <bs-button :disabled>Disabled</bs-button>
-              <bs-link :href="#buttons" :button :variant="secondary" :outline>Link as button</bs-link>
+              <bs-button ::size="lg">Large</bs-button>
+              <bs-button ::disabled>Disabled</bs-button>
+              <bs-link ::href="#buttons" ::button ::variant="secondary" ::outline>Link as button</bs-link>
               <bs-close />
             </div>
 
-            <bs-button-group :label="Alignment">
-              <bs-button :variant="secondary" :outline>Left</bs-button>
-              <bs-button :variant="secondary" :outline :active>Middle</bs-button>
-              <bs-button :variant="secondary" :outline>Right</bs-button>
+            <bs-button-group ::label="Alignment">
+              <bs-button ::variant="secondary" ::outline>Left</bs-button>
+              <bs-button ::variant="secondary" ::outline ::active>Middle</bs-button>
+              <bs-button ::variant="secondary" ::outline>Right</bs-button>
             </bs-button-group>
           </div>
         </section>
@@ -362,22 +362,22 @@
         <section class="kit-section mb-5" id="cards">
           <h3 class="h5 mb-3">Cards</h3>
           <div class="kit-example">
-            <bs-card-group :cols=${2}>
+            <bs-card-group ::cols=${2}>
               <div class="col">
-                <bs-card :image=${slide('#0d6efd')}
-                         :imageAlt="A blue placeholder"
-                         :title="Card title"
-                         :subtitle="With a subtitle"
-                         :footer="Updated 2 days ago">
+                <bs-card ::image=${slide('#0d6efd')}
+                         ::imageAlt="A blue placeholder"
+                         ::title="Card title"
+                         ::subtitle="With a subtitle"
+                         ::footer="Updated 2 days ago">
                   <p class="card-text">Parameters for the chrome, the slot for
                     the content.</p>
-                  <bs-link :href="#cards" :variant="primary">Go somewhere</bs-link>
+                  <bs-link ::href="#cards" ::variant="primary">Go somewhere</bs-link>
                 </bs-card>
               </div>
               <div class="col">
-                <bs-card :header="Featured" :title="Special title treatment"
-                         :variant="primary">
-                  <span :slot="header">Featured <bs-badge :variant="light" :pill>new</bs-badge></span>
+                <bs-card ::header="Featured" ::title="Special title treatment"
+                         ::variant="primary">
+                  <span :slot="header">Featured <bs-badge ::variant="light" ::pill>new</bs-badge></span>
                   <p class="card-text mb-0">A card that colours itself, header
                     and all, from one parameter — and the header is a slot, so
                     it can hold markup rather than a string.</p>
@@ -390,7 +390,7 @@
         <section class="kit-section mb-5" id="carousel">
           <h3 class="h5 mb-3">Carousel</h3>
           <div class="kit-example">
-            <bs-carousel :slides=${[
+            <bs-carousel ::slides=${[
               { image: slide('#0d6efd'), alt: 'Blue', title: 'First slide',
                 text: 'Indicators, controls and captions from one array.' },
               { image: slide('#198754'), alt: 'Green', title: 'Second slide',
@@ -404,11 +404,11 @@
         <section class="kit-section mb-5" id="collapse">
           <h3 class="h5 mb-3">Collapse</h3>
           <div class="kit-example">
-            <bs-button :toggle="collapse" :target="#more" :variant="secondary"
-                       :outline :extra="mb-3">
+            <bs-button ::toggle="collapse" ::target="#more" ::variant="secondary"
+                       ::outline ::extra="mb-3">
               Toggle the details
             </bs-button>
-            <bs-collapse :name="more">
+            <bs-collapse ::name="more">
               <bs-card>
                 <p class="card-text mb-0">The trigger is a separate tag on
                   purpose: more than one thing may open the same region.</p>
@@ -420,13 +420,13 @@
         <section class="kit-section mb-5" id="dropdowns">
           <h3 class="h5 mb-3">Dropdowns</h3>
           <div class="kit-example d-flex flex-wrap gap-2">
-            <bs-dropdown :label="Dropdown" />
-            <bs-dropdown :label="Split" :variant="success" :split />
-            <bs-dropdown :label="Dropup" :variant="secondary" :direction="up" />
-            <bs-dropdown :label="With a header"
-                         :variant="info"
-                         :align="end"
-                         :items=${[
+            <bs-dropdown ::label="Dropdown" />
+            <bs-dropdown ::label="Split" ::variant="success" ::split />
+            <bs-dropdown ::label="Dropup" ::variant="secondary" ::direction="up" />
+            <bs-dropdown ::label="With a header"
+                         ::variant="info"
+                         ::align="end"
+                         ::items=${[
                            { header: 'Sections' },
                            { name: 'Content', link: '#content' },
                            { name: 'Forms', link: '#forms' },
@@ -439,7 +439,7 @@
         <section class="kit-section mb-5" id="list-group">
           <h3 class="h5 mb-3">List group</h3>
           <div class="kit-example">
-            <bs-list-group :items=${[
+            <bs-list-group ::items=${[
               { name: 'Inbox', link: '#list-group', badge: { name: '14', variant: 'primary' } },
               { name: 'Drafts', link: '#list-group', text: 'Two of them are the same draft.' },
               { name: 'Archive', link: '#list-group', active: true },
@@ -451,17 +451,17 @@
         <section class="kit-section mb-5" id="modal">
           <h3 class="h5 mb-3">Modal</h3>
           <div class="kit-example d-flex flex-wrap gap-2">
-            <bs-button :toggle="modal" :target="#demo-modal">Open by trigger</bs-button>
-            <bs-button :variant="secondary" :outline
+            <bs-button ::toggle="modal" ::target="#demo-modal">Open by trigger</bs-button>
+            <bs-button ::variant="secondary" ::outline
                        :on-click=${() => stateModal.open = true}>Open by value</bs-button>
           </div>
 
-          <bs-modal :name="demo-modal" :title="Opened by a trigger" :centered>
+          <bs-modal ::name="demo-modal" ::title="Opened by a trigger" ::centered>
             <p class="mb-0">This one is opened the Bootstrap way, by a button
               naming it.</p>
           </bs-modal>
 
-          <bs-modal :aka="stateModal" :title="Opened by a value" :centered>
+          <bs-modal :aka="stateModal" ::title="Opened by a value" ::centered>
             <p>This one is opened by setting <code>open</code>, and sets it
               back when Bootstrap closes it — so the value never disagrees
               with the screen.</p>
@@ -472,23 +472,23 @@
         <section class="kit-section mb-5" id="navs">
           <h3 class="h5 mb-3">Navs &amp; tabs</h3>
           <div class="kit-example">
-            <bs-nav :variant="pills" :extra="mb-3"
-                    :toggle="pill"
-                    :items=${[
+            <bs-nav ::variant="pills" ::extra="mb-3"
+                    ::toggle="pill"
+                    ::items=${[
                       { name: 'Overview', target: '#pane-overview', active: true },
                       { name: 'Details', target: '#pane-details' },
                       { name: 'History', target: '#pane-history' },
                     ]} />
             <bs-tab-content>
-              <bs-tab-pane :name="pane-overview" :active>
+              <bs-tab-pane ::name="pane-overview" ::active>
                 The nav renders from an array; each pane is a tag of its own,
                 because a pane holds markup.
               </bs-tab-pane>
-              <bs-tab-pane :name="pane-details">
+              <bs-tab-pane ::name="pane-details">
                 Set <code>:toggle</code> and the entries become tab buttons
                 instead of links.
               </bs-tab-pane>
-              <bs-tab-pane :name="pane-history">
+              <bs-tab-pane ::name="pane-history">
                 Nothing here yet.
               </bs-tab-pane>
             </bs-tab-content>
@@ -498,13 +498,13 @@
         <section class="kit-section mb-5" id="offcanvas">
           <h3 class="h5 mb-3">Offcanvas</h3>
           <div class="kit-example">
-            <bs-button :toggle="offcanvas" :target="#demo-offcanvas"
-                       :variant="secondary">Open the panel</bs-button>
+            <bs-button ::toggle="offcanvas" ::target="#demo-offcanvas"
+                       ::variant="secondary">Open the panel</bs-button>
           </div>
 
-          <bs-offcanvas :name="demo-offcanvas" :title="A panel" :placement="end">
+          <bs-offcanvas ::name="demo-offcanvas" ::title="A panel" ::placement="end">
             <p>Same shape as the modal: a trigger names it, or a value opens it.</p>
-            <bs-list-group :flush :items=${[
+            <bs-list-group ::flush ::items=${[
               { name: 'One', link: '#offcanvas' },
               { name: 'Two', link: '#offcanvas' },
             ]} />
@@ -514,10 +514,10 @@
         <section class="kit-section mb-5" id="pagination">
           <h3 class="h5 mb-3">Pagination</h3>
           <div class="kit-example">
-            <bs-pagination :current=${currentPage}
-                           :pages=${5}
-                           :align="center"
-                           :select=${(n) => currentPage = n} />
+            <bs-pagination ::current=${currentPage}
+                           ::pages=${5}
+                           ::align="center"
+                           ::select=${(n) => currentPage = n} />
             <p class="text-center text-body-secondary mb-0 mt-3">
               Showing page ${currentPage} of 5
             </p>
@@ -532,11 +532,11 @@
         <section class="kit-section mb-5" id="placeholders">
           <h3 class="h5 mb-3">Placeholders</h3>
           <div class="kit-example">
-            <bs-card :title="Loading…">
+            <bs-card ::title="Loading…">
               <p class="card-text">
-                <bs-placeholder :cols=${7} /><br>
-                <bs-placeholder :cols=${4} /><br>
-                <bs-placeholder :cols=${6} />
+                <bs-placeholder ::cols=${7} /><br>
+                <bs-placeholder ::cols=${4} /><br>
+                <bs-placeholder ::cols=${6} />
               </p>
             </bs-card>
           </div>
@@ -545,12 +545,12 @@
         <section class="kit-section mb-5" id="progress">
           <h3 class="h5 mb-3">Progress</h3>
           <div class="kit-example">
-            <bs-progress :value=${budget.value} :label="${budget.value}%"
-                         :extra="mb-3" />
-            <bs-progress :value=${budget.value} :variant="success" :striped :animated
-                         :extra="mb-3" />
-            <bs-range :label="Drag me" :showValue :aka="budget2" :value=${amount} />
-            <bs-progress :value=${budget2.value} :variant="danger" />
+            <bs-progress ::value=${budget.value} ::label="${budget.value}%"
+                         ::extra="mb-3" />
+            <bs-progress ::value=${budget.value} ::variant="success" ::striped ::animated
+                         ::extra="mb-3" />
+            <bs-range ::label="Drag me" ::showValue :aka="budget2" ::value=${amount} />
+            <bs-progress ::value=${budget2.value} ::variant="danger" />
           </div>
           <p class="small text-body-secondary mt-2 mb-0">
             One value, three bars: the slider writes it and the bars read it,
@@ -562,11 +562,11 @@
           <h3 class="h5 mb-3">Spinners</h3>
           <div class="kit-example d-flex flex-wrap gap-3 align-items-center">
             <bs-spinner :for-each=${['primary', 'secondary', 'success', 'danger']}
-                        :variant=${data} />
-            <bs-spinner :type="grow" :variant="info" />
-            <bs-spinner :small :variant="dark" />
-            <bs-button :disabled>
-              <bs-spinner :small :label="Saving" />
+                        ::variant=${data} />
+            <bs-spinner ::type="grow" ::variant="info" />
+            <bs-spinner ::small ::variant="dark" />
+            <bs-button ::disabled>
+              <bs-spinner ::small ::label="Saving" />
               Saving…
             </bs-button>
           </div>
@@ -578,8 +578,8 @@
             <bs-button :on-click=${() => saved.open = true}>Show a toast</bs-button>
           </div>
 
-          <bs-toast-container :placement="bottom-end">
-            <bs-toast :aka="saved" :title="Saved" :time="just now">
+          <bs-toast-container ::placement="bottom-end">
+            <bs-toast :aka="saved" ::title="Saved" ::time="just now">
               Your changes are safe.
             </bs-toast>
           </bs-toast-container>
@@ -589,18 +589,18 @@
           <h3 class="h5 mb-3">Tooltips &amp; popovers</h3>
           <div class="kit-example d-flex flex-wrap gap-2 align-items-center">
             <bs-tooltip :for-each=${['top', 'right', 'bottom', 'left']}
-                        :placement=${data}
-                        :title="Tooltip on ${data}">
-              <bs-button :variant="secondary" :outline>${data}</bs-button>
+                        ::placement=${data}
+                        ::title="Tooltip on ${data}">
+              <bs-button ::variant="secondary" ::outline>${data}</bs-button>
             </bs-tooltip>
 
-            <bs-popover :title="A popover"
-                        :content="Constructed per instance, so it keeps up when its text changes.">
-              <bs-button :variant="danger">Click me</bs-button>
+            <bs-popover ::title="A popover"
+                        ::content="Constructed per instance, so it keeps up when its text changes.">
+              <bs-button ::variant="danger">Click me</bs-button>
             </bs-popover>
 
-            <bs-tooltip :title="Page ${currentPage} — this tooltip's text is an expression">
-              <bs-button :variant="info">Reactive tooltip</bs-button>
+            <bs-tooltip ::title="Page ${currentPage} — this tooltip's text is an expression">
+              <bs-button ::variant="info">Reactive tooltip</bs-button>
             </bs-tooltip>
           </div>
           <p class="small text-body-secondary mt-2 mb-0">

@@ -33,9 +33,9 @@ async function render(html: string) {
 describe('custom tags inside replicated markup', () => {
   it('instantiates a component once per :for-each replica', async () => {
     const { errors, runtimeErrors, body } = await render(
-      '<html><head><:define tag="my-card:div" class="card" :title="T">' +
+      '<html><head><:define tag="my-card:div" class="card" ::title="T">' +
         '<h5>${title}</h5></:define></head>' +
-        '<body><div :for-each=${["a", "b"]}><my-card :title=${data} /></div></body></html>'
+        '<body><div :for-each=${["a", "b"]}><my-card ::title=${data} /></div></body></html>'
     );
 
     expect(errors).toStrictEqual([]);
@@ -54,9 +54,9 @@ describe('custom tags inside replicated markup', () => {
     // -- so the attribute written beside it reads that name like any other
     // call-site expression
     const { errors, runtimeErrors, body } = await render(
-      '<html><head><:define tag="my-card:div" class="card" :title="T">' +
+      '<html><head><:define tag="my-card:div" class="card" ::title="T">' +
         '<h5>${title}</h5></:define></head>' +
-        '<body><my-card :for-each=${["a", "b"]} :title=${data} /></body></html>'
+        '<body><my-card :for-each=${["a", "b"]} ::title=${data} /></body></html>'
     );
 
     expect(errors).toStrictEqual([]);
@@ -92,8 +92,8 @@ describe('custom tags inside replicated markup', () => {
     // attribute and not the definition's default
     const { errors, runtimeErrors, body } = await render(
       '<html :title=${"from-page"}><head>' +
-        '<:define tag="my-card:div" class="card" :title="definition">${title}</:define>' +
-        '</head><body><my-card :for-each=${[1]} :title=${title} /></body></html>'
+        '<:define tag="my-card:div" class="card" ::title="definition">${title}</:define>' +
+        '</head><body><my-card :for-each=${[1]} ::title=${title} /></body></html>'
     );
 
     expect(errors).toStrictEqual([]);
@@ -127,7 +127,7 @@ describe('custom tags inside replicated markup', () => {
     // still resolves to the page's, and the definition's stays invisible
     const { errors, runtimeErrors, body } = await render(
       '<html :tone=${"page"}><head>' +
-        '<:define tag="my-card:div" class="card" :tone=${"definition"}><:slot /></:define>' +
+        '<:define tag="my-card:div" class="card" ::tone=${"definition"}><:slot /></:define>' +
         '</head><body><my-card :for-each=${[1]}>${tone}</my-card></body></html>'
     );
 
@@ -142,9 +142,9 @@ describe('custom tags inside replicated markup', () => {
     // the containment fix must not over-reach: a usage nested anywhere in
     // replicated markup is fine, it is only the host element that is refused
     const { errors, runtimeErrors, body } = await render(
-      '<html><head><:define tag="my-card:div" class="card" :title="T">' +
+      '<html><head><:define tag="my-card:div" class="card" ::title="T">' +
         '<h5>${title}</h5></:define></head>' +
-        '<body><ul><li :for-each=${["a", "b"]}><span><my-card :title=${data} /></span></li></ul></body></html>'
+        '<body><ul><li :for-each=${["a", "b"]}><span><my-card ::title=${data} /></span></li></ul></body></html>'
     );
 
     expect(errors).toStrictEqual([]);
@@ -157,10 +157,10 @@ describe('custom tags inside replicated markup', () => {
   it('lets one component use another', async () => {
     const { errors, runtimeErrors, body } = await render(
       '<html><head>' +
-        '<:define tag="my-badge:span" class="badge" :label="B">${label}</:define>' +
-        '<:define tag="my-card:div" class="card" :title="T">' +
-        '<h5>${title}</h5><my-badge :label="inner" /></:define>' +
-        '</head><body><my-card :title="hello" /></body></html>'
+        '<:define tag="my-badge:span" class="badge" ::label="B">${label}</:define>' +
+        '<:define tag="my-card:div" class="card" ::title="T">' +
+        '<h5>${title}</h5><my-badge ::label="inner" /></:define>' +
+        '</head><body><my-card ::title="hello" /></body></html>'
     );
 
     expect(errors).toStrictEqual([]);
@@ -191,8 +191,8 @@ describe('custom tags inside replicated markup', () => {
     // the other half of the same rule: this expression was written in the
     // page, so it reads the page's `gap` even though it lands on an instance
     const { errors, runtimeErrors, body } = await render(
-      '<html><head><:define tag="my-gap:i" :n=${0}>${n}</:define></head>' +
-        '<body><section :gap=${99}><my-gap :n=${gap} /></section></body></html>'
+      '<html><head><:define tag="my-gap:i" ::n=${0}>${n}</:define></head>' +
+        '<body><section :gap=${99}><my-gap ::n=${gap} /></section></body></html>'
     );
 
     expect(errors).toStrictEqual([]);
@@ -236,7 +236,7 @@ describe('slots', () => {
     // the component's own `tone`, and only when the tag had an attribute
     const { errors, runtimeErrors, body } = await render(
       '<html :tone=${"page"}><head>' +
-        '<:define tag="my-card:div" class="card" :tone=${"definition"}><:slot /></:define>' +
+        '<:define tag="my-card:div" class="card" ::tone=${"definition"}><:slot /></:define>' +
         '</head><body><my-card :x=${1}>${tone}</my-card></body></html>'
     );
 
@@ -252,7 +252,7 @@ describe('slots', () => {
     // silently change what it means
     const { errors, runtimeErrors, body } = await render(
       '<html :label=${"page"}><head>' +
-        '<:define tag="my-box:div" :label=${"definition"}><:slot /></:define>' +
+        '<:define tag="my-box:div" ::label=${"definition"}><:slot /></:define>' +
         '</head><body><my-box>${label}</my-box></body></html>'
     );
 
@@ -268,7 +268,7 @@ describe('slots', () => {
     // order or every binding after it shifts
     const { errors, runtimeErrors, body } = await render(
       '<html :who=${"world"}><head>' +
-        '<:define tag="my-box:div" :top=${"T"} :tail=${"E"}>' +
+        '<:define tag="my-box:div" ::top=${"T"} ::tail=${"E"}>' +
         '${top}<:slot />${tail}</:define>' +
         '</head><body><my-box>-hello ${who}-</my-box></body></html>'
     );
@@ -307,7 +307,7 @@ describe('slots', () => {
 // attribute rather than a wrapper element, so filling a slot adds no markup.
 describe('named slots', () => {
   const PANEL =
-    '<:define tag="my-panel:section" class="panel" :title="T">' +
+    '<:define tag="my-panel:section" class="panel" ::title="T">' +
     '<header><:slot name="header">${title}</:slot></header>' +
     '<div class="body"><:slot /></div>' +
     '<footer><:slot name="footer">(none)</:slot></footer>' +
@@ -316,7 +316,7 @@ describe('named slots', () => {
   it('routes each child to the slot it names, and the rest to the default', async () => {
     const { errors, runtimeErrors, body } = await render(
       `<html :who=\${"world"}><head>${PANEL}</head><body>` +
-        '<my-panel :title="T"><h2 :slot="header">Custom ${who}</h2>' +
+        '<my-panel ::title="T"><h2 :slot="header">Custom ${who}</h2>' +
         'body ${who}<p>more</p></my-panel></body></html>'
     );
 
@@ -333,7 +333,7 @@ describe('named slots', () => {
   it('falls back per slot, independently', async () => {
     const { errors, runtimeErrors, body } = await render(
       `<html><head>${PANEL}</head><body>` +
-        '<my-panel :title="mine"><p :slot="footer">bye</p></my-panel></body></html>'
+        '<my-panel ::title="mine"><p :slot="footer">bye</p></my-panel></body></html>'
     );
 
     expect(errors).toStrictEqual([]);
@@ -352,15 +352,15 @@ describe('named slots', () => {
     // component with no markup at all, reporting each of its bindings
     // unbound, in exactly the instances that supplied their own footer
     const DIALOG =
-      '<:define tag="my-btn:button" class="btn" :kind="x" data-kind=${kind}><:slot /></:define>' +
+      '<:define tag="my-btn:button" class="btn" ::kind="x" data-kind=${kind}><:slot /></:define>' +
       '<:define tag="my-dialog:div" class="dlg">' +
       '<div class="body"><:slot /></div>' +
       '<div class="foot"><:slot name="foot">' +
-      '<my-btn :kind="close">Close</my-btn></:slot></div>' +
+      '<my-btn ::kind="close">Close</my-btn></:slot></div>' +
       '</:define>';
     const { errors, runtimeErrors, body } = await render(
       `<html><head>${DIALOG}</head><body>` +
-        '<my-dialog><p>one</p><span :slot="foot"><my-btn :kind="go">Go</my-btn></span></my-dialog>' +
+        '<my-dialog><p>one</p><span :slot="foot"><my-btn ::kind="go">Go</my-btn></span></my-dialog>' +
         '<my-dialog><p>two</p></my-dialog>' +
         '</body></html>'
     );
@@ -378,7 +378,7 @@ describe('named slots', () => {
   it('reports content addressed to a slot the definition has not got', async () => {
     const { errors } = await render(
       `<html><head>${PANEL}</head><body>` +
-        '<my-panel :title="T"><p :slot="sidebar">x</p></my-panel></body></html>'
+        '<my-panel ::title="T"><p :slot="sidebar">x</p></my-panel></body></html>'
     );
 
     expect(errors.length).toBe(1);
@@ -390,13 +390,13 @@ describe('named slots', () => {
 // descending at a usage site, so those were left unexpanded and silent
 describe('custom tags inside slotted content', () => {
   const LIB =
-    '<:define tag="my-badge:span" class="badge" :label="B">${label}</:define>' +
+    '<:define tag="my-badge:span" class="badge" ::label="B">${label}</:define>' +
     '<:define tag="my-card:div" class="card"><:slot /></:define>';
 
   it('expands a component slotted into another component', async () => {
     const { errors, runtimeErrors, body } = await render(
       `<html :who=\${"world"}><head>${LIB}</head><body>` +
-        '<my-card><my-badge :label=${who} /> and ${who}</my-card></body></html>'
+        '<my-card><my-badge ::label=${who} /> and ${who}</my-card></body></html>'
     );
 
     expect(errors).toStrictEqual([]);
@@ -411,7 +411,7 @@ describe('custom tags inside slotted content', () => {
   it('resolves through two levels of slotting', async () => {
     const { errors, runtimeErrors, body } = await render(
       `<html :who=\${"deep"}><head>${LIB}</head><body>` +
-        '<my-card><my-card><my-badge :label=${who} /></my-card></my-card>' +
+        '<my-card><my-card><my-badge ::label=${who} /></my-card></my-card>' +
         '</body></html>'
     );
 
@@ -441,7 +441,7 @@ describe('custom tags inside slotted content', () => {
 // between per-usage slotting and per-replica stamping
 describe('a slot inside the definition own :for-each', () => {
   const LIST =
-    '<:define tag="my-list:ul" :items=${["a", "b"]}>' +
+    '<:define tag="my-list:ul" ::items=${["a", "b"]}>' +
     '<li :for-each=${items}><:slot>item ${data}</:slot></li>' +
     '</:define>';
 
@@ -473,7 +473,7 @@ describe('a slot inside the definition own :for-each', () => {
 
   it('reports it for a named slot too', async () => {
     const { errors } = await render(
-      '<html><head><:define tag="my-list:ul" :items=${[1]}>' +
+      '<html><head><:define tag="my-list:ul" ::items=${[1]}>' +
         '<li :for-each=${items}><:slot name="row" /></li>' +
         '</:define></head>' +
         '<body><my-list><b :slot="row">x</b></my-list></body></html>'
@@ -504,8 +504,8 @@ describe('a slot inside the definition own :for-each', () => {
 describe('a usage-site value naming its own parameter', () => {
   it('reads the page value, not the parameter it fills', async () => {
     const r = await render(
-      '<html><head><:define tag="x-same:div" :items=${[]}>${items.length}</:define></head>' +
-        '<body :items=${[1, 2, 3]}><x-same :items=${items} /></body></html>'
+      '<html><head><:define tag="x-same:div" ::items=${[]}>${items.length}</:define></head>' +
+        '<body :items=${[1, 2, 3]}><x-same ::items=${items} /></body></html>'
     );
     expect(r.errors).toStrictEqual([]);
     expect(r.runtimeErrors).toStrictEqual([]);
@@ -514,8 +514,8 @@ describe('a usage-site value naming its own parameter', () => {
 
   it('does the same for a differently named one, which always worked', async () => {
     const r = await render(
-      '<html><head><:define tag="x-diff:div" :rows=${[]}>${rows.length}</:define></head>' +
-        '<body :items=${[1, 2]}><x-diff :rows=${items} /></body></html>'
+      '<html><head><:define tag="x-diff:div" ::rows=${[]}>${rows.length}</:define></head>' +
+        '<body :items=${[1, 2]}><x-diff ::rows=${items} /></body></html>'
     );
     expect(r.errors).toStrictEqual([]);
     expect(r.body).toContain('2');
@@ -526,8 +526,8 @@ describe('a usage-site value naming its own parameter', () => {
     // the alias on itself, and its own values have to see it -- which is
     // what the runtime's LoopSiteScope is for
     const r = await render(
-      '<html><head><:define tag="x-row:i" :label=${\'\'}>${label}</:define></head>' +
-        '<body><x-row :for-each=${[7, 8]} :label=${data} /></body></html>'
+      '<html><head><:define tag="x-row:i" ::label=${\'\'}>${label}</:define></head>' +
+        '<body><x-row :for-each=${[7, 8]} ::label=${data} /></body></html>'
     );
     expect(r.errors).toStrictEqual([]);
     expect(r.runtimeErrors).toStrictEqual([]);

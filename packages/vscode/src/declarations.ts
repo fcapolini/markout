@@ -193,7 +193,7 @@ function locate(
 /**
  * The attribute name the offset is on, and the tag it belongs to.
  *
- * `:title` in `<x-card :title=${'Hi'}>` -- the name, not the value, which is
+ * `:title` in `<x-card ::title=${'Hi'}>` -- the name, not the value, which is
  * an expression and resolves at the call site like any other. The two are a
  * few characters apart and mean opposite directions: the name asks about the
  * definition, the value about here.

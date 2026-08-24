@@ -34,8 +34,8 @@
   <:define tag="std-data:logic"
 
     // parameters
-    :url=""                    // where to fetch; nothing happens without one
-    :client=${false}           // fetch in the browser instead of here
+    ::url=""                    // where to fetch; nothing happens without one
+    ::client=${false}           // fetch in the browser instead of here
 
     /*
       Resolved against the page's own origin, so `:url="/data.json"`
@@ -100,11 +100,11 @@
       the source of truth for readers. A browser fetch wins when there
       has been one, since it is the newer of the two
     */
-    :data=${_fetched ?? _served?.body ?? null}
-    :error=${_failed ?? _served?.error ?? null}
-    :loading=${false}
+    ::data=${_fetched ?? _served?.body ?? null}
+    ::error=${_failed ?? _served?.error ?? null}
+    ::loading=${false}
 
-    :reload=${() => {
+    ::reload=${() => {
       if (!_url) { return; }
       loading = true;
       fetch(_url)

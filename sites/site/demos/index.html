@@ -117,8 +117,8 @@
         },
       ]}>
 
-  <bs-navbar :brand="/"
-             :items=${[
+  <bs-navbar ::brand="/"
+             ::items=${[
                { name: 'Home', link: '/' },
                { name: 'Demos', link: '/demos/', active: true },
              ]}>
@@ -146,8 +146,8 @@
           cards are `h-100` and the blurbs are not the same length, so
           without it every card's links sit wherever its own prose ended.
         -->
-        <bs-card :extra="h-100"
-                 :bodyExtra="d-flex flex-column">
+        <bs-card ::extra="h-100"
+                 ::bodyExtra="d-flex flex-column">
           <span class="badge text-bg-secondary mb-3 align-self-start">${demo.tag}</span>
           <h2 class="h4 mb-2"><a class="stretched-link link-body-emphasis text-decoration-none"
                                  href=${demo.href}>${demo.name}</a></h2>

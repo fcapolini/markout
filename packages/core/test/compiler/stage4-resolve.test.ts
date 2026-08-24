@@ -319,8 +319,8 @@ describe('stage4-resolve: unknown reference validation', () => {
   // times, every one of them naming the same line.
   it('reports a definition body\'s unknown reference once, however many usages', () => {
     const p = compile(
-      '<html><head><:define tag="my-card:div" :n=${0}>${fmt.compact(n)}</:define></head>' +
-        '<body><my-card :n=${1} /><my-card :n=${2} /><my-card :n=${3} /></body></html>'
+      '<html><head><:define tag="my-card:div" ::n=${0}>${fmt.compact(n)}</:define></head>' +
+        '<body><my-card ::n=${1} /><my-card ::n=${2} /><my-card ::n=${3} /></body></html>'
     );
     expect(p.errors.map(e => e.msg)).toStrictEqual(['Unknown reference: "fmt"']);
   });
@@ -329,7 +329,7 @@ describe('stage4-resolve: unknown reference validation', () => {
     // the requirement belongs to the definition, so it is checked whether or
     // not the page goes on to use the tag
     const p = compile(
-      '<html><head><:define tag="my-card:div" :n=${0}>${fmt.compact(n)}</:define></head>' +
+      '<html><head><:define tag="my-card:div" ::n=${0}>${fmt.compact(n)}</:define></head>' +
         '<body></body></html>'
     );
     expect(p.errors.map(e => e.msg)).toStrictEqual(['Unknown reference: "fmt"']);
@@ -460,7 +460,7 @@ describe('stage4-resolve: chained scope navigation', () => {
     // markup refers to its own controls, and walking past would make every
     // one of them part of the interface. Not suggested by the error either
     const p = compile(
-      '<html><head><:define tag="my-card:div" :n=${1}>' +
+      '<html><head><:define tag="my-card:div" ::n=${1}>' +
         '<span :aka="inner" :k=${9}></span></:define></head>' +
         '<body><my-card :aka="c" /><i>${c.inner.k}</i></body></html>'
     );
@@ -472,7 +472,7 @@ describe('stage4-resolve: chained scope navigation', () => {
     // the other half of the rule: `detail.open` on a component IS in there,
     // and is how the kit's overlays are driven
     const p = compile(
-      '<html><head><:define tag="my-box:div" :open=${false}><:slot /></:define></head>' +
+      '<html><head><:define tag="my-box:div" ::open=${false}><:slot /></:define></head>' +
         '<body><my-box :aka="detail"></my-box><i>${detail.open}</i></body></html>'
     );
     expect(p.errors).toStrictEqual([]);

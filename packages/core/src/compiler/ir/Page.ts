@@ -49,6 +49,16 @@ export const SERVER_VALUE_ATTR_PREFIX = 'server-';
  */
 export const COMPTIME_VALUE_ATTR_PREFIX = 'const-';
 /**
+ * `::name`: a name a component's interface has.
+ *
+ * The one mark that says nothing about the value's own nature. `:const-` and
+ * `:server-` answer WHEN or WHERE an expression runs; this answers whose the
+ * NAME is -- declared by a `<:define>`, passed by a usage site, and reserved
+ * at every usage of that tag so a caller cannot take it for something of its
+ * own. Meaningless anywhere else, and refused there.
+ */
+export const PARAMETER_MARKER = '::';
+/**
  * `:if=${expr}` renders the element when the expression is truthy, and not
  * at all otherwise.
  *

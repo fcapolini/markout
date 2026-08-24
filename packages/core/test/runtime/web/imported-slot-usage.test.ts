@@ -34,8 +34,8 @@ describe('a slot filled at a usage site inside an imported library', () => {
     fs.writeFileSync(
       path.join(dir, 'button.htm'),
       '<lib>' +
-        '<:define tag="mk-btn:a" :label=${"x"} class="btn-${label}"><:slot /></:define>' +
-        '<:define tag="mk-fixed:a" :label=${"x"} class="fix-${label}">own</:define>' +
+        '<:define tag="mk-btn:a" ::label=${"x"} class="btn-${label}"><:slot /></:define>' +
+        '<:define tag="mk-fixed:a" ::label=${"x"} class="fix-${label}">own</:define>' +
         '</lib>'
     );
     // a library that USES them -- this is what puts the usage site in a
@@ -44,8 +44,8 @@ describe('a slot filled at a usage site inside an imported library', () => {
       path.join(dir, 'panel.htm'),
       '<lib><:import src="button.htm" />' +
         '<:define tag="mk-panel:div">' +
-        '<mk-fixed :label=${"f"}></mk-fixed>' +
-        '<mk-btn :label=${"b"}>slotted</mk-btn>' +
+        '<mk-fixed ::label=${"f"}></mk-fixed>' +
+        '<mk-btn ::label=${"b"}>slotted</mk-btn>' +
         '</:define></lib>'
     );
     fs.writeFileSync(

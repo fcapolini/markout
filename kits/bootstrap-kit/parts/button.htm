@@ -9,8 +9,8 @@
     a modal, an offcanvas or a collapse is this same tag rather than a
     component of its own:
 
-      <bs-button :toggle="modal" :target="#signup">Sign up</bs-button>
-      <bs-button :dismiss="modal" :variant="secondary">Close</bs-button>
+      <bs-button ::toggle="modal" ::target="#signup">Sign up</bs-button>
+      <bs-button ::dismiss="modal" ::variant="secondary">Close</bs-button>
 
     Note the two spellings of "conditional attribute" used throughout the kit:
     a plain `name=${expr}` sets a VALUE and removes the attribute when the
@@ -20,16 +20,16 @@
   <:define tag="bs-button:button"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :variant=${'primary'}
-    :outline=${false}
-    :size=${null}
-    :active=${false}
-    :disabled=${false}
-    :type=${'button'}
-    :toggle=${null}
-    :target=${null}
-    :dismiss=${null}
+    ::extra=${null}      // extra classes for this instance
+    ::variant=${'primary'}
+    ::outline=${false}
+    ::size=${null}
+    ::active=${false}
+    ::disabled=${false}
+    ::type=${'button'}
+    ::toggle=${null}
+    ::target=${null}
+    ::dismiss=${null}
 
     // private
     :_class=${[
@@ -59,16 +59,16 @@
   <:define tag="bs-link:a"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :href=${'#'}
-    :variant=${null}
-    :outline=${false}
-    :size=${null}
-    :active=${false}
-    :disabled=${false}
-    :button=${false}
-    :toggle=${null}
-    :target=${null}
+    ::extra=${null}      // extra classes for this instance
+    ::href=${'#'}
+    ::variant=${null}
+    ::outline=${false}
+    ::size=${null}
+    ::active=${false}
+    ::disabled=${false}
+    ::button=${false}
+    ::toggle=${null}
+    ::target=${null}
 
     // private
     :_class=${[
@@ -99,10 +99,10 @@
   <:define tag="bs-button-group:div"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :label=${'Button group'}
-    :size=${null}
-    :vertical=${false}
+    ::extra=${null}      // extra classes for this instance
+    ::label=${'Button group'}
+    ::size=${null}
+    ::vertical=${false}
 
     // private
     :_class=${[
@@ -127,9 +127,9 @@
     role="toolbar"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :label=${'Toolbar'}
-    :gap=${2}
+    ::extra=${null}      // extra classes for this instance
+    ::label=${'Toolbar'}
+    ::gap=${2}
 
     aria-label=${label}
     :class-gap-1=${gap === 1}
@@ -149,10 +149,10 @@
     class="btn-close ${extra ?? ''}"
 
     // parameters
-    :extra=${null}      // extra classes for this instance
-    :label=${'Close'}
-    :dismiss=${null}
-    :disabled=${false}
+    ::extra=${null}      // extra classes for this instance
+    ::label=${'Close'}
+    ::dismiss=${null}
+    ::disabled=${false}
 
     aria-label=${label}
     :attr-disabled=${disabled}
