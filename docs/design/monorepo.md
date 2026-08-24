@@ -282,6 +282,15 @@ follows the files.
 
 ## Two traps, both npm's
 
+**`npm install` will quietly narrow the lockfile to this machine.** npm 11
+rewrites `package-lock.json` to describe what is INSTALLED, so an install on
+a Mac deletes every `@esbuild/*` entry but that one's -- and the lockfile
+stops being the artifact `npm ci` is for. It happened here and held from
+2026-06 to 2026-08 with nothing going red, because npm resolves an optional
+platform package at install time even unpinned. No flag prevents it; `npm run
+lockfile` repairs it and `test/lockfile-platforms.test.ts` says when it is
+needed. See TODO.md for what was measured.
+
 **Hoisting will lie.** Every dependency lands in the root `node_modules`, so a
 package that imports something it never declared works locally and breaks for
 the consumer. Discipline does not catch this; a check does. In CI: `npm pack`
