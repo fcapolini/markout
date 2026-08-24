@@ -122,20 +122,30 @@ export class WebScope extends CoreScope {
     // siblings, or anything that inserts or moves markup within a scope's
     // territory (slotted content, most of all) silently shifts every
     // binding after it onto the wrong node
+    // Walked live and by index rather than over a `[...e.childNodes]` copy.
+    // The copy was there for two reasons, and neither needs it: the
+    // `insertBefore` below is positioned by NODE, so it does not care what
+    // the indices did, and the one lookahead is `i + 1`, which a live list
+    // answers as well -- it just has to re-read `length`, since an insert
+    // grows it. What follows an insert is the empty Text just added, which
+    // is neither an element nor a marker and costs one idle turn of the
+    // loop. The copy, meanwhile, was an array per element of every scope's
+    // territory: millions of them on a 10k-row mount, and the GC to match
     const f = (e: Element) => {
-      const childNodes = [...e.childNodes];
-      childNodes.forEach((n, i) => {
+      const childNodes = e.childNodes;
+      for (let i = 0; i < childNodes.length; i++) {
+        const n = childNodes[i];
         if (n.nodeType === NodeType.ELEMENT && (n as Element).getAttribute(DOM_ID_ATTR) === null) {
           if (!DOM_ATOMIC_TEXT_TAGS.has((n as Element).tagName)) {
             f(n as Element);
           }
-          return;
+          continue;
         }
         if (
           n.nodeType !== NodeType.COMMENT ||
           !(n as Comment).textContent.startsWith(DOM_TEXT_MARKER1)
         ) {
-          return;
+          continue;
         }
         const id = Number.parseInt((n as Comment).textContent.slice(DOM_TEXT_MARKER1.length));
         const next = childNodes[i + 1];
@@ -148,7 +158,7 @@ export class WebScope extends CoreScope {
         ) {
           const target = (next as Element).childNodes[0];
           target?.nodeType === NodeType.TEXT && this.texts.set(id, target as Text);
-          return;
+          continue;
         }
         // otherwise the interpolation's own text node sits between the two
         // markers -- except when there is none to sit there. An interpolation
@@ -167,7 +177,7 @@ export class WebScope extends CoreScope {
                 next ?? null
               ) as Text)
         );
-      });
+      }
     };
     // An atomic-text element with a scope of ITS OWN (`<textarea :on-input=...>`)
     // is the one case the walk below cannot reach: its content marker sits
@@ -366,8 +376,12 @@ export class WebScope extends CoreScope {
       (e as Element).tagName === 'TEMPLATE'
         ? (e as unknown as TemplateElement).content.childNodes
         : e.childNodes;
+    // indexed, for the reason WebContext.searchDocument gives: a live
+    // NodeList walked with `for...of` allocates an iterator per element,
+    // and this walk is entered once per scope per mount
     const lookup = (childNodes: NodeList): T | undefined => {
-      for (const n of childNodes) {
+      for (let i = 0, len = childNodes.length; i < len; i++) {
+        const n = childNodes[i];
         const found = match(n);
         if (found !== undefined) return found;
         if (n.nodeType !== NodeType.ELEMENT) continue;

@@ -179,8 +179,14 @@ export class WebContext extends CoreContext {
       e.tagName === 'TEMPLATE'
         ? (e as unknown as TemplateElement).content?.childNodes ?? e.childNodes
         : e.childNodes;
+    // indexed rather than `for...of`: this walks a live NodeList, and the
+    // iterator protocol allocates one iterator per element visited. Mounting
+    // the catalog benchmark's 10k rows walks a million-odd nodes through
+    // here and through WebScope's own search, and the allocation was
+    // measurably the larger half of both
     const search = (childNodes: NodeList, template?: Element): T | undefined => {
-      for (const n of childNodes) {
+      for (let i = 0, len = childNodes.length; i < len; i++) {
+        const n = childNodes[i];
         const found = match(n);
         if (found !== undefined) {
           this.foundInTemplate = template;
