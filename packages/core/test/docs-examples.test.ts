@@ -338,7 +338,8 @@ describe('docs/concepts/data.md', () => {
     const result = await render(
       "<html><body :tracks=${[{ id: 'lantern', name: 'Lantern Season', note: 'capo 3' }]}>" +
         '<ol><li :for-each=${tracks} :for-key=${data.id}>' +
-        '<input value=${data.note} :on-input=${e => tracks = tracks.map(t =>' +
+        '<input value=${data.note} :prop-value=${data.note}' +
+        ' :on-input=${e => tracks = tracks.map(t =>' +
         ' t.id === data.id ? { ...t, note: e.target.value } : t)}>' +
         '</li></ol></body></html>'
     );

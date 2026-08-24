@@ -50,13 +50,15 @@
 
         <option value=""
           :if=${placeholder}
-          :attr-selected=${value == null}>${placeholder}</option>
+          :attr-selected=${value == null}
+          :prop-selected=${value == null}>${placeholder}</option>
 
         <option :for-each=${_options}
           :for-as="option"
           value=${option.value}
           :attr-disabled=${option.disabled}
-          :attr-selected=${option.value === value}>${option.name}</option>
+          :attr-selected=${option.value === value}
+          :prop-selected=${option.value === value}>${option.name}</option>
       </select>
 
       <label for=${_id}

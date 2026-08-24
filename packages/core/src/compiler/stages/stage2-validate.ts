@@ -180,6 +180,8 @@ function validateScope(page: Page, scope: Scope) {
     );
   }
 
+  validateDirtyValue(page, scope);
+
   // Validate all user-defined values in this scope, including the ones its
   // usage site declared rather than passed -- those are user-written too, and
   // the only scope holding them is this one
@@ -190,12 +192,143 @@ function validateScope(page: Page, scope: Scope) {
   // Text values are validated separately and are not treated as user-defined values
   for (const [name, value] of scope.textValues) {
     validateTextValue(page, name, value);
+    validateDirtyText(page, scope, value);
   }
 
   // Recursively validate all child scopes
   for (const child of scope.children) {
     validateScope(page, child);
   }
+}
+
+/**
+ * The attributes HTML gives a dirty flag to, per element that has one.
+ *
+ * `value` on a text-entry `<input>` and on a `<textarea>`, `checked` on a
+ * checkbox or radio, `selected` on an `<option>`: from the user's first
+ * keystroke or click the element's own state is independent of both the
+ * content attribute and the content, and nothing written to either shows
+ * again.
+ */
+const DIRTY_ATTRS: { [tagName: string]: string[] } = {
+  INPUT: ['value', 'checked'],
+  TEXTAREA: ['value'],
+  OPTION: ['selected'],
+};
+
+/**
+ * The `<input>` types whose `value` a user cannot dirty.
+ *
+ * `value` on a submit or a button is its label, on a hidden field it is data
+ * the page put there, and on a checkbox or a radio it is what that control
+ * SUBMITS -- none of them is the thing being typed in. HTML calls these the
+ * "default" and "default/on" modes of operation: the property reflects the
+ * attribute for as long as the element exists, so writing the attribute is
+ * exactly right and saying otherwise would be noise on the one spelling that
+ * works. `file` is here for the opposite reason -- its value is a filename
+ * the page may not set at all, so `:prop-value` is not the advice either.
+ *
+ * `checked` on a checkbox or a radio IS dirtiable, and is checked separately:
+ * this list is about `value` alone.
+ */
+const UNDIRTIABLE_VALUE_TYPES = new Set([
+  'button',
+  'checkbox',
+  'file',
+  'hidden',
+  'image',
+  'radio',
+  'reset',
+  'submit',
+]);
+
+/**
+ * Says so when a page writes a value the user can take away from it.
+ *
+ * `value=${v}` reads as "this is the value" and behaves as "this was the
+ * initial value": HTML's dirty-value flag makes an input's value independent
+ * of its attribute and its content from the first keystroke, so `v = ''`
+ * after a submit empties the model and leaves the typed text sitting in the
+ * box. Confirmed in a browser rather than reasoned about, and it is a bug
+ * this project shipped -- `bs-input` bound it this way.
+ *
+ * Not fixed by making `value=` write the property when it happens to be on an
+ * input: that is the shape-guessing the two-spellings rule exists to prevent,
+ * and it would make one attribute mean two things depending on where it sits.
+ * `:prop-value=${v}` is already the spelling for "what it shows", and the
+ * attribute stays what the element is SERVED with -- which a hydrating page
+ * still needs. So both are right together, and the warning is what makes the
+ * pair discoverable at the moment someone writes half of it.
+ *
+ * A warning rather than an error, for the reason the others here are: an
+ * initial value that the user is then free to own is a thing someone may
+ * well mean.
+ */
+function validateDirtyValue(page: Page, scope: Scope) {
+  const el = scope.e;
+  const names = el && DIRTY_ATTRS[el.tagName];
+  if (!el || !names) return;
+  for (const name of names) {
+    // Only when the type is KNOWN to be dirtiable: absent, or a literal that
+    // is not on the list. A computed type could be anything, and warning
+    // about it was tried and was wrong -- `bs-check` writes `type=${_type}`
+    // over checkbox/radio/switch and `value` there is what the control
+    // submits, so the warning fired on the kit's own correct code with no
+    // correct way to answer it. An unknown gets silence: a warning nobody can
+    // act on teaches people to stop reading them, which costs more than the
+    // computed-type case it would catch
+    if (name === 'value' && el.tagName === 'INPUT') {
+      // a computed type is a value on this scope rather than a literal on the
+      // element, and it is the shape that has to stay quiet
+      if (scope.values.has(`${ATTR_VALUE_PREFIX}type`)) continue;
+      const type = el.getAttribute('type');
+      if (typeof type === 'string' && UNDIRTIABLE_VALUE_TYPES.has(type.toLowerCase())) {
+        continue;
+      }
+    }
+    // both spellings of "the page decides this attribute": `value=${v}` sets
+    // what it says, `:attr-checked=${v}` sets whether it is there at all, and
+    // the flag defeats each of them the same way
+    const written =
+      scope.values.get(`${ATTR_VALUE_PREFIX}${name}`) ??
+      scope.values.get(`${PRESENCE_VALUE_PREFIX}${name}`);
+    if (!written) continue;
+    if (scope.values.has(`${PROP_VALUE_PREFIX}${name}`)) continue;
+    page.addWarning(
+      `<${el.tagName.toLowerCase()}> keeps its own "${name}" once the user has ` +
+        `changed it, so this stops showing -- did you mean to add ` +
+        `"${SPECIAL_ATTR_PREFIX}${PROP_VALUE_ATTR_PREFIX}${name}=" beside it?`,
+      written.node.loc
+    );
+  }
+}
+
+/**
+ * The same warning for the other way a `<textarea>` is filled.
+ *
+ * `<textarea>${v}</textarea>` is the spelling most people reach for, and the
+ * dirty flag defeats it exactly as it defeats the attribute -- the content is
+ * the default value and stops being consulted from the first keystroke.
+ *
+ * It needs its own pass because a text interpolation does not give its
+ * element a scope: the value lands on the nearest enclosing one, so the
+ * textarea is reached through the node rather than through the tree.
+ */
+function validateDirtyText(page: Page, scope: Scope, value: Value) {
+  const el = value.node.parentElement;
+  if (el?.tagName !== 'TEXTAREA') return;
+  // the textarea has a scope only if something else on it made one, and that
+  // is where a `:prop-value` beside this content would be -- which is either
+  // the scope holding this text or a child of it, since a `:` attribute on
+  // the tag is exactly what makes the content land on the tag's own scope
+  const own = scope.e === el ? scope : scope.children.find(c => c.e === el);
+  if (own?.values.has(`${PROP_VALUE_PREFIX}value`)) return;
+  page.addWarning(
+    `<textarea> keeps its own "value" once the user has changed it, so this ` +
+      `stops showing -- did you mean to add ` +
+      `"${SPECIAL_ATTR_PREFIX}${PROP_VALUE_ATTR_PREFIX}value=" on the tag?`,
+    value.node.loc
+  );
 }
 
 function validateValue(page: Page, name: string, value: Value) {

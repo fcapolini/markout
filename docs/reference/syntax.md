@@ -146,6 +146,49 @@ neither set and so is never touched. Before this, a reactive `class=${...}`
 re-running turned `box box-red mine` into `box box-green`, silently, and
 only once the variant happened to change.
 
+### A form control keeps what the user typed
+
+`value=${v}` on an `<input>` reads as "this is the value" and behaves as
+"this was the initial value". HTML gives a handful of attributes a **dirty
+flag**: from the user's first keystroke or click, the element's own state is
+independent of both the content attribute and the content, and nothing
+written to either is consulted again. So `v = ''` after a submit empties the
+model and leaves the typed text sitting in the box.
+
+The attribute is still needed — it is what the element is *served* with, and
+a page rendered on the server hydrates onto it. What is missing is the other
+half:
+
+```html
+<input value=${note}
+       :prop-value=${note}
+       :on-input=${e => note = e.target.value}>
+```
+
+`value=` is what it is served with; `:prop-value=` is what it shows from then
+on. Both, together. The pairs are:
+
+| Element | Attribute | Written beside it |
+| --- | --- | --- |
+| `<input>` (a type that is typed in) | `value=${...}` | `:prop-value=${...}` |
+| `<input type="checkbox">`, `<input type="radio">` | `:attr-checked=${...}` | `:prop-checked=${...}` |
+| `<textarea>` | the content, or `value=${...}` | `:prop-value=${...}` |
+| `<option>` | `:attr-selected=${...}` | `:prop-selected=${...}` |
+
+`value` on a submit, a button, a hidden field, a checkbox or a radio is not
+on the list, because none of those is the thing being typed: HTML keeps them
+reflecting the attribute for as long as the element exists, and there the
+attribute alone is exactly right.
+
+**The compiler warns when it sees one without the other**, which is the only
+reason this is safe to leave as two spellings rather than one. Making
+`value=` quietly write the property when it happens to be on an input would
+be the shape-guessing that [two intents, two
+spellings](#a-composite-attribute-is-added-to-not-replaced) exists to
+prevent — one attribute meaning two different things depending on the
+element it sits on. The alternative to magic is not silence: it is being
+told, with a file and a line, the moment half the pair is written.
+
 ## Values
 
 | Syntax | Meaning |

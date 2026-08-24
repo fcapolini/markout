@@ -35,7 +35,14 @@ function run(html: string) {
   }).refresh();
   return {
     ctx,
-    errors: page.errors.map(e => e.msg),
+    // errors only. These fixtures are about markers, so they write the bare
+    // `<textarea>${v}</textarea>` deliberately -- including the one case that
+    // must have NO scope on the tag, which a `:prop-value` would give it. The
+    // dirty-value warning is right about every one of them and is asserted
+    // where it belongs, in `compiler/dirty-value.test.ts`; collecting it here
+    // would only make these tests about something else
+    errors: page.errors.filter(e => e.type === 'error').map(e => e.msg),
+    warnings: page.errors.filter(e => e.type === 'warning').map(e => e.msg),
     runtime: runtime.map(e => `${e.phase}: ${e.message}`),
     // ids are noise here; what matters is what sits between the tags
     markup: () => page.source.doc.toString().replace(/ data-markout="[^"]*"/g, ''),

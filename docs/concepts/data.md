@@ -24,6 +24,7 @@ It goes in ordinary values, declared on whichever scope owns it — usually
 <body :tracks=${[{ id: 'lantern', name: 'Lantern Season', note: '' }]}>
   <ol><li :for-each=${tracks} :for-key=${data.id}>
     <input value=${data.note}
+           :prop-value=${data.note}
            :on-input=${e => tracks = tracks.map(t =>
              t.id === data.id ? { ...t, note: e.target.value } : t)}>
   </li></ol>
@@ -34,6 +35,16 @@ Note where the cue note lives. Typing folds it back into `tracks` rather than
 leaving it in the `<input>` — an element is a projection, so anything left
 only there is unreachable and unsavable. It is the one mistake this page
 exists to prevent.
+
+And the projection has to keep projecting, which is what the second binding
+is for. HTML gives `value` a *dirty flag*: from the user's first keystroke
+the element's value is its own, independent of the attribute, so an attribute
+written afterwards is simply not consulted. `value=` is what the element is
+**served** with, which a page rendered on the server still needs;
+`:prop-value=` is what it **shows** from then on. Both, together — writing
+only the first compiles clean and then loses every change made from anywhere
+but that box, which is why the compiler warns when it sees one without the
+other.
 
 Where that data comes FROM is what [datasources](#datasources) are for: a
 value whose contents are fetched rather than written down, computed while the

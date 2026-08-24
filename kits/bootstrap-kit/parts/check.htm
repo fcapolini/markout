@@ -40,6 +40,7 @@
       role=${type === 'switch' ? 'switch' : null}
       aria-describedby=${help ? _helpId : null}
       :attr-checked=${checked}
+      :prop-checked=${checked}
       :attr-disabled=${disabled}
       :on-change=${ev => checked = ev.target.checked}>
 
@@ -118,6 +119,7 @@
         name=${_name}
         value=${option.value}
         :attr-checked=${_multi ? _selected.includes(option.value) : option.value === value}
+        :prop-checked=${_multi ? _selected.includes(option.value) : option.value === value}
         :attr-disabled=${disabled || option.disabled}
         :on-change=${(ev) => {
           if (!_multi) { value = ev.target.value; return; }
@@ -180,6 +182,7 @@
       max=${max}
       step=${step}
       value=${value}
+      :prop-value=${value}
       :attr-disabled=${disabled}
       :on-input=${ev => value = Number(ev.target.value)}>
   </:define>

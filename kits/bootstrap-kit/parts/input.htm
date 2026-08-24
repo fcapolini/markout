@@ -74,6 +74,7 @@
         type=${type}
         name=${name}
         value=${value}
+        :prop-value=${value}
         placeholder=${placeholder}
         aria-describedby=${help ? _helpId : null}
         :class-is-invalid=${_invalid}
@@ -96,6 +97,7 @@
         type=${type}
         name=${name}
         value=${value}
+        :prop-value=${value}
         placeholder=${placeholder || label || ' '}
         :class-is-invalid=${_invalid}
         :attr-disabled=${disabled}
@@ -153,6 +155,7 @@
       :attr-disabled=${disabled}
       :attr-readonly=${readonly}
       :attr-required=${required}
+      :prop-value=${value}
       :on-input=${ev => value = ev.target.value}>${value}</textarea>
 
     <div class="form-text"

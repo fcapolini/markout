@@ -57,6 +57,7 @@ ships rather than after:
 | A page the server cannot look at | Every filesystem error while resolving a page -- a permission on the docroot, an `EMFILE` under load, a volume gone away -- was caught and answered as an ordinary 404, so a broken deployment reported itself empty in an access log full of them, with the file sitting right there | Only the errnos that mean "no such name" stay silent; anything else is logged naming the path and the code, and says it is serving the page as not found |
 | `:if` or `:for-each` on `<html>`, `<head>` or `<body>` | The element moved into a stencil, and `document.body` answers with a direct child of `<html>` and nothing else — so there was no body to append the props and the runtime to, and the page shipped rendered, complete and completely inert, saying nothing at either time | A compile error naming the tag and the attribute: those three are where a page keeps what makes it work, so a region cannot be one of them |
 | A region inside inline SVG | Caught in the act while moving stencils to `<head>`: a `<circle>` in a stencil parses into the HTML namespace, so the clone was an `HTMLUnknownElement` that drew nothing and reported nothing — where the arrangement before it had at least thrown | The stencil travels with the `<svg>`/`<math>` that names its namespace, and the test parses the served bytes in a DOM that has namespaces — the compiler's own has none to get wrong |
+| A value written back into a field the user has typed in | HTML's dirty-value flag makes an input's value independent of its attribute and its content from the first keystroke, so `v = ''` after a submit emptied the model and left the typed text on screen. It compiled clean, ran clean, and this project SHIPPED it -- `bs-input`, `bs-textarea`, `bs-check`, `bs-range` and `bs-select` all bound it that way, and the durable-state page in the docs taught it | `:prop-value=${...}` beside the attribute, which was already the spelling and was already what `demos/desk/` did. A compile warning when one is written without the other, per element and attribute HTML gives a flag to; the kit and the docs fixed. Not closed by making `value=` write the property on an input, which would be one attribute meaning two things by where it sits |
 
 ## Open
 
@@ -65,10 +66,6 @@ ships rather than after:
   the component's parameter self-references, and fails at runtime with
   `unresolved dependency`. No compile-time diagnostic names the collision.
   See TODO.md.
-- **A value written back does not clear a field the user has typed in.**
-  HTML's dirty-value flag makes an input's value independent of its attribute
-  from the first keystroke, so `v = ''` empties the model and leaves the text
-  on screen. Nothing reports the divergence. See TODO.md.
 - **A definition based on another definition.** Accepted with no error and
   then broken: with caller content it reports a missing `<:slot>` that is
   there, and without it renders nothing at all. See TODO.md.
