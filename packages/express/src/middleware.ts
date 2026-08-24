@@ -526,7 +526,17 @@ export function markout(props: MarkoutProps) {
       // Asked of the Location itself rather than of the pathname it is built
       // from, which is the difference between checking a value and checking
       // an ingredient: what goes to the browser is the string with the
-      // trailing slash on it, so that is the string the claim is about
+      // trailing slash on it, so that is the string the claim is about.
+      //
+      // CodeQL flags this line anyway, and is dismissed rather than answered
+      // a fourth time: the flow `req.path -> resolve() -> pathname ->
+      // redirect` is real, and what makes it safe is inside
+      // `normalizeLogical`, which no analysis is going to derive from here.
+      // Worth knowing before dismissing the next one at this spot: TWO
+      // earlier versions of this redirect were flagged by that rule and both
+      // were genuinely wrong -- `//demos` echoed the request straight back,
+      // and the fix for it still let `/\demos` through. The rule has been
+      // right about this code twice
       const target = dir === undefined ? undefined : `${dir}/`;
       if (target?.startsWith('/') && !target.startsWith('//')) {
         res.redirect(301, target);
