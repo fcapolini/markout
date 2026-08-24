@@ -886,7 +886,15 @@ function expandDefine(page: Page, defineEl: ServerElement): ServerElement | unde
     if (attr.name === DEFINE_TAG_ATTR) continue;
     attr.clone(doc, inner);
   }
-  inner.className = defineEl.className;
+  // `class` and `style` are kept as element PROPERTIES rather than attribute
+  // nodes, so the attribute loop above misses both -- and only one of them
+  // was remembered here, which silently dropped a definition's static style.
+  // Read through getAttribute so an element with neither is left with
+  // neither, rather than gaining an empty one it then serializes
+  const definedClass = defineEl.getAttribute('class');
+  const definedStyle = defineEl.getAttribute('style');
+  definedClass && (inner.className = definedClass);
+  definedStyle && (inner.style = definedStyle);
   for (const child of [...defineEl.childNodes]) {
     (child as ServerNode).clone(doc, inner);
   }
@@ -1118,6 +1126,7 @@ function expandCustomTagUsages(page: Page): void {
       // is the scope that carries those values and the one the runtime sees
       page.usageInstances.set(loadedUsageScope, scope);
     }
+    settleComposite(page, scope, defScope, usageEl, tagName);
     // an instance composes the DEFINITION's element, so a `class+=` written
     // here is contributing to the class that definition sets. Declared now
     // rather than while the definition loaded, where there was no way to
@@ -2142,6 +2151,61 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
       asValue?.node.loc ?? e.loc
     );
     scope.values.set(alias, new Value(alias, dataAttr, scope, page.createValueId()));
+  }
+}
+
+/**
+ * Settles who owns a composite attribute when a usage site writes one, and
+ * says so.
+ *
+ * A plain attribute at a usage site replaces the definition's. That was true
+ * of a definition whose `class` is static and NOT of one that computes it:
+ * the computed one is a value, values are applied after the instance's
+ * static attributes, and so `<bs-alert class="mine">` kept the alert's own
+ * classes while `<my-box class="mine">` did not. One rule, two behaviours,
+ * decided by something the caller cannot see. The definition's value is
+ * dropped for this instance instead, so the rule holds either way.
+ *
+ * And then the warning, which is what the rule holding makes sayable:
+ * `<bs-alert class="mb-0">` is legal, means exactly what a plain attribute
+ * means, and is almost never what the author wanted -- `bs-alert` derives
+ * `alert alert-warning` from its own parameters and this throws all of it
+ * away. Before `class+=` there was nothing better to suggest, so it stayed
+ * quiet; now there is.
+ *
+ * A warning rather than an error, for the reason the other one here is: it
+ * is a judgment about the page rather than a fact about whether the page can
+ * be built, and replacing a component's class outright is a thing someone
+ * may well mean.
+ */
+function settleComposite(
+  page: Page,
+  scope: Scope,
+  defScope: Scope,
+  usageEl: ServerElement,
+  tagName: string
+): void {
+  for (const [name, add] of [
+    ['class', CLASS_ADD_ATTR],
+    ['style', STYLE_ADD_ATTR],
+  ] as [string, string][]) {
+    const key = `${ATTR_VALUE_PREFIX}${name}`;
+    // written here, either way it can be: a literal lands among the
+    // instance's static attributes, an expression among its values
+    const literal = !!scope.attributes?.has(name);
+    const written = literal || !!scope.callSiteValues?.has(key);
+    if (!written) continue;
+    const sets = defScope.values.has(key) || !!defScope.e?.getAttribute(name);
+    if (!sets) continue;
+    // a literal here against a computed one there: the value would win on
+    // ordering alone, so it goes. An expression here has already taken the
+    // same slot, being merged over the definition's a few lines above
+    literal && !scope.callSiteValues?.has(key) && scope.values.delete(key);
+    page.addWarning(
+      `<${tagName}> sets "${name}" itself, and a "${name}" here replaces it ` +
+        `-- did you mean "${add}="?`,
+      scope.values.get(key)?.node.loc ?? usageEl.loc
+    );
   }
 }
 

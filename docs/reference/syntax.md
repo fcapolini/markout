@@ -103,6 +103,18 @@ to say the other thing:
 <bs-alert ::dismissible class-="fade">No animation, please</bs-alert>
 ```
 
+Replacing it outright is still legal and still means what it says, but it is
+almost never what someone wants from a component that derives its own
+classes, so it is said out loud:
+
+```
+warning: <bs-alert> sets "class" itself, and a "class" here replaces it -- did you mean "class+="?
+```
+
+A warning rather than an error, on the same footing as `nothing reads
+"varient"` below: a judgment about the page rather than a fact about whether
+it can be built.
+
 **A literal is read the way HTML spells that attribute; an expression carries
 the value itself.** Three of the four take a set of names, and `style+=` a
 map, because addition assigns and removal only names:

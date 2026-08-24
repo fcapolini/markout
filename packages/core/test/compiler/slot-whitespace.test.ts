@@ -71,14 +71,14 @@ describe('whitespace in slotted content', () => {
     // written `</span> <span>` came out of the slot touching
     assert.equal(
       render(page('<mk-box><span>a</span> <span>b</span></mk-box>')),
-      '<div class="" data-markout="s7"><span>a</span> <span>b</span></div>'
+      '<div data-markout="s7"><span>a</span> <span>b</span></div>'
     );
   });
 
   it('keeps a newline-and-indent gap, which renders as a space', () => {
     assert.equal(
       render(page('<mk-box>\n    <span>a</span>\n    <span>b</span>\n  </mk-box>')),
-      '<div class="" data-markout="s7"><span>a</span>\n    <span>b</span></div>'
+      '<div data-markout="s7"><span>a</span>\n    <span>b</span></div>'
     );
   });
 
@@ -88,14 +88,14 @@ describe('whitespace in slotted content', () => {
     // is plainly wrong
     assert.equal(
       render(page('<mk-box><span>a</span>&nbsp;<span>b</span></mk-box>')),
-      '<div class="" data-markout="s7"><span>a</span> <span>b</span></div>'
+      '<div data-markout="s7"><span>a</span> <span>b</span></div>'
     );
   });
 
   it('treats content that is only &nbsp; as content', () => {
     assert.equal(
       render(page('<mk-fallback>&nbsp;</mk-fallback>')),
-      '<div class="" data-markout="s7"> </div>'
+      '<div data-markout="s7"> </div>'
     );
   });
 
@@ -104,14 +104,14 @@ describe('whitespace in slotted content', () => {
     // them in would put the usage site's source layout in the page
     assert.equal(
       render(page('<mk-box>\n    <span>a</span>\n  </mk-box>')),
-      '<div class="" data-markout="s7"><span>a</span></div>'
+      '<div data-markout="s7"><span>a</span></div>'
     );
   });
 
   it('still falls back when the content is only whitespace', () => {
     assert.equal(
       render(page('<mk-fallback>   \n  </mk-fallback>')),
-      '<div class="" data-markout="s7">FALLBACK</div>'
+      '<div data-markout="s7">FALLBACK</div>'
     );
   });
 
@@ -122,21 +122,21 @@ describe('whitespace in slotted content', () => {
     // compile error for entirely well-formed markup
     assert.equal(
       render(page('<mk-two>\n    <i :slot="h">H</i>\n    <i :slot="b">B</i>\n  </mk-two>')),
-      '<div class="" data-markout="s7"><i>H</i><hr><i>B</i></div>'
+      '<div data-markout="s7"><i>H</i><hr><i>B</i></div>'
     );
   });
 
   it('keeps the gap between two pieces addressed to the SAME named slot', () => {
     assert.equal(
       render(page('<mk-two><i :slot="h">H1</i> <i :slot="h">H2</i><i :slot="b">B</i></mk-two>')),
-      '<div class="" data-markout="s7"><i>H1</i> <i>H2</i><hr><i>B</i></div>'
+      '<div data-markout="s7"><i>H1</i> <i>H2</i><hr><i>B</i></div>'
     );
   });
 
   it('leaves text that is not whitespace alone, padding included', () => {
     assert.equal(
       render(page('<mk-box>  x  </mk-box>')),
-      '<div class="" data-markout="s7">  x  </div>'
+      '<div data-markout="s7">  x  </div>'
     );
   });
 });

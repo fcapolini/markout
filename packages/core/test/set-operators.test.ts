@@ -26,8 +26,9 @@ async function run(html: string) {
   stage2validate(page);
   stage3qualify(page);
   stage4resolve(page);
-  const errors = page.errors.map(e => e.msg);
-  if (errors.length) return { errors, ctx: undefined, served: '', page };
+  const errors = page.errors.filter(e => e.type === 'error').map(e => e.msg);
+  const warnings = page.errors.filter(e => e.type === 'warning').map(e => e.msg);
+  if (errors.length) return { errors, warnings, ctx: undefined, served: '', page };
   stage7generate(page);
   const runtimeErrors: string[] = [];
   await renderPage(page);
@@ -37,7 +38,7 @@ async function run(html: string) {
     doc: page.source.doc,
     onError: (e: RuntimeError) => runtimeErrors.push(e.message),
   }).refresh();
-  return { errors, ctx, served, page, runtimeErrors };
+  return { errors, warnings, ctx, served, page, runtimeErrors };
 }
 
 /**
@@ -89,12 +90,60 @@ describe('adding to a composite attribute', () => {
   });
 
   it('leaves a plain `class` replacing, which is the rule it does not change', async () => {
-    const { errors, served } = await run(
+    const { errors, warnings, served } = await run(
       '<html><head><:define tag="my-box:div" class="box"><:slot /></:define></head>' +
         '<body><my-box class="mine">hi</my-box></body></html>'
     );
     expect(errors).toStrictEqual([]);
     expect(served).toContain('<div class="mine"');
+    // legal, and said out loud, because it is almost never what was meant
+    expect(warnings).toStrictEqual([
+      '<my-box> sets "class" itself, and a "class" here replaces it -- did you mean "class+="?',
+    ]);
+  });
+
+  it('replaces a class the definition COMPUTES, not only a static one', async () => {
+    // one rule, two behaviours before this: the computed one is a value,
+    // values land after the instance's static attributes, and so a usage
+    // site's `class` was thrown away by a component that derived its own
+    const { errors, warnings, served } = await run(
+      `<html><head>${BOX}</head><body><my-box class="mine">hi</my-box></body></html>`
+    );
+    expect(errors).toStrictEqual([]);
+    expect(served).toContain('<div class="mine"');
+    expect(served).not.toContain('box-red');
+    expect(warnings).toStrictEqual([
+      '<my-box> sets "class" itself, and a "class" here replaces it -- did you mean "class+="?',
+    ]);
+  });
+
+  it('says nothing where the component sets no class of its own', async () => {
+    const { errors, warnings, served } = await run(
+      '<html><head><:define tag="my-box:div" ::v=${1}><:slot /></:define></head>' +
+        '<body><my-box class="mine">hi</my-box></body></html>'
+    );
+    expect(errors).toStrictEqual([]);
+    expect(warnings).toStrictEqual([]);
+    expect(served).toContain('<div class="mine"');
+  });
+
+  it('says nothing when the caller used the spelling that adds', async () => {
+    const { errors, warnings } = await run(
+      `<html><head>${BOX}</head><body><my-box class+="mine">hi</my-box></body></html>`
+    );
+    expect(errors).toStrictEqual([]);
+    expect(warnings).toStrictEqual([]);
+  });
+
+  it('warns about style on the same terms', async () => {
+    const { errors, warnings } = await run(
+      '<html :c=${"red"}><head><:define tag="my-box:div" style="gap: 1rem"><:slot /></:define>' +
+        '</head><body><my-box style=${"color: " + c}>hi</my-box></body></html>'
+    );
+    expect(errors).toStrictEqual([]);
+    expect(warnings).toStrictEqual([
+      '<my-box> sets "style" itself, and a "style" here replaces it -- did you mean "style+="?',
+    ]);
   });
 
   it('adds and removes style declarations', async () => {
@@ -104,6 +153,19 @@ describe('adding to a composite attribute', () => {
     );
     expect(errors).toStrictEqual([]);
     expect(served).toContain('style="color: blue; margin: 0;"');
+  });
+
+  it("carries a definition's static style onto its instances", async () => {
+    // `class` and `style` are element properties rather than attribute
+    // nodes, and only the first was copied when a definition was expanded --
+    // so a static style on a `<:define>` reached nothing, which makes
+    // `style+=` an argument with a base that was never there
+    const { errors, served } = await run(
+      '<html><head><:define tag="my-box:div" style="gap: 1rem" class="box">' +
+        '<:slot /></:define></head><body><my-box>hi</my-box></body></html>'
+    );
+    expect(errors).toStrictEqual([]);
+    expect(served).toContain('<div class="box" style="gap: 1rem;"');
   });
 
   it('takes a { property: value } map from an expression', async () => {

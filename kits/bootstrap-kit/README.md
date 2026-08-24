@@ -67,8 +67,8 @@ a title, a footer, an image — is a parameter. What it *contains* is slotted.
 
 **`class+=` adds classes.** A `class` written at a usage site *replaces* the
 one a definition sets, which is the language's rule and not something this
-kit overrides. `class+=` is the language's other spelling, and it is what to
-reach for when a component already has a class of its own:
+kit overrides — and since every component here computes its own, writing one
+gets you a warning naming `class+=`. That is the spelling to reach for:
 
 ```html
 <bs-alert ::variant="warning" class+="mb-0">Careful</bs-alert>
