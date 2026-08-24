@@ -906,7 +906,7 @@
                 <code class="rule-code">${…}</code> works in a stylesheet
                 exactly as it does in markup, so a value like
                 <code class="rule-code">appAccent</code> is a design token
-                without anything being a design token — no build step, no
+                without any special treatment: no build step, no
                 preprocessor, no custom property indirection unless you want
                 one.
               </p>
@@ -928,12 +928,9 @@
               </h3>
               <p class="text-body-secondary mb-0">
                 A token that never changes shouldn't cost anything to watch.
-                This one is fixed at compile time: worked out once while the
+                It's fixed at compile time, worked out once while the
                 page is built and substituted into every reader, so nothing of
-                it reaches the browser at all. It is read as a plain
-                <code class="rule-code">${name}</code> like any other value
-                — which is what lets the page that needs one to move declare
-                it reactively instead, with nothing in the kit changing.
+                it reaches the browser at all.
               </p>
             </div>
           </div>
