@@ -497,7 +497,14 @@ export function markout(props: MarkoutProps) {
     }
 
     if (i < 0 && !req.path.endsWith('/') && (await isDirectory(req.path, resolver))) {
-      res.redirect(301, `${req.path}/`);
+      // the CANONICAL path, not the one asked for. `//demos` is a request for
+      // the same directory -- the resolver joins it to the same place -- and
+      // echoing it back into a Location makes a protocol-relative URL: a
+      // browser reads `//demos/` as `http://demos/` and leaves the site.
+      // Only reachable for a name that IS a directory here, so it is not an
+      // open redirect to anywhere an attacker chooses, and it is still a
+      // redirect off the origin that this server had no reason to issue
+      res.redirect(301, `/${req.path.split('/').filter(Boolean).join('/')}/`);
       return;
     }
 

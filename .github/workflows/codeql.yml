@@ -22,4 +22,6 @@ jobs:
         with:
           languages: javascript-typescript
           build-mode: none
+          # excludes test files, and says why: see the file itself
+          config-file: ./.github/codeql/codeql-config.yml
       - uses: github/codeql-action/analyze@v3

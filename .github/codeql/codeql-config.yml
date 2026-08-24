@@ -1,0 +1,30 @@
+# What CodeQL looks at here, and what it deliberately does not.
+#
+# The default suite over the whole repository was 68 open alerts, and 66 of
+# them were in test files -- every one the same two rules,
+# `js/incomplete-multi-character-sanitization` and `js/bad-tag-filter`,
+# against lines like this in a test harness:
+#
+#     page.source.doc.toString().replace(/<!--.*?-->/g, '')
+#
+# That is a test stripping the COMPILER'S OWN comment markers out of markup
+# the same test just produced, so that an assertion reads. CodeQL sees a
+# regular expression removing HTML comments and reasons about what an
+# attacker could smuggle through it, which is the right reading of a
+# sanitizer and the wrong reading of this.
+#
+# They are excluded by path rather than by turning the rules off, because
+# both rules are worth having over anything that ships. Nothing here does:
+# every package publishes `dist` and nothing else, so a test file is not
+# reachable by a consumer at all -- there is no attacker and no input.
+#
+# The cost, stated rather than glossed: a genuine flaw in a test helper is
+# now invisible to this. That is the trade, and it is worth it at 66-to-2 --
+# an alert list nobody reads is worth less than no alert list, since it is
+# the reading that catches the real one.
+name: markout
+paths-ignore:
+  - '**/test/**'
+  - '**/*.test.ts'
+  - '**/fixture/**'
+  - '**/bench/**'

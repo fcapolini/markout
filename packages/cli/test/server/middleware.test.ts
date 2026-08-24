@@ -72,6 +72,21 @@ describe("Middleware", () => {
     expect(res.headers.location).toBe("/subdir/");
   });
 
+  it("redirects a directory to a path on this origin, whatever was asked for", async () => {
+    // `//subdir` reaches the same directory -- the resolver joins it to the
+    // same place -- and echoing it back into a Location would make a
+    // PROTOCOL-RELATIVE url: a browser reads `//subdir/` as `http://subdir/`
+    // and leaves the site. Flagged by CodeQL as
+    // js/server-side-unvalidated-url-redirection, and it reproduced
+    for (const asked of ["//subdir", "///subdir", "//subdir"]) {
+      const res = await request(app).get(asked);
+      expect(res.status, asked).toBe(301);
+      expect(res.headers.location, asked).toBe("/subdir/");
+      // the property that matters, whatever the path was: it stays here
+      expect(res.headers.location.startsWith("//"), asked).toBe(false);
+    }
+  });
+
   it("should serve index.html for directory paths with trailing slash", async () => {
     const res = await request(app).get("/subdir/");
     expect(res.status).toBe(200);
