@@ -1,7 +1,7 @@
 {
   "name": "@markout-lang/site",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "The Markout homepage and its demos, written in Markout and served by @markout-lang/express",
   "scripts": {
     "dev": "tsx --tsconfig ../../packages/cli/tsconfig.dev.json server.ts",
