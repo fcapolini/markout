@@ -510,7 +510,19 @@ export function markout(props: MarkoutProps) {
       // the same normalization that decided which file to stat. There is
       // nothing of the request left in it to be tricked by
       const dir = await directoryPathname(req.path, resolver);
-      if (dir) {
+      // Belt and braces, in the shape paths.ts uses for the same reason: a
+      // Location this server issues names a path on this ORIGIN, and that is
+      // checked here rather than argued for.
+      //
+      // It cannot fail. `normalizeLogical` builds the pathname by dropping
+      // every empty segment and joining what is left under one leading
+      // slash, so `//x` and `/\x` are `/x` by the time they get here. But
+      // the whole failure being avoided is a Location that looks relative
+      // and is not, the guarantee lives in another file, and the cost of the
+      // check is a comparison -- so it is made where it is relied on. A
+      // pathname that somehow were not local falls through to be resolved
+      // and answered like any other request
+      if (dir && dir.startsWith('/') && !dir.startsWith('//')) {
         res.redirect(301, `${dir}/`);
         return;
       }
