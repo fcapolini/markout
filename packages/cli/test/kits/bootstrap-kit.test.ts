@@ -1012,5 +1012,48 @@ describe('the demo application', () => {
         await page.close();
       }
     });
+
+    /**
+     * The one place in the demo where a control's state and a sentence about
+     * it have to agree.
+     *
+     * `bs-check-group` reported ONE value whatever its `:type`, so a
+     * checkbox group behaved as a radio group that could not make up its
+     * mind: ticking a second box unticked the first, unticking a box left it
+     * ticked, and the summary named a single channel however many were on
+     * screen. Nothing but clicking finds that, which is why this is here
+     * rather than beside the compiler tests.
+     */
+    it('reflects the notification checkboxes in the sentence beneath them', async () => {
+      const { page, failures } = await open('/orbit.html');
+      try {
+        const box = (name: string) =>
+          page.locator(`#settings input[type="checkbox"][value="${name}"]`);
+        const says = async () =>
+          (await page.locator('#settings').innerText()).replace(/\s+/g, ' ');
+
+        expect(await says()).toContain('over Slack when');
+
+        await box('Email').check();
+        // in the order the options were given, not the order they were clicked
+        expect(await says()).toContain('over Email, Slack when');
+
+        await box('SMS').check();
+        expect(await says()).toContain('over Email, Slack, SMS when');
+
+        await box('Slack').uncheck();
+        expect(await says()).toContain('over Email, SMS when');
+        // and the others were left alone, which is the half that was broken
+        expect(await box('Email').isChecked()).toBe(true);
+        expect(await box('SMS').isChecked()).toBe(true);
+
+        await box('Email').uncheck();
+        await box('SMS').uncheck();
+        expect(await says()).toContain('over no channel when');
+        expect(failures).toStrictEqual([]);
+      } finally {
+        await page.close();
+      }
+    });
   });
 });

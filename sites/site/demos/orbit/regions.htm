@@ -971,7 +971,7 @@
             ::legend="Deliver to"
             ::type="checkbox"
             ::inline
-            ::value=${'Slack'}
+            ::value=${['Slack']}
             ::options=${['Email', 'Slack', 'SMS']} />
 
           <!--- not kept up to date — derived: it reads the controls above -->
@@ -982,7 +982,8 @@
             </span>
             <span :if=${!contact._invalid}>
               Paging <strong>${contact.value}</strong> over
-              <strong>${channels.value}</strong> when errors pass
+              <strong>${channels.value.length ? channels.value.join(', ') : 'no channel'}</strong>
+              when errors pass
               <strong>${threshold.value}%</strong> — outside
               ${quiet.value === 'Never' ? 'no quiet hours' : quiet.value}.
               That is

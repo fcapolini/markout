@@ -275,12 +275,28 @@ listed here. Defaults are in the definitions, which are commented.
 | `bs-textarea` | `label` `name` `value` `placeholder` `rows` `help` `disabled` `readonly` `required` `check` `message` |
 | `bs-select` | `label` `name` `options` `value` `placeholder` `help` `size` `multiple` `disabled` `required` `floating` |
 | `bs-check` | `label` `type` (`checkbox`/`radio`/`switch`) `name` `value` `checked` `inline` `reverse` `disabled` `help` |
-| `bs-check-group` | `legend` `type` `options` `value` `inline` `disabled` |
+| `bs-check-group` | `legend` `type` `options` `value` (see below) `inline` `disabled` |
 | `bs-range` | `label` `name` `min` `max` `step` `value` `disabled` `showValue` |
 | `bs-input-group` | `prefix` `suffix` `size` |
 
 `bs-input` and `bs-textarea` also answer `valid`, which is read rather than
 passed -- see *Values are read and written* above.
+
+**`bs-check-group`'s `::value` is decided by its `::type`**, because that is
+what the two controls mean: a radio group submits one value and a checkbox
+group submits every box that is ticked, under the same name. So a radio
+group's is the selected value or `null`, and a checkbox or switch group's is
+an **array**, in the order the options were given rather than the order they
+were clicked:
+
+```html
+<bs-check-group :aka="channels"
+  ::type="checkbox"
+  ::value=${['Slack']}
+  ::options=${['Email', 'Slack', 'SMS']} />
+
+Deliver to ${channels.value.join(', ')}
+```
 
 ### Components
 

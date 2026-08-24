@@ -55,6 +55,20 @@
     A whole group of radios or checkboxes from one array, sharing a name and
     reporting the selection back through `:value`. Entries are strings or
     `{ name, value, disabled }`, as in `bs-select`.
+
+    What `:value` HOLDS is decided by `:type`, because that is what the two
+    controls mean: a radio group submits one value and a checkbox group
+    submits every box that is ticked, under the same name. So a radio group's
+    `:value` is the selected value or `null`, and a checkbox or switch
+    group's is an ARRAY, in the order the options were given rather than the
+    order they were clicked — a summary sentence reading it should not
+    reorder itself under the reader.
+
+    It used to be one value either way, which made a checkbox group behave
+    like a radio group that could not make up its mind: ticking a second box
+    unticked the first, and unticking a box left it ticked. Not a shape
+    guessed from a value — `:type` is declared, and it is the same thing that
+    already picks the input's type and the switch class.
   -->
   <:define tag="bs-check-group:div"
     class="mb-3"
@@ -64,13 +78,18 @@
     ::legend=${null}
     ::type=${'radio'}
     ::options=${[]}
-    ::value=${null}
+    ::value=${type === 'radio' ? null : []}
     ::inline=${false}
     ::disabled=${false}
 
     // private
     :_name=${`bs-check-group-${$id}`}
     :_legendId=${`bs-check-group-legend-${$id}`}
+    :_multi=${type !== 'radio'}
+    // a lone value read as a list of one, the way `:options` reads a lone
+    // string as an entry: passing `:value="Slack"` to a checkbox group says
+    // something unambiguous, and spreading a string into characters is not it
+    :_selected=${!_multi ? [] : Array.isArray(value) ? value : value == null ? [] : [value]}
 
     aria-labelledby=${legend ? _legendId : null}
     :_options=${options.map(o =>
@@ -98,9 +117,16 @@
         type=${type === 'switch' ? 'checkbox' : type}
         name=${_name}
         value=${option.value}
-        :attr-checked=${option.value === value}
+        :attr-checked=${_multi ? _selected.includes(option.value) : option.value === value}
         :attr-disabled=${disabled || option.disabled}
-        :on-change=${ev => value = ev.target.value}>
+        :on-change=${(ev) => {
+          if (!_multi) { value = ev.target.value; return; }
+          const on = ev.target.checked;
+          const hit = ev.target.value;
+          value = _options
+            .filter(o => (o.value === hit ? on : _selected.includes(o.value)))
+            .map(o => o.value);
+        }}>
       <label class="form-check-label"
         for="${_name}-${option.value}">${option.name}</label>
     </div>
