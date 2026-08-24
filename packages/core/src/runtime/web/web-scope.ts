@@ -106,11 +106,10 @@ export class WebScope extends CoreScope {
     // there. A dependency on `$dom` is perfectly ordinary once anything
     // reads it outside a callback, and the runtime treats one that resolves
     // to nothing as a compiler bug, so the name has to exist either way
-    this.values[RT_DOM_VALUE_KEY] = new CoreValue(
-      { val: (this.ctx.props as WebContextProps).server ? undefined : view },
-      this,
-      RT_DOM_VALUE_KEY
-    );
+    // $dom is built on demand, like the other names the runtime supplies --
+    // see CoreScope.builtin(). The comment above still holds: the name has
+    // to be answerable on every scope, holding nothing where there is no
+    // element, and never inherited from an ancestor
     if (!view) {
       // Root scope or other scopes without corresponding DOM elements
       // should not try to perform DOM operations
@@ -209,6 +208,20 @@ export class WebScope extends CoreScope {
       }
     }
     f(this.dom);
+  }
+
+  override builtin(key: string): CoreValue<any> | undefined {
+    if (key !== RT_DOM_VALUE_KEY) return super.builtin(key);
+    const already = this.values[key];
+    if (already) return already;
+    // Answered even where there is no element, holding nothing: a dependency
+    // on `$dom` is ordinary once anything reads it outside a callback, and
+    // the runtime treats one that resolves to nothing as a compiler bug --
+    // so the name has to exist either way. Browser-only is a property of the
+    // value, not of whether the name is there
+    return (this.values[key] = this.newValue(key, {
+      val: (this.ctx.props as WebContextProps).server ? undefined : this.dom,
+    }));
   }
 
   /** whether this scope's markup comes and goes, or is stamped out */

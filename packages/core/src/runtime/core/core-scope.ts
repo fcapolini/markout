@@ -195,27 +195,7 @@ export class CoreScope {
           valProps.serverOnly && state && key in state ? { val: state[key] } : undefined;
         this.values[key] = this.newValue(key, frozen ?? valProps, props.values);
       }
-      this.values[RT_VALUE_FN_KEY] = this.newValue(RT_VALUE_FN_KEY, {
-        val: (key: string) => this.lookup(key),
-      });
-      this.values[RT_SET_FN_KEY] = this.newValue(RT_SET_FN_KEY, {
-        // `lookup`, so it writes where a plain assignment would: the proxy's
-        // own set trap resolves the same way, and the two must not disagree
-        // about which scope holds the name
-        val: (key: string, value: unknown) => {
-          const found = this.lookup(key);
-          found?.set(value);
-          return !!found;
-        },
-      });
-      this.values[RT_PARENT_VALUE_KEY] = this.newValue(RT_PARENT_VALUE_KEY, {
-        // a direct value, not `exp`/a callable: parent is already fixed by
-        // this point (linked above, before init()) and never changes again.
-        // The LEXICAL one: `$parent` reaching into a component's call site
-        // would hand back through the front door the isolation lookup() is
-        // careful to keep
-        val: this.lexicalParent()?.proxy,
-      });
+      // $value, $set and $parent are not built here -- see builtin()
     }
     // The custom-tag instance this scope ended up INSIDE, structurally --
     // where `$parent` is where it was WRITTEN. The two are the same thing
@@ -226,21 +206,7 @@ export class CoreScope {
     // Deliberately not reachable by a bare name: a definition sees its
     // container only where it says so, which is what keeps `$host` from
     // reopening the isolation lookup() maintains.
-    this.values[RT_HOST_VALUE_KEY] = this.newValue(RT_HOST_VALUE_KEY, {
-      // fixed once linked, like $parent; undefined outside any instance,
-      // which is what lets a component fall back to standing on its own
-      val: this.enclosingInstance()?.proxy,
-    });
-    // unconditionally, unlike the two above: lookup() walks up the scope
-    // chain, so a scope missing its own $id wouldn't fail -- it would
-    // silently answer with an ancestor's, which is exactly the kind of
-    // quietly-wrong binding that's hardest to notice
-    this.values[RT_ID_VALUE_KEY] = this.newValue(RT_ID_VALUE_KEY, {
-      // rooted in the id stage1 stamped into the element as `data-markout`,
-      // which the browser reads back out of the compiled props: it comes
-      // from the page, so server and client can't disagree on it
-      val: this.uid,
-    });
+    // $host and $id are not built here either -- see builtin()
     this.relocateLoopAlias();
     // told once the refresh it was built in has settled, so `:did-init` sees
     // a scope whose values are evaluated and whose bindings have landed
@@ -615,9 +581,84 @@ export class CoreScope {
     return scope === this ? this.parent : scope;
   }
 
+  /**
+   * The names the runtime supplies to every scope, built when something
+   * first asks for one rather than for all of them up front.
+   *
+   * Five per scope -- `$value`, `$set`, `$parent`, `$host`, `$id` -- and on
+   * a page of any size most scopes are never asked for any of them. Built
+   * eagerly they were 58% of every CoreValue on the catalog benchmark: five
+   * objects and ten Sets per scope, a million of them for ten thousand rows,
+   * so that a handful of expressions could say `$parent`.
+   *
+   * Built HERE, on the scope being asked, and never further up. lookup()
+   * walks the chain, so a scope that answered nothing for its own `$id`
+   * would quietly answer with an ancestor's -- which is why these were
+   * unconditional in the first place, and why laziness has to resolve them
+   * before the walk rather than during it.
+   */
+  protected builtin(key: string): CoreValue<any> | undefined {
+    const already = this.values[key];
+    if (already) return already;
+    // a scope that has deliberately given one up, so it falls through to
+    // where it does mean something -- see LoopSiteScope
+    if (this.noBuiltin?.has(key)) return undefined;
+    switch (key) {
+      case RT_HOST_VALUE_KEY:
+        // fixed once linked; undefined outside any instance, which is what
+        // lets a component fall back to standing on its own
+        return (this.values[key] = this.newValue(key, {
+          val: this.enclosingInstance()?.proxy,
+        }));
+      case RT_ID_VALUE_KEY:
+        // rooted in the id stage1 stamped into the element as `data-markout`,
+        // which the browser reads back out of the compiled props: it comes
+        // from the page, so server and client can't disagree on it
+        return (this.values[key] = this.newValue(key, { val: this.uid }));
+      case RT_VALUE_FN_KEY:
+        if (!this.props.values) return undefined;
+        return (this.values[key] = this.newValue(key, {
+          val: (name: string) => this.lookup(name),
+        }));
+      case RT_SET_FN_KEY:
+        if (!this.props.values) return undefined;
+        // `lookup`, so it writes where a plain assignment would: the proxy's
+        // own set trap resolves the same way, and the two must not disagree
+        // about which scope holds the name
+        return (this.values[key] = this.newValue(key, {
+          val: (name: string, value: unknown) => {
+            const found = this.lookup(name);
+            found?.set(value);
+            return !!found;
+          },
+        }));
+      case RT_PARENT_VALUE_KEY:
+        if (!this.props.values) return undefined;
+        // a direct value, not `exp`/a callable: parent is fixed by the time
+        // anything can ask, and never changes again. The LEXICAL one:
+        // `$parent` reaching into a component's call site would hand back
+        // through the front door the isolation lookup() is careful to keep
+        return (this.values[key] = this.newValue(key, {
+          val: this.lexicalParent()?.proxy,
+        }));
+    }
+    return undefined;
+  }
+
+  /** names this scope declines to supply, so they resolve further out */
+  protected noBuiltin?: Set<string>;
+
   lookup(prop: string | symbol): CoreValue<any> | undefined {
     let scope: CoreScope | undefined = this;
     let value = scope.cache.get(prop);
+    // `$` first, so an ordinary name pays one character comparison for this
+    if (!value && typeof prop === 'string' && prop.charCodeAt(0) === 36) {
+      value = this.builtin(prop);
+      if (value) {
+        this.cache.set(prop, value);
+        return value;
+      }
+    }
     while (scope && !value) {
       value = scope.values[prop];
       value && this.cache.set(prop, value);
@@ -1199,6 +1240,9 @@ class LoopSiteScope extends CoreScope {
     // for a thing with no element and no place in the tree. $value stays
     // ours -- the compiler emits every dependency as `this.$value(name)`,
     // and those have to start resolving HERE to reach the alias
+    // declined rather than deleted: they are built on demand now, so
+    // removing them would only mean building them again on first ask
+    this.noBuiltin = new Set([RT_ID_VALUE_KEY, RT_PARENT_VALUE_KEY]);
     delete this.values[RT_ID_VALUE_KEY];
     delete this.values[RT_PARENT_VALUE_KEY];
   }
