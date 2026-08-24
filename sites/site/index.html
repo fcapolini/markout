@@ -928,9 +928,8 @@
               </h3>
               <p class="text-body-secondary mb-0">
                 A token that never changes shouldn't cost anything to watch.
-                It's fixed at compile time, worked out once while the
-                page is built and substituted into every reader, so nothing of
-                it reaches the browser at all.
+                It's worked out once at compile time and substituted into every
+                reader, so nothing of it reaches the browser at all.
               </p>
             </div>
           </div>
@@ -974,9 +973,9 @@
         </div>
       </div>
 
-      <div class="row g-4">
+      <div class="row g-4 justify-content-center">
 
-        <div class="col-md-6">
+        <div class="col-md-6 col-lg-4">
           <page-step ::n="01"
                      ::heading="HTML is the syntax">
             <p class="text-body-secondary mb-0">
@@ -987,7 +986,7 @@
           </page-step>
         </div>
 
-        <div class="col-md-6">
+        <div class="col-md-6 col-lg-4">
           <page-step ::n="02"
                      ::heading="One expression syntax">
             <p class="text-body-secondary mb-0">
@@ -997,7 +996,7 @@
           </page-step>
         </div>
 
-        <div class="col-md-6">
+        <div class="col-md-6 col-lg-4">
           <page-step ::n="03"
                      ::heading="One prefix for everything else">
             <p class="text-body-secondary mb-0">
@@ -1011,27 +1010,24 @@
           </page-step>
         </div>
 
-        <div class="col-md-6">
+        <div class="col-md-6 col-lg-4">
           <page-step ::n="04"
                      ::heading="Scopes nest lexically">
             <p class="text-body-secondary mb-0">
               A value is visible to every descendant, with no separate
-              wiring. An expression resolves where it was written — which is
-              what lets a component move without changing meaning.
+              wiring. An expression resolves where it was written.
             </p>
           </page-step>
         </div>
 
-        <div class="col-md-6">
+        <div class="col-md-6 col-lg-4">
           <page-step ::n="05"
                      ::heading="A component says what it takes">
             <p class="text-body-secondary mb-0">
               <code class="rule-code">::</code> marks a component's interface
               — declared on the <code class="rule-code">&lt;:define&gt;</code>,
               passed at the usage. Everything else on that tag is a plain
-              <code class="rule-code">:</code> and stays yours: the component
-              never sees it, and a name it does take cannot be quietly
-              borrowed for something else.
+              <code class="rule-code">:</code> and stays yours.
             </p>
           </page-step>
         </div>
