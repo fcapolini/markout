@@ -25,10 +25,9 @@
     collide and nothing has to be named.
   -->
   <:define tag="bs-accordion:div"
-    class="accordion ${extra ?? ''}"
+    class="accordion"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::exclusive=${true}  // one open panel at a time
     ::flush=${false}
 
@@ -45,10 +44,9 @@
   </:define>
 
   <:define tag="bs-accordion-item:div"
-    class="accordion-item ${extra ?? ''}"
+    class="accordion-item"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::title=${''}
     ::open=${false}
 

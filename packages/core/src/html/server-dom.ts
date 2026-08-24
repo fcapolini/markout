@@ -1,4 +1,5 @@
 import * as acorn from 'acorn';
+import { parseDeclarations } from './css';
 // the HTML5 character-reference table, for the same reason acorn parses the
 // JS: it is spec data, and a hand-kept subset of it is a standing bug
 import { decodeHTML, decodeHTMLAttribute } from 'entities';
@@ -247,7 +248,10 @@ class ServerClassProp implements ClassProp {
   }
 
   fromString(s: string): this {
-    this.list = new Set(s.split(/\s+/));
+    // filtered: an empty or blank value used to leave an empty-string member
+    // behind, which serializes as a leading space and, now that classes are
+    // composed rather than assigned, survives every later add
+    this.list = new Set(s.split(/\s+/).filter(t => t.length > 0));
     return this;
   }
 }
@@ -271,12 +275,10 @@ class ServerStyleProp implements StyleProp {
 
   set cssText(s: string) {
     this.list.clear();
-    s.split(/\s*;\s*/).forEach(s => {
-      const parts = s.split(/\s*:\s*/);
-      parts.length === 2 && this.list.set(parts[0], parts[1]);
-    });
+    parseDeclarations(s).forEach(([k, v]) => this.list.set(k, v));
   }
 }
+
 
 // Base class for nodes that can contain children
 export abstract class ServerContainerNode extends ServerNode {

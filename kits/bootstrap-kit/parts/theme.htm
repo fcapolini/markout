@@ -41,7 +41,6 @@
     type="button"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::variant=${'secondary'}
     ::outline=${true}
     ::size=${null}
@@ -52,7 +51,6 @@
       'btn',
       `btn-${outline ? 'outline-' : ''}${variant}`,
       size ? `btn-${size}` : '',
-      extra,
     ].filter(s => s).join(' ')}
 
     class=${_class}

@@ -8,6 +8,7 @@ import type {
   ObjectExpression,
   Property,
 } from 'estree';
+import { parseDeclarations } from '../../html/css';
 import {
   ServerComment,
   ServerElement,
@@ -20,6 +21,8 @@ import { DEV_GLOBAL, PROPS_DATA_ATTR, PROPS_GLOBAL } from '../../runtime/core/co
 import {
   EVENT_VALUE_PREFIX,
   REGION_STENCIL_MARKER,
+  SET_OPERATOR_ATTRS,
+  SET_OPERATOR_MAP_ATTR,
   TEXT_VALUE_PREFIX,
 } from '../ir/Page';
 import {
@@ -847,10 +850,24 @@ function generateExpBody(value: Value): Expression {
     return literal(true);
   }
   if (typeof expression === 'string') {
+    // `class+="mb-0 shadow"` and the other three: a literal is read the way
+    // HTML spells that attribute, and folded HERE into the same typed value
+    // an expression would have carried -- so nothing downstream, the runtime
+    // included, ever meets the string form
+    if (SET_OPERATOR_ATTRS.has(value.name)) {
+      return value.name === SET_OPERATOR_MAP_ATTR
+        ? objectExpression(parseDeclarations(expression))
+        : arrayExpression(tokens(expression));
+    }
     // a plain (non-`${}`) value is a static literal, not an expression
     return literal(expression);
   }
   return expression as unknown as Expression;
+}
+
+/** a space-separated attribute value, as the names it holds */
+function tokens(s: string): string[] {
+  return s.split(/\s+/).filter(t => t.length > 0);
 }
 
 /**
@@ -893,6 +910,30 @@ function identifier(name: string): Expression {
 
 function literal(value: string | number | boolean): Expression {
   return { type: 'Literal', value } as unknown as Expression;
+}
+
+function arrayExpression(values: string[]): Expression {
+  return {
+    type: 'ArrayExpression',
+    elements: values.map(v => literal(v)),
+  } as unknown as Expression;
+}
+
+function objectExpression(entries: [string, string][]): Expression {
+  return {
+    type: 'ObjectExpression',
+    properties: entries.map(([k, v]) => ({
+      type: 'Property',
+      kind: 'init',
+      method: false,
+      shorthand: false,
+      // quoted, like every other key here: a CSS property is dashed, and a
+      // dashed Identifier prints as broken source
+      computed: false,
+      key: literal(k),
+      value: literal(v),
+    })),
+  } as unknown as Expression;
 }
 
 function callExpression(callee: Expression, args: Expression[]): Expression {

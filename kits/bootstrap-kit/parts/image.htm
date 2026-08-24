@@ -8,14 +8,12 @@
   <:define tag="bs-image:img"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::src=${null}
     ::alt=${''}
     ::fluid=${true}
     ::thumbnail=${false}
     ::rounded=${false}
 
-    class=${extra}
     src=${src}
     alt=${alt}
     :class-img-fluid=${fluid}
@@ -25,10 +23,9 @@
 
   <!--- An image with its caption, as one thing. -->
   <:define tag="bs-figure:figure"
-    class="figure ${extra ?? ''}"
+    class="figure"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::src=${null}
     ::alt=${''}
     ::caption=${null}

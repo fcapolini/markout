@@ -26,10 +26,9 @@
     of its own to hang off; wrap the trigger, not the page around it.
   -->
   <:define tag="bs-tooltip:span"
-    class="d-inline-block ${extra ?? ''}"
+    class="d-inline-block"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::title=${''}
     ::placement=${'top'}
     ::html=${false}

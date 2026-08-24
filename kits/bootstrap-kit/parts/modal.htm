@@ -19,11 +19,10 @@
     amount of markup expresses them, and a handler is what runs them.
   -->
   <:define tag="bs-modal:div"
-    class="modal fade ${extra ?? ''}"
+    class="modal fade"
     tabindex="-1"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::name=${null}
     ::title=${''}
     ::size=${null}          // 'sm' | 'lg' | 'xl'

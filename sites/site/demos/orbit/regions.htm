@@ -28,7 +28,7 @@
     ::requests=${0}>
     <bs-nav ::vertical
       ::variant="pills"
-      ::extra="mb-4"
+      class+="mb-4"
       id="dash-side-nav"
       ::items=${[
         { name: 'Overview', link: '#overview' },
@@ -48,7 +48,7 @@
       <bs-progress ::value=${Math.min(100, (requests / 2000000) * 100)}
         ::height="0.5rem"
         ::name="Request quota"
-        ::extra="mb-3" />
+        class+="mb-3" />
 
       <div class="small text-body-secondary d-flex justify-content-between">
         <span>Seats</span>
@@ -61,7 +61,7 @@
 
       <bs-link ::href="#settings"
         ::variant="primary"
-        ::extra="small d-inline-block mt-3">Manage plan</bs-link>
+        class+="small d-inline-block mt-3">Manage plan</bs-link>
     </dash-panel>
   </:define>
 
@@ -82,7 +82,7 @@
     ::setSpan=${(n) => n}
     ::onExport=${() => undefined}>
     <div>
-      <bs-breadcrumb ::extra="small"
+      <bs-breadcrumb class+="small"
         ::items=${[
           { name: 'Orbit', link: '#overview' },
           { name: 'Production', link: '#overview' },
@@ -170,7 +170,7 @@
     -->
     <bs-alert :for-data=${incidents[0]}
       ::variant="danger"
-      ::extra="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      class+="d-flex flex-wrap justify-content-between align-items-center gap-3">
       <span>
         <strong>${incidents.length} open incident${incidents.length === 1 ? '' : 's'}.</strong>
         ${data.title}, ${fmt.ago(data.since)}.
@@ -274,7 +274,7 @@
             <bs-check ::type="switch"
               ::label="Live"
               ::checked=${live}
-              ::extra="mb-0"
+              class+="mb-0"
               :on-change=${ev => setLive(ev.target.checked)} />
             <bs-tooltip ::title="A new reading arrives every two seconds while this is on.">
               <bs-badge ::variant=${live ? 'success' : 'secondary'}
@@ -288,7 +288,7 @@
             they hold one chart component over three arrays.
           -->
           <bs-nav ::variant="underline"
-            ::extra="mb-3"
+            class+="mb-3"
             ::toggle="tab"
             ::items=${[
               { name: 'Requests', target: '#dash-pane-requests', active: true },
@@ -385,7 +385,7 @@
                 ::variant=${data.projected > data.budget ? 'danger' : 'success'}
                 ::height="0.5rem"
                 ::name="Spend against budget"
-                ::extra="mt-2 mb-2" />
+                class+="mt-2 mb-2" />
               <p class="small text-body-secondary mb-0">
                 Projected $${fmt.num(data.projected)} —
                 ${data.projected > data.budget ? 'over' : 'under'} budget.
@@ -467,7 +467,7 @@
           -->
           <bs-table ::small
             ::hover
-            ::extra="mb-3"
+            class+="mb-3"
             ::columns=${[
               { key: 'path', name: 'Path' },
               { key: 'calls', name: 'Calls', class: 'text-end' },
@@ -486,7 +486,7 @@
             ::variant=${ep.tone}
             ::height="0.35rem"
             ::name=${ep.path}
-            ::extra="mb-2" />
+            class+="mb-2" />
         </dash-panel>
       </div>
     </div>
@@ -559,14 +559,14 @@
             <bs-input :aka="hunt"
               ::label="Search"
               ::size="sm"
-              ::extra="mb-0"
+              class+="mb-0"
               ::placeholder="service, commit or author" />
           </div>
           <div class="col-6 col-md-3">
             <bs-select :aka="envPick"
               ::label="Environment"
               ::size="sm"
-              ::extra="mb-0"
+              class+="mb-0"
               ::placeholder="All"
               ::options=${['production', 'staging']} />
           </div>
@@ -574,7 +574,7 @@
             <bs-select :aka="statePick"
               ::label="Status"
               ::size="sm"
-              ::extra="mb-0"
+              class+="mb-0"
               ::placeholder="Any"
               ::options=${['shipped', 'running', 'queued', 'failed']} />
           </div>
@@ -582,7 +582,7 @@
             <bs-select :aka="pageSize"
               ::label="Per page"
               ::size="sm"
-              ::extra="mb-0"
+              class+="mb-0"
               ::value=${'6'}
               ::options=${['6', '10', '20']} />
           </div>
@@ -635,7 +635,7 @@
                 :for-as="col">
                 <bs-button ::variant="link"
                   ::size="sm"
-                  ::extra="p-0 text-decoration-none fw-semibold text-body"
+                  class+="p-0 text-decoration-none fw-semibold text-body"
                   :on-click=${() => _sortBy(col.key)}>${col.name}${_mark(col.key)}</bs-button>
               </th>
               <th scope="col"><span class="visually-hidden">Actions</span></th>
@@ -746,7 +746,7 @@
           ::note="A nav and a scrolling region, tied together by scrollspy.">
           <bs-nav ::vertical
             ::variant="underline"
-            ::extra="mb-2"
+            class+="mb-2"
             id="dash-runbook-nav"
             ::items=${[
               { name: 'Roll back', link: '#dash-run-rollback' },
@@ -757,7 +757,7 @@
           <bs-scrollspy ::target="#dash-runbook-nav"
             ::height=${170}
             ::smooth
-            ::extra="border rounded p-3">
+            class+="border rounded p-3">
             <h6 id="dash-run-rollback">Roll back</h6>
             <p class="small text-body-secondary">
               Find the last deployment with a <code>shipped</code> status for
@@ -820,7 +820,7 @@
             ::variant="success"
             ::height="0.4rem"
             ::name="Tasks completed"
-            ::extra="mb-3" />
+            class+="mb-3" />
 
           <!---
             A checkbox that writes back into the array it came from:
@@ -834,7 +834,7 @@
             <div class="d-flex justify-content-between align-items-center gap-2">
               <bs-check ::label=${task.text}
                 ::checked=${task.done}
-                ::extra=${task.done ? 'text-decoration-line-through opacity-50' : null}
+                class+=${task.done ? ['text-decoration-line-through', 'opacity-50'] : []}
                 :on-change=${ev => setTodos(todos.map(t =>
                   t.id === task.id ? { ...t, done: ev.target.checked } : t))} />
               <bs-badge ::variant=${task.due === 'today' ? 'warning' : 'secondary'}
@@ -911,7 +911,7 @@
               <bs-button :for-each=${swatches}
                 :for-as="hex"
                 ::variant=${null}
-                ::extra="dash-swatch"
+                class+="dash-swatch"
                 :class-dash-picked=${accent === hex}
                 :style-background-color=${hex}
                 :on-click=${() => setAccent(hex)}
@@ -947,14 +947,14 @@
                 ::value="ops@orbit.dev"
                 ::check=${(v) => v.includes('@') && v.includes('.')}
                 ::message="That doesn't look like an email address."
-                ::extra="mb-0" />
+                class+="mb-0" />
             </div>
             <div class="col-md-6">
               <bs-select :aka="quiet"
                 ::label="Quiet hours"
                 ::value=${'22:00 – 07:00'}
                 ::options=${['Never', '22:00 – 07:00', 'Weekends']}
-                ::extra="mb-0" />
+                class+="mb-0" />
             </div>
           </div>
 
@@ -965,7 +965,7 @@
             ::max=${5}
             ::step=${0.1}
             ::value=${1.5}
-            ::extra="mt-3 mb-2" />
+            class+="mt-3 mb-2" />
 
           <bs-check-group :aka="channels"
             ::legend="Deliver to"
@@ -976,7 +976,7 @@
 
           <!--- not kept up to date — derived: it reads the controls above -->
           <bs-alert ::variant=${contact._invalid ? 'danger' : 'secondary'}
-            ::extra="mb-3">
+            class+="mb-3">
             <span :if=${contact._invalid}>
               Fix the alert address before saving.
             </span>

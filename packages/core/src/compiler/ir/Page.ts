@@ -113,6 +113,47 @@ export const TEXT_VALUE_PREFIX = 't$';
 export const CLASS_VALUE_PREFIX = 'class$';
 export const STYLE_VALUE_PREFIX = 'style$';
 export const ATTR_VALUE_PREFIX = 'attr$';
+
+/**
+ * `class+=`, `class-=`, `style+=`, `style-=`: the whole-set forms of the
+ * `:class-x` and `:style-x` families.
+ *
+ * A plain attribute REPLACES; its `+=`/`-=` forms contribute. `class=` sets
+ * the class attribute, `class+=` adds to whatever is there and `class-=`
+ * takes away -- which is what a usage site needs against a definition that
+ * sets `class` itself, and what `:class-x` already did one name at a time.
+ *
+ * Only these two attributes have them, and the reason is a fact about HTML
+ * rather than a convenience: `class` and `style` are the two that hold a SET
+ * rather than a value, which is also why they are the two with a dash-case
+ * family and why there is no `:href-x`. `+=` anywhere else is refused --
+ * see rejectSetOperator.
+ *
+ * Not `:` attributes, deliberately. `:` names what HTML has no name for, and
+ * `class` has a name; what is new here is the operation, and an operation is
+ * not a name. The compiled key is the attribute exactly as written, the way
+ * `class$x` keeps a class name verbatim.
+ */
+export const CLASS_ADD_ATTR = 'class+';
+export const CLASS_DEL_ATTR = 'class-';
+export const STYLE_ADD_ATTR = 'style+';
+export const STYLE_DEL_ATTR = 'style-';
+/** the four, by the attribute name that spells each */
+export const SET_OPERATOR_ATTRS = new Set([
+  CLASS_ADD_ATTR,
+  CLASS_DEL_ATTR,
+  STYLE_ADD_ATTR,
+  STYLE_DEL_ATTR,
+]);
+/**
+ * The one of the four that takes a MAP; the other three take a set of names.
+ *
+ * Addition takes what the attribute is -- a set for `class`, a map for
+ * `style` -- and removal takes names, always. A map on a removal would have
+ * to either ignore its values, which makes `style-=${{color: 'red'}}` a lie,
+ * or match on them, which is a different feature wearing this one's clothes.
+ */
+export const SET_OPERATOR_MAP_ATTR = STYLE_ADD_ATTR;
 // deliberately not `attr$`: that one is already the value-setting form
 export const PRESENCE_VALUE_PREFIX = 'flag$';
 export const PROP_VALUE_PREFIX = 'prop$';

@@ -314,7 +314,7 @@
   -->
   <bs-navbar ::sticky
              ::brand="#top"
-             ::extra="border-bottom"
+             class+="border-bottom"
              ::expand="md"
              ::items=${[
                { name: 'Demos', link: '/demos/' },
@@ -371,7 +371,7 @@
         <div class="row align-items-center gy-5 gx-0 gx-sm-5">
 
           <div class="col-lg-7">
-            <page-eyebrow ::extra="mb-3">Bootstrap + Markout</page-eyebrow>
+            <page-eyebrow class+="mb-3">Bootstrap + Markout</page-eyebrow>
 
             <h1 class="display-4 fw-bold lh-1 mb-4">
               Add application logic directly to your Bootstrap&nbsp;page.
@@ -449,7 +449,7 @@
             <bs-nav ::variant="pills"
                     ::align="center"
                     ::toggle="pill"
-                    ::extra="gap-2 mb-4"
+                    class+="gap-2 mb-4"
                     ::items=${[
                       { name: 'Plain Bootstrap', target: '#plain', active: true },
                       { name: 'With the Bootstrap Kit', target: '#kitted' },
@@ -554,7 +554,7 @@
         <div class="row align-items-center gy-5 gx-0 gx-sm-5">
 
           <div class="col-lg-6">
-            <page-eyebrow ::extra="mb-3">Bootstrap Kit</page-eyebrow>
+            <page-eyebrow class+="mb-3">Bootstrap Kit</page-eyebrow>
 
             <h2 class="display-6 fw-bold mb-3">
               Components that are just HTML fragments
@@ -578,7 +578,7 @@
               beyond the markup itself.
             </p>
 
-            <bs-card ::extra="bg-body-tertiary mt-4"
+            <bs-card class+="bg-body-tertiary mt-4"
                      ::bodyExtra="p-4">
               <p class="mb-0">
                 Every component is a <code class="rule-code">bs-</code> tag
@@ -643,7 +643,7 @@
               work in the before/after above.
             </p>
 
-            <bs-card ::extra="h-100 bg-body-tertiary"
+            <bs-card class+="h-100 bg-body-tertiary"
                      ::border="primary-subtle">
               <span class="fw-semibold">…and the next one you write</span>
               <p class="text-body-secondary small mb-0 mt-2">
@@ -726,7 +726,7 @@
             <code-card ::title="bootstrap-kit/parts/input.htm"
                        ::label="the component"
                        ::variant="primary"
-                       ::extra="h-100"
+                       class+="h-100"
                        ::note>
 <pre class="mb-0"><code data-lang="html">&lt;:define tag="bs-input:div"
   class="mb-3"
@@ -770,7 +770,7 @@
           <div class="col-lg-6">
             <code-card ::title="examples/validation.html"
                        ::label="using it"
-                       ::extra="h-100"
+                       class+="h-100"
                        ::note>
 <pre class="mb-0"
      data-lang="html"><:include src="/examples/validation.html" as="code" escaping /></pre>
@@ -853,7 +853,7 @@
 
           <div class="col-lg-6">
             <code-card ::title="a chain of branches"
-                       ::extra="h-100"
+                       class+="h-100"
                        ::note>
 <pre class="mb-0"><code data-lang="html">&lt;bs-spinner :if=${loading} /&gt;
 
@@ -935,7 +935,7 @@
             <code-card ::title="examples/app-kit.htm"
                        ::label="your kit"
                        ::variant="primary"
-                       ::extra="h-100"
+                       class+="h-100"
                        ::note>
 <pre class="mb-0"
      data-lang="html"><:include src="/examples/app-kit.htm" as="code" escaping /></pre>
@@ -1004,7 +1004,7 @@
 
         <div class="row justify-content-center mt-4">
           <div class="col-lg-10">
-            <bs-card ::extra="bg-body-tertiary"
+            <bs-card class+="bg-body-tertiary"
                      ::align="center"
                      ::bodyExtra="p-4">
               <p class="mb-0">
@@ -1101,7 +1101,7 @@
 
         <div class="row justify-content-center mt-5">
           <div class="col-lg-9">
-            <bs-card ::extra="bg-body-tertiary"
+            <bs-card class+="bg-body-tertiary"
                      ::align="center"
                      ::bodyExtra="p-4">
               <p class="mb-3">
@@ -1131,7 +1131,7 @@
 
           <div class="col-lg-6">
             <page-eyebrow ::variant="success"
-                          ::extra="mb-3">Isomorphic by design</page-eyebrow>
+                          class+="mb-3">Isomorphic by design</page-eyebrow>
 
             <h2 class="display-6 fw-bold mb-3">
               The same page runs on the server and in the browser
@@ -1154,7 +1154,7 @@
           </div>
 
           <div class="col-lg-6">
-            <bs-card ::extra="shadow-sm"
+            <bs-card class+="shadow-sm"
                      ::bodyExtra="p-4">
 
               <div class="border rounded p-3 text-center fw-semibold mb-3">
@@ -1225,7 +1225,7 @@
 
         <div class="row justify-content-center mt-4">
           <div class="col-lg-9">
-            <bs-card ::extra="bg-body-tertiary"
+            <bs-card class+="bg-body-tertiary"
                      ::align="center"
                      ::bodyExtra="p-4">
               <p class="mb-0">
@@ -1381,7 +1381,7 @@
             </div>
 
             <bs-alert ::variant="secondary"
-                      ::extra="mt-4 mb-0 pb-1">
+                      class+="mt-4 mb-0 pb-1">
               <p><strong class="d-block mb-1">And the honest costs.</strong></p>
               <p>
                 Alpine is mature, and its ecosystem, community and documentation
@@ -1566,7 +1566,7 @@
                 <code-card ::title="Serve a directory"
                            ::mono=${false}
                            ::label="shell"
-                           ::extra="h-100"
+                           class+="h-100"
                            ::note>
 <pre class="mb-0"><code data-lang="sh">markout ./my-site</code></pre>
                   <p :slot="note"
@@ -1581,7 +1581,7 @@
                 <code-card ::title="Work on it"
                            ::mono=${false}
                            ::label="shell"
-                           ::extra="h-100"
+                           class+="h-100"
                            ::note>
 <pre class="mb-0"><code data-lang="sh">markout ./my-site --dev</code></pre>
                   <p :slot="note"

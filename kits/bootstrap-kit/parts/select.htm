@@ -8,10 +8,9 @@
       <bs-select ::label="Size" ::options=${['S', 'M', 'L']} />
   -->
   <:define tag="bs-select:div"
-    class="mb-3 ${extra ?? ''}"
+    class="mb-3"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::label=${null}
     ::name=${null}
     ::options=${[]}

@@ -19,7 +19,6 @@
   <:define tag="bs-pagination:nav"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::current=${1}
     ::pages=${5}
     ::size=${null}          // 'sm' | 'lg'
@@ -39,7 +38,6 @@
     ].filter(s => s).join(' ')}
     :_numbers=${Array.from({ length: pages }, (_, i) => i + 1)}
 
-    class=${extra}
     aria-label=${label}
   >
     <ul class=${_class}>

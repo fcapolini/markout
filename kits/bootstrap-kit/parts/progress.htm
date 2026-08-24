@@ -9,10 +9,9 @@
     `:label` is the text drawn inside the bar; leave it off for a bare bar.
   -->
   <:define tag="bs-progress:div"
-    class="progress ${extra ?? ''}"
+    class="progress"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::value=${0}
     ::min=${0}
     ::max=${100}

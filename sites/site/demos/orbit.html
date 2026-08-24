@@ -269,7 +269,7 @@
   <!--- ================================================== navigation bar -->
   <bs-navbar ::sticky
              ::bg="body"
-             ::extra="border-bottom"
+             class+="border-bottom"
              ::container="container-fluid"
              ::items=${[
                { name: 'Overview', link: '#overview' },
@@ -296,7 +296,7 @@
       <bs-button ::size="sm"
                  ::variant="secondary"
                  ::outline
-                 ::extra="d-lg-none"
+                 class+="d-lg-none"
                  ::toggle="offcanvas"
                  ::target="#dash-menu">Menu</bs-button>
 
@@ -446,7 +446,7 @@
 
       <bs-table ::small
                 ::borderless
-                ::extra="mb-3"
+                class+="mb-3"
                 ::columns=${[
                   { key: 'field', name: 'Field' },
                   { key: 'detail', name: 'Value', class: 'text-end' },
@@ -461,7 +461,7 @@
 
       <bs-alert ::variant=${theme.tone(data.state)}
                 ::heading=${data.state === 'failed' ? 'This deployment failed' : null}
-                ::extra="small">
+                class+="small">
         <span :if=${data.state === 'failed'}>
           The rollout was stopped after health checks failed on two nodes. The
           previous commit is still serving traffic.

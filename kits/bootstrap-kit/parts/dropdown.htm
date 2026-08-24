@@ -15,7 +15,6 @@
   <:define tag="bs-dropdown:div"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::label=${'Dropdown'}
     ::items=${[
       { name: 'Action', link: '#' },
@@ -33,7 +32,7 @@
 
     // private
     :_id=${`bs-dropdown-${$id}`}
-    :_class=${[direction === 'down' ? 'dropdown' : `drop${direction}`, extra]
+    :_class=${[direction === 'down' ? 'dropdown' : `drop${direction}`]
               .filter(s => s).join(' ')}
     :_btnClass=${[
       'btn',

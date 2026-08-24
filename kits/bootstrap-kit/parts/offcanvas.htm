@@ -14,7 +14,6 @@
     tabindex="-1"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::name=${null}
     ::title=${''}
     ::placement=${'start'}   // 'start' | 'end' | 'top' | 'bottom'
@@ -28,7 +27,6 @@
     :_class=${[
       responsive ? `offcanvas-${responsive}` : 'offcanvas',
       `offcanvas-${placement}`,
-      extra,
     ].join(' ')}
 
     class=${_class}

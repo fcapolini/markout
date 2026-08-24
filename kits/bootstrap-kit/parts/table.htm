@@ -16,7 +16,6 @@
   <:define tag="bs-table:div"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::columns=${[]}
     ::rows=${[]}
     ::caption=${null}
@@ -42,7 +41,6 @@
       align ? `align-${align}` : '',
     ].filter(s => s).join(' ')}
 
-    class=${extra}
     :class-table-responsive=${responsive}
   >
     <table class=${_class}>

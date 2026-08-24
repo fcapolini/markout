@@ -4,28 +4,57 @@
   "name": "Markout",
   "injectionSelector": "L:text.html -comment -string",
   "patterns": [
-    { "include": "#interpolation" },
-    { "include": "#directive-close-tag" },
-    { "include": "#directive-tag" },
-    { "include": "#colon-attribute" }
+    {
+      "include": "#interpolation"
+    },
+    {
+      "include": "#directive-close-tag"
+    },
+    {
+      "include": "#directive-tag"
+    },
+    {
+      "include": "#colon-attribute"
+    },
+    {
+      "include": "#set-operator-attribute"
+    }
   ],
   "repository": {
     "interpolation": {
       "comment": "${ ... } -- the only interpolation syntax there is, in text, in CSS and in attribute values alike",
       "begin": "(\\$\\{)",
       "end": "(\\})",
-      "beginCaptures": { "1": { "name": "punctuation.section.embedded.begin.markout" } },
-      "endCaptures": { "1": { "name": "punctuation.section.embedded.end.markout" } },
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.section.embedded.begin.markout"
+        }
+      },
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.section.embedded.end.markout"
+        }
+      },
       "name": "meta.embedded.expression.markout",
-      "patterns": [{ "include": "source.js" }]
+      "patterns": [
+        {
+          "include": "source.js"
+        }
+      ]
     },
     "directive-close-tag": {
       "comment": "</:define>, </:group>, ... -- matched before the open tag, so that the `<` of a `</` never starts one",
       "match": "(</)(:[a-zA-Z][\\w-]*)\\s*(>)",
       "captures": {
-        "1": { "name": "punctuation.definition.tag.markout" },
-        "2": { "name": "entity.name.tag.directive.markout" },
-        "3": { "name": "punctuation.definition.tag.markout" }
+        "1": {
+          "name": "punctuation.definition.tag.markout"
+        },
+        "2": {
+          "name": "entity.name.tag.directive.markout"
+        },
+        "3": {
+          "name": "punctuation.definition.tag.markout"
+        }
       }
     },
     "directive-tag": {
@@ -33,25 +62,64 @@
       "begin": "(<)(:[a-zA-Z][\\w-]*)",
       "end": "(/?>)",
       "beginCaptures": {
-        "1": { "name": "punctuation.definition.tag.markout" },
-        "2": { "name": "entity.name.tag.directive.markout" }
+        "1": {
+          "name": "punctuation.definition.tag.markout"
+        },
+        "2": {
+          "name": "entity.name.tag.directive.markout"
+        }
       },
-      "endCaptures": { "1": { "name": "punctuation.definition.tag.markout" } },
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.markout"
+        }
+      },
       "name": "meta.tag.directive.markout",
       "patterns": [
-        { "include": "#colon-attribute" },
-        { "include": "text.html.basic#attribute" }
+        {
+          "include": "#colon-attribute"
+        },
+        {
+          "include": "text.html.basic#attribute"
+        }
       ]
     },
     "colon-attribute": {
       "comment": "the attributes HTML has no name for: values, class and style toggles, events, lifecycle, replication. A block rather than a bare name, so the `=` and the value that follows are ours too -- left to HTML they are characters it thinks are illegal there",
       "begin": "(?<=[\\s\"'])(::?[a-zA-Z_$][\\w:$-]*)",
       "end": "(?=\\s*+[^=\\s])",
-      "beginCaptures": { "1": { "name": "entity.other.attribute-name.markout" } },
+      "beginCaptures": {
+        "1": {
+          "name": "entity.other.attribute-name.markout"
+        }
+      },
       "name": "meta.attribute.markout",
       "patterns": [
-        { "include": "#interpolation" },
-        { "include": "text.html.basic#attribute-interior" }
+        {
+          "include": "#interpolation"
+        },
+        {
+          "include": "text.html.basic#attribute-interior"
+        }
+      ]
+    },
+    "set-operator-attribute": {
+      "comment": "`class+=` / `class-=` / `style+=` / `style-=`: the whole-set forms of the `:class-x` / `:style-x` families. Claimed here because HTML's own grammar reads `class+=` as the attribute `class` followed by a stray `+`, so the name is coloured as two things -- `class-=` it already reads whole, DASH being a name character there. Not an error either way, which is why this is about reading rather than about the illegal-character check.",
+      "begin": "(?<=[\\s\"'])([a-zA-Z_][\\w.:-]*[-+])(?==)",
+      "end": "(?=\\s*+[^=\\s])",
+      "beginCaptures": {
+        "1": {
+          "name": "entity.other.attribute-name.markout"
+        }
+      },
+      "name": "meta.attribute.markout",
+      "patterns": [
+        {
+          "include": "#interpolation"
+        },
+        {
+          "include": "text.html.basic#attribute-interior"
+        }
       ]
     }
   }

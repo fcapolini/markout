@@ -12,7 +12,6 @@
   <:define tag="bs-nav:ul"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::items=${[
       { name: 'Active', link: '#', active: true },
       { name: 'Link', link: '#' },
@@ -34,7 +33,6 @@
       vertical ? 'flex-column' : '',
       align === 'center' ? 'justify-content-center' : '',
       align === 'end' ? 'justify-content-end' : '',
-      extra,
     ].filter(s => s).join(' ')}
 
     class=${_class}
@@ -70,11 +68,10 @@
   </:define>
 
   <:define tag="bs-tab-pane:div"
-    class="tab-pane fade ${extra ?? ''}"
+    class="tab-pane fade"
     role="tabpanel"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::name=${null}
     ::active=${false}
 

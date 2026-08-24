@@ -20,7 +20,6 @@
     aria-atomic="true"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::title=${null}
     ::time=${null}
     ::variant=${null}
@@ -29,7 +28,7 @@
     ::delay=${5000}
 
     // private
-    :_class=${['toast', variant ? `text-bg-${variant} border-0` : '', extra]
+    :_class=${['toast', variant ? `text-bg-${variant} border-0` : '']
               .filter(s => s).join(' ')}
 
     class=${_class}
@@ -81,7 +80,7 @@
 
       <bs-close ::dismiss="toast"
         ::label="Close notification"
-        ::extra="me-2 m-auto"
+        class+="me-2 m-auto"
         :if=${!title} />
     </div>
   </:define>
@@ -93,7 +92,6 @@
   <:define tag="bs-toast-container:div"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::placement=${'bottom-end'}   // 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end' | 'top-center'
 
     // private
@@ -103,7 +101,6 @@
       placement.endsWith('start') ? 'start-0' : '',
       placement.endsWith('end') ? 'end-0' : '',
       placement.endsWith('center') ? 'start-50 translate-middle-x' : '',
-      extra,
     ].filter(s => s).join(' ')}
 
     class=${_class}

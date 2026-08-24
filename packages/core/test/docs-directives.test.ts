@@ -258,6 +258,43 @@ const CASES: Record<string, Case> = {
       expect(p.body()).toContain('color: blue');
     },
   },
+  'class+=${expr}': {
+    works: async () => {
+      const p = await run(
+        '<html :on=${true}><body><i class="box" class+=${on ? ["lit"] : []}>x</i></body></html>'
+      );
+      expect(p.body()).toContain('class="box lit"');
+      p.ctx.root.proxy['on'] = false;
+      expect(p.body()).toContain('class="box"');
+    },
+  },
+  'class-=${expr}': {
+    works: async () => {
+      const p = await run('<html><body><i class="box lit" class-="lit">x</i></body></html>');
+      expect(p.body()).toContain('class="box"');
+      expect(p.body()).not.toContain('lit');
+    },
+  },
+  'style+=${expr}': {
+    works: async () => {
+      const p = await run(
+        '<html :c=${"red"}><body><i style="gap: 1rem" style+=${{ color: c }}>x</i></body></html>'
+      );
+      expect(p.body()).toContain('gap: 1rem');
+      expect(p.body()).toContain('color: red');
+      p.ctx.root.proxy['c'] = 'blue';
+      expect(p.body()).toContain('color: blue');
+    },
+  },
+  'style-=${expr}': {
+    works: async () => {
+      const p = await run(
+        '<html><body><i style="color: red; gap: 1rem" style-="color">x</i></body></html>'
+      );
+      expect(p.body()).toContain('gap: 1rem');
+      expect(p.body()).not.toContain('color');
+    },
+  },
   ':on-click=${() => ...}': {
     works: async () => {
       // a real DOM: the server's addEventListener does nothing at all

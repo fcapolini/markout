@@ -98,7 +98,10 @@ reactive web development. The whole language is a handful of rules:
   meaning exactly what it means on a `<span>`.
 - Two intents get two spellings rather than one guessing from the shape of
   a value: `title=${v}` sets an attribute's value, `:attr-title=${v}` sets
-  whether it is there at all.
+  whether it is there at all. Likewise `class=` replaces and `class+=` adds
+  — `class` and `style` are the two attributes HTML gives a *set* rather
+  than a value, which is the same fact that gives them a `:class-`/`:style-`
+  family and gives `href` none.
 
 The full syntax is a single page: **[syntax
 reference](docs/reference/syntax.md)**. The reasoning behind each part is in
@@ -110,9 +113,10 @@ dependency injection, change detection, ...): the goal is for this list to
 stay short.
 
 No rule above has a "convenient" exception (e.g. `class`/`style` silently
-merging instead of overriding when re-assigned, or a callback attribute
-accepting a bare expression sometimes and requiring a function other
-times). A shortcut that only saves a few characters at the call site but
+merging instead of overriding when re-assigned — `class=` replaces
+everywhere, and adding is the other spelling rather than the same one
+behaving differently in context — or a callback attribute accepting a bare
+expression sometimes and requiring a function other times). A shortcut that only saves a few characters at the call site but
 requires every future reader to remember a special case isn't a
 simplification, it's deferred, compounding complexity: better to always
 type a couple more characters than to hide behavior that depends on

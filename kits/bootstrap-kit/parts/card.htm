@@ -11,15 +11,14 @@
         <p class="card-text">Some quick example text.</p>
       </bs-card>
 
-    The body is the one region a caller cannot reach with `:extra`, which
-    goes on the card itself -- hence `:bodyExtra`, for the padding Bootstrap
+    The body is the one region a caller cannot reach with `class+=`, which
+    goes on the card itself -- hence `::bodyExtra`, for the padding Bootstrap
     leaves to a utility class: `p-0` for a table or a code surface that runs
     to the edges, `p-4` for a card that is mostly one paragraph.
   -->
   <:define tag="bs-card:div"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::bodyExtra=${null}  // extra classes for the body: `p-0`, `p-4`, `d-flex`
     ::title=${null}
     ::subtitle=${null}
@@ -38,7 +37,6 @@
       variant ? `text-bg-${variant}` : '',
       border ? `border-${border}` : '',
       align ? `text-${align}` : '',
-      extra,
     ].filter(s => s).join(' ')}
 
     class=${_class}
@@ -84,7 +82,6 @@
   <:define tag="bs-card-group:div"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::cols=${3}
     ::gap=${4}
     ::attached=${false}     // a seamless strip instead of separate cards
@@ -93,9 +90,7 @@
     :_class=${attached
       ? 'card-group'
       : `row row-cols-1 row-cols-md-${cols} g-${gap}`}
-    :_groupClass=${extra ? `${_class} ${extra}` : _class}
-
-    class=${_groupClass}
+    class=${_class}
   >
     <:slot />
   </:define>

@@ -65,14 +65,21 @@ all of them.
 **Parameters for the chrome, the slot for the content.** What a card *has* —
 a title, a footer, an image — is a parameter. What it *contains* is slotted.
 
-**`::extra` adds classes.** A `class` written at a usage site *replaces* the
+**`class+=` adds classes.** A `class` written at a usage site *replaces* the
 one a definition sets, which is the language's rule and not something this
-kit overrides. So every component takes `::extra` for the utility classes a
-caller wants on top:
+kit overrides. `class+=` is the language's other spelling, and it is what to
+reach for when a component already has a class of its own:
 
 ```html
-<bs-alert ::variant="warning" ::extra="mb-0">Careful</bs-alert>
+<bs-alert ::variant="warning" class+="mb-0">Careful</bs-alert>
+<bs-alert ::dismissible class-="fade">No animation, please</bs-alert>
 ```
+
+Every component used to declare an `::extra` parameter for this, hand-rolled
+into its own class list — 28 files agreeing on a convention the language now
+has a spelling for. `::bodyExtra` on `bs-card` stays, and says why the rest
+went: `class+=` reaches a component's own element, and the card's *body* is a
+different element.
 
 **Comments in a tag: `//` for one line, `/* … */` for more.** Both are
 stripped at parse time. A run of `//` lines reads as a stack of fragments;
@@ -220,8 +227,8 @@ flashes the wrong mode, and `<bs-theme-toggle />` to switch it.
 
 ## Components
 
-Every tag also takes `::extra`. Defaults are in the definitions, which are
-commented.
+Every tag takes `class+=` and `class-=`, which are the language's and not
+listed here. Defaults are in the definitions, which are commented.
 
 ### Content
 

@@ -12,7 +12,6 @@
   <:define tag="bs-check:div"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::label=${null}
     ::type=${'checkbox'}   // 'checkbox' | 'radio' | 'switch'
     ::name=${null}
@@ -28,7 +27,7 @@
     :_helpId=${`bs-check-help-${$id}`}
     :_type=${type === 'switch' ? 'checkbox' : type}
 
-    class="form-check ${extra ?? ''}"
+    class="form-check"
     :class-form-switch=${type === 'switch'}
     :class-form-check-inline=${inline}
     :class-form-check-reverse=${reverse}
@@ -58,11 +57,10 @@
     `{ name, value, disabled }`, as in `bs-select`.
   -->
   <:define tag="bs-check-group:div"
-    class="mb-3 ${extra ?? ''}"
+    class="mb-3"
     role="group"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::legend=${null}
     ::type=${'radio'}
     ::options=${[]}
@@ -110,10 +108,9 @@
 
   <!--- A range slider, with its label and its current value. -->
   <:define tag="bs-range:div"
-    class="mb-3 ${extra ?? ''}"
+    class="mb-3"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::label=${null}
     ::name=${null}
     ::min=${0}

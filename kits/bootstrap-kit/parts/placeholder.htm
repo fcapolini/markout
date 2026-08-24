@@ -9,14 +9,13 @@
   <:define tag="bs-placeholder:span"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::cols=${6}
     ::size=${null}         // 'xs' | 'sm' | 'lg'
     ::variant=${null}
     ::animation=${'glow'}  // 'glow' | 'wave' | null
 
     // private
-    :_class=${[animation ? `placeholder-${animation}` : '', extra]
+    :_class=${[animation ? `placeholder-${animation}` : '']
               .filter(s => s).join(' ') || null}
     :_barClass=${[
       'placeholder',

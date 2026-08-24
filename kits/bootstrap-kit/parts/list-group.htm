@@ -14,7 +14,6 @@
   <:define tag="bs-list-group:div"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::items=${[
       { name: 'An item', active: true },
       { name: 'A second item' },
@@ -28,7 +27,6 @@
       'list-group',
       flush ? 'list-group-flush' : '',
       horizontal ? 'list-group-horizontal' : '',
-      extra,
     ].filter(s => s).join(' ')}
 
     class=${_class}

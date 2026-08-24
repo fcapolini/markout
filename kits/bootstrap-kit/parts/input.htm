@@ -35,10 +35,9 @@
     layouts are two regions rather than one with a class toggled on it.
   -->
   <:define tag="bs-input:div"
-    class="mb-3 ${extra ?? ''}"
+    class="mb-3"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::label=${null}
     ::type=${'text'}
     ::name=${null}
@@ -116,10 +115,9 @@
     `rows`, and a type that isn't one of HTML's would be a small lie.
   -->
   <:define tag="bs-textarea:div"
-    class="mb-3 ${extra ?? ''}"
+    class="mb-3"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::label=${null}
     ::name=${null}
     ::value=${''}
@@ -172,13 +170,12 @@
   <:define tag="bs-input-group:div"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::prefix=${null}
     ::suffix=${null}
     ::size=${null}
 
     // private
-    :_class=${['input-group', size ? `input-group-${size}` : '', extra]
+    :_class=${['input-group', size ? `input-group-${size}` : '']
               .filter(s => s).join(' ')}
 
     class=${_class}

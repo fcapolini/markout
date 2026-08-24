@@ -17,7 +17,6 @@
   <:define tag="bs-navbar:nav"
 
     // parameters
-    ::extra=${null}      // extra classes for this instance
     ::items=${[
       { name: 'Home', link: '#', active: true },
       { name: 'Features', link: '#' },
@@ -37,7 +36,6 @@
       'navbar',
       expand ? `navbar-expand-${expand}` : '',
       bg ? `bg-${bg}` : '',
-      extra,
     ].filter(s => s).join(' ')}
 
     // The gap under the links is only wanted while they are stacked, which

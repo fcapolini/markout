@@ -34,9 +34,15 @@ The attribute is written whenever the expression changes. A `null` or
 `"null"`, which is what makes `title=${count > 0 ? 'yes' : null}` behave the
 way it reads.
 
-`class` and `style` follow the same rule and are *overwritten*, not merged. To
-change one class or one property without touching the rest, use `:class-x` and
-`:style-x` below.
+`class` and `style` follow the same rule and are *overwritten*, not merged —
+what changes for those two is that there is a second spelling that adds
+instead. `class+="mb-0"` adds those classes to whatever is there and
+`class-="fade"` takes them away, with `style+=` and `style-=` doing the same
+for declarations; `:class-x` and `:style-x` below are the one-name-at-a-time
+form of the same thing. Two intents, two spellings — `class=` never quietly
+merges, and never behaves differently depending on what else is on the
+element. The full rule, and what each form takes, is in the [syntax
+reference](../reference/syntax.md#a-composite-attribute-is-added-to-not-replaced).
 
 ### Presence, not value
 

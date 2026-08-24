@@ -28,6 +28,7 @@ const QUOT = '"'.charCodeAt(0);
 const APOS = "'".charCodeAt(0);
 const DOLLAR = '$'.charCodeAt(0);
 const STAR = '*'.charCodeAt(0);
+const PLUS = '+'.charCodeAt(0);
 const LEXP = '${';
 const REXP = '}'.charCodeAt(0);
 
@@ -828,8 +829,13 @@ function skipName(src: Source, i: number, isAttribute = false) {
       (code < '0'.charCodeAt(0) || code > '9'.charCodeAt(0)) &&
       code != DASH &&
       code != '_'.charCodeAt(0) &&
+      // `+` is here for `class+=` / `style+=`; their `-=` counterparts need
+      // nothing, DASH being a name character already
       (!isAttribute ||
-        (code != '.'.charCodeAt(0) && code != DOLLAR && code != STAR)) &&
+        (code != '.'.charCodeAt(0) &&
+          code != DOLLAR &&
+          code != STAR &&
+          code != PLUS)) &&
       code != ':'.charCodeAt(0)
     ) {
       break;

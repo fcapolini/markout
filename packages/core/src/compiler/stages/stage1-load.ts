@@ -25,6 +25,12 @@ import {
   CLASS_VALUE_PREFIX,
   STYLE_VALUE_PREFIX,
   ATTR_VALUE_PREFIX,
+  SET_OPERATOR_ATTRS,
+  SET_OPERATOR_MAP_ATTR,
+  CLASS_ADD_ATTR,
+  CLASS_DEL_ATTR,
+  STYLE_ADD_ATTR,
+  STYLE_DEL_ATTR,
   EVENT_VALUE_PREFIX,
   DID_VALUE_PREFIX,
   WILL_VALUE_PREFIX,
@@ -449,6 +455,9 @@ function needsScope(e: ServerElement): boolean {
     // it to land on the enclosing scope instead (see load()), it would set
     // the attribute on that scope's element rather than on this one
     if (isDynamic(attr)) return true;
+    // and so does a set operator, literal or not, for exactly that reason:
+    // what it contributes belongs to THIS element's class or style
+    if (SET_OPERATOR_ATTRS.has(attr.name.toLowerCase())) return true;
   }
   return false;
 }
@@ -1109,6 +1118,11 @@ function expandCustomTagUsages(page: Page): void {
       // is the scope that carries those values and the one the runtime sees
       page.usageInstances.set(loadedUsageScope, scope);
     }
+    // an instance composes the DEFINITION's element, so a `class+=` written
+    // here is contributing to the class that definition sets. Declared now
+    // rather than while the definition loaded, where there was no way to
+    // know whether any usage would ever argue with it
+    defScope.e && declareComposedBase(page, scope, defScope.e, scope.attributes);
 
     // read now, not when the usage was collected: expanding an outer usage
     // moves its slotted content into that instance's stencil, so an inner
@@ -1198,7 +1212,12 @@ function usageDeclarations(
     declared.add((usage.values.get(FOR_AS_VALUE)?.value as string) || FOR_DATA_DEFAULT_NAME);
   }
   for (const [name, value] of usage.values) {
-    if (name.includes('$') || declared.has(name)) continue;
+    // `$` marks the element-facing families -- `class$x`, `attr$y`, `on$z` --
+    // which apply to the instance's own element rather than declaring
+    // anything. The set operators are those families' whole-set forms and
+    // belong on the same side of the line; their keys spell the attribute
+    // rather than carrying the marker, so they are named here
+    if (name.includes('$') || SET_OPERATOR_ATTRS.has(name) || declared.has(name)) continue;
     const isParameter = !!parameters?.has(name);
     if (value.parameter) {
       // `::name` here says "the component's", so it has to be one
@@ -1820,6 +1839,17 @@ function findScopeForElement(scope: Scope | undefined, e: ServerElement): Scope 
 function extractValues(page: Page, scope: Scope, e: ServerElement) {
   for (const attr of e.attributes as ServerAttribute[]) {
     if (!attr.name.startsWith(SPECIAL_ATTR_PREFIX)) {
+      // `class+=`, `class-=`, `style+=`, `style-=`: a contribution to a
+      // composite attribute rather than a value for a plain one. Always a
+      // value, literal or not -- what it holds is a set to add or take away,
+      // and the runtime composes it either way
+      const setOp = attr.name.toLowerCase();
+      if (SET_OPERATOR_ATTRS.has(setOp)) {
+        rejectSetOperatorString(page, attr, setOp) ||
+          scope.values.set(setOp, new Value(setOp, attr, scope, page.createValueId()));
+        continue;
+      }
+      if (rejectSetOperator(page, attr)) continue;
       // `href=${...}` and the like: no `:` needed, since the attribute is
       // already named by the HTML author -- the expression alone is what
       // makes it reactive, exactly as in text and CSS
@@ -2080,11 +2110,18 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     parameter && page.definitionScopes.has(scope) && (scope.parameters ??= new Set()).add(name);
     scope.values.set(name, value);
   }
+  declareComposedBase(page, scope, e);
   // both families are now scope values: leaving them behind would serialize
   // an expression object as an empty attribute, which the runtime would then
   // immediately overwrite anyway
   e.attributes = e.attributes.filter(
-    attr => !attr.name.startsWith(SPECIAL_ATTR_PREFIX) && !isDynamic(attr as ServerAttribute)
+    attr =>
+      !attr.name.startsWith(SPECIAL_ATTR_PREFIX) &&
+      !isDynamic(attr as ServerAttribute) &&
+      // a LITERAL `class+="mb-0"` is a value like any other here: it stays
+      // out of the served markup, and what it contributes reaches the page
+      // through the class attribute the runtime composes
+      !SET_OPERATOR_ATTRS.has(attr.name.toLowerCase())
   );
   if (scope.values.has(FOR_EACH_VALUE) || scope.values.has(FOR_DATA_VALUE)) {
     // ordinary value, not a for$-prefixed one: stage3-qualify already turns
@@ -2106,6 +2143,122 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     );
     scope.values.set(alias, new Value(alias, dataAttr, scope, page.createValueId()));
   }
+}
+
+/**
+ * Writes a composed attribute's BASE into the props.
+ *
+ * A set operator contributes to what the attribute already holds, and the
+ * runtime has to know what that was. When the base is a `class=${...}` there
+ * is a value saying so; when it is static markup there is only the element,
+ * and reading the element works exactly once -- on the SERVER. By the time
+ * the client hydrates, the attribute standing there is the served result,
+ * contributions included, and taking THAT for the base means a `class+=`
+ * that later stops contributing can never take its classes back off.
+ *
+ * So it is stated rather than observed, and only where a set operator makes
+ * it necessary: an element with a `:class-x` toggle needs nothing, because a
+ * toggle says both directions and so corrects itself either way.
+ */
+function declareComposedBase(
+  page: Page,
+  scope: Scope,
+  e: ServerElement,
+  written?: Map<string, string | null>
+): void {
+  // an element with no scope of its own is loaded against the enclosing one,
+  // so this runs with somebody else's markup in hand as often as not -- and
+  // read from there it declared a card's base to be the class of the first
+  // paragraph slotted into it
+  if (scope.e !== e && written === undefined) return;
+  const declare = (add: string, del: string, name: string) => {
+    if (!scope.values.has(add) && !scope.values.has(del)) return;
+    const key = `${ATTR_VALUE_PREFIX}${name}`;
+    // what the usage site wrote takes the base slot, since a plain attribute
+    // there replaces the definition's -- `written` is that, when there is one
+    const value = written?.get(name) ?? e.getAttribute(name);
+    if (!value || scope.values.has(key)) return;
+    const attr = new ServerAttribute(e.ownerDocument, null, name, value, e.loc);
+    scope.values.set(key, new Value(key, attr, scope, page.createValueId()));
+  };
+  declare(CLASS_ADD_ATTR, CLASS_DEL_ATTR, 'class');
+  declare(STYLE_ADD_ATTR, STYLE_DEL_ATTR, 'style');
+}
+
+/**
+ * Refuses `+=` and `-=` on an attribute that holds a value rather than a set.
+ *
+ * The spelling looks general and its domain is two attributes, so the
+ * restriction has to be said rather than discovered: `class` and `style` are
+ * the composite ones, which is the same fact that gives them a `:class-x` /
+ * `:style-x` family and gives `href` none.
+ *
+ * @returns whether anything was refused
+ */
+function rejectSetOperator(page: Page, attr: ServerAttribute): boolean {
+  const op = attr.name.slice(-1);
+  if (op !== '+' && op !== '-') return false;
+  const name = attr.name.slice(0, -1);
+  addError(
+    page,
+    `"${attr.name}" is not an attribute: "${op}=" adds to and takes from a ` +
+      `SET, and "${name}" holds a value. Only "class" and "style" hold a set, ` +
+      `so only "${CLASS_ADD_ATTR}"/"${CLASS_DEL_ATTR}"/"${STYLE_ADD_ATTR}"/` +
+      `"${STYLE_DEL_ATTR}" exist`,
+    attr.loc
+  );
+  return true;
+}
+
+/**
+ * Refuses a set operator whose expression is visibly a string.
+ *
+ * A LITERAL is fine and is the ergonomic case -- `class+="mb-0 shadow"` is
+ * read the way HTML spells that attribute. An EXPRESSION carries the typed
+ * value instead, and the two shapes an author reaches for by accident are
+ * both strings: an interpolation (`class+="mb-0 ${extra}"`, which the value
+ * table already says is always a string) and a string expression
+ * (`class+=${'mb-0 ' + extra}`).
+ *
+ * Best-effort by nature -- `${cond ? 'a' : 'b'}` is a string this cannot
+ * see -- so the runtime reports the rest. What it buys is that the two
+ * shapes someone actually writes are named at build time, with the fix.
+ *
+ * @returns whether anything was refused
+ */
+function rejectSetOperatorString(
+  page: Page,
+  attr: ServerAttribute,
+  name: string
+): boolean {
+  const exp = attr.value;
+  if (exp == null) {
+    addError(
+      page,
+      `"${name}" needs a value: it contributes a set, and there is nothing here to contribute`,
+      attr.loc
+    );
+    return true;
+  }
+  if (typeof exp === 'string') return false;
+  const type = (exp as unknown as acorn.Expression).type;
+  const str =
+    type === 'TemplateLiteral' ||
+    (type === 'Literal' && typeof (exp as unknown as acorn.Literal).value === 'string');
+  if (!str) return false;
+  const want =
+    name === SET_OPERATOR_MAP_ATTR
+      ? `a { property: value } map -- write \`${name}="color: red"\` or ` +
+        `\`${name}=\${{ color: accent }}\``
+      : `a string[] -- write \`${name}="mb-0 shadow"\` or ` +
+        `\`${name}=\${['mb-0', extra]}\``;
+  addError(
+    page,
+    `"${name}" takes ${want}. A quoted value holding "\${...}" is an ` +
+      `interpolation, and an interpolation is always a string`,
+    attr.valueLoc ?? attr.loc
+  );
+  return true;
 }
 
 // a plain (non-prefixed) value or scope name must be a clean JS identifier:

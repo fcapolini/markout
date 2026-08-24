@@ -221,7 +221,7 @@
               </div>
             </div>
 
-            <bs-alert ::variant="secondary" ::extra="mb-0">
+            <bs-alert ::variant="secondary" class+="mb-0">
               Email is <strong>${email.value || '(empty)'}</strong> and
               it is ${email._invalid ? 'invalid' : 'fine'};
               budget is <strong>${budget.value}</strong>.
@@ -262,7 +262,7 @@
         <section class="kit-section mb-5" id="input-groups">
           <h3 class="h5 mb-3">Input groups</h3>
           <div class="kit-example">
-            <bs-input-group ::prefix="@" ::extra="mb-3">
+            <bs-input-group ::prefix="@" class+="mb-3">
               <input class="form-control" placeholder="Username">
             </bs-input-group>
 
@@ -301,7 +301,7 @@
             <bs-alert ::variant="success" ::heading="Well done">
               You read the whole message, and it has a heading.
             </bs-alert>
-            <bs-alert ::variant="warning" ::dismissible ::extra="mb-0">
+            <bs-alert ::variant="warning" ::dismissible class+="mb-0">
               This one can be dismissed.
             </bs-alert>
           </div>
@@ -405,7 +405,7 @@
           <h3 class="h5 mb-3">Collapse</h3>
           <div class="kit-example">
             <bs-button ::toggle="collapse" ::target="#more" ::variant="secondary"
-                       ::outline ::extra="mb-3">
+                       ::outline class+="mb-3">
               Toggle the details
             </bs-button>
             <bs-collapse ::name="more">
@@ -472,7 +472,7 @@
         <section class="kit-section mb-5" id="navs">
           <h3 class="h5 mb-3">Navs &amp; tabs</h3>
           <div class="kit-example">
-            <bs-nav ::variant="pills" ::extra="mb-3"
+            <bs-nav ::variant="pills" class+="mb-3"
                     ::toggle="pill"
                     ::items=${[
                       { name: 'Overview', target: '#pane-overview', active: true },
@@ -546,9 +546,9 @@
           <h3 class="h5 mb-3">Progress</h3>
           <div class="kit-example">
             <bs-progress ::value=${budget.value} ::label="${budget.value}%"
-                         ::extra="mb-3" />
+                         class+="mb-3" />
             <bs-progress ::value=${budget.value} ::variant="success" ::striped ::animated
-                         ::extra="mb-3" />
+                         class+="mb-3" />
             <bs-range ::label="Drag me" ::showValue :aka="budget2" ::value=${amount} />
             <bs-progress ::value=${budget2.value} ::variant="danger" />
           </div>

@@ -64,6 +64,76 @@ something an attribute could never carry:
 NOTE: "on its own" is literal — whitespace is text like any other, so
 `:x=" ${expr}"` interpolates and yields a string.
 
+### A composite attribute is added to, not replaced
+
+A plain attribute replaces what was there. Two of them hold a **set** rather
+than a value, and those two can also be contributed to:
+
+| Written | Meaning |
+| --- | --- |
+| `class="a b"` | sets the class attribute — replaces |
+| `class+="a b"` | adds those classes to whatever is there |
+| `class-="a"` | takes them away |
+| `style+="color: red"` | adds those declarations |
+| `style-="color"` | takes those properties away |
+
+Which is the whole rule, and it has exactly two members because HTML has
+exactly two composite attributes. That is the same fact that gives `class`
+and `style` a dash-case family and gives `href` none: `class+=` is the
+whole-set form of `:class-x`, and `class-=` of `:class-x=${false}`.
+
+|  | one name | a set |
+| --- | --- | --- |
+| replace | — | `class=` |
+| add | `:class-x` | `class+=` |
+| remove | `:class-x=${false}` | `class-=` |
+
+They are not `:` attributes, deliberately. `:` names what HTML has no name
+for, and `class` has a name — what is new here is the operation, and an
+operation is not a name. `+=` on anything else is a compile error, since a
+`title` holds a value and there is nothing there to add to.
+
+**The case they exist for** is a usage site arguing with a definition that
+sets `class` itself. A `class` written there replaces the one the component
+computed, which is the language's rule and the right one; `class+=` is how
+to say the other thing:
+
+```html
+<bs-alert ::variant="warning" class+="mb-0 shadow-sm">Careful</bs-alert>
+<bs-alert ::dismissible class-="fade">No animation, please</bs-alert>
+```
+
+**A literal is read the way HTML spells that attribute; an expression carries
+the value itself.** Three of the four take a set of names, and `style+=` a
+map, because addition assigns and removal only names:
+
+| | literal | expression |
+| --- | --- | --- |
+| `class+=` | `"mb-0 shadow-sm"` | `string[]` |
+| `class-=` | `"fade"` | `string[]` |
+| `style+=` | `"color: red; gap: 1rem"` | `{ [property]: value }` |
+| `style-=` | `"color gap"` | `string[]` |
+
+Which is decided by the compiler rather than guessed from the value: a lone
+`${...}` keeps its type, and anything holding literal text beside an
+expression is an interpolation and so a string. `class+="mb-0 ${extra}"` is
+therefore refused, and written `class+=${['mb-0', ...extra]}`.
+
+### The order is by kind, not by position
+
+Base, then every addition, then every removal — whatever order they appear
+in. So `class-="fade"` means the same thing whether it stands before or
+after the `class+=` it is arguing with, and a falsy `:class-x` is a removal
+like any other.
+
+Nothing writes the attribute whole, which is what makes any of this hold:
+each input says what it contributes, the four together say what the set
+should be, and only the **difference** is applied. A class this page never
+put on — one Bootstrap's own JS added to a modal it was handed — is in
+neither set and so is never touched. Before this, a reactive `class=${...}`
+re-running turned `box box-red mine` into `box box-green`, silently, and
+only once the variant happened to change.
+
 ## Values
 
 | Syntax | Meaning |
@@ -77,6 +147,10 @@ NOTE: "on its own" is literal — whitespace is text like any other, so
 | `:prop-name=${expr}` | Assigns the element's JS property `name`, for what an attribute can't carry. Browser-only: skipped when server rendering. |
 | `:class-name` | Toggles the `name` CSS class. |
 | `:style-name` | Writes the `name` CSS property. |
+| `class+=${expr}` | Adds classes to whatever `class` holds, rather than replacing it. A literal is a list of names, an expression a `string[]` — see [a composite attribute is added to](#a-composite-attribute-is-added-to-not-replaced). |
+| `class-=${expr}` | Takes those classes away, the whole-set form of `:class-name=${false}`. |
+| `style+=${expr}` | Adds declarations to whatever `style` holds. A literal is CSS text, an expression a `{ property: value }` map. |
+| `style-=${expr}` | Takes those properties away. Names, not declarations: removal names what to drop. |
 | `:on-click=${() => ...}` | Binds an event handler. The name is the event type verbatim, so `.` and `:` are allowed for the sake of `shown.bs.modal`, `click.mine` and the like. |
 | `:handle-name=${(v) => ...}` | Runs when value `name` changes, and once at start, with its value. For driving the view imperatively; browser-only. |
 | `:did-init=${() => ...}` | Runs once, when this scope has come up. Browser-only. |

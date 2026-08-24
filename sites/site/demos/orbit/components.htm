@@ -180,13 +180,12 @@
 <:define tag="dash-panel:div"
 
   // parameters
-  ::extra=${null}       // extra classes for this instance
   ::heading=${''}
   ::note=${null}        // a line of explanation under the heading
   ::flush=${false}      // no body padding, for a table or a list
 
   // private
-  :_class=${['card h-100', extra].filter(s => s).join(' ')}
+  :_class=${['card h-100'].filter(s => s).join(' ')}
 
   class=${_class}
 >
@@ -219,10 +218,9 @@
   inside foreign content as a template. Each shape is a computed string.
 -->
 <:define tag="dash-chart:div"
-  class="dash-chart ${extra ?? ''}"
+  class="dash-chart"
 
   // parameters
-  ::extra=${null}       // extra classes for this instance
   ::points=${[]}
   ::stroke=${'var(--dash-accent)'}
   ::fill=${true}
@@ -294,10 +292,9 @@
   twice.
 -->
 <:define tag="dash-stat:div"
-  class="card dash-stat h-100 ${extra ?? ''}"
+  class="card dash-stat h-100"
 
   // parameters
-  ::extra=${null}       // extra classes for this instance
   ::caption=${''}
   ::figure=${''}
   ::unit=${null}
@@ -337,10 +334,9 @@
   written in <body> agree on what "degraded" looks like.
 -->
 <:define tag="dash-dot:span"
-  class="d-inline-flex align-items-center gap-2 ${extra ?? ''}"
+  class="d-inline-flex align-items-center gap-2"
 
   // parameters
-  ::extra=${null}       // extra classes for this instance
   ::state=${'ok'}
   ::quiet=${false}      // the dot alone, without the word
 

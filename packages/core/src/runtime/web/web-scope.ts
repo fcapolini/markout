@@ -8,6 +8,7 @@ import {
   TemplateElement,
   Text,
 } from '../../html/dom';
+import { parseDeclarations } from '../../html/css';
 import {
   CoreScope,
   CoreScopeProps,
@@ -40,6 +41,15 @@ export const RT_PROP_VALUE_PREFIX = 'prop$';
 export const RT_PRESENCE_VALUE_PREFIX = 'flag$';
 export const RT_CLASS_VALUE_PREFIX = 'class$';
 export const RT_STYLE_VALUE_PREFIX = 'style$';
+/**
+ * `class+=` / `class-=` / `style+=` / `style-=`, the whole-set forms of the
+ * two families above. Compiled under the attribute name exactly as written
+ * (see SET_OPERATOR_ATTRS in the compiler's Page.ts, which these mirror).
+ */
+export const RT_CLASS_ADD_KEY = 'class+';
+export const RT_CLASS_DEL_KEY = 'class-';
+export const RT_STYLE_ADD_KEY = 'style+';
+export const RT_STYLE_DEL_KEY = 'style-';
 export const RT_TEXT_VALUE_PREFIX = 'text$';
 export const RT_EVENT_VALUE_PREFIX = 'event$';
 export const RT_HANDLE_VALUE_PREFIX = 'handle$';
@@ -439,6 +449,29 @@ export class WebScope extends CoreScope {
     }
     const ret = super.newValue(key, props, allValues);
     if (ret.cb) return ret;
+    if (key === RT_CLASS_ADD_KEY || key === RT_CLASS_DEL_KEY) {
+      const add = key === RT_CLASS_ADD_KEY;
+      ret.setCB((_, val) => {
+        const names = this.nameSet(ret, key, val);
+        add ? (this.classAdd = names) : (this.classDel = names);
+        this.applyClasses(ret);
+      });
+      return ret;
+    }
+    if (key === RT_STYLE_ADD_KEY) {
+      ret.setCB((_, val) => {
+        this.styleAdd = this.declarationMap(ret, key, val);
+        this.applyStyles(ret);
+      });
+      return ret;
+    }
+    if (key === RT_STYLE_DEL_KEY) {
+      ret.setCB((_, val) => {
+        this.styleDel = this.nameSet(ret, key, val);
+        this.applyStyles(ret);
+      });
+      return ret;
+    }
     if (key.startsWith(RT_ATTR_VALUE_PREFIX)) {
       // verbatim, like class$/style$/on$: the key already holds the name the
       // author wrote, and an attribute name is element-facing rather than
@@ -447,6 +480,31 @@ export class WebScope extends CoreScope {
       // the DOM only honours the exact name. Nothing in HTML needs the
       // conversion: a dashed attribute is written dashed.
       const name = key.slice(RT_ATTR_VALUE_PREFIX.length);
+      // `class` and `style` are the composed ones: what they resolve to is
+      // the BASE the contributions sit on, not the attribute's final text.
+      //
+      // Claimed before any callback runs, and nothing is applied until it has
+      // arrived. Both matter: the first keeps the base from being mistaken
+      // for whatever the markup happened to carry (see applyClasses), and the
+      // second keeps a contribution from landing in front of it
+      if (name === 'class') {
+        this.classPending = true;
+        ret.setCB((_, val) => {
+          this.classBase = val == null ? [] : tokens(`${val}`);
+          this.classPending = false;
+          this.applyClasses(ret);
+        });
+        return ret;
+      }
+      if (name === 'style') {
+        this.stylePending = true;
+        ret.setCB((_, val) => {
+          this.styleBase = new Map(val == null ? [] : parseDeclarations(`${val}`));
+          this.stylePending = false;
+          this.applyStyles(ret);
+        });
+        return ret;
+      }
       ret.setCB((_, val) => {
         if (!this.dom) return this.unbound(ret, `no element to set "${name}" on`);
         if (val == null) {
@@ -481,20 +539,16 @@ export class WebScope extends CoreScope {
     if (key.startsWith(RT_CLASS_VALUE_PREFIX)) {
       const name = key.slice(RT_CLASS_VALUE_PREFIX.length);
       ret.setCB((_, val) => {
-        if (!this.dom) return this.unbound(ret, `no element to toggle class "${name}" on`);
-        if (val) {
-          this.dom.classList.add(name);
-        } else {
-          this.dom.classList.remove(name);
-        }
+        (this.classOn ??= new Map()).set(name, !!val);
+        this.applyClasses(ret);
       });
       return ret;
     }
     if (key.startsWith(RT_STYLE_VALUE_PREFIX)) {
       const name = key.slice(RT_STYLE_VALUE_PREFIX.length);
       ret.setCB((_, val) => {
-        if (!this.dom) return this.unbound(ret, `no element to set style "${name}" on`);
-        this.dom.style.setProperty(name, val);
+        (this.styleOn ??= new Map()).set(name, val == null || val === '' ? null : `${val}`);
+        this.applyStyles(ret);
       });
       return ret;
     }
@@ -537,6 +591,138 @@ export class WebScope extends CoreScope {
       return ret;
     }
     return ret;
+  }
+
+  // ==========================================================================
+  // class and style: composed, not assigned
+  // ==========================================================================
+
+  /**
+   * What each of the two composite attributes is built from.
+   *
+   * `class` and `style` have more than one author. A definition sets the
+   * attribute, a usage site adds to it with `class+=` and takes from it with
+   * `class-=`, `:class-x` toggles one name, and -- for the components that
+   * hand their element to somebody else's JS -- Bootstrap puts `show` on a
+   * modal while nobody is looking. Writing the whole attribute is how each of
+   * those used to destroy the others: a reactive `class=${...}` re-running
+   * turned `box box-red mine` into `box box-green`, silently, and only once
+   * the variant happened to change.
+   *
+   * So nothing here writes the attribute. Each input records what it
+   * contributes, the four together say what the element's set SHOULD be, and
+   * `apply` moves the difference -- which leaves a class this scope never put
+   * on exactly where it was.
+   */
+  declare private classBase?: string[];
+  declare private classAdd?: string[];
+  declare private classDel?: string[];
+  declare private classOn?: Map<string, boolean>;
+  declare private classApplied?: Set<string>;
+  /** a `class=${...}` is on its way: hold off until it lands */
+  declare private classPending?: boolean;
+  declare private styleBase?: Map<string, string>;
+  declare private styleAdd?: Map<string, string>;
+  declare private styleDel?: string[];
+  declare private styleOn?: Map<string, string | null>;
+  declare private styleApplied?: Map<string, string>;
+  declare private stylePending?: boolean;
+
+  /**
+   * Base, then every addition, then every removal -- in that order whatever
+   * order they were written in.
+   *
+   * By kind rather than by position, so `class-="fade"` at a usage site means
+   * the same thing whether it stands before or after the `class+=` in the
+   * definition it is arguing with. A falsy `:class-x` is a removal like any
+   * other, which is what it always was.
+   */
+  private applyClasses(value: CoreValue<any>): void {
+    if (!this.dom) return this.unbound(value, 'no element to set classes on');
+    if (this.classPending) return;
+    // what stands on the element the first time round is the markup's own
+    // class -- the stencil's, plus whatever a usage site wrote over it. It is
+    // the base when no `class=${...}` claims that job, and either way it is
+    // what the first pass is a difference FROM, so a `class` the definition
+    // computes still replaces the one written at the usage site.
+    //
+    // Afterwards the difference is from what we last applied, which is the
+    // whole point: a class this scope never put on -- Bootstrap's `show` on a
+    // modal it was handed -- is in neither set and so is never touched.
+    const on = tokens(this.dom.className);
+    const had = this.classApplied ?? new Set(on);
+    this.classBase ??= on;
+    const want = new Set(this.classBase);
+    this.classAdd?.forEach(n => want.add(n));
+    this.classOn?.forEach((yes, n) => yes && want.add(n));
+    this.classOn?.forEach((yes, n) => yes || want.delete(n));
+    this.classDel?.forEach(n => want.delete(n));
+    had.forEach(n => want.has(n) || this.dom.classList.remove(n));
+    want.forEach(n => had.has(n) || this.dom.classList.add(n));
+    this.classApplied = want;
+  }
+
+  private applyStyles(value: CoreValue<any>): void {
+    if (!this.dom) return this.unbound(value, 'no element to set styles on');
+    if (this.stylePending) return;
+    const on = new Map(parseDeclarations(this.dom.style.cssText));
+    const had = this.styleApplied ?? on;
+    this.styleBase ??= on;
+    const want = new Map(this.styleBase);
+    this.styleAdd?.forEach((v, k) => want.set(k, v));
+    this.styleOn?.forEach((v, k) => (v == null ? want.delete(k) : want.set(k, v)));
+    this.styleDel?.forEach(k => want.delete(k));
+    had.forEach((_, k) => want.has(k) || this.dom.style.setProperty(k, null));
+    want.forEach((v, k) => had.get(k) === v || this.dom.style.setProperty(k, v));
+    this.styleApplied = want;
+  }
+
+  /**
+   * A `string[]`, or a reported mistake.
+   *
+   * The compiler names the two shapes someone reaches for by accident -- an
+   * interpolation and a string expression -- and cannot see a string arrived
+   * at any other way, so the last word is here. Silence would be the bad
+   * answer: a string is iterable, and `[...'mb-0']` is five classes named `m`,
+   * `b`, `-` and `0`.
+   */
+  private nameSet(value: CoreValue<any>, key: string, val: unknown): string[] {
+    if (val == null) return [];
+    if (Array.isArray(val) && val.every(v => typeof v === 'string')) return val;
+    this.ctx.onError(
+      'callback',
+      new Error(
+        `"${key}" takes a string[], and was given ${describe(val)}. ` +
+          `A quoted value is read as a list of names; an expression carries the array itself`
+      ),
+      value
+    );
+    return [];
+  }
+
+  /** a `{ property: value }` map, or a reported mistake */
+  private declarationMap(
+    value: CoreValue<any>,
+    key: string,
+    val: unknown
+  ): Map<string, string> {
+    if (val == null) return new Map();
+    if (typeof val === 'object' && !Array.isArray(val)) {
+      return new Map(
+        Object.entries(val as Record<string, unknown>)
+          .filter(([, v]) => v != null)
+          .map(([k, v]) => [k, `${v}`])
+      );
+    }
+    this.ctx.onError(
+      'callback',
+      new Error(
+        `"${key}" takes a { property: value } map, and was given ${describe(val)}. ` +
+          `A quoted value is read as declarations; an expression carries the map itself`
+      ),
+      value
+    );
+    return new Map();
   }
 
   /**
@@ -685,4 +871,15 @@ export class WebScope extends CoreScope {
     container.insertBefore(node, ref.nextSibling);
     return node;
   }
+}
+
+/** what a value IS, for a message about what it should have been */
+function describe(val: unknown): string {
+  if (Array.isArray(val)) return 'an array holding something other than strings';
+  return typeof val === 'string' ? `the string "${val}"` : `a ${typeof val}`;
+}
+
+/** a space-separated attribute value, as the names it holds */
+function tokens(s: string): string[] {
+  return s.split(/\s+/).filter(t => t.length > 0);
 }
