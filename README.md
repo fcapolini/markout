@@ -77,7 +77,7 @@ reactive web development. The whole language is a handful of rules:
 - `:` names what HTML has no name for, always in the same `:family-name`
   shape: `:class-`, `:style-`, `:attr-`, `:prop-`, `:on-`, `:did-`/`:will-`,
   `:for-`, `:handle-`, `:server-`, `:slot` — plus `:name=${...}` to declare a
-  value, `::name` to declare one the compiler works out and drops, and `:aka`
+  value, `:const-name` to declare one the compiler works out and drops, and `:aka`
   to name a scope.
 - A few directives take a reserved word rather than a prefix — `:if`,
   `:else-if`, `:else` — and can, because a value has to be something an

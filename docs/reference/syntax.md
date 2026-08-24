@@ -70,7 +70,7 @@ NOTE: "on its own" is literal — whitespace is text like any other, so
 | --- | --- |
 | `:name=${expr}` | Declares a reactive value on the current scope. |
 | `:server-name=${expr}` | Declares value `name`, but the expression runs on the **server only** — the client is handed its result. Server-only. |
-| `::name=${expr}` | A **compile-time constant**: computed while the page is built and written into every expression that reads it. Nothing of it reaches the runtime. |
+| `:const-name=${expr}` | A **compile-time constant**: computed while the page is built and written into every expression that reads it. Nothing of it reaches the runtime. |
 | `:aka="name"` | Names the current scope so descendants can reference it. A literal, not an expression. |
 | `:attr-name=${expr}` | Toggles whether attribute `name` is PRESENT, as boolean and custom-element attributes need. Bare `:attr-name` implies `true`. `.` and `:` are allowed, for `data-x.y` and `xlink:href`. |
 | `:prop-name=${expr}` | Assigns the element's JS property `name`, for what an attribute can't carry. Browser-only: skipped when server rendering. |
@@ -195,10 +195,10 @@ works.
 
 ### Compile-time constants
 
-A design token never changes, and `::` says so:
+A design token never changes, and `:const-` says so:
 
 ```html
-<html ::accent="#6f42c1" ::gutter=${16}>
+<html :const-accent="#6f42c1" :const-gutter=${16}>
   <head><style>:root { --accent: ${accent}; --gutter: ${gutter}px }</style></head>
 ```
 
@@ -206,31 +206,46 @@ The value is computed while the page is built and written into every
 expression that reads it, so **nothing of it reaches the runtime** — no
 scope entry, no dependency edge, no cell that can never fire. It matters
 most in a stylesheet, where one interpolation otherwise makes the [whole
-sheet a binding](#a-stylesheet-is-one-binding); with `::` there is no
+sheet a binding](#a-stylesheet-is-one-binding); with `:const-` there is no
 binding at all.
 
-The mark is on the name rather than a `:const-` family, because a family
-prefix marks only the declaration: a `:const-color` would still be read as
-`${color}`, indistinguishable from a reactive value everywhere the
-difference costs something. `${accent}` says it at every use.
+`const-` is a **modifier**, like [`:server-`](#server-only-values) and unlike
+the `:class-`/`:on-` families: a family names something in another world —
+a CSS class, a DOM event — and the dash-case part is that other thing's real
+name, while what a modifier marks is an ordinary markout value, declared and
+read under its own name. `:const-accent` is read as plain `${accent}`.
 
-**One rule keeps it honest: a `::` value may read only literals and other
-`::` values.** Reading an ordinary value, `$id`, the DOM or a handler is a
+Which buys something beyond tidiness. Because the modifier is not part of
+what the value is *called*, **an import site can override a constant with an
+ordinary reactive value** and nothing that reads it changes:
+
+```html
+<head :radius=${dark ? '0' : '1rem'}>     <!-- the kit's :const-radius, live -->
+  <:import src="/some-kit/all.htm" />
+```
+
+The kit goes on writing `${radius}` in its stylesheet. Every page that
+doesn't need this pays nothing, and the one that does pays for a binding
+exactly where it asked for one.
+
+**One rule keeps it honest: a `:const-` value may read only literals and
+other `:const-` values.** Reading an ordinary value, `$id`, the DOM or a handler is a
 compile error — never a quiet fall back to being reactive, which would hand
 the page exactly the cost the marker was meant to avoid. The result also has
 to be a primitive; substituting an object would give every reader a separate
 copy.
 
-And the limit worth knowing before reaching for it: **a `::` value cannot
+And the limit worth knowing before reaching for it: **a `:const-` value cannot
 participate in runtime theming.** A light/dark switch changes values while
-the page runs, and these are gone by then. `::` is for what is fixed when
-the page is built.
+the page runs, and these are gone by then. `:const-` is for what is fixed when
+the page is built — which is why a page that needs one of a kit's tokens to
+move declares that name plainly, as above, rather than reaching for `:const-`.
 
-A kit's tokens are `::` for exactly this reason, and a page overrides them
+A kit's tokens are `:const-` for exactly this reason, and a page overrides them
 where it imports the kit — see [root attributes](#root-attributes-reach-the-call-site):
 
 ```html
-<head ::bsRadius="1rem">
+<head :const-bsRadius="1rem">
   <:import src="/bootstrap-kit/all.htm" />
 ```
 

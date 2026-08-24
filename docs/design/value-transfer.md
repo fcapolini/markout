@@ -87,7 +87,7 @@ Plain named values only. A compile error on:
 
 - `_private` composes fine: `:server-_raw` is a server-only internal value. The
   underscore is a naming convention, not a mechanism.
-- `comptime` does not, and should be a compile error. A `::` value is
+- `comptime` does not, and should be a compile error. A `:const-` value is
   substituted into its readers by stage5 and never reaches the runtime as a
   cell, so there is nothing left to send. (Same reasoning as the comptime
   note in TODO.md: unsolvable must be an error, never a silent fallback to
@@ -272,7 +272,7 @@ honest.
 | stage2-validate | None, in the end. The design put the refusals here, but stage1 is where the family prefix is determined, so checking there costs one `if` next to the information instead of re-deriving it from compiled names. |
 | stage3-qualify | None. This changes neither scoping nor qualification. |
 | stage4-resolve | None. A server-only value's dependencies are ordinary dependencies. |
-| stage5-comptime | Refused: `::server-x` is both compile-time and server-only, and a `::` value is substituted into its readers, so nothing of it exists to send. |
+| stage5-comptime | Refused: `:const-server-x` is both compile-time and server-only, and a `:const-` value is substituted into its readers, so nothing of it exists to send. |
 | stage6-treeshake | None. A server-only value nothing reads is dead by the existing rule and should still be dropped. |
 | stage7-generate | Emits `serverOnly: true` in the value's props, and reserves the state `<script>` — but only on a page that has one, so every other page's output is byte-for-byte what it was. |
 

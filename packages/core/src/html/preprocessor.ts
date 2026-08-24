@@ -479,14 +479,42 @@ export class Preprocessor {
     directive: Include,
     rootElement: dom.ServerElement
   ) {
-    const existing = directive.parent.getAttributeNames();
+    // by the NAME each attribute declares rather than by its spelling, so a
+    // page overriding a kit's `:const-bsRadius` with a plain `:bsRadius`
+    // replaces it -- taking the token from constant to reactive, and
+    // changing nothing in the kit that reads it (see declaredValueName)
+    const existing = new Set(directive.parent.getAttributeNames().map(declaredValueName));
     for (const attr of rootElement.attributes) {
       const name = attr.name;
-      if (!existing.includes(name)) {
+      if (!existing.has(declaredValueName(name))) {
         directive.parent.attributes.push(rootElement.getAttributeNode(name)!);
       }
     }
   }
+}
+
+/**
+ * The name a `:` attribute declares its value under, with any MODIFIER
+ * stripped -- `:const-accent` and `:server-accent` both declare `accent`.
+ *
+ * Only modifiers, never families: `:class-active` declares no value called
+ * `active`, it toggles a CSS class, and collapsing the two would make a page
+ * lose one by declaring the other.
+ *
+ * The three prefixes are spelled here rather than imported, the way
+ * CoreScope spells FOR_DATA_DEFAULT_NAME: this file splices HTML and is
+ * deliberately below the compiler, which is where ir/Page.ts states them.
+ */
+const SPECIAL_ATTR = ':';
+const VALUE_MODIFIERS = ['const-', 'server-'];
+
+export function declaredValueName(attrName: string): string {
+  if (!attrName.startsWith(SPECIAL_ATTR)) return attrName;
+  let name = attrName.slice(SPECIAL_ATTR.length);
+  for (const modifier of VALUE_MODIFIERS) {
+    name.startsWith(modifier) && (name = name.slice(modifier.length));
+  }
+  return `${SPECIAL_ATTR}${name}`;
 }
 
 export type Include = {

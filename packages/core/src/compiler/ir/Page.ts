@@ -40,6 +40,15 @@ export const HANDLE_VALUE_ATTR_PREFIX = 'handle-';
 // and the value it marks is an ordinary one. See docs/design/value-transfer.md
 export const SERVER_VALUE_ATTR_PREFIX = 'server-';
 /**
+ * `:const-name`: computed while the page is built and written into every
+ * expression that reads it.
+ *
+ * A modifier like `:server-`, and read back as plain `${name}` for the same
+ * reason -- which is what lets a page override a kit's constant with an
+ * ordinary reactive value of the same name and change nothing that reads it.
+ */
+export const COMPTIME_VALUE_ATTR_PREFIX = 'const-';
+/**
  * `:if=${expr}` renders the element when the expression is truthy, and not
  * at all otherwise.
  *

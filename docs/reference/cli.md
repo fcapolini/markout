@@ -425,7 +425,7 @@ regenerated, and no class name touched:
 Two details make that work. The rule is **unlayered**, and an unlayered rule
 outranks every cascade layer, so it beats the `@layer theme` the generated
 sheet puts its own values in without `!important`. And it is a value rather
-than a [compile-time constant](syntax.md#compile-time-constants) — `::` is
+than a [compile-time constant](syntax.md#compile-time-constants) — `:const-` is
 gone before the page runs and cannot theme anything afterwards — which is
 also why it belongs in a `<style>` of its own: [one interpolation makes a
 whole sheet reactive](syntax.md#a-stylesheet-is-one-binding), and the

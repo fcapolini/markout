@@ -389,7 +389,7 @@ export function looksLikeMarkout(text: string): boolean {
 
 /** `<:import`, `</:define`, and the rest */
 const DIRECTIVE_TAG = /<\/?:[a-zA-Z]/;
-/** `:count=${`, `::bsRadius=${` -- the `=${` is what makes it ours */
+/** `:count=${`, `:const-bsRadius=${` -- the `=${` is what makes it ours */
 const EXPRESSION_ATTRIBUTE = /[\s"']::?[A-Za-z_$][\w:$-]*=\$\{/;
 
 /**

@@ -165,10 +165,10 @@ The CDN URLs and their hashes are tokens like any other, so a page points the
 kit at its own copy without forking `base.htm`:
 
 ```html
-<head ::bsCssUrl="/vendor/bootstrap.min.css"
-      ::bsJsUrl="/vendor/bootstrap.bundle.min.js"
-      ::bsCssIntegrity=${null}
-      ::bsJsIntegrity=${null}>
+<head :const-bsCssUrl="/vendor/bootstrap.min.css"
+      :const-bsJsUrl="/vendor/bootstrap.bundle.min.js"
+      :const-bsCssIntegrity=${null}
+      :const-bsJsIntegrity=${null}>
   <:import src="/bootstrap-kit/all.htm" />
 </head>
 ```
@@ -201,7 +201,7 @@ Four reasons this is worth having rather than a convenience:
 variables, so restyling everything is setting one value at the import site:
 
 ```html
-<head ::bsRadius="1rem" ::bsLinkDecoration="none">
+<head :const-bsRadius="1rem" :const-bsLinkDecoration="none">
   <:import src="/bootstrap-kit/all.htm" />
 </head>
 ```

@@ -7,15 +7,15 @@ import type { Scope } from '../ir/Scope';
 import type { Value, ValueDepRef } from '../ir/Value';
 import { chainDep } from './stage4-resolve';
 
-/** the attribute marker that declares a value compile-time: `::name` */
-export const COMPTIME_MARKER = '::';
+/** the attribute marker that declares a value compile-time: `:const-name` */
+export const COMPTIME_MARKER = ':const-';
 
 /**
- * Stage 5: Evaluate `::` values and substitute them into their readers.
+ * Stage 5: Evaluate `:const-` values and substitute them into their readers.
  *
  * A design token is a constant, and today it costs what a changing value
  * costs: a scope entry, a dependency closure, and a cell that will never
- * fire. `::accent=${'#6f42c1'}` says the value is fixed when the page is
+ * fire. `:const-accent=${'#6f42c1'}` says the value is fixed when the page is
  * built, and this stage takes it at its word -- computing it, writing the
  * result into every expression that reads it, and removing it from the
  * scope so nothing about it reaches the runtime at all.
@@ -41,7 +41,7 @@ export const COMPTIME_MARKER = '::';
  *
  * What keeps this tractable is one rule:
  *
- *     a `::` value may read only literals and other `::` values
+ *     a `:const-` value may read only literals and other `:const-` values
  *
  * That is a closure check rather than partial evaluation. Anything reaching
  * an ordinary value, `$id`, the DOM or a handler is refused -- and refused
@@ -70,7 +70,7 @@ export function stage5comptime(page: Page) {
 }
 
 /**
- * Refuses `::x = 1`, and `x++` on one.
+ * Refuses `:const-x = 1`, and `x++` on one.
  *
  * A constant is gone by the time the page runs, so an assignment to one has
  * nothing to assign to -- and substitution rewrites the target along with
@@ -117,7 +117,7 @@ function rejectWrites(page: Page, constants: Map<Value, Value>) {
   }
 }
 
-/** every `::` value in the page, by the id stage4 records dependencies against */
+/** every `:const-` value in the page, by the id stage4 records dependencies against */
 function collect(page: Page): Map<Value, Value> {
   const found = new Map<Value, Value>();
   const walk = (scope: Scope) => {

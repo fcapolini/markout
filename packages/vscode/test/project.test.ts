@@ -145,7 +145,7 @@ describe('a page that speaks for itself', () => {
 
   it('recognises an attribute whose value is an expression', () => {
     expect(looksLikeMarkout('<html :count=${0}><body>${count}</body></html>')).toBe(true);
-    expect(looksLikeMarkout('<head ::bsRadius=${"1rem"}></head>')).toBe(true);
+    expect(looksLikeMarkout('<head :const-bsRadius=${"1rem"}></head>')).toBe(true);
   });
 
   it('is not fooled by the neighbours, which is the whole difficulty', () => {

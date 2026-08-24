@@ -16,7 +16,7 @@
     Tailwind compiles `bg-brand-600` to `background-color:
     var(--color-brand-600)`, so moving the variable moves every utility that
     reads it -- no stylesheet regenerated, no class name touched, and
-    nothing on the page told about it. That is the `::` limit from the
+    nothing on the page told about it. That is the `:const-` limit from the
     syntax reference read the other way round: a compile-time token cannot
     take part in runtime theming, and this is what it costs to want that.
 

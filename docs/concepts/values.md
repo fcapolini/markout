@@ -20,13 +20,13 @@ scope lookup.
 
 ### Values the compiler works out
 
-`::name=${expr}` declares a value computed while the page is built and
+`:const-name=${expr}` declares a value computed while the page is built and
 substituted into every reader, so nothing of it reaches the runtime. It is
 for the things that never change — a design token, a pinned version — where
 watching them would be pure cost:
 
 ```html
-<head ::accent="#6f42c1">
+<head :const-accent="#6f42c1">
 ```
 
 The rule that makes it decidable is that such a value may read only literals

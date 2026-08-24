@@ -12,7 +12,7 @@
   meta tags and a stylesheet. Where that stylesheet comes from is a token, so
   a page names its own build at the import site rather than forking this file:
 
-    <head ::twCssUrl="/css/app.css">
+    <head :const-twCssUrl="/css/app.css">
       <:import src="/demos/tailwind-kit/all.htm" />
 
   Deliberately NOT Tailwind's browser build. The CDN script generates the
@@ -27,7 +27,7 @@
   Where that step goes relative to `markout build`, and what it can and
   cannot see of a markout page, is in docs/reference/cli.md.
 -->
-<lib ::twCssUrl=${'/demos/tailwind/build.css'}>
+<lib :const-twCssUrl=${'/demos/tailwind/build.css'}>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href=${twCssUrl}>

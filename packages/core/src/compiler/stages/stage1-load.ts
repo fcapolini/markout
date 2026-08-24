@@ -58,6 +58,7 @@ import {
   PROP_VALUE_ATTR_PREFIX,
   PROP_VALUE_PREFIX,
   SERVER_VALUE_ATTR_PREFIX,
+  COMPTIME_VALUE_ATTR_PREFIX,
 } from '../ir/Page';
 import { COMPTIME_MARKER } from './stage5-comptime';
 import { NodeType } from '../../html/dom';
@@ -1759,22 +1760,22 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
       continue;
     }
     let name = attr.name.slice(SPECIAL_ATTR_PREFIX.length);
-    // `::name` is the compile-time marker, and a modifier for the same
-    // reason `:server-` is: what it marks is an ordinary value, declared
-    // and read under its own name. Doubling the prefix rather than adding
-    // a `:const-` family, because a family names something in ANOTHER
-    // namespace -- `:class-` a CSS class, `:on-` a DOM event -- and the
-    // dash-case part is that other thing's real name. A constant is a
-    // markout value, so a family form would have to invent a rule for what
-    // `:const-accent` is called when it is read
+    // `:const-` and `:server-` are MODIFIERS, not families of their own:
+    // stripped up front so the rest of the name parses exactly as it would
+    // without them, and what they mark stays an ordinary value, declared and
+    // read under its own name. That is the whole difference from a family --
+    // `:class-` names a CSS class and `:on-` a DOM event, and the dash-case
+    // part is that other thing's real name, while `${accent}` is what a
+    // `:const-accent` is called everywhere it is read.
+    //
+    // Which is also what lets a page take a kit's constant and make it
+    // reactive by declaring the same name plainly: nothing that READS it
+    // changes, because the modifier was never part of what it is called
     let comptime = false;
-    if (name.startsWith(SPECIAL_ATTR_PREFIX)) {
+    if (name.startsWith(COMPTIME_VALUE_ATTR_PREFIX)) {
       comptime = true;
-      name = name.slice(SPECIAL_ATTR_PREFIX.length);
+      name = name.slice(COMPTIME_VALUE_ATTR_PREFIX.length);
     }
-    // `:server-` is a modifier, not a family of its own: strip it up front so
-    // the rest of the name parses exactly as it would without it, and what it
-    // marks stays an ordinary value
     let serverOnly = false;
     if (name.startsWith(SERVER_VALUE_ATTR_PREFIX)) {
       serverOnly = true;
@@ -1785,7 +1786,7 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     if (comptime && SERVER_REJECTED_ATTRS.has(name)) {
       addError(
         page,
-        `"${SPECIAL_ATTR_PREFIX}${SPECIAL_ATTR_PREFIX}${name}" is not a value: ` +
+        `"${SPECIAL_ATTR_PREFIX}${COMPTIME_VALUE_ATTR_PREFIX}${name}" is not a value: ` +
           `"${COMPTIME_MARKER}" marks a declared value as compile-time`,
         attr.loc
       );
