@@ -14,8 +14,16 @@
   happens between them and `api.ts`, the Express router beside this file:
 
     a query          `?q=` is a question about data the page does not have.
-                     The page puts what was typed into the URL, and a URL
-                     that changes is a datasource that refetches.
+                     What was typed goes into the SOURCE's url — the address
+                     it asks — and a url that changes is a datasource that
+                     refetches.
+                     Not the browser's address bar, which is worth saying
+                     because "puts it in the url" reads like navigation and
+                     this is not that. Nothing here touches `location` or
+                     `history`, and there is no client-side routing: the
+                     page never navigates, only its question changes. A
+                     router is a kit component nobody has written yet, and
+                     this demo is not a preview of one.
 
     a chain          which thread to show is decided by which tickets
                      matched, so the thread cannot be asked for until the
@@ -126,7 +134,7 @@
 
 <!---
   Page state on <body>, so everything under it can read it by name — the
-  sources included, which is what puts what was typed into a URL.
+  sources included, which is what puts what was typed into a source's url.
 -->
 <body :typed=${''}        // what is in the box right now
       :query=${''}        // what the list is actually filtered by
@@ -192,13 +200,19 @@
     <section class="card" aria-label="Tickets">
       <div class="search">
         <!---
-          `:on-input` writes what was typed; the URL takes it a moment later.
+          `:on-input` writes what was typed; `listSrc`'s url takes it a
+          moment later, and the browser's address bar never does.
           The delay is the only thing here that is a technique rather than a
           value: without it every keystroke is a request, and the answers can
           arrive out of order.
+          `:prop-value` beside `value` for the same reason the reply box has
+          it, spelled out down there: the attribute is what the box is
+          served with, the property is what it shows once someone has typed
+          in it.
         -->
         <input type="search" placeholder="Search tickets…" aria-label="Search tickets"
                value=${typed}
+               :prop-value=${typed}
                :on-input=${(ev) => {
                  typed = ev.target.value;
                  clearTimeout(_debounce);
