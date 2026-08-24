@@ -1014,6 +1014,89 @@ describe('the demo application', () => {
     });
 
     /**
+     * The marker on a chart's last reading is round, and stays round.
+     *
+     * It used to be drawn inside the plot, whose box is stretched to fill
+     * its element -- x and y by different amounts -- so a `<circle>` came out
+     * an ellipse. A zero-length path with a round cap and
+     * `vector-effect="non-scaling-stroke"` fixed that in Chrome and left it
+     * an ellipse in Safari, which is the same bug in the other engine. An
+     * element positioned over the plot is not in that coordinate system at
+     * all, so a square with a 50% radius is a circle everywhere, and the
+     * assertion is the one that matters: the box is square.
+     */
+    it('marks the last reading with a round dot, whatever the chart\'s shape', async () => {
+      const { page } = await open('/orbit.html');
+      try {
+        const tips = await page.evaluate(`[...document.querySelectorAll('.dash-chart-tip')]
+          .map(t => {
+            const r = t.getBoundingClientRect();
+            const box = t.parentElement.getBoundingClientRect();
+            return { w: Math.round(r.width * 100) / 100, h: Math.round(r.height * 100) / 100,
+                     wide: Math.round(box.width), tall: Math.round(box.height),
+                     dx: Math.round((r.left + r.width / 2) - box.right) };
+          })`) as { w: number; h: number; wide: number; tall: number; dx: number }[];
+
+        // a chart inside a panel that is not on screen has no box at all,
+        // and nothing to say about roundness
+        const shown = tips.filter(t => t.wide > 0 && t.tall > 0);
+        expect(shown.length).toBeGreaterThan(2);
+        // charts of different proportions, which is what used to decide how
+        // stretched the ellipse was
+        expect(new Set(shown.map(t => t.tall)).size).toBeGreaterThan(1);
+        for (const t of shown) {
+          expect(t.w).toBe(t.h);
+          expect(t.w).toBeGreaterThan(0);
+          // and it sits on the last reading, which is the right-hand edge
+          expect(Math.abs(t.dx)).toBeLessThanOrEqual(1);
+        }
+        // nothing left drawing it inside the plot
+        expect(await page.locator('.dash-chart svg path').count()).toBe(0);
+      } finally {
+        await page.close();
+      }
+    });
+
+    /**
+     * The sidebar's "nothing is marked" fallback, and the half of it that
+     * cannot be asked in CSS.
+     *
+     * Scrollspy marks nothing in two situations. At the start of the page
+     * the first section has not reached the band it watches, and the sidebar
+     * should read as the first entry. Mid-page it also marks nothing for a
+     * frame or two while scrolling up -- it clears the section that left the
+     * band before processing the one that entered it -- and there the same
+     * fallback lit the first entry and put it back. `.dash-at-start` is what
+     * tells them apart; Bootstrap's own JS is stubbed here, so what this
+     * checks is the page's half of it.
+     */
+    it('only offers the sidebar fallback while the page is above its first section', async () => {
+      const { page } = await open('/orbit.html');
+      try {
+        const first = await page.evaluate(
+          "document.querySelector('.dash-section').offsetTop"
+        ) as number;
+        expect(first).toBeGreaterThan(0);
+        const atStart = () =>
+          page.evaluate("document.body.classList.contains('dash-at-start')");
+
+        // served with it, since a page arrives at its own top
+        expect(await atStart()).toBe(true);
+
+        await page.evaluate(`window.scrollTo({ top: ${first + 200}, behavior: 'instant' })`);
+        await page.waitForTimeout(100);
+        expect(await page.evaluate('window.scrollY')).toBeGreaterThan(first);
+        expect(await atStart()).toBe(false);
+
+        await page.evaluate("window.scrollTo({ top: 0, behavior: 'instant' })");
+        await page.waitForTimeout(100);
+        expect(await atStart()).toBe(true);
+      } finally {
+        await page.close();
+      }
+    });
+
+    /**
      * The one place in the demo where a control's state and a sentence about
      * it have to agree.
      *

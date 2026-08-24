@@ -144,6 +144,42 @@
       data-bs-target="#dash-side-nav"
       data-bs-root-margin="0px 0px -60%"
       tabindex="0"
+
+      /*
+        Whether the page is still above its first section.
+
+        Scrollspy marks nothing in two quite different situations, and the
+        sidebar's fallback is only right in one of them. At the start of the
+        page the first section has not reached the band scrollspy watches,
+        so nothing is marked and the sidebar should read as the first entry.
+        But it also marks nothing for a frame or two MID-PAGE while scrolling
+        up -- it clears the section that left the band before the one that
+        entered it is processed -- and there the same fallback lit "Overview"
+        and put it back, which is the flicker this exists to stop.
+
+        Telling them apart takes something scrollspy does not offer and CSS
+        cannot ask: where the page is scrolled to. `:has()` still asks
+        whether anything is marked; this says whether being unmarked means
+        what the fallback assumes.
+      */
+      :_atStart=${true}
+      :_stopWatching=${null}
+      :did-init=${() => {
+        const win = globalThis;
+        const measure = () => win.document.querySelector('.dash-section')?.offsetTop ?? 0;
+        let first = measure();
+        const onScroll = () => { _atStart = win.scrollY < first; };
+        const onResize = () => { first = measure(); onScroll(); };
+        win.addEventListener('scroll', onScroll, { passive: true });
+        win.addEventListener('resize', onResize, { passive: true });
+        onScroll();
+        _stopWatching = () => {
+          win.removeEventListener('scroll', onScroll);
+          win.removeEventListener('resize', onResize);
+        };
+      }}
+      :will-dispose=${() => _stopWatching?.()}
+      :class-dash-at-start=${_atStart}
 >
 
   <:include src="/demos/orbit/sources.htm" />

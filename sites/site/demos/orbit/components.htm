@@ -93,13 +93,18 @@
       one. `:has()` asks the question directly, and it stays a fallback,
       since the moment scrollspy marks anything this stops matching.
 
+      `.dash-at-start` is the other half, and the page carries it: scrollspy
+      also marks nothing for a frame or two mid-page while scrolling up, and
+      without that gate this lit the first entry there too -- a flicker to
+      the top of the sidebar and back. See <body> in orbit.html.
+
       `:first-of-type` rather than `:first-child` for no reason any more: a
       `:for-each` used to leave its stencil in the DOM as a <template>,
       which counted as the first child. It is in <head> now, so either
       works here -- this one is left as it stands because it is equally
       correct and the demo is not about the change.
     */
-    #dash-side-nav:not(:has(.active)) > li:first-of-type > .nav-link {
+    .dash-at-start #dash-side-nav:not(:has(.active)) > li:first-of-type > .nav-link {
       color: var(--bs-nav-pills-link-active-color);
       background-color: var(--bs-nav-pills-link-active-bg);
     }
@@ -121,10 +126,39 @@
     }
 
     /* the charts scale to their box; the stroke must not scale with it */
+    .dash-chart {
+      position: relative;
+    }
+
     .dash-chart svg {
       display: block;
       width: 100%;
       overflow: visible;
+    }
+
+    /*
+      The marker on the last reading, drawn OUTSIDE the plot.
+
+      Inside it there is no way to be sure of a circle. The box is stretched
+      to fill the element (`preserveAspectRatio="none"`), so x and y are
+      scaled by different amounts and anything drawn in there is stretched
+      with them. `vector-effect="non-scaling-stroke"` is the one escape and
+      it is not reliable: a zero-length path with a round cap is a dot in
+      Chrome and an ellipse in Safari, which is the same bug this had before
+      in the other browser.
+
+      An element positioned over the plot is not in that coordinate system at
+      all, so it is round because it is a square with a round corner radius,
+      which every engine agrees about. The plot's own coordinates still say
+      WHERE: x is a percentage of the box, and so is y.
+    */
+    .dash-chart-tip {
+      position: absolute;
+      width: 0.3125rem;
+      height: 0.3125rem;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
     }
 
     .dash-dot {
@@ -248,16 +282,12 @@
   :_last=${_xy.length ? _xy[_xy.length - 1] : [0, 0]}
 
   /*
-    The marker is drawn as STROKE rather than as a shape. The box
-    is stretched to fill its element (`preserveAspectRatio="none"`)
-    and x and y are stretched by different amounts, so a <circle>
-    comes out as an ellipse — wider the wider the chart. A
-    zero-length path with a round cap is a dot whose size comes
-    from `stroke-width`, and `vector-effect="non-scaling-stroke"`
-    keeps that in device pixels, so it stays round at any size.
+    Where the marker goes, as percentages of the box rather than in
+    plot coordinates: it is drawn as an element over the chart, for
+    the reason `.dash-chart-tip` gives.
   */
-  :_dot=${`M ${_last[0].toFixed(2)} ${_last[1].toFixed(2)}` +
-          ` L ${_last[0].toFixed(2)} ${_last[1].toFixed(2)}`}
+  :_tipX=${`${_last[0].toFixed(2)}%`}
+  :_tipY=${`${((_last[1] / _h) * 100).toFixed(2)}%`}
 >
   <svg viewBox="0 0 100 ${_h}"
     preserveAspectRatio="none"
@@ -277,13 +307,13 @@
       stroke-linecap="round"
       vector-effect="non-scaling-stroke" />
 
-    <path d=${_dot}
-      fill="none"
-      stroke=${stroke}
-      stroke-width="5"
-      stroke-linecap="round"
-      vector-effect="non-scaling-stroke" />
   </svg>
+
+  <span class="dash-chart-tip"
+    :style-left=${_tipX}
+    :style-top=${_tipY}
+    :style-background=${stroke}
+    :if=${points.length > 0}></span>
 </:define>
 
 <!---
