@@ -260,6 +260,17 @@ export class Page {
    * walking back up to it.
    */
   defineStencils: Map<string, ServerElement>;
+  /**
+   * Instance scope -> the `<template>` holding the copy it is stamped from.
+   *
+   * A usage site given content gets a stencil of its own, appended to
+   * `<head>` beside the definition's. Recorded for the same reason as the
+   * map above, and for one more: an instance written inside a definition's
+   * body has its stencil out here rather than inside that definition's, so
+   * dropping the definition cannot reach it by walking the tree -- see
+   * stage6-treeshake.
+   */
+  usageStencils: Map<Scope, ServerElement>;
   /** elements carrying `:when-used`, and the tags each waits on */
   whenUsed: Map<ServerElement, string[]>;
   /** the <:define> scopes themselves -- excluded from their parent's
@@ -426,6 +437,7 @@ export class Page {
     this.elementlessTags = new Set();
     this.usedTags = new Set();
     this.defineStencils = new Map();
+    this.usageStencils = new Map();
     this.whenUsed = new Map();
     this.values = new Map();
     this.readValues = new Set();

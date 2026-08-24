@@ -1408,6 +1408,7 @@ function slotUsage(
   const template = new ServerTemplateElement(doc, usageEl.loc);
   template.appendChild(stencil);
   (doc!.head ?? doc!.documentElement!).appendChild(template);
+  page.usageStencils.set(scope, template);
 
   // the slotted scopes move under the instance, where their DOM now lives,
   // but keep resolving against the scope the usage was written in

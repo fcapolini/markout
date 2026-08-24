@@ -158,6 +158,25 @@ describe('stage6-treeshake', () => {
     expect(markup).toContain('viaother-marker');
   });
 
+  it('drops the stencil of an instance written inside a definition that went', async () => {
+    // `x-wrapper` holds `<x-viaother>w</x-viaother>`, and an instance given
+    // content is stamped from a stencil of its own -- appended to <head>
+    // beside the definitions' rather than nested inside the one it was
+    // written in. So removing the wrapper's stencil left that instance's
+    // behind, and nothing could ever stamp it: an instance stencil is
+    // reachable only through the `template` its scope's props name, and the
+    // scope went with the definition
+    const { markup, page } = await build('<x-used>hi</x-used>');
+    // the DEFINITION survives, by the conservative rule above
+    expect(markup).toContain('viaother-marker');
+    // ...its instance inside the dropped wrapper does not
+    expect(markup).not.toContain('>w<');
+    const props = page.props!.data;
+    const stencils = [...markup.matchAll(/data-markout="(s\d+t)"/g)].map(m => m[1]);
+    // every instance stencil still standing is named by a scope that can use it
+    expect(stencils.filter(id => !props.includes(`"${id}"`))).toStrictEqual([]);
+  });
+
   it('leaves a page that uses everything exactly as it was', async () => {
     const { markup } = await build(
       '<x-used>a</x-used><x-unused>b</x-unused><x-wrapper />'

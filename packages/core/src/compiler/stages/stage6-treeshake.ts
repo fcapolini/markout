@@ -33,10 +33,37 @@ export function stage6treeshake(page: Page) {
     page.defineStencils.delete(tag);
     page.customTags.delete(tag);
     page.definitionScopes.delete(scope);
+    dropUsageStencils(page, scope);
     detach(scope);
   }
   dropUnusedAssets(page);
   return page;
+}
+
+/**
+ * Drops the stencils of instances written inside a definition that is going.
+ *
+ * `<bs-modal>`'s footer holds a `<bs-button>`, and an instance given content
+ * is stamped from a stencil of its own -- appended to `<head>`, beside the
+ * definitions', rather than nested inside the one it was written in. So
+ * removing the modal's own stencil leaves that button's behind, and nothing
+ * can ever stamp it: an instance stencil is reachable only through the
+ * `template` its scope's props name, and the scope went with the definition.
+ * Two of those were 154 bytes of unreachable markup on a page importing the
+ * whole Bootstrap kit and using one alert.
+ *
+ * Keyed on the scope rather than swept by id, so what goes is exactly what
+ * this pass just took the scope for -- the cheap version, "no surviving
+ * scope names it", would be a second answer to the same question and this
+ * pass's one unacceptable failure is deleting markup a page needs.
+ */
+function dropUsageStencils(page: Page, scope: Scope) {
+  const stencil = page.usageStencils.get(scope);
+  if (stencil) {
+    stencil.parentElement?.removeChild(stencil);
+    page.usageStencils.delete(scope);
+  }
+  scope.children.forEach(child => dropUsageStencils(page, child));
 }
 
 /**
@@ -77,6 +104,9 @@ function prune(page: Page, root: ServerElement) {
       scope.values.clear();
       scope.usageValues?.clear();
       scope.textValues.clear();
+      // for the reason stage6treeshake does it: an instance's stencil is in
+      // <head>, not inside the markup being pruned here
+      dropUsageStencils(page, scope);
       detach(scope);
     }
   };

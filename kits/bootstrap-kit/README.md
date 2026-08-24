@@ -27,22 +27,33 @@ its path instead.
 `all.htm` pulls in everything, and that is the ordinary thing to import: a
 component no tag on the page uses is dropped before the page is served, so
 what the whole kit costs is what you actually reach for. A page importing all
-of it and using one component serves 5.2KB, against 19.8KB with that pass
-turned off.
+of it and using one `bs-alert` serves 5.0KB where the same page with that
+pass turned off is 19.8KB.
 
 Importing parts by hand is for when you want to be explicit rather than to
-save weight — it is worth 0.6KB on that page. Each part imports `base.htm`
-itself and a file is only imported once, so it never leaves Bootstrap out:
+save weight — it is worth 134 bytes on that page. Each part imports
+`base.htm` itself and a file is only imported once, so it never leaves
+Bootstrap out:
 
 ```html
 <:import src="/npm/@markout-lang/bootstrap-kit/parts/button.htm" />
 <:import src="/npm/@markout-lang/bootstrap-kit/parts/card.htm" />
 ```
 
-That 0.6KB is the pass being careful rather than a component sneaking
-through: a tag named inside another definition's body counts as used even
-when that definition is itself dropped, and a kit's page-level markup — the
-theme's pre-paint script — is not a definition at all.
+Those 134 bytes are the pass being careful rather than a component sneaking
+through, and they are two stencils: `bs-alert` names `<bs-close>` in its
+body, `bs-close` lives in `button.htm`, and so `bs-button` and `bs-badge`
+count as used. A tag named inside another definition's body is kept even
+when that definition is itself dropped — narrowing that needs the usage
+graph rather than a flat set, and getting it wrong deletes markup a page
+needs.
+
+What the hand-picked page does *not* get is `theme.htm`, so it has no colour
+modes: comparing the two only measures the treeshaker if both import it. The
+pre-paint script is page-wide rather than `bs-theme-toggle`'s own, which is
+why it carries no `:when-used` — a page with no toggle and a visitor whose
+stored preference is dark still needs it, or it flashes light and stays
+light.
 
 Every component below is shown one after another in the [kitchen
 sink](https://markout.dev/demos/kitchen-sink), and
