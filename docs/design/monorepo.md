@@ -1,15 +1,19 @@
 # Five deliverables, one repository
 
-Status: **done except the extension.** Six workspaces:
+Status: **done.** Seven workspaces:
 [`@markout-lang/core`](../../packages/core/),
 [`@markout-lang/express`](../../packages/express/) and
 [`@markout-lang/cli`](../../packages/cli/) for the code;
 [`@markout-lang/bootstrap-kit`](../../kits/bootstrap-kit/) and
-[`@markout-lang/std-kit`](../../kits/std-kit/) for the kits; and
-[`@markout-lang/site`](../../sites/site/), private, for the homepage and the demos.
-The VS Code extension is the one deliverable still to build, and the reason
-the split was worth doing. This file records the decisions and the order, so
-the work can be picked up without the reasoning being lost with it.
+[`@markout-lang/std-kit`](../../kits/std-kit/) for the kits;
+[`@markout-lang/site`](../../sites/site/), private, for the homepage and the
+demos; and [`markout-vscode`](../../packages/vscode/), also private, for the
+VS Code extension.
+
+The extension was the forcing case for the split and is the reason it was
+worth doing — it is now built and on the Marketplace, which is what closes
+this file. The decisions and the order are recorded here so the reasoning is
+not lost with the work.
 
 ## The problem
 
@@ -266,8 +270,15 @@ follows the files.
    is the test that matters: a demo not worth a card on that page is a demo
    worth deleting, and now there is somewhere for that judgement to be made.
 
-   The remaining deliverable is **the VS Code extension**, on Volar, against
-   `@markout-lang/core`.
+7. **The extension.** **Done**, and it is the step the other six existed
+   for: [packages/vscode/](../../packages/vscode/) is a Volar language server
+   depending on `@markout-lang/core` and nothing else of ours, published to
+   the Marketplace as `markout.markout-vscode`. That constraint is asserted
+   rather than intended —
+   [dependencies.test.ts](../../packages/vscode/test/dependencies.test.ts)
+   walks the declared closure and fails if express, compression, commander or
+   the CLI appear in it. The design is in
+   [editor-support.md](editor-support.md).
 
 ## Two traps, both npm's
 

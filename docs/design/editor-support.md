@@ -626,11 +626,24 @@ and it fails in a quarter of a second rather than at install time.
 BUNDLE over stdio, so what the suite talks to is the file the archive
 carries.
 
-Dropping `private: true` is what lets the manifest be published as it
-stands, and it takes with it the thing that kept this package out of npm —
-so a `prepublishOnly` that throws replaces it. `vsce` runs
-`vscode:prepublish` and never npm's own hook, so the guard stops
-`npm publish` and nothing else.
+`private: true` is back on the manifest, and both halves of what it was
+dropped for turned out to be wrong. It never blocked the Marketplace: `vsce`
+does not read the field at all — there is no reference to it anywhere in its
+source, and `vsce package` produces the same archive either way, checked
+rather than reasoned about. And what it was dropped *for* — letting the
+manifest be published as it stands — was solving a problem npm was never
+going to have, since nothing here publishes this package to npm.
+
+What put it back is [Changesets](../../.changeset/README.md), which needs to
+know the difference: private packages are versioned and changelogged and not
+published, which is exactly this package's arrangement. Without the flag,
+`changeset publish` would try npm on every release and hit the
+`prepublishOnly` guard, so a release would fail loudly on the one package
+that was never meant to go there.
+
+The `prepublishOnly` that throws stays as the second lock. `vsce` runs
+`vscode:prepublish` and never npm's own hook, so the guard costs the
+Marketplace path nothing and says in prose what the flag says to tooling.
 
 ## Shape
 
