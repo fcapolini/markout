@@ -13,6 +13,13 @@ export const PROPS_GLOBAL = '__MARKOUT_PROPS';
 export const PROPS_DATA_ATTR = 'data-markout-props';
 /** set alongside PROPS_GLOBAL when the page was compiled in dev mode */
 export const DEV_GLOBAL = '__MARKOUT_DEV';
+/**
+ * Dev only: where each value was written, keyed `scopeId.key`.
+ *
+ * Set beside the props by a page compiled in dev mode, and absent from every
+ * other page -- which is the point. See CompiledProps.locs.
+ */
+export const LOCS_GLOBAL = '__MARKOUT_LOCS';
 
 /** which part of the reactive cycle an error came out of */
 export type RuntimeErrorPhase =
@@ -51,6 +58,14 @@ export interface RuntimeError {
   scope?: string;
   /** the value's key within that scope, when there is one */
   key?: string;
+  /**
+   * Where the value was written -- `file:line:column` -- in dev mode.
+   *
+   * Absent outside it, because the map this is read from is dev only: a
+   * served page must not describe its own sources. Absent too for a failure
+   * that belongs to no value, which is what `phase: 'refresh'` is.
+   */
+  loc?: string;
   message: string;
   /**
    * Whether the value that failed was declared `:server-`.
@@ -71,7 +86,14 @@ export interface RuntimeError {
 }
 
 export function formatRuntimeError(e: RuntimeError): string {
-  const where = e.scope ? ` ${e.scope}${e.key ? `.${e.key}` : ''}` : '';
+  // the location when there is one, because a scope uid is the compiler's
+  // name for something and a file and a line is the author's. The key stays
+  // either way: it is the one part of the pair they wrote
+  const where = e.loc
+    ? ` ${e.loc}${e.key ? ` (${e.key})` : ''}`
+    : e.scope
+      ? ` ${e.scope}${e.key ? `.${e.key}` : ''}`
+      : '';
   return `markout [${e.phase}]${where}: ${e.message}`;
 }
 
@@ -109,6 +131,15 @@ export interface CoreContextProps {
    * Used by the server to collect them for the dev-mode overlay.
    */
   onError?: (e: RuntimeError) => void;
+  /**
+   * Dev only: where each value was written, keyed `scopeId.key`.
+   *
+   * Compiled by stage7 and carried to the browser beside the props. Passing
+   * it is what turns `s12.total` into `index.html:47:13 (total)` in every
+   * report -- the console, the dev overlay, the server log -- since all of
+   * them go through `formatRuntimeError`.
+   */
+  locs?: { [key: string]: string };
   /**
    * Results of the server's `:server-` values, if this is a client rehydrating
    * a served page. A value found here is built frozen -- with the result and
@@ -459,10 +490,14 @@ export class CoreContext {
    * message would have been.
    */
   onError(phase: RuntimeErrorPhase, err: unknown, value?: CoreValue): void {
+    const scope = value?.scope.props.id;
+    const key = value?.key;
     const e: RuntimeError = {
       phase,
-      scope: value?.scope.props.id,
-      key: value?.key,
+      scope,
+      key,
+      loc:
+        scope && key !== undefined ? this.props.locs?.[`${scope}.${key}`] : undefined,
       message: err instanceof Error ? err.message : `${err}`,
       serverOnly: value?.props.serverOnly,
     };

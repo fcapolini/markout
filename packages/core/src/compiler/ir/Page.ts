@@ -235,6 +235,16 @@ export interface CompiledProps {
   exps: string;
   /** the scope tree, as JSON, with each `exp` an index into that array */
   data: string;
+  /**
+   * Dev only: where each value was written, as JSON, keyed `scopeId.key`.
+   *
+   * A runtime failure names the compiler's own ids and nothing an author
+   * typed, so this is what lets one say a file and a line the way a compile
+   * error does. Absent outside dev mode, and deliberately: a served page
+   * describing its own sources is the thing the production error page was
+   * changed to stop doing.
+   */
+  locs?: string;
 }
 
 export class Page {

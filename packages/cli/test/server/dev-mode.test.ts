@@ -92,10 +92,14 @@ describe('dev mode: runtime error reporting', () => {
       expect(items[0]).toContain("Cannot read properties of null (reading 'name')");
     });
 
-    it('names the scope and value that failed', async () => {
+    it('names the file and the line that failed', async () => {
       const res = await request(devServer.app!).get('/broken.html');
-      // `s<n>.text$<n>` -- enough to find the expression in a page with many
-      expect(listItems(res.text)[0]).toMatch(/ s\d+\.text\$\d+:/);
+      // `/broken.html:<line>:<col> (text$<n>)`. It used to be the scope uid
+      // and the key -- `s3.text$0` -- which is enough to find the expression
+      // only if you already know how to read the compiler's own names.
+      // "Mistakes caught with a file and a line" is the claim; this is where
+      // it used to stop holding
+      expect(listItems(res.text)[0]).toMatch(/ \/broken\.html:\d+:\d+ \(text\$\d+\):/);
     });
 
     it('carries none of the failed page: no content, no runtime', async () => {

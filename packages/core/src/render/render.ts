@@ -53,10 +53,13 @@ export async function renderPage(
     return [];
   }
   const errors: RuntimeError[] = [];
-  const { root, exps } = loadProps(page.props);
+  const { root, exps, locs } = loadProps(page.props);
   const ctx = new WebContext({
     root,
     exps,
+    // dev only, and undefined otherwise: what turns a scope uid into a file
+    // and a line in whatever the caller does with these errors
+    locs,
     doc: page.source.doc,
     onError: e => errors.push(e),
     // property bindings have nothing to write into a served page (see

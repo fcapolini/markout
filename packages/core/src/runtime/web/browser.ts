@@ -1,4 +1,4 @@
-import { DEV_GLOBAL, PROPS_GLOBAL, STATE_GLOBAL } from '../core/core-context';
+import { DEV_GLOBAL, LOCS_GLOBAL, PROPS_GLOBAL, STATE_GLOBAL } from '../core/core-context';
 import type { PageState } from '../core/core-context';
 import type { CoreScopeProps } from '../core/core-scope';
 import type { Document as MarkoutDocument } from '../../html/dom';
@@ -41,6 +41,9 @@ export function init(): WebContext | undefined {
     // expression, which for a server-only expression is the only way it can
     // exist in the browser at all
     state: window[STATE_GLOBAL] as PageState | undefined,
+    // dev only, and absent from every other page: what lets a failure name
+    // the line it was written on rather than the scope uid it compiled to
+    locs: window[LOCS_GLOBAL] as { [key: string]: string } | undefined,
     // the same fact the server rendered with, arrived at the other way round.
     // Not carried in the state: each side knows its own, and a mismatch would
     // mean the page is being served from somewhere it doesn't think it is

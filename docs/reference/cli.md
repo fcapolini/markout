@@ -92,6 +92,22 @@ browser), while failures that happen after the page loads appear in a panel at
 the bottom of it. And it reloads open pages when anything under the docroot
 changes, error pages included, so fixing the file is enough to see the fix:
 
+In dev mode those errors name **a file, a line and a column**, the way a
+compile error does:
+
+```
+markout [update] /demos/orbit.html:212:34 (text$7): Cannot read properties of undefined
+```
+
+It names the file the expression was *written* in, so a component that fails
+points at the fragment rather than at the page that used it. Outside dev mode
+the same failure says `markout [update] s12.text$7: …` — the compiler's own
+scope id and value key — for the reason the compile-error listing is dev's
+too: a served page should not describe its own sources. The map that makes
+the first form possible is compiled only in dev mode and carried only by a
+dev page, so a production page pays nothing for it, in bytes or in
+disclosure.
+
 ```sh
 markout ./demo --dev
 ```

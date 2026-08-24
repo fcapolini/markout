@@ -17,7 +17,7 @@ import {
   ServerText,
 } from '../../html/server-dom';
 import { NodeType } from '../../html/dom';
-import { DEV_GLOBAL, PROPS_DATA_ATTR, PROPS_GLOBAL } from '../../runtime/core/core-context';
+import { DEV_GLOBAL, LOCS_GLOBAL, PROPS_DATA_ATTR, PROPS_GLOBAL } from '../../runtime/core/core-context';
 import {
   EVENT_VALUE_PREFIX,
   REGION_STENCIL_MARKER,
@@ -534,7 +534,13 @@ function injectBootstrapScripts(page: Page, runtimeSrc: string, dev: boolean) {
         `p:JSON.parse(document.querySelector('[${PROPS_DATA_ATTR}]').textContent)};` +
         // tells the browser runtime to surface expression errors in the page
         // the same way SSR just did, instead of only logging them
-        (dev ? `window.${DEV_GLOBAL} = true;` : ''),
+        (dev ? `window.${DEV_GLOBAL} = true;` : '') +
+        // and what lets those errors name a file and a line rather than a
+        // scope uid. Dev only, both because a served page must not describe
+        // its own sources and because nothing else would ever read it
+        (dev && page.clientProps.locs
+          ? `window.${LOCS_GLOBAL} = ${escapeScriptClose(page.clientProps.locs)};`
+          : ''),
       body.loc,
       false
     )
@@ -664,12 +670,56 @@ function regexAsConstructor(node: unknown): NewExpression | undefined {
  */
 function emitProps(root: Scope, forClient: boolean, dev: boolean): CompiledProps {
   const exps = new Expressions();
-  const data = generateScope(root, forClient, exps, dev);
+  // dev only, and the whole reason it is a separate artifact rather than a
+  // field on each value: a served page must not describe its own sources,
+  // and a page that is not being developed should not pay a byte for a map
+  // nobody will read. See Locations
+  const locs = dev ? new Locations() : undefined;
+  const data = generateScope(root, forClient, exps, dev, locs);
   const gap = dev ? '\n' : '';
   return {
     exps: `[${gap}${exps.texts.join(`,${gap}`)}${gap}]`,
     data: JSON.stringify(data, null, dev ? 1 : undefined).replace(/</g, '\\u003c'),
+    locs: locs?.json(),
   };
+}
+
+/**
+ * Where each value was written, by the name the RUNTIME knows it by.
+ *
+ * A runtime failure names a scope uid and a value key -- `s12.total` -- which
+ * are the compiler's own and nothing an author typed. Compile-time errors
+ * name a file and a line, and "mistakes caught with a file and a line" is the
+ * row this project is sold on, so it holding only until the page starts
+ * running is the pitch expiring at the moment it matters most.
+ *
+ * Keyed `scopeId.key` and flat, because that is exactly the lookup
+ * `CoreContext.onError` has to do and one string beats walking a tree per
+ * failure. The value is spelled the way `formatPageError` spells one, so a
+ * compile error and a runtime error name a place the same way.
+ */
+class Locations {
+  private readonly map: { [key: string]: string } = {};
+  private empty = true;
+
+  add(scopeId: string, key: string, value: Value): void {
+    const loc = value.node.loc;
+    if (!loc) {
+      return;
+    }
+    // `source` names the file the value was written in, which is not the page
+    // when it came from an imported fragment -- the case where naming the
+    // file earns the most
+    const where = (loc as { source?: string }).source;
+    this.map[`${scopeId}.${key}`] =
+      `${where ?? ''}:${loc.start.line}:${loc.start.column + 1}`;
+    this.empty = false;
+  }
+
+  /** absent rather than `{}` when nothing had a location worth carrying */
+  json(): string | undefined {
+    return this.empty ? undefined : JSON.stringify(this.map).replace(/</g, '\\u003c');
+  }
 }
 
 /**
@@ -737,16 +787,24 @@ class Expressions {
   }
 }
 
-function generateScope(scope: Scope, forClient: boolean, exps: Expressions, dev: boolean): ScopeData {
+function generateScope(
+  scope: Scope,
+  forClient: boolean,
+  exps: Expressions,
+  dev: boolean,
+  locs?: Locations
+): ScopeData {
   const values: { [key: string]: ValueData } = {};
   for (const [name, value] of [...scope.values, ...scope.textValues]) {
-    values[toRuntimeKey(name)] = generateValueProps(
+    const key = toRuntimeKey(name);
+    values[key] = generateValueProps(
       value,
       scope.callSiteValues?.has(name),
       forClient,
       exps,
       dev
     );
+    locs?.add(scope.id, key, value);
   }
 
   const props: ScopeData = { id: scope.id };
@@ -759,7 +817,9 @@ function generateScope(scope: Scope, forClient: boolean, exps: Expressions, dev:
       // no `callSite`: these are built ON that scope rather than held by the
       // instance on its behalf, so the scope they evaluate against is simply
       // their own
-      usageValues[toRuntimeKey(name)] = generateValueProps(value, false, forClient, exps, dev);
+      const key = toRuntimeKey(name);
+      usageValues[key] = generateValueProps(value, false, forClient, exps, dev);
+      locs?.add(scope.id, key, value);
     }
     props.usageValues = usageValues;
   }
@@ -801,7 +861,7 @@ function generateScope(scope: Scope, forClient: boolean, exps: Expressions, dev:
   // position -- only usage-site instances of it are, elsewhere in the tree
   props.children = scope.children
     .filter(child => !scope.page.definitionScopes.has(child))
-    .map(c => generateScope(c, forClient, exps, dev));
+    .map(c => generateScope(c, forClient, exps, dev, locs));
 
   return props;
 }

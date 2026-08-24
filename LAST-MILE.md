@@ -120,7 +120,7 @@ is: warn only where the type is KNOWN to be dirtiable. A warning nobody can
 act on is worse than the case it catches, because it teaches people to stop
 reading them.
 
-## 3. A runtime error names a scope, not a line
+## 3. A runtime error names a scope, not a line -- **closed 2026-08-24**
 
 "Mistakes caught before the page loads, with a file and a line" is the row
 that distinguishes markout from Alpine, and it holds exactly until the page
@@ -142,6 +142,30 @@ Production props are rightly stripped of everything that is not needed -- see
 not cost a served page a byte: a side-car map from `scope.key` to
 `file:line`, shipped only when the server is in dev mode, and read by the
 overlay and by `formatRuntimeError`.
+
+**Closed, and built as described.** stage7 collects a flat
+`scopeId.key -> file:line:column` map when compiling in dev mode; the context
+resolves it in `onError` and puts a `loc` on the error itself, so every
+reporter gained it at once rather than one at a time -- the console, the
+dev-mode overlay, the dev error page and the server log all go through
+`formatRuntimeError`.
+
+The file it names is the one the expression was WRITTEN in, which is where
+this earns most: a component that fails points at its own fragment rather
+than at the page that used it, and that is asserted rather than hoped for.
+
+Dev only in both senses, and the second one is not incidental: a served page
+must not describe its own sources, which is already why the detailed
+compile-error listing is dev's. The test asserts the stronger thing -- not
+that the global is absent from a production page, but that the fragment's
+NAME does not appear in the served bytes at all.
+
+Measured on `demos/orbit.html`, the heaviest page here: production serves
+284KB and carries none of the map; a dev page carries 107KB of it, on top of
+the 715KB dev mode already serves by pretty-printing the props. Localhost
+bytes for a thing you only read while debugging. If that ever matters, the
+obvious win is interning the file names -- every entry currently repeats the
+whole path -- and it belongs with "shrink the app props" rather than here.
 
 ## 4. There is no testing story for the people who use it -- **closed 2026-08-24**
 

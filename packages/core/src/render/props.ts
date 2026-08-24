@@ -24,9 +24,12 @@ import type { ValueExp } from '../runtime/core/core-value';
 export function loadProps(props: CompiledProps): {
   root: CoreScopeProps;
   exps: ValueExp<any>[];
+  /** dev only, and undefined otherwise -- see CompiledProps.locs */
+  locs?: { [key: string]: string };
 } {
   return {
     root: JSON.parse(props.data) as CoreScopeProps,
     exps: new Function(`return (${props.exps});`)() as ValueExp<any>[],
+    locs: props.locs ? JSON.parse(props.locs) : undefined,
   };
 }
