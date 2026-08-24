@@ -197,6 +197,37 @@ describe('a definition states its interface, and the tag reserves it', () => {
     expect(p.errors).toStrictEqual(['<x-box> has no parameter "tonne": it takes "tone"']);
   });
 
+  it('says the same thing when the usage is replicated -- issue #32', () => {
+    // The bug this closes: adding `:for-each` used to change the DIAGNOSIS.
+    // Without it, `:tone` on a tag that takes `::tone` was a clean compile
+    // error; with it, the error was lost and the build exited 0 having
+    // written a page with the values missing, reporting only a `link`
+    // warning naming a generated scope id. Two spellings left nothing for
+    // the loop to tip, but nothing pins that until this does
+    const one = render('<html><body>' + BOX + '<x-box :tone=${"cold"} /></body></html>');
+    const many = render(
+      '<html><body>' + BOX + '<x-box :for-each=${[1, 2]} :tone=${"cold"} /></body></html>'
+    );
+    expect(many.errors).toStrictEqual(one.errors);
+    expect(many.errors).toStrictEqual([
+      '"tone" is a parameter of <x-box>: write "::tone" to pass it, or pick ' +
+        'another name for a value of your own',
+    ]);
+  });
+
+  it('passes a parameter into every replica -- issue #32, the other half', () => {
+    // and the spelling that IS right keeps working per replica, so the fix
+    // is not "the loop errors now"
+    const p = render(
+      '<html><body>' +
+        BOX +
+        '<x-box :for-each=${["a", "b"]} ::tone=${data} /></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+    expect(p.body()).toContain('>a<');
+    expect(p.body()).toContain('>b<');
+  });
+
   it('says so plainly when the tag takes none at all', () => {
     const p = render(
       '<html><body><:define tag="x-p:p">hi</:define><x-p ::title="t" /></body></html>'

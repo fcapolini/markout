@@ -54,19 +54,110 @@ export const COMPTIME_MARKER = ':const-';
  */
 export function stage5comptime(page: Page) {
   const constants = collect(page);
-  if (!constants.size) {
-    return page;
+  if (constants.size) {
+    rejectWrites(page, constants);
+    const values = evaluate(page, constants);
+    substitute(page, constants, values);
+    // only once every reader has been rewritten: a constant removed earlier
+    // would leave stage7 emitting a dependency on a value that is gone
+    for (const value of constants.values()) {
+      value.scope.values.delete(value.name);
+      page.values.delete(value.id);
+    }
   }
-  rejectWrites(page, constants);
-  const values = evaluate(page, constants);
-  substitute(page, constants, values);
-  // only once every reader has been rewritten: a constant removed earlier
-  // would leave stage7 emitting a dependency on a value that is gone
-  for (const value of constants.values()) {
-    value.scope.values.delete(value.name);
-    page.values.delete(value.id);
-  }
+  // after substitution, because that is what makes most of them constant --
+  // but not conditional on it, since `<title>a${'b'}</title>` was constant
+  // before this stage ever ran
+  foldConstantText(page);
   return page;
+}
+
+/**
+ * Writes a text interpolation that can never change into the markup, and
+ * drops the binding.
+ *
+ * `<style>:root { --accent: ${accent} }</style>` with `accent` a `:const-`
+ * comes out of substitution as `'... ' + '#2C88E7' + ' ...'`: no scope
+ * references left, no dependencies, and a value that will be evaluated once
+ * and never again. It still shipped in full. A whole stylesheet is one text
+ * node, so on the site this was measured against (issue #33) it was 3,136
+ * bytes on every page -- 30% of everything those pages carried, for a
+ * binding that cannot produce anything the served markup does not already
+ * contain.
+ *
+ * The rewrite is safe because it is not a new write: server rendering
+ * already evaluates this value against this same document and puts the
+ * result in this same node. All that changes is WHEN -- once at compile
+ * time instead of once per render -- and that the value is then gone from
+ * both props. So the served bytes are what they were, and a page compiled
+ * without ever being rendered gains the text it would otherwise only have
+ * got from a render.
+ *
+ * It reaches the cases a props-level "don't send it to the client" could
+ * not. A stencil's markup is never rendered -- that is what makes it a
+ * stencil -- so a constant inside an `:if` region or a `<:define>` body has
+ * to be in the template for a client-side instantiation to show it. Written
+ * into the node, it is.
+ *
+ * Text only, and that is the whole of what makes it sound: a text value's
+ * key is generated (`t$3`), no expression can name one, so nothing can be
+ * reading it. An attribute value is reachable by name and dropping one
+ * would strand its readers.
+ */
+function foldConstantText(page: Page) {
+  const walk = (scope: Scope) => {
+    for (const [name, value] of [...scope.textValues]) {
+      const ast = value.value;
+      if (!ast || typeof ast === 'string' || !isConstantExpression(ast as unknown as Node)) {
+        continue;
+      }
+      let text: unknown;
+      try {
+        text = new Function(`return (${generate(ast as unknown as Node)});`)();
+      } catch {
+        // an expression that cannot be evaluated here is left exactly as it
+        // was: this is an optimisation, and the runtime is still perfectly
+        // able to fail at it and say so
+        continue;
+      }
+      if (typeof text !== 'string') {
+        continue;
+      }
+      (value.node as { textContent: unknown }).textContent = text;
+      scope.textValues.delete(name);
+      page.values.delete(value.id);
+    }
+    scope.children.forEach(walk);
+  };
+  walk(page.global);
+}
+
+/**
+ * Whether an expression is made of literals and nothing else.
+ *
+ * A whitelist rather than "has no dependencies", and the difference matters:
+ * `$id`, a global, a call and a function all have no scope dependencies
+ * either, and none of them is a constant. Only the shapes an interpolation
+ * actually compiles to are accepted -- a string literal, a template with no
+ * holes left, and the `+` chain that joins the pieces of interpolated text.
+ * Anything else keeps its binding.
+ */
+function isConstantExpression(node: Node): boolean {
+  switch (node.type) {
+    case 'Literal':
+      // a regex is an object, and a fresh one per evaluation
+      return !('regex' in node);
+    case 'TemplateLiteral':
+      return node.expressions.length === 0;
+    case 'BinaryExpression':
+      return (
+        node.operator === '+' &&
+        isConstantExpression(node.left as Node) &&
+        isConstantExpression(node.right as Node)
+      );
+    default:
+      return false;
+  }
 }
 
 /**

@@ -185,3 +185,111 @@ describe('stage5-comptime', () => {
     expect(live.props).toContain('radius');
   });
 });
+
+describe('a text interpolation that can never change -- issue #33', () => {
+  // After substitution a token sheet is `'... ' + '#2C88E7' + ' ...'`: no
+  // scope references, no dependencies, and a value evaluated once and never
+  // again. It shipped in full anyway -- on the site the issue was filed
+  // against, 3,136 bytes on every page, 30% of what those pages carried, for
+  // a binding that cannot produce anything the served markup does not have.
+  //
+  // It is written into the node instead. Safe because it is not a new write:
+  // server rendering already evaluates this value against this document and
+  // puts the result in this node. Only the WHEN changes.
+
+  it('writes the sheet into the markup and ships no binding for it', async () => {
+    const r = await build(
+      `<html :const-accent=\${'#2C88E7'}>` +
+        `<head><style>:root { --accent: \${accent}; }</style></head>` +
+        `<body><p>x</p></body></html>`
+    );
+
+    expect(r.errors).toStrictEqual([]);
+    expect(r.markup).toContain('<style>:root { --accent: #2C88E7; }</style>');
+    // and the string is nowhere in the props, which is the whole point
+    expect(r.props).not.toContain('--accent');
+    expect(r.props).not.toContain('#2C88E7');
+  });
+
+  it('folds a literal-only interpolation with no constants involved', async () => {
+    // `${'b'}` was constant before this stage ever ran, so the fold is not
+    // conditional on the page declaring a `:const-` anywhere
+    const r = await build(`<html><head><title>a\${'b'}c</title></head><body></body></html>`);
+
+    expect(r.markup).toContain('<title>abc</title>');
+    expect(r.props).not.toContain('abc');
+  });
+
+  it('leaves a live interpolation exactly where it was', async () => {
+    const r = await build(
+      `<html :n=\${1}><head><style>i { z-index: \${n}; }</style></head>` +
+        `<body><p>\${n}</p></body></html>`
+    );
+
+    expect(r.errors).toStrictEqual([]);
+    // still a binding, because it still can change
+    expect(r.props).toContain('z-index');
+  });
+
+  it('reaches inside a stencil, which a props-level fix could not', async () => {
+    // a stencil's markup is never rendered -- that is what makes it a
+    // stencil -- so a constant in an `:if` region or a definition body has
+    // to be IN the template for a client-side instantiation to show it.
+    // Dropping it from the client's props alone would render the region
+    // empty the first time it came up in the browser
+    const r = await build(
+      `<html :const-tone=\${'warm'} :n=\${0}>` +
+        `<body><p :if=\${n > 0}>tone \${tone}</p></body></html>`
+    );
+
+    expect(r.errors).toStrictEqual([]);
+    // the region is away, so the text lives in the stencil and nowhere else.
+    // The markers stay around it, which is deliberate -- see below
+    expect(r.markup).toMatch(/<template[^>]*>.*tone <!---t\d+-->warm/);
+    expect(r.props).not.toContain('warm');
+  });
+
+  it('serves byte-for-byte what it served before', async () => {
+    // The property that makes this safe to do at all, and the reason the
+    // interpolation markers are left in place rather than tidied away:
+    // server rendering already wrote this value into this node, so folding
+    // it earlier must produce the same document. Markers included -- pulling
+    // them out would change the served bytes, which is a different change
+    // with a different risk, for about fourteen of them
+    const src =
+      `<html :const-a=\${'A'} :const-b=\${'B'}>` +
+      `<head><style>i { content: "\${a}\${b}"; }</style><title>t\${a}</title></head>` +
+      `<body><p>x\${a}y</p></body></html>`;
+    const folded = await build(src);
+
+    // the same page, rendered with the value still in place: what SSR alone
+    // would have produced
+    // raw-text elements hold their whole content as one node with the
+    // marker OUTSIDE the tag, which is why nothing lands inside the CSS
+    expect(folded.markup).toMatch(/<!---t\d+--><style>i \{ content: "AB"; \}<\/style>/);
+    expect(folded.markup).toMatch(/<!---t\d+--><title>tA<\/title>/);
+    // ordinary text keeps its wrapping pair, with the constant between them
+    expect(folded.markup).toMatch(/x<!---t\d+-->A<!---\/-->y/);
+    // and nothing is left to evaluate: every expression on the page folded
+    expect(folded.page.props?.exps).toBe('[]');
+  });
+
+  it('folds nothing whose value is not fixed at build time', async () => {
+    // a whitelist of literal shapes, not "has no dependencies": `$id`, a
+    // global and a call all have no scope dependencies either, and none of
+    // them is a constant
+    for (const expr of ['$id', 'Math.random()', 'new Date().getFullYear()', '[1, 2].length']) {
+      const r = await build(`<html><body><p>v\${${expr}}</p></body></html>`);
+      expect(r.errors).toStrictEqual([]);
+      expect(r.props, expr).toContain('$=>');
+      // still a binding: the expression is in the props
+      expect(r.props.length, expr).toBeGreaterThan(120);
+    }
+  });
+
+  it('leaves a regex literal alone, being a fresh object each time', async () => {
+    const r = await build(`<html><body><p>\${/x/.source}</p></body></html>`);
+    expect(r.errors).toStrictEqual([]);
+    expect(r.props).toContain('$=>');
+  });
+});
