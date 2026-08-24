@@ -1,6 +1,6 @@
 {
   "name": "@markout-lang/std-kit",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "The system parts of a Markout page -- data sources and the outside world -- written with the language rather than built into it",
   "repository": {
     "type": "git",
@@ -11,6 +11,9 @@
     "url": "https://github.com/fcapolini/markout/issues"
   },
   "homepage": "https://markout.dev",
+  "peerDependencies": {
+    "@markout-lang/core": "^0.5.0"
+  },
   "markout": {
     "root": "/std-kit"
   },

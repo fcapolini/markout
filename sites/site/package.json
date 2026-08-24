@@ -1,7 +1,7 @@
 {
   "name": "@markout-lang/site",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "The Markout homepage and its demos, written in Markout and served by @markout-lang/express",
   "scripts": {
     "dev": "tsx --tsconfig ../../packages/cli/tsconfig.dev.json server.ts",
@@ -24,9 +24,9 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
-    "@markout-lang/bootstrap-kit": "^0.2.0",
-    "@markout-lang/express": "^0.4.0",
-    "@markout-lang/std-kit": "^0.2.0",
+    "@markout-lang/bootstrap-kit": "^0.3.0",
+    "@markout-lang/express": "^0.5.0",
+    "@markout-lang/std-kit": "^0.3.0",
     "compression": "^1.8.1",
     "express": "^5.2.1"
   }
