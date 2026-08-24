@@ -15,6 +15,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test-coverage": "vitest run --coverage",
+    "changeset": "changeset",
+    "version-packages": "changeset version && npm install --package-lock-only",
+    "release": "npm run build && changeset publish",
     "pretest-coverage": "npm run build",
     "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
     "dev": "npm run dev -w @markout-lang/site",
@@ -26,6 +29,7 @@
   "author": "Fabrizio Capolini",
   "license": "MIT",
   "devDependencies": {
+    "@changesets/cli": "^2.29.8",
     "@types/node": "^26.2.0",
     "@vitest/coverage-v8": "^4.1.10",
     "typescript": "^7.0.2",

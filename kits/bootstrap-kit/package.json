@@ -12,7 +12,7 @@
   },
   "homepage": "https://markout.dev",
   "peerDependencies": {
-    "@markout-lang/core": "^0.5.0"
+    "@markout-lang/core": ">=0.5.0 <1.0.0"
   },
   "markout": {
     "root": "/bootstrap-kit"

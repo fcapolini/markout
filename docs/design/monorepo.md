@@ -270,8 +270,30 @@ promises.
 
 **Publishing needs the tool.** Given the table above — ranges not rewritten on
 bump, stale ranges silently resolved from the registry — releasing by hand is
-a matter of time. Changesets from step 2, before there is more than one
-package to get wrong.
+a matter of time. **Done 2026-08-24**, later than step 2 and after the
+failure had already happened once: 0.3.0 was cut by editing five
+`package.json` files, of which four were versions and the fifth was the
+site's range on the middleware, which nothing would have reported.
+
+Configuration and the reasoning are in [.changeset/README.md](../../.changeset/README.md).
+Two things that had to be decided rather than defaulted, both consequences of
+being pre-1.0:
+
+- The kits' peer range on core is `>=0.5.0 <1.0.0`, not `^0.5.0`. In a 0.x
+  version `^` does not span minors, so a core minor puts every peer dependent
+  out of range and Changesets bumps both kits to **1.0.0** — a stability
+  claim nobody made, about packages that would then read as further along
+  than the language they are written in.
+- Private packages are versioned but not published
+  (`privatePackages: { version: true, tag: false }`). The site has to be in
+  the versioning pass, because the site's stale range is the failure this is
+  all for; the extension has to stay out of the publishing one, because it
+  goes to the Marketplace with `vsce` and its own `prepublishOnly` refuses
+  npm.
+
+Verified rather than assumed: a minor on core rewrites the range in
+`express`, `cli`, both kits, the extension and the site in one pass, and a
+major on the middleware carries the site's range with it.
 
 ## Parked, deliberately
 
