@@ -562,4 +562,77 @@ describe("an attribute's own quote inside its expression -- issue #30", () => {
     const src = parser.parse('<html><body><p :v="${1 +}">t</p></body></html>', 'test');
     assert.isNotEmpty(src.errors);
   });
+
+  // ---------------------------------------------------------------------
+  // the node the scan cached is the node the parse would have made
+  // ---------------------------------------------------------------------
+  //
+  // Finding where the value ends means parsing the expressions in it, so
+  // those are kept and handed to the parse that follows instead of being
+  // thrown away and made again. That is a second producer of the same nodes,
+  // and the failure it can have is silent: a cached node missing `locations`
+  // or its `sourceFile`, or still wrapped in the parens acorn was asked to
+  // preserve, compiles perfectly well and goes wrong somewhere else -- a
+  // runtime error naming no file, an expression whose `}` is not found.
+  // Every quoted attribute expression now comes from the cache, so these
+  // check it against the paths that do not use one.
+
+  function expOf(html: string, attribute: string): acorn.Expression {
+    const src = parser.parse(html, 'quotes.html');
+    assert.deepEqual(src.errors.map(e => e.msg), [], html);
+    return find(src.doc.documentElement, 'P')!.getAttributeNode(attribute)!
+      .value as acorn.Expression;
+  }
+
+  it('carries the locations a runtime error is named from', () => {
+    // read by stage7 to build the `scopeId.key -> file:line:column` map, so
+    // a cached node without them costs every runtime error its location and
+    // says nothing about why
+    const exp = expOf('<html><body><p :v="${ 1 + 2 }">t</p></body></html>', ':v');
+    assert.equal(exp.loc?.source, 'quotes.html');
+    assert.equal(exp.loc?.start.line, 1);
+    assert.isNumber(exp.loc?.start.column);
+  });
+
+  it('agrees with the unquoted path, which uses no cache', () => {
+    // `:v=${...}` never goes through the value scan, so it is the control
+    const cached = expOf('<html><body><p :v="${a.b + 1}">t</p></body></html>', ':v');
+    const direct = expOf('<html><body><p :v=${a.b + 1}>t</p></body></html>', ':v');
+    assert.equal(generate(cached), generate(direct));
+    assert.equal(cached.type, direct.type);
+    assert.equal(cached.loc?.source, direct.loc?.source);
+  });
+
+  it('unwraps parens, and still finds the closing brace past them', () => {
+    // the acorn subtlety `preserveParens` exists for: without the wrapper
+    // acorn reports the INNER end and the scan looks for `}` at `)`. The
+    // wrapper has to be there to find the end and gone from what is cached
+    const exp = expOf('<html><body><p :v="${((1) + (2))}">t</p></body></html>', ':v');
+    assert.notInclude(JSON.stringify(exp), 'ParenthesizedExpression');
+    assert.equal(generate(exp).replace(/\s+/g, ' '), '1 + 2');
+  });
+
+  it('keeps several expressions in one value apart', () => {
+    // each is cached under its own offset; one shared entry would give the
+    // second the first's node, which renders wrongly and reports nothing
+    const src = parser.parse(
+      '<html><body><p :v="a${1}b${"x"}c">t</p></body></html>',
+      'quotes.html'
+    );
+    assert.deepEqual(src.errors.map(e => e.msg), []);
+    const exp = find(src.doc.documentElement, 'P')!.getAttributeNode(':v')!
+      .value as acorn.Expression;
+    // an interpolation is a template literal, so each expression is in a
+    // hole of its own: one shared cache entry would put the first in both
+    assert.equal(generate(exp).replace(/\s+/g, ' '), "`a${ 1 }b${ 'x' }c`");
+  });
+
+  // Not tested: that each expression is parsed exactly ONCE. It has no
+  // correctness signature -- a cache that never hits produces identical
+  // nodes, only slower -- so the only honest check is a measurement, and
+  // that one is recorded against `valueEnd`: 37.8ms -> 39.0ms to compile
+  // this repository's homepage, where parsing every interpolated attribute
+  // twice instead cost +3.8ms. What the tests above pin is the part that
+  // CAN go silently wrong: that what the cache hands over is what the parse
+  // would have made.
 });
