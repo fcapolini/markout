@@ -250,7 +250,7 @@ directory and run a smoke test. That is what catches an undeclared dependency
 and a wrong `files` list, and it is the only way to be sure a kit ships the
 fragments it promises. Changesets does not do it.
 
-## 6. Client-side navigation is unanswered
+## 6. Client-side navigation is unanswered -- **answered 2026-08-24**
 
 Not "build a router". The multi-page position is defensible and the compile
 numbers support it: an ordinary page is ~2ms and the heaviest page on this
@@ -260,3 +260,26 @@ But nothing in [docs/](docs/) or [POSITIONING.md](POSITIONING.md) says it, so
 a reader coming from any SPA framework assumes it is an oversight rather than
 a decision. A stated position costs a paragraph. An unstated one costs the
 reader's confidence that the question was considered.
+
+**Answered better than this entry proposed**, and the answer is now a TODO
+rather than a paragraph: routing goes in `std-kit`, as component(s). Which is
+the same call every framework-shaped feature here gets, with `std-data`
+standing next to it as the precedent -- a datasource turned out to be a
+component and a URL rather than a mechanism -- and `syntax.md` already names
+a router in passing as the kind of thing `<:logic>` is for.
+
+A component answers the question by existing, which a paragraph does not. It
+also splits the question in two, which the paragraph would have blurred:
+*in-page* routing (which region of this page is showing, decided by the URL)
+is a kit component and is nearly buildable today; *between-page* routing
+(replacing the document with no round trip) is the SPA question, and a
+compiled page being one document means that is a mechanism markout does not
+have. The second still wants an explicit position -- building the first will
+make people ask.
+
+And it surfaced a language dependency this entry had not seen: **a page
+cannot read its own URL.** `$origin` is the origin alone, and `location` is
+refused for the usual reason. But the path and the query are not like headers
+and cookies -- both sides have them and they mean the same thing -- so they
+clear the bar `$origin` clears, and something has to be supplied the way
+`$origin` is before any router can be written. See TODO.md.
