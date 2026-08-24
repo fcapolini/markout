@@ -8,6 +8,10 @@ import https from "https";
 import exitHook from './exit-hook';
 import {
   defaultLogger,
+  // the middleware's own rule for what a page request is, imported rather
+  // than spelled again here: a limiter that disagreed with it would count a
+  // render it did not cost, or miss one it did
+  isPageRequest,
   markout,
   type ErrorPages,
   type MarkoutLogger,
@@ -208,19 +212,6 @@ export interface ServerProps {
    * remains a reason to mount `markout()` yourself.
    */
   fallback?: (app: Application, props: ServerProps) => void | Promise<void>;
-}
-
-/**
- * Whether a path is one the pages answer -- markout's own rule, which is
- * that a page is an extensionless path or a `.html` one.
- *
- * Spelled the same way here as in the middleware, deliberately: the two
- * disagreeing would mean a request that costs a render and is not counted,
- * or an image that is.
- */
-function isPageRequest(pathname: string): boolean {
-  const i = pathname.lastIndexOf('.');
-  return i < 0 || pathname.substring(i).toLowerCase() === '.html';
 }
 
 export class Server {

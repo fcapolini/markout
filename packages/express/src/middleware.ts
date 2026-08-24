@@ -465,7 +465,7 @@ export function markout(props: MarkoutProps) {
 
   return async function (req: Request, res: Response, next: NextFunction) {
     const i = req.path.lastIndexOf('.');
-    const extname = i < 0 ? '.html' : req.path.substring(i).toLowerCase();
+    const extname = extnameOf(req.path);
 
     if (reloader?.handle(req, res)) {
       return;
@@ -658,6 +658,32 @@ export function cspNonce(): RequestHandler {
 function originOf(req: Request): string | undefined {
   const host = req.get('host');
   return host ? `${req.protocol}://${host}` : undefined;
+}
+
+/**
+ * The extension a request is answered by: its own, or `.html` when it has
+ * none, since an extensionless path is a page request.
+ *
+ * One definition, because this rule decides two things that must not
+ * disagree -- what the middleware renders, and what a rate limiter counts.
+ * A limiter spelling it differently means either a request that costs a
+ * render and is not counted, or an image that is.
+ */
+function extnameOf(pathname: string): string {
+  const i = pathname.lastIndexOf('.');
+  return i < 0 ? '.html' : pathname.substring(i).toLowerCase();
+}
+
+/**
+ * Whether a path is one the pages answer -- an extensionless path, or a
+ * `.html` one.
+ *
+ * Exported for whoever is deciding what a page request COSTS: a rate limiter
+ * in front of these pages wants to count renders and not assets, and the
+ * only way for it to agree with the middleware is to ask the middleware.
+ */
+export function isPageRequest(pathname: string): boolean {
+  return extnameOf(pathname) === '.html';
 }
 
 async function isDirectory(requestPath: string, resolver: Resolver): Promise<boolean> {

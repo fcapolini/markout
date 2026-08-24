@@ -19,6 +19,7 @@
 export {
   CLIENT_CODE_REQ,
   cspNonce,
+  isPageRequest,
   markout,
   resolvePath,
   type ErrorPages,

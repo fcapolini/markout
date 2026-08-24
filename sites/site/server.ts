@@ -23,7 +23,8 @@
  */
 import compression from "compression";
 import express, { type Express } from 'express';
-import { markout } from '@markout-lang/express';
+import { isPageRequest, markout } from '@markout-lang/express';
+import rateLimit from 'express-rate-limit';
 import { deskApi } from './demos/desk/api';
 
 export interface SiteProps {
@@ -68,6 +69,35 @@ export function createSite(props: SiteProps): Express {
   // knows nothing about it; it is here first because whoever answers first
   // wins, and these paths are the application's.
   app.use('/demos/desk/api', deskApi());
+
+  // ------------------------------------------------------------- the budget
+  //
+  // Here rather than at the top, for the reason the whole list is ordered:
+  // everything above has already answered, so the health check and the
+  // desk's API are outside the budget and only what is about to be RENDERED
+  // is inside it.
+  //
+  // A page here is a compile and a render, and the heaviest of them fetches
+  // a directory of JSON while it renders -- which is the amplification worth
+  // bounding. `isPageRequest` is the middleware's own rule imported rather
+  // than restated, so this counts exactly what it renders: a limiter that
+  // disagreed would either miss a render or charge for an image.
+  //
+  // 300 a minute is generous on purpose. A person clicking through this site
+  // manages perhaps one page a second at their fastest, so it is well clear
+  // of any visitor and still a bound on what a script can make the renderer
+  // do. Behind CapRover's nginx, `trust proxy` above is what makes it key on
+  // the visitor rather than on the proxy -- without it the whole site shares
+  // one budget, which is the failure that looks exactly like success.
+  app.use(
+    rateLimit({
+      windowMs: 60_000,
+      limit: 300,
+      standardHeaders: true,
+      legacyHeaders: false,
+      skip: req => !isPageRequest(req.path),
+    })
+  );
 
   // ------------------------------------------------------------ the pages
   app.use(markout({ docroot: props.docroot, dev: props.dev }));
