@@ -70,7 +70,20 @@
   Naming them is also what retires the `_` prefix these used to carry:
   `fmt.ago` says what `_ago` was using an underscore to hint at.
 -->
-<html lang="en">
+<html lang="en"
+
+      /*
+        How much of the top of the viewport the sticky navbar takes: its
+        height plus the container's padding. One number, in three places that
+        all mean the same thing -- the CSS custom property every section
+        scrolls to, and the band scrollspy watches, which starts below the
+        bar rather than behind it.
+
+        In rem because that is what the rest of the page measures in, and
+        multiplied out for scrollspy because `rootMargin` takes px or % and
+        nothing else.
+      */
+      :const-dashTop=${5.0625}>
 
   <!--- what the page looks like -->
   <:logic :aka="theme"
@@ -142,7 +155,7 @@
       */
       data-bs-spy="scroll"
       data-bs-target="#dash-side-nav"
-      data-bs-root-margin="0px 0px -60%"
+      data-bs-root-margin=${`-${dashTop * 16}px 0px -60%`}
       tabindex="0"
 
       /*

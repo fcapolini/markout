@@ -1136,6 +1136,41 @@ describe('the demo application', () => {
       }
     });
 
+    /**
+     * The band scrollspy watches starts below the sticky bar, not behind it.
+     *
+     * It used to start at the top of the viewport while every section
+     * scrolled to a line 81px lower, so at rest the section ABOVE the
+     * current one still reached 81px into the band. Two sections in it at
+     * once, and scrolling up the plugin prefers the higher one -- which is
+     * why jumping from Deployments to Services lit "Traffic" for the last
+     * stretch of the animation and then corrected itself.
+     *
+     * One number says both, so they cannot drift: `:const-dashTop` on
+     * `<html>` feeds the CSS custom property the sections scroll to and the
+     * margin the observer watches. In px there because `rootMargin` takes
+     * px or % and nothing else.
+     */
+    it('starts scrollspy\'s band below the sticky bar, from the same number', async () => {
+      const { page } = await open('/orbit.html');
+      try {
+        const { margin, top } = await page.evaluate(`(() => {
+          const probe = document.createElement('div');
+          probe.style.height = 'var(--dash-top)';
+          document.body.append(probe);
+          const top = probe.getBoundingClientRect().height;
+          probe.remove();
+          return { margin: document.body.dataset.bsRootMargin, top };
+        })()`) as { margin: string; top: number };
+
+        expect(top).toBeGreaterThan(40);
+        // the top of the band, and the line the sections scroll to
+        expect(margin).toBe(`-${Math.round(top)}px 0px -60%`);
+      } finally {
+        await page.close();
+      }
+    });
+
     it('agrees with itself however the reader arrives', async () => {
       const { page } = await open('/orbit.html');
       try {

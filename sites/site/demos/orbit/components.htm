@@ -30,12 +30,13 @@
       --dash-gutter: ${theme.dense ? '0.75rem' : '1.25rem'};
 
       /*
-        Where the page begins under the sticky navbar: its height plus the
-        container's own top padding. One value, because the sidebar sticks
-        to it and every section scrolls to it, and the two drifting apart is
-        exactly what makes a sidebar jump on the first scroll.
+        Where the page begins under the sticky navbar. One value, because the
+        sidebar sticks to it, every section scrolls to it, and scrollspy's
+        band starts below it -- and any two of those drifting apart is what
+        makes a sidebar jump. It is declared on <html> in orbit.html, where
+        the third reader is.
       */
-      --dash-top: 5.0625rem;
+      --dash-top: ${dashTop}rem;
     }
   </style>
 
