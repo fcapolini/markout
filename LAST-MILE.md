@@ -262,11 +262,19 @@ a decision. A stated position costs a paragraph. An unstated one costs the
 reader's confidence that the question was considered.
 
 **Answered better than this entry proposed**, and the answer is now a TODO
-rather than a paragraph: routing goes in `std-kit`, as component(s). Which is
-the same call every framework-shaped feature here gets, with `std-data`
-standing next to it as the precedent -- a datasource turned out to be a
-component and a URL rather than a mechanism -- and `syntax.md` already names
-a router in passing as the kind of thing `<:logic>` is for.
+rather than a paragraph: routing is a component, in three layers with three
+homes -- the URL into the language, the address bar as read/write state into
+`std-kit`, and the router itself into a kit of its OWN. Which is the same
+call every framework-shaped feature here gets, with `std-data` standing next
+to it as the precedent -- a datasource turned out to be a component and a URL
+rather than a mechanism -- and `syntax.md` already names a router in passing
+as the kind of thing `<:logic>` is for.
+
+The router being separate rather than ambient is the one part that had to be
+argued rather than followed from precedent, and it turns on opinion:
+`std-data` has one sensible design, a router is a design space, and std-kit
+is spliced into every page by core -- so an opinion shipped there becomes THE
+opinion, in a project positioned as not an application framework.
 
 A component answers the question by existing, which a paragraph does not. It
 also splits the question in two, which the paragraph would have blurred:
