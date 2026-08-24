@@ -521,9 +521,15 @@ export function markout(props: MarkoutProps) {
       // and is not, the guarantee lives in another file, and the cost of the
       // check is a comparison -- so it is made where it is relied on. A
       // pathname that somehow were not local falls through to be resolved
-      // and answered like any other request
-      if (dir && dir.startsWith('/') && !dir.startsWith('//')) {
-        res.redirect(301, `${dir}/`);
+      // and answered like any other request.
+      //
+      // Asked of the Location itself rather than of the pathname it is built
+      // from, which is the difference between checking a value and checking
+      // an ingredient: what goes to the browser is the string with the
+      // trailing slash on it, so that is the string the claim is about
+      const target = dir === undefined ? undefined : `${dir}/`;
+      if (target?.startsWith('/') && !target.startsWith('//')) {
+        res.redirect(301, target);
         return;
       }
     }
