@@ -497,3 +497,69 @@ describe('parser: parenthesized expressions', () => {
     assert.include(source.errors.map(e => e.msg), 'Unterminated expression');
   });
 });
+
+describe("an attribute's own quote inside its expression -- issue #30", () => {
+  // HTML ends an attribute at the first matching quote, and that is HTML's
+  // rule -- but `${...}` already suppresses the other delimiter. `>` inside
+  // an expression does not end the tag, so the quote was the one place a
+  // delimiter stayed live inside an expression, and the result was a
+  // `SyntaxError` pointing INSIDE the expression, at nothing the author had
+  // got wrong.
+  function find(node: any, tag: string): ServerElement | undefined {
+    for (const n of node.childNodes ?? []) {
+      if ((n as ServerElement).tagName === tag) return n as ServerElement;
+      const found = find(n, tag);
+      if (found) return found;
+    }
+    return undefined;
+  }
+
+  /** the `:v` expression of the page's only `<p>`, printed back as source */
+  function attr(html: string): string {
+    const src = parser.parse(html, 'test');
+    assert.deepEqual(src.errors.map(e => e.msg), [], html);
+    const p = find(src.doc.documentElement, 'P')!;
+    // whitespace-collapsed: escodegen's line breaking is not what is under
+    // test here, only where the value was decided to END
+    return generate(p.getAttributeNode(':v')!.value as acorn.Expression)
+      .replace(/\s+/g, ' ');
+  }
+
+  it('accepts a double quote inside a double-quoted attribute', () => {
+    assert.equal(attr('<html><body><p :v="${"x"}">t</p></body></html>'), "'x'");
+  });
+
+  it('accepts a single quote inside a single-quoted attribute', () => {
+    assert.equal(attr("<html><body><p :v='${'x'}'>t</p></body></html>"), "'x'");
+  });
+
+  it('finds the end past braces, strings and nested templates', () => {
+    // the shapes that rule out every cheap "is this offset inside an
+    // expression" test short of parsing: a brace in an object literal, a
+    // brace inside a string, and a template with a hole of its own
+    assert.equal(
+      attr('<html><body><p :v="${["a","b"].join("-")}">t</p></body></html>'),
+      "[ 'a', 'b' ].join('-')"
+    );
+    assert.equal(attr('<html><body><p :v="${{a: "}"}.a}">t</p></body></html>'), "{ a: \'}\' }.a");
+    assert.equal(attr('<html><body><p :v="${`a${"b"}c`}">t</p></body></html>'), "`a${ \'b\' }c`");
+  });
+
+  it('still ends a plain literal at its quote', () => {
+    const src = parser.parse('<html><body><p class="a b">t</p></body></html>', 'test');
+    assert.deepEqual(src.errors.map(e => e.msg), []);
+    assert.equal(find(src.doc.documentElement, 'P')!.getAttribute('class'), 'a b');
+  });
+
+  it('still reports an unterminated value rather than running to the end', () => {
+    const src = parser.parse("<html><body><p :v=\"${'x'}>t</p></body></html>", 'test');
+    assert.include(src.errors.map(e => e.msg), 'Unterminated attribute value');
+  });
+
+  it('leaves a broken expression to the parser that can explain it', () => {
+    // acorn cannot read it, so this is not a quote to skip over: answer what
+    // the old scan would have, and let the expression parse report it
+    const src = parser.parse('<html><body><p :v="${1 +}">t</p></body></html>', 'test');
+    assert.isNotEmpty(src.errors);
+  });
+});

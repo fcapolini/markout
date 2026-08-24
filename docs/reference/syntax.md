@@ -64,6 +64,14 @@ something an attribute could never carry:
 NOTE: "on its own" is literal — whitespace is text like any other, so
 `:x=" ${expr}"` interpolates and yields a string.
 
+Inside `${...}` the attribute's own quote is ordinary JavaScript, so
+`:v="${"x"}"` and `:v='${'x'}'` both parse. HTML would have ended the value at
+that second quote, and this does not, for the same reason a `>` inside an
+expression does not end the tag: an expression is JavaScript, and the
+delimiters around it stop applying until it closes. That leaves nothing to
+remember about which quote to reach for — one fewer rule rather than one
+more.
+
 ### A composite attribute is added to, not replaced
 
 A plain attribute replaces what was there. Two of them hold a **set** rather
