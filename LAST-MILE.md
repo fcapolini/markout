@@ -160,7 +160,7 @@ Worth more than its size: a testing story is what a reader reads as "this is
 maintained", and its absence is read as the opposite regardless of the test
 count in CI.
 
-## 5. There is no changelog, and the spelling moved twice
+## 5. There is no changelog, and the spelling moved twice -- **closed 2026-08-24**
 
 No `CHANGELOG.md` in the repository or in any package, and no `.changeset/`.
 
@@ -174,6 +174,25 @@ This is the other half of the Changesets entry already open in TODO.md, and
 [monorepo.md](docs/design/monorepo.md) calls for the tool. The point worth
 adding is that the version numbers were never the risk on their own -- the
 risk is a language whose spelling moves with no note that it did.
+
+**Closed.** Changesets is installed and configured, five changelogs are
+seeded back to 0.4.0, and core's carries the `::` migration note that was
+missing. The flow was verified by running a release and reverting it, which
+is how the one file that mattered got checked: a bump rewrites the site's
+range on the middleware, which is the exact line 0.3.0 missed.
+
+Two decisions the default configuration got wrong, both because this is 0.x,
+are in [.changeset/README.md](.changeset/README.md): the kits' peer range on
+core has to span 0.x minors, or Changesets answers an out-of-range peer by
+bumping both kits to **1.0.0** on a core minor; and private packages are
+versioned but not published, so the site's ranges are kept in step while the
+extension never goes near npm.
+
+What is still open from the same design note, and is a separate entry in
+TODO.md: `npm pack` each package in CI, install the tarball into an empty
+directory and run a smoke test. That is what catches an undeclared dependency
+and a wrong `files` list, and it is the only way to be sure a kit ships the
+fragments it promises. Changesets does not do it.
 
 ## 6. Client-side navigation is unanswered
 
