@@ -610,6 +610,19 @@ existing `:label` local into an error naming the tag and the name, fixed by
 renaming that local — rather than quietly taking a name someone was already
 using.
 
+One shape the reservation cannot catch is a misspelling, since `:varient`
+claims the name for you and so is a perfectly legal local. What notices it
+is that nothing reads it:
+
+```
+warning: nothing reads "varient": <bs-alert> takes "variant" -- did you mean "::variant"?
+```
+
+A **warning**, not an error — the page builds and is served, because unlike
+everything else the compiler reports this is a judgment about the page
+rather than a fact about whether it can be built. A local a handler writes
+and nothing displays is state, not a mistake, and says nothing.
+
 Everything else on a usage site is unchanged, being neither: `:if`,
 `:for-each`, `:aka` and `:slot` name no value, and `:class-`, `:style-`,
 `:attr-`, `:prop-` and `:on-` apply to the instance's own element.

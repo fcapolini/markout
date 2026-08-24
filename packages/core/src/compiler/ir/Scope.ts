@@ -9,6 +9,7 @@ type Carried =
   | 'values'
   | 'textCount'
   | 'usesTemplate'
+  | 'usesTag'
   | 'attributes'
   | 'callSiteValues'
   | 'usageValues'
@@ -79,6 +80,9 @@ export class Scope {
   parameters?: Set<string>;
   /** set for a custom-tag usage scope: the id of the <:define> scope it instantiates from */
   usesTemplate?: string;
+  /** and the tag it is an instance OF -- an instance has no element of its
+   * own to read a name off, and errors about one have to name it */
+  usesTag?: string;
   /**
    * Set on the scope a usage ELEMENT was loaded into, once its values have
    * been handed to the instance and it has been spliced out of the tree.
@@ -187,6 +191,7 @@ export class Scope {
     copy.values = this.values;
     copy.textCount = this.textCount;
     copy.usesTemplate = this.usesTemplate;
+    copy.usesTag = this.usesTag;
     copy.attributes = this.attributes;
     copy.callSiteValues = this.callSiteValues && new Set(this.callSiteValues);
     copy.usageValues = this.usageValues;

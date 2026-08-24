@@ -297,6 +297,17 @@ export class Page {
   slottedInto: Map<object, Scope>;
   main?: Scope;
   errors: PageError[] = [];
+  /**
+   * Every value something in the page resolves a reference to, filled as
+   * stage4 walks.
+   *
+   * Kept because that walk is the only one that sees inside a callback body:
+   * those references are resolved for the errors alone and recorded as
+   * dependencies nowhere, so "what reads this" cannot be answered afterwards
+   * from `deps` -- and a value a handler is the sole user of would read as
+   * used by nobody.
+   */
+  readValues!: Set<Value>;
   nextValueId = 0;
   nextScopeId = 0;
   /**
@@ -376,6 +387,7 @@ export class Page {
     this.defineStencils = new Map();
     this.whenUsed = new Map();
     this.values = new Map();
+    this.readValues = new Set();
   }
 
   /**
@@ -393,10 +405,31 @@ export class Page {
    * eleven times.
    */
   addError(msg: string, loc?: acorn.SourceLocation | null) {
+    this.report('error', msg, loc);
+  }
+
+  /**
+   * Record something worth saying that is not a reason to stop.
+   *
+   * A warning is a judgment about the page rather than a fact about whether
+   * it can be built, so a stage after this one still runs and what comes out
+   * is still served -- `hasErrors` is what gates compilation, not the length
+   * of this list.
+   */
+  addWarning(msg: string, loc?: acorn.SourceLocation | null) {
+    this.report('warning', msg, loc);
+  }
+
+  /** whether anything recorded actually stops the page being built */
+  get hasErrors(): boolean {
+    return this.errors.some(e => e.type === 'error');
+  }
+
+  private report(type: 'error' | 'warning', msg: string, loc?: acorn.SourceLocation | null) {
     if (this.errors.some(e => e.msg === msg && sameLoc(e.loc, loc))) {
       return;
     }
-    this.errors.push(new PageError('error', msg, loc));
+    this.errors.push(new PageError(type, msg, loc));
   }
 
   /**

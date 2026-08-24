@@ -147,13 +147,15 @@ export class Compiler {
     const page = new Page(await this.preprocessor.load(pathname));
     page.serverGlobals = this.serverGlobals;
     page.errors = page.source.errors;
-    page.errors.length || stage1load(page);
-    page.errors.length || stage2validate(page);
-    page.errors.length || stage3qualify(page);
-    page.errors.length || stage4resolve(page);
-    page.errors.length || stage5comptime(page);
-    page.errors.length || !this.treeshake || stage6treeshake(page);
-    page.errors.length ||
+    // `hasErrors`, not `errors.length`: a warning is something to say about a
+    // page that builds, so it must not stop the page being built
+    page.hasErrors || stage1load(page);
+    page.hasErrors || stage2validate(page);
+    page.hasErrors || stage3qualify(page);
+    page.hasErrors || stage4resolve(page);
+    page.hasErrors || stage5comptime(page);
+    page.hasErrors || !this.treeshake || stage6treeshake(page);
+    page.hasErrors ||
       stage7generate(page, this.runtimeSrc, this.dev, this.classManifest, this.generator);
     return page;
   }

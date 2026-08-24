@@ -211,6 +211,15 @@ function report(result: BuildResult, restricted = false, classesOnly = false) {
     console.warn(`${pathname} ${formatRuntimeError(error)}`)
   );
 
+  // said, and not counted against the build: these name pages that compiled
+  result.warnings.forEach(({ pathname, error }) => {
+    const loc = error.loc;
+    const where = loc
+      ? `${loc.source ?? pathname}:${loc.start.line}:${loc.start.column + 1}`
+      : pathname;
+    console.warn(`${where}: warning: ${error.msg}`);
+  });
+
   if (result.errors.length || result.serverErrors.length) {
     result.errors.forEach(({ pathname, error }) => {
       const loc = error.loc;

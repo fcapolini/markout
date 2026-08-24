@@ -15,10 +15,13 @@ async function render(html: string) {
   stage3qualify(page);
   stage4resolve(page);
   stage7generate(page);
-  const runtimeErrors = page.errors.length ? [] : await renderPage(page);
+  const runtimeErrors = page.hasErrors ? [] : await renderPage(page);
   const markup = page.source.doc.toString();
   return {
-    errors: page.errors,
+    // errors alone: a warning says something about a page that builds, and
+    // several of these give a usage an attribute purely to give it a scope
+    errors: page.errors.filter(e => e.type === 'error'),
+    warnings: page.errors.filter(e => e.type === 'warning'),
     runtimeErrors,
     // only what's actually live: a <template> holds an inert stencil, which
     // renders too but never reaches the page

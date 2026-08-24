@@ -120,6 +120,14 @@ export interface BuildResult {
    */
   errors: { pathname: string; error: PageError }[];
   /**
+   * What the compiler had to say about pages that built anyway.
+   *
+   * Kept apart from `errors` because the difference is the whole point: a
+   * warning is a judgment about a page, and a build that stopped for one --
+   * or exited non-zero -- would make it an error under another name.
+   */
+  warnings: { pathname: string; error: PageError }[];
+  /**
    * Ordinary expressions that threw while rendering. The page was still
    * written, on the same grounds the server keeps serving one: the browser
    * re-derives these, so a value that was asked too early here is a hole that
@@ -224,6 +232,7 @@ export async function build(props: BuildProps): Promise<BuildResult> {
     assets: [],
     runtime: runtimeSrc,
     errors: [],
+    warnings: [],
     runtimeErrors: [],
     serverErrors: [],
     kitErrors: discovered.errors,
@@ -241,10 +250,8 @@ export async function build(props: BuildProps): Promise<BuildResult> {
     const names = new Set<string>();
     for (const pathname of found.pages) {
       const page = await compiler.compile(pathname);
-      if (page.errors.length) {
-        page.errors.forEach(error => result.errors.push({ pathname, error }));
-        continue;
-      }
+      collectDiagnostics(result, pathname, page);
+      if (page.hasErrors) continue;
       page.classNames().forEach(name => names.add(name));
     }
     result.classes = [...names].sort();
@@ -283,10 +290,8 @@ export async function build(props: BuildProps): Promise<BuildResult> {
   // a turn of its own rather than overlapping them
   for (const pathname of found.pages) {
     const page = await compiler.compile(pathname);
-    if (page.errors.length) {
-      page.errors.forEach(error => result.errors.push({ pathname, error }));
-      continue;
-    }
+    collectDiagnostics(result, pathname, page);
+    if (page.hasErrors) continue;
     const errors = await renderPage(page, { origin: props.origin });
     const fatal = errors.filter(e => e.serverOnly);
     fatal.forEach(error => result.serverErrors.push({ pathname, error }));
@@ -397,4 +402,22 @@ async function write(outdir: string, pathname: string, text: string) {
 async function copy(from: string, target: string) {
   await fs.promises.mkdir(path.dirname(target), { recursive: true });
   await fs.promises.copyFile(from, target);
+}
+
+/**
+ * Sorts what a compile had to say into what stops the build and what does not.
+ *
+ * One place, because the two callers below both used to write the same line
+ * and a warning reaching `errors` would fail a build for something the
+ * compiler deliberately declined to fail on.
+ */
+function collectDiagnostics(
+  result: { errors: { pathname: string; error: PageError }[];
+            warnings: { pathname: string; error: PageError }[] },
+  pathname: string,
+  page: { errors: PageError[] }
+): void {
+  for (const error of page.errors) {
+    (error.type === 'warning' ? result.warnings : result.errors).push({ pathname, error });
+  }
 }

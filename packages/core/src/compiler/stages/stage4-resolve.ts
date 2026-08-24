@@ -6,10 +6,13 @@ import type { ServerAttribute } from '../../html/server-dom';
 import {
   DID_VALUE_PREFIX,
   EVENT_VALUE_PREFIX,
+  FOR_AS_VALUE,
+  FOR_DATA_DEFAULT_NAME,
   FOR_DATA_VALUE,
   FOR_EACH_VALUE,
   IF_VALUE,
   HANDLE_VALUE_PREFIX,
+  PARAMETER_MARKER,
   WILL_VALUE_PREFIX,
 } from '../ir/Page';
 import type { Scope } from '../ir/Scope';
@@ -81,7 +84,66 @@ export function stage4resolve(page: Page) {
   for (const child of page.global.children) {
     resolveScope(child, page, lazy);
   }
+  // after every value has been resolved, since that walk is what fills
+  // `readValues` -- including the callback bodies nothing else looks inside
+  warnUnreadLocals(page);
   return page;
+}
+
+/**
+ * Warns about a name a usage site declared that nothing goes on to read.
+ *
+ * A local is the caller's own state hung on a tag, and one nobody reads is
+ * dead either way -- but the shape worth catching is narrower than that.
+ * `<bs-alert :variant="danger">` where the tag takes a `variant` is refused
+ * outright; `:varient` is not, because it IS a legal local, and this is what
+ * is left to notice it.
+ *
+ * A warning rather than an error, because unlike everything else this stage
+ * reports it is a judgment about the page rather than a fact about whether
+ * it can be built. A write counts as a use: `:log=${''}` assigned by a
+ * handler and displayed nowhere is state, not a mistake.
+ */
+function warnUnreadLocals(page: Page): void {
+  const walk = (scope: Scope) => {
+    // the per-item alias is declared by the LANGUAGE, not by whoever wrote
+    // the tag: `<my-row :for-each=${rows} />` introduces `data` whether or
+    // not anything wants it, and telling someone nothing reads a name they
+    // never wrote is noise. A `:for-each` on a plain element says nothing
+    // either, which is the behaviour this matches
+    const alias =
+      scope.values.has(FOR_EACH_VALUE) || scope.values.has(FOR_DATA_VALUE)
+        ? (scope.values.get(FOR_AS_VALUE)?.value as string) || FOR_DATA_DEFAULT_NAME
+        : undefined;
+    for (const [name, value] of scope.usageValues ?? []) {
+      if (name === alias || page.readValues.has(value)) continue;
+      const tag = scope.usesTag;
+      const parameters = tag ? page.customTags.get(tag)?.parameters : undefined;
+      const near = parameters && [...parameters].find(p => looksLike(p, name));
+      page.addWarning(
+        `nothing reads "${name}"` +
+          (near
+            ? `: <${tag}> takes "${near}" -- did you mean "${PARAMETER_MARKER}${near}"?`
+            : `, declared on <${tag}>`),
+        value.node.loc
+      );
+    }
+    scope.children.forEach(walk);
+  };
+  page.main && walk(page.main);
+}
+
+/** one edit apart, which is what a misspelling of a parameter name is */
+function looksLike(a: string, b: string): boolean {
+  if (a === b || Math.abs(a.length - b.length) > 1) return false;
+  const [short, long] = a.length <= b.length ? [a, b] : [b, a];
+  let i = 0, j = 0, slack = 1;
+  while (i < short.length && j < long.length) {
+    if (short[i] === long[j]) { i++; j++; continue; }
+    if (--slack < 0) return false;
+    short.length === long.length ? (i++, j++) : j++;
+  }
+  return true;
 }
 
 function resolveScope(scope: Scope, page: Page, lazy: Set<Value>) {
@@ -916,7 +978,14 @@ function validated(
     key !== RT_HOST_VALUE_KEY &&
     key !== RT_DOM_VALUE_KEY
   ) {
-    if (!resolvesToKnownValue(target, key, via.length > 0)) {
+    const resolved = lookup(target, key, via.length > 0);
+    // noted as this stage walks -- which is the only walk that sees inside a
+    // callback body, whose references are resolved for the errors alone and
+    // recorded as dependencies nowhere (see collectLazyFunctions). Anything
+    // asking "does something read this" has to count those, or a value a
+    // handler is the sole user of reads as used by nobody
+    resolved?.value && page.readValues.add(resolved.value);
+    if (!resolved) {
       // Supplied by the host to the SERVER, so it exists in one half of the
       // render and not the other. Readable only from a `:server-` value,
       // whose expression never reaches the browser -- anywhere else it would

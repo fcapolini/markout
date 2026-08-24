@@ -1056,6 +1056,7 @@ function expandCustomTagUsages(page: Page): void {
     // scopes here, and that must not reach the other instances
     scope.children = [...defScope.children];
     scope.usesTemplate = slotUsage(page, usageEl, defScope, scope, loadedUsageScope);
+    scope.usesTag = tagName;
     scope.attributes = new Map();
     // only static ones are left to carry over: extractValues() already
     // turned any `${...}` attribute here into an attr$ value on

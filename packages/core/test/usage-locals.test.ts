@@ -21,8 +21,10 @@ function render(html: string) {
   stage3qualify(page);
   stage4resolve(page);
   stage7generate(page);
-  const errors = page.errors.map(e => e.msg);
-  if (errors.length) return { errors, body: () => '', root: null as any, rt: [] as string[] };
+  const errors = page.errors.filter(e => e.type === 'error').map(e => e.msg);
+  const warnings = page.errors.filter(e => e.type === 'warning').map(e => e.msg);
+  if (errors.length)
+    return { errors, warnings, body: () => '', root: null as any, rt: [] as string[] };
   const rt: string[] = [];
   const ctx = new WebContext({
     ...loadProps(page.props!),
@@ -33,7 +35,7 @@ function render(html: string) {
     const m = page.source.doc.toString().replace(/<!--.*?-->/g, '');
     return m.slice(m.indexOf('<body'), m.indexOf('<script'));
   };
-  return { errors, body, root: ctx.root.proxy as any, rt };
+  return { errors, warnings, body, root: ctx.root.proxy as any, rt };
 }
 
 const BUTTON =
@@ -244,5 +246,43 @@ describe('`::` where there is no interface', () => {
       '<html><body><:define tag="x-r:div" ::const-w=${4}>r</:define></body></html>'
     );
     expect(p.errors[0]).toContain('cannot be both a parameter and compile-time');
+  });
+});
+
+describe('a local nothing reads', () => {
+  const BTN = '<:define tag="w-b:button" ::variant=${"a"}><:slot /></:define>';
+
+  it('is a warning, not an error -- and the page still builds', () => {
+    const p = render('<html><body>' + BTN + '<w-b :orphan=${1}>hi</w-b></body></html>');
+    expect(p.errors).toStrictEqual([]);
+    expect(p.warnings).toStrictEqual(['nothing reads "orphan", declared on <w-b>']);
+    expect(p.body()).toContain('hi');
+  });
+
+  it('names the parameter when the local looks like a misspelling of one', () => {
+    // the one shape reservation cannot catch: `:` claimed the name, so it is
+    // a legal local, and only "nobody reads it" is left to notice
+    const p = render('<html><body>' + BTN + '<w-b :varient="danger">hi</w-b></body></html>');
+    expect(p.warnings).toStrictEqual([
+      'nothing reads "varient": <w-b> takes "variant" -- did you mean "::variant"?',
+    ]);
+  });
+
+  it('says nothing when a handler is the only thing using it', () => {
+    // a callback body is resolved for its errors and recorded as a
+    // dependency nowhere, so a naive "who depends on this" would call this
+    // unused. State written by a handler and displayed nowhere is state
+    const p = render(
+      '<html><body>' + BTN + '<w-b :log=${""} :on-click=${() => log = "x"}>hi</w-b></body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+    expect(p.warnings).toStrictEqual([]);
+  });
+
+  it('says nothing about a per-item alias nobody wrote', () => {
+    const p = render(
+      '<html><body :rows=${[1, 2]}>' + BTN + '<w-b :for-each=${rows}>hi</w-b></body></html>'
+    );
+    expect(p.warnings).toStrictEqual([]);
   });
 });

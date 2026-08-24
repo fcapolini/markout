@@ -363,6 +363,14 @@ export function markout(props: MarkoutProps) {
    * that fails HERE is already the consolation prize, and the one thing it
    * must not do is raise its own error page and arrive back at this function.
    */
+  function reportWarnings(page: { errors: PageError[] }, pathname: string): void {
+    page.errors.forEach(
+      e =>
+        e.type === 'warning' &&
+        logger('warn', `[markout] ${formatPageError(e, pathname)}`)
+    );
+  }
+
   async function renderErrorPage(
     pathname: string,
     req: Request,
@@ -372,10 +380,11 @@ export function markout(props: MarkoutProps) {
   ): Promise<string | undefined> {
     try {
       return await cache.use<string | undefined>(pathname, async page => {
-        if (page.source.errors.length) {
+        if (page.hasErrors) {
           page.source.errors.forEach(e => report(formatPageError(e, pathname)));
           return undefined;
         }
+        reportWarnings(page, pathname);
         const runtimeErrors = await renderPage(page, {
           origin: originOf(req),
           globals,
@@ -513,9 +522,14 @@ export function markout(props: MarkoutProps) {
       | { errors: PageError[] }
       | { runtimeErrors: RuntimeError[]; html: string };
     const served: Served = await cache.use<Served>(pathname, async page => {
-      if (page.source.errors.length) {
+      if (page.hasErrors) {
         return { errors: page.source.errors };
       }
+      // said and served: a warning is about a page that compiled, so it goes
+      // to whoever can act on it rather than into an error page nobody asked
+      // for. Logged on every render, like the runtime errors below -- the
+      // cache means that is once per compile, which is when it is news
+      reportWarnings(page, pathname);
       const runtimeErrors = await renderPage(page, {
         origin: originOf(req),
         globals,
