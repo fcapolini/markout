@@ -35,6 +35,22 @@ error rather than a quiet fall back to being reactive, and the result has to
 be a primitive, since substituting an object would give every reader a copy
 of its own.
 
+`const-` is a **modifier**, not a family: it marks an ordinary value rather
+than naming something in another world the way `:class-` names a CSS class.
+So it is no part of what the value is *called* — `:const-accent` is read as
+plain `${accent}` — and a page can take a kit's constant and make it live by
+declaring that same name plainly where it imports the kit:
+
+```html
+<head :radius=${dark ? '0' : '1rem'}>
+  <:import src="/some-kit/all.htm" />
+```
+
+The kit goes on writing `${radius}` and nothing in it changes. Every page
+that doesn't need this pays nothing, and the one that does pays for a
+binding exactly where it asked for one — which is also the answer to the
+limit above, since a `:const-` value cannot take part in runtime theming.
+
 ## Static vs. reactive
 
 Markout treats a value as either:

@@ -84,6 +84,19 @@ reactive web development. The whole language is a handful of rules:
   and a usage site passes them with it, which is what tells "this is for the
   component" from "this is mine" at a glance — see [a usage site is a call,
   and an element](docs/reference/syntax.md#a-usage-site-is-a-call-and-an-element).
+- A **modifier** is not a family. `:const-` and `:server-` mark an ordinary
+  value rather than naming something in another world, so neither is part of
+  what that value is *called*: `:const-accent` is read as plain `${accent}`.
+  Which is what lets a page take a kit's constant and make it live by
+  declaring that name plainly — the kit goes on writing `${accent}`, and
+  only the page that asked for a binding pays for one.
+- `class+=` and `class-=` — and `style+=`, `style-=` — contribute to an
+  attribute instead of replacing it, and are not `:` names for the reason
+  the rest are: `:` names what HTML has no name for, and `class` has a name.
+  What is new is the **operation**. Only those two attributes have them,
+  being the two HTML gives a *set* rather than a value; a literal is read
+  the way HTML spells that attribute, an expression carries the value
+  itself.
 - A few directives take a reserved word rather than a prefix — `:if`,
   `:else-if`, `:else` — and can, because a value has to be something an
   expression can say: `${if}` does not parse, so no page could ever have
@@ -98,10 +111,7 @@ reactive web development. The whole language is a handful of rules:
   meaning exactly what it means on a `<span>`.
 - Two intents get two spellings rather than one guessing from the shape of
   a value: `title=${v}` sets an attribute's value, `:attr-title=${v}` sets
-  whether it is there at all. Likewise `class=` replaces and `class+=` adds
-  — `class` and `style` are the two attributes HTML gives a *set* rather
-  than a value, which is the same fact that gives them a `:class-`/`:style-`
-  family and gives `href` none.
+  whether it is there at all.
 
 The full syntax is a single page: **[syntax
 reference](docs/reference/syntax.md)**. The reasoning behind each part is in
