@@ -34,6 +34,11 @@ export interface BuildProps {
   /** `src` the built pages use for the runtime; defaults to DEFAULT_RUNTIME_SRC */
   runtimeSrc?: string;
   /**
+   * Drop an installed kit's files when no page in this build mentions its
+   * root. Off by default, and opt-in on purpose -- see pruneKits().
+   */
+  pruneKits?: boolean;
+  /**
    * Installed kits. Absent means discover them from the docroot, which is
    * what the CLI wants; passing an explicit list (`[]` included) is for a
    * caller that has already scanned, or a test that wants neither.
@@ -114,6 +119,16 @@ export interface BuildResult {
    * asked for them.
    */
   classes?: string[];
+  /**
+   * Kit roots dropped by `pruneKits`, sorted. Present only when the flag was
+   * passed, and `[]` when it was passed and nothing was dropped -- so the
+   * caller can say which of the two happened.
+   *
+   * Reported rather than merely done: a build quietly shipping less than the
+   * one before it is how a missing file becomes a 404 nobody connects to a
+   * flag they set months ago.
+   */
+  prunedKits?: string[];
   /**
    * Compile errors, with the page each came from. Non-empty means the build
    * FAILED: the pages it names were not written.
@@ -242,6 +257,8 @@ export async function build(props: BuildProps): Promise<BuildResult> {
   }
 
   const restricted = !!props.pages?.length;
+  /** kit roots some built page mentioned; only filled when pruning */
+  const referenced = new Set<string>();
   const found = restricted
     ? { pages: props.pages!.map(pagePathname), assets: [] }
     : await collect(docroot, discovered.kits, resolver);
@@ -301,8 +318,17 @@ export async function build(props: BuildProps): Promise<BuildResult> {
     if (fatal.length) {
       continue;
     }
-    await write(outdir, pathname, '<!doctype html>\n' + page.source.doc.toString());
+    const text = page.source.doc.toString();
+    await write(outdir, pathname, '<!doctype html>\n' + text);
     result.pages.push(pathname);
+    // what this page MENTIONS, which is not what it imported: a page naming
+    // `/bootstrap-kit/res/logo.png` and importing nothing still needs the
+    // kit's files. Read off the rendered output for that reason
+    if (props.pruneKits) {
+      for (const kit of discovered.kits) {
+        text.includes(kit.root) && referenced.add(kit.root);
+      }
+    }
     if (props.classManifest) {
       const all = new Set(result.classes ?? []);
       page.classNames().forEach(name => all.add(name));
@@ -311,7 +337,10 @@ export async function build(props: BuildProps): Promise<BuildResult> {
   }
 
   await write(outdir, runtimeSrc, clientCode);
-  for (const pathname of found.assets) {
+  const assets = props.pruneKits
+    ? pruneKits(found.assets, discovered.kits, referenced, result, restricted)
+    : found.assets;
+  for (const pathname of assets) {
     // through the resolver, so an asset under a kit's root is copied out of
     // the package while one under the docroot is copied out of the docroot,
     // by the same line
@@ -391,6 +420,64 @@ async function collect(
     }
   }
   return { pages: found.pages.sort(), assets: found.assets.sort() };
+}
+
+/**
+ * Drops the files of an installed kit that no page in this build mentions.
+ *
+ * Off by default and opt-in, because the rule it bends is the one the whole
+ * kit design is arranged around: the server's mount table and the build's
+ * output BOTH derive from what is installed, never from what was imported,
+ * so dev and the deliverable cannot disagree about whether a kit's resource
+ * exists. See docs/design/npm-kits.md, which committed to this being a flag
+ * for exactly that reason.
+ *
+ * So the test is **reference, not import**, and that difference is the point.
+ * A page writing `<img src="/bootstrap-kit/res/logo.png">` without importing
+ * anything needs those files, and import-derived pruning is the trap the rule
+ * exists to close -- it would work in dev and 404 once built. What is read
+ * here is the rendered output of every page, which is the last thing that
+ * knows what a page actually asks for.
+ *
+ * Conservative wherever it cannot see the whole picture, and each of these is
+ * a way to be wrong quietly rather than a special case:
+ *
+ * - a page that failed to compile contributed no output, so its references
+ *   are unknown and NOTHING is pruned -- the same call `--classes-only`
+ *   makes when it would otherwise write a manifest short by a page's worth
+ * - a restricted build (`--page`) never saw the other pages, and their
+ *   references are equally unknown
+ * - a kit contributing PAGES was named by a docroot page's `allow-pages`, so
+ *   it is kept whether or not its root appears in any output
+ * - a string match, so a mention in a comment or in prose keeps the kit. Err
+ *   toward keeping: the cost of a wrong keep is two metadata files, and the
+ *   cost of a wrong drop is a 404 in the deliverable
+ *
+ * A URL a page builds at runtime is the case this cannot see, and the reason
+ * the flag belongs to the person who knows their pages do not do that.
+ */
+function pruneKits(
+  assets: string[],
+  kits: Kit[],
+  referenced: Set<string>,
+  result: BuildResult,
+  restricted: boolean
+): string[] {
+  result.prunedKits = [];
+  if (result.errors.length || restricted) {
+    return assets;
+  }
+  const pages = new Set(result.pages);
+  const drop = kits
+    .filter(kit => !referenced.has(kit.root))
+    // a kit whose own pages were built was allowed in by name
+    .filter(kit => ![...pages].some(p => p.startsWith(kit.root + '/')))
+    .map(kit => kit.root);
+  if (!drop.length) {
+    return assets;
+  }
+  result.prunedKits = [...drop].sort();
+  return assets.filter(a => !drop.some(root => a.startsWith(root + '/')));
 }
 
 async function write(outdir: string, pathname: string, text: string) {

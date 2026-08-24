@@ -83,13 +83,22 @@ async function main() {
       `write only ${CLASSES_MANIFEST_FILE} -- the same names, merged, with ` +
         'no pages, assets or runtime; the scan target for a served docroot'
     )
+    // Opt-in, and it stays opt-in: what a build writes derives from what is
+    // INSTALLED rather than from what a page imported, so that dev and the
+    // deliverable cannot disagree about whether a kit's resource exists.
+    // This bends that, on evidence read from the rendered pages, for the
+    // person who knows theirs do not build URLs at runtime.
+    .option(
+      '--prune-kits',
+      "drop an installed kit's files when no built page mentions its root"
+    )
     // negated, so the default reads as what it is: pages say what built
     // them unless a deployment would rather they did not
     .option(
       '--no-generator',
       'omit the <meta name="generator"> naming Markout and its version'
     )
-    .action(async (pathname: string | undefined, outdir: string | undefined, options: { page: string[]; origin?: string; classManifest?: boolean; classesOnly?: boolean; generator?: boolean }) => {
+    .action(async (pathname: string | undefined, outdir: string | undefined, options: { page: string[]; origin?: string; classManifest?: boolean; classesOnly?: boolean; pruneKits?: boolean; generator?: boolean }) => {
       const docroot = path.resolve(process.cwd(), pathname ?? DEFAULT_DOCROOT);
       // beside the docroot rather than inside it: `build` refuses an output
       // directory under the docroot, because the next run would compile its
@@ -122,6 +131,7 @@ async function main() {
             origin,
             classManifest: options.classManifest,
             classesOnly: options.classesOnly,
+            pruneKits: options.pruneKits,
             generator: options.generator,
           }),
           options.page.length > 0,
@@ -281,6 +291,19 @@ function report(result: BuildResult, restricted = false, classesOnly = false) {
   console.log(
     `${result.pages.length} page(s)${assets}, runtime at ${result.runtime}${manifest}`
   );
+
+  // Said rather than silently done. A build shipping less than the one
+  // before it is how a missing file becomes a 404 nobody connects to a flag
+  // set months ago -- and "pruned nothing" is worth saying too, since it is
+  // the answer to "why is this kit still in my output"
+  if (result.prunedKits) {
+    console.log(
+      result.prunedKits.length
+        ? `pruned ${result.prunedKits.length} kit(s) no page mentions: ` +
+            result.prunedKits.join(' ')
+        : 'no kits pruned: every installed one is mentioned by a built page'
+    );
+  }
 }
 
 void main();

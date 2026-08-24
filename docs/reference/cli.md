@@ -321,6 +321,32 @@ in the same attribute.
 somebody else published — ask the compiler for the names instead of guessing
 at them. Two flags, and which one you want follows from what you deploy.
 
+**Trimming installed kits.** A build materializes every *installed* kit into
+the output, whether or not any page imported it — the same rule the dev
+server mounts by, so that the two cannot disagree about whether a kit's
+resource exists. `--prune-kits` drops the files of a kit that no built page
+**mentions**:
+
+```sh
+markout build ./site ./dist --prune-kits
+```
+
+Mentions, not imports, and that difference is the whole of it: a page writing
+`<img src="/some-kit/res/logo.png">` and importing nothing still needs those
+files. What is read is the rendered output of every page, after expressions
+have run, so a root a page computed counts too. The build says what it
+dropped, and says so when it dropped nothing.
+
+It is opt-in and stays opt-in, because it can only see what a page *rendered*.
+A page that builds a kit URL in the browser — from data fetched after load,
+say — would work in dev and 404 in the deliverable. Turn it on if you know
+yours do not, and leave it off otherwise: what it saves is a directory the
+author never named, and what it risks is a missing file.
+
+Nothing is pruned when the evidence is incomplete: if any page failed to
+compile, or the build was restricted with `--page`, the pages that were not
+built might have mentioned anything, so every kit is kept.
+
 **Deploying the built output.** `--class-manifest` appends a `<template>` to
 each page naming the classes its toggles can apply:
 
