@@ -68,6 +68,19 @@ export interface CoreScopeProps {
   name?: string;
   children?: CoreScopeProps[];
   values?: { [key: string]: CoreValueProps<any> };
+  /**
+   * What this instance's usage site DECLARED rather than passed -- a name the
+   * tag takes no parameter for, or the per-item alias a `:for-each` on the
+   * tag introduces.
+   *
+   * Built on the usage-site scope rather than here (see usageSiteScope), so
+   * they are what the usage's own attributes and its slotted markup resolve
+   * to, and are reachable from nowhere in the definition. Kept out of
+   * `values` for the same reason they are kept out of it at compile time: a
+   * local of the same name would otherwise stand where the definition's own
+   * value should be.
+   */
+  usageValues?: { [key: string]: CoreValueProps<any> };
   /** set by CoreScope.clone() on a replica's own props; read during init() */
   cloned?: boolean;
   /** a replica's index within its `:for-each`, set alongside `cloned` --
@@ -207,7 +220,7 @@ export class CoreScope {
     // container only where it says so, which is what keeps `$host` from
     // reopening the isolation lookup() maintains.
     // $host and $id are not built here either -- see builtin()
-    this.relocateLoopAlias();
+    this.buildUsageValues();
     // told once the refresh it was built in has settled, so `:did-init` sees
     // a scope whose values are evaluated and whose bindings have landed
     this.ctx.arrived.add(this);
@@ -504,20 +517,23 @@ export class CoreScope {
   /**
    * Where THIS scope's own usage-site values resolve.
    *
-   * Normally just callSiteScope(): the tag was written there, so that is what
-   * its attributes see. A `:for-each` on the tag changes it, because that
-   * DECLARES a name rather than passing a value, and declares it where the
-   * instance scope is defined -- at the usage site. So in
-   * `<my-card :for-each=${rows} :title=${data.n} />` both attributes are
-   * written in one place, and the name one introduces is visible to the other.
+   * A custom tag's usage site is two things at once: a call, and an element
+   * in the caller's markup. Arguments belong to the call and are held by the
+   * instance, so `:title=${title}` goes on meaning "the title from out here"
+   * rather than resolving to itself. Everything else the site declares --
+   * a name the tag takes no parameter for, or the per-item alias a
+   * `:for-each` introduces -- belongs to the element, and lives here: a
+   * scope of its own between the call site and the instance, which the
+   * usage's other attributes and its slotted markup resolve through and the
+   * definition cannot reach.
    *
-   * Only the loop's alias joins them. `:title=${title}` must go on meaning
-   * "the title from out here" rather than resolving to itself, and the
-   * definition's own names stay invisible from the call site as always.
+   * With nothing declared there is nothing to hold, and the call site itself
+   * is the answer -- which is what it was for every usage before locals
+   * existed.
    */
   usageSiteScope(): CoreScope {
-    if (!this.replicates()) return this.callSiteScope() ?? this;
-    return (this.loopSite ??= new LoopSiteScope(this));
+    if (!this.props.usageValues) return this.callSiteScope() ?? this;
+    return (this.usageSite ??= new UsageSiteScope(this));
   }
 
   /** whether this scope binds a per-item name of its own, at either arity */
@@ -526,38 +542,64 @@ export class CoreScope {
       this.props.values?.[RT_FOR_EACH_VALUE] || this.props.values?.[RT_FOR_DATA_VALUE]
     );
   }
-  private loopSite?: CoreScope;
+  /**
+   * The usage-site scope, once something has needed one -- `undefined` until
+   * then, which is what tells a plain usage from one with names of its own.
+   *
+   * Not private: CoreContext walks it for `:server-` values, which it has to
+   * reach without building one where there is nothing to build.
+   */
+  usageSite?: CoreScope;
 
   /** the per-item name this scope's `:for-each` introduces */
   aliasName(): string {
     return (this.values[RT_FOR_AS_VALUE]?.get() as string) || FOR_DATA_DEFAULT_NAME;
   }
 
-  /** the CoreValue holding this replica's item, wherever it ended up living */
+  /**
+   * The CoreValue holding this replica's item, wherever it ended up living.
+   *
+   * The usage site first, and that order is load-bearing: a `:for-each` on a
+   * custom tag declares the alias THERE, and the instance may well have a
+   * value of the same name that the definition declared for itself.
+   * `<std-data :for-each=${urls} />` is exactly that -- `std-data` takes a
+   * `:data`, and answering with it here would hand the component its
+   * caller's loop item and leave the alias holding nothing.
+   */
   aliasValue(): CoreValue<any> | undefined {
     const alias = this.aliasName();
-    return this.values[alias] ?? this.loopSite?.values[alias];
+    return this.usageSite?.values[alias] ?? this.values[alias];
   }
 
   /**
-   * Moves a usage-site `:for-each`'s per-item value into that usage-site
-   * scope, before any child of this one is built.
+   * Builds everything the usage site DECLARED, on the usage-site scope,
+   * before any child of this one is built.
    *
-   * Left in place it would sit in the instance's own namespace, which is what
-   * the DEFINITION resolves against -- so a component whose body happened to
-   * say `${data}` would read its caller's loop item instead of its own
-   * scope's value. The name belongs to the usage site alone. A `:for-each` on
-   * an ordinary element is untouched: there the alias is not a usage-site
-   * value, and the scope's own namespace is exactly where it belongs.
+   * Built there rather than here because this scope's namespace is what the
+   * DEFINITION resolves against -- so a component whose body happened to say
+   * `${data}` would read its caller's loop item instead of its own scope's
+   * value, and a caller hanging state on the tag could shade any name the
+   * component reads.
+   *
+   * Before the children, because the caller's markup is among them: slotted
+   * content resolves back through here (callSiteScope), and would find the
+   * scope empty if it were built first.
    */
-  private relocateLoopAlias(): void {
-    if (!this.replicates()) return;
-    const alias = this.aliasName();
-    if (!this.props.values?.[alias]?.callSite) return;
-    const value = this.values[alias];
-    if (!value) return;
-    this.usageSiteScope().values[alias] = value;
-    delete this.values[alias];
+  private buildUsageValues(): void {
+    const props = this.props.usageValues;
+    if (!props) return;
+    const site = this.usageSiteScope();
+    // and the same rehydration the scope's own values get above: a
+    // `:server-` value is a `:server-` value wherever it was declared, and
+    // one built from its expression instead of from the served result would
+    // be the browser re-running what only the server could do
+    const state = this.ctx.props.state?.[site.uid];
+    for (const key in props) {
+      const valProps = props[key];
+      const frozen =
+        valProps.serverOnly && state && key in state ? { val: state[key] } : undefined;
+      site.values[key] = site.newValue(key, frozen ?? valProps, props);
+    }
   }
 
   private enclosingInstance(): CoreScope | undefined {
@@ -601,7 +643,7 @@ export class CoreScope {
     const already = this.values[key];
     if (already) return already;
     // a scope that has deliberately given one up, so it falls through to
-    // where it does mean something -- see LoopSiteScope
+    // where it does mean something -- see UsageSiteScope
     if (this.noBuiltin?.has(key)) return undefined;
     switch (key) {
       case RT_HOST_VALUE_KEY:
@@ -667,18 +709,56 @@ export class CoreScope {
     return value;
   }
 
+  /**
+   * The usage-site scope's own values, which share this scope's life without
+   * sharing its place in the tree.
+   *
+   * That scope is deliberately not one of anybody's `children` -- it has no
+   * element, no markup and no life cycle of its own -- so the three walks
+   * below would never reach it, and a local declared at a usage site would
+   * be built and then never linked or evaluated. It is reached from here
+   * instead, under this scope's own liveness rule.
+   */
+  private eachUsageValue(visit: (value: CoreValue<any>) => void): void {
+    const site = this.usageSite;
+    // the common case by far, and the reason this is a walk rather than a
+    // list: every scope in the page runs the three below, and only a usage
+    // site that declared something has anything here at all
+    if (!site) return;
+    // a stencil renders nothing and evaluates nothing per item: an expression
+    // reading the alias would compute against an item that is never set here.
+    // The same reasoning as liveKeys(), applied to this scope's other half
+    if (this.isStencil()) return;
+    // and the alias itself is never evaluated wherever it lives -- replication
+    // ASSIGNS it (see foreachCB), so asking it for a value would answer with
+    // the expression standing in for the attribute that declared it
+    const alias = this.replicates() ? this.aliasName() : undefined;
+    for (const key in site.values) {
+      key === alias || visit(site.values[key]);
+    }
+  }
+
   linkValues(recur = true) {
     this.liveKeys().forEach((key) => this.values[key].link());
+    this.eachUsageValue((value) => value.link());
     recur && this.children.forEach((scope) => scope.linkValues());
   }
 
   unlinkValues(recur = true) {
     this.cache.clear();
     this.liveKeys().forEach((key) => this.values[key].unlink());
+    this.usageSite?.cache.clear();
+    this.eachUsageValue((value) => value.unlink());
     recur && this.children.forEach((scope) => scope.unlinkValues());
   }
 
   updateValues(recur = true) {
+    this.eachUsageValue((value) => {
+      // before this scope's own, which may read them: they are the names the
+      // usage site declared, and the instance's values are what it passed
+      value.src.size && (value.dirty = true);
+      value.get();
+    });
     this.liveKeys().forEach((key) => {
       const value = this.values[key];
       // a refresh has just rebuilt the graph under here, so everything with
@@ -1211,6 +1291,10 @@ export class CoreScope {
       template: this.props.template,
       children: this.props.children,
       values: this.props.values,
+      // a replica declares what the usage site declared, once per item: its
+      // own `count`, its own per-item alias. Shared props, separate values --
+      // built by the constructor, like the instance's own
+      usageValues: this.props.usageValues,
       cloned: true,
       replicaIndex: index,
     }, this.ctx, this);
@@ -1220,14 +1304,15 @@ export class CoreScope {
 }
 
 /**
- * The resolution scope for the usage-site values of a REPLICATED custom tag:
- * the loop's alias, then the scope the tag was written in.
+ * The resolution scope for what a custom tag's usage site DECLARED: the names
+ * it holds itself, then the scope the tag was written in.
  *
  * A scope of its own rather than a rule on the instance, because the instance
  * also holds the definition's values and those must stay invisible from the
- * call site. Only the alias crosses over -- see usageSiteScope().
+ * call site -- while these must stay invisible from the definition. Nothing
+ * crosses either way; see usageSiteScope().
  */
-class LoopSiteScope extends CoreScope {
+class UsageSiteScope extends CoreScope {
   private owner?: CoreScope;
 
   constructor(owner: CoreScope) {

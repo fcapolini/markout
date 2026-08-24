@@ -48,7 +48,10 @@ export function stage3qualify(page: Page) {
 }
 
 function qualifyScope(scope: Scope) {
-  for (const [name, value] of scope.values) {
+  // `usageValues` alongside the rest: they are declared at the usage site
+  // rather than held by the instance, and an expression is qualified the same
+  // way wherever it was written
+  for (const [name, value] of [...scope.values, ...(scope.usageValues ?? [])]) {
     // A value written at a usage site does not shadow-skip.
     //
     // The rule below turns a value that reads its OWN name into a read of

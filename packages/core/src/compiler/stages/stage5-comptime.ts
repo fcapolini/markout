@@ -121,7 +121,7 @@ function rejectWrites(page: Page, constants: Map<Value, Value>) {
 function collect(page: Page): Map<Value, Value> {
   const found = new Map<Value, Value>();
   const walk = (scope: Scope) => {
-    for (const [, value] of scope.values) {
+    for (const [, value] of [...scope.values, ...(scope.usageValues ?? [])]) {
       value.comptime && found.set(value, value);
     }
     scope.children.forEach(walk);

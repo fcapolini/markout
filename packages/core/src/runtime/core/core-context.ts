@@ -268,6 +268,19 @@ export class CoreContext {
           value && visit(scope, key, value);
         }
       }
+      // and what this scope's usage site declared, which lives on a scope of
+      // its own (see CoreScope.usageSiteScope) and would otherwise be
+      // evaluated here and collected nowhere -- leaving the browser a
+      // `:server-` value with no expression and no result, which is the one
+      // shape that fails in silence
+      const site = stencil ? undefined : scope.usageSite;
+      if (site) {
+        for (const [key, valProps] of Object.entries(scope.props.usageValues!)) {
+          if (!valProps.serverOnly) continue;
+          const value = site.values[key];
+          value && visit(site, key, value);
+        }
+      }
       for (const child of scope.children) {
         (!stencil || child.cloned) && walk(child);
       }

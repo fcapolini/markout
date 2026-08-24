@@ -88,6 +88,11 @@ function resolveScope(scope: Scope, page: Page, lazy: Set<Value>) {
   for (const [name, value] of scope.values) {
     resolveValue(name, value, page, lazy);
   }
+  // what the usage site declared rather than passed: not the instance's, but
+  // still this page's, and it reads names like anything else
+  for (const [name, value] of scope.usageValues ?? []) {
+    resolveValue(name, value, page, lazy);
+  }
   for (const [name, value] of scope.textValues) {
     resolveValue(name, value, page, lazy);
   }
@@ -189,34 +194,33 @@ function resolveValue(name: string, value: Value, page: Page, lazy: Set<Value>) 
  * lives on.
  *
  * A value written at a usage site keeps the scope its ELEMENT was loaded
- * into -- spliced out of the tree, but still holding it, so its own name
- * would resolve to itself here. That scope does not exist at runtime: the
- * value lives on the instance and evaluates against the call site
- * (CoreScope.hostFor). Starting one level up is what the runtime does, and
- * what keeps the dependency this stage records true of it.
+ * into -- spliced out of the tree, but still holding what that site
+ * DECLARED. Those names are exactly what resolution should find here: they
+ * are the usage's own, the way a native element's are, and the runtime holds
+ * them on the instance's usage-site scope (CoreScope.usageSiteScope) for
+ * this stage's dependencies to stay true of.
+ *
+ * The arguments have already been taken out of that map by stage1, so a
+ * name the tag accepts is NOT found here and goes on meaning what it means
+ * at the call site -- which is what keeps `<bs-badge :variant=${variant} />`
+ * a pass-through rather than a self-reference.
  */
 function resolvesFrom(value: Value): Scope {
   const scope = value.scope;
   if (!scope.detachedUsageSite) {
     return scope;
   }
-  // Unless the usage replicates. `<my-tag :for-each=${rows} :x=${data} />`
-  // binds the per-item alias on the usage itself, and its own values have
-  // to see it -- which is what the runtime's LoopSiteScope is for. There the
-  // call site DOES carry the alias, so this scope is the right place to
-  // start after all.
-  if (scope.values.has(FOR_EACH_VALUE) || scope.values.has(FOR_DATA_VALUE)) {
-    return scope;
-  }
-  // And a usage written in someone's slot has its call site further out than
-  // its structural parent, which is inside the instance it was slotted into.
-  // The runtime evaluates it at the call site either way (callSiteScope), and
-  // for as long as every `:aka` landed flat on <body> both walks reached the
-  // same names, so the difference never showed. It shows the moment a name
+  // and it carries on outwards from here by `lexical()`, which is the same
+  // step the old code took eagerly: the structural parent, or -- for a usage
+  // written in someone's slot -- the call site further out, since the
+  // structural one is inside the instance it was slotted into. The runtime
+  // evaluates it at the call site either way (callSiteScope), and for as
+  // long as every `:aka` landed flat on <body> both walks reached the same
+  // names, so the difference never showed. It shows the moment a name
   // belongs to the instance: `<bs-modal :aka="newDeploy">` holding
-  // `<bs-input :aka="ndCommit">` accepted a bare `ndCommit` here, by walking
+  // `<bs-input :aka="ndCommit">` accepted a bare `ndCommit` by walking
   // structurally back through the modal, and failed to link out there
-  return (scope.slotted ? scope.lexical() : scope.parent) ?? scope;
+  return scope;
 }
 
 /**
@@ -585,6 +589,7 @@ function isCallbackValue(name: string, ast: Node): boolean {
 function eachValue(page: Page, visit: (name: string, value: Value) => void) {
   const walk = (scope: Scope) => {
     scope.values.forEach((value, name) => visit(name, value));
+    scope.usageValues?.forEach((value, name) => visit(name, value));
     scope.textValues.forEach((value, name) => visit(name, value));
     scope.children.forEach(walk);
   };

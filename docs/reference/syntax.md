@@ -543,6 +543,50 @@ than something to remember. It only ever changes indentation, and only inside
 an open tag: where an attribute list *wraps* is a judgment about how a
 component reads, and stays yours.
 
+### A usage site is a call, and an element
+
+`<bs-alert :variant="danger">` is two things written as one. It is a **call**,
+whose attributes are arguments; and it is an **element in your markup**, which
+can hold state of its own the way any native element can. The definition
+decides which each attribute is, and it decides by what it declares:
+
+```html
+<:define tag="bs-alert:div" :variant=${'primary'} :heading=${null}>…</:define>
+
+<bs-alert :variant="danger"     // an ARGUMENT: the tag takes a `variant`
+          :count=${0}           // a LOCAL: it does not, so this one is yours
+          :on-click=${() => count++}>${count}</bs-alert>
+```
+
+An **argument** goes to the component. It overrides the default, the
+definition's body reads it, and its own expression resolves out at the call
+site — which is what makes the pass-through idiom mean what it looks like:
+
+```html
+<bs-badge :variant=${variant} />   <!-- the `variant` from out HERE -->
+```
+
+A **local** stays where it was written. It is a value on the usage site, so
+the attributes beside it see it, the tag's slotted content sees it, and a
+handler can write to it — everything that is true of `:count` on a `<span>`.
+What it is not is the component's: a name it declares is reachable from
+nowhere inside the definition, and cannot shade one the definition reads.
+
+That division is what makes both halves safe. Neither namespace can reach
+into the other, so a component gains a parameter in a later version without
+capturing a caller's local of the same name, and a caller hangs whatever it
+likes on a tag without knowing what the component calls things inside.
+
+Two consequences worth knowing. A local is per **replica**, so
+`<my-row :for-each=${rows} :draft=${''} />` gives each row its own `draft`
+with no wrapper element to hold it. And a name is a local *because* the tag
+takes no parameter for it — so a misspelled `:varient="danger"` is a
+perfectly good local that simply nothing reads, and the alert stays primary.
+
+Everything else on a usage site is unchanged, being neither: `:if`,
+`:for-each`, `:aka` and `:slot` name no value, and `:class-`, `:style-`,
+`:attr-`, `:prop-` and `:on-` apply to the instance's own element.
+
 ### `<:logic>` — a scope with no element
 
 Everything else that declares values is markup that happens to carry them.
@@ -912,8 +956,8 @@ that needs a browser belongs in a handler.
   reactive — `:` names things HTML has no name for, rather than marking
   reactivity by itself.
 - An expression resolves where it was WRITTEN. A definition's body sees the
-  definition's scope; a usage site's attributes and slotted content see the
-  call site.
+  definition's scope; a usage site's attributes and slotted content see what
+  that site declares, and then the call site around it.
 - The compiler is responsible for qualification and dependency extraction.
 - The runtime executes the generated graph; it does not discover dependencies on
   its own.

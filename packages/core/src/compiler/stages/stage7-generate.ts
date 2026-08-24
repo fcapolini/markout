@@ -686,6 +686,9 @@ interface ScopeData {
   template?: string;
   attributes?: { [name: string]: string };
   values?: { [key: string]: ValueData };
+  /** what a custom-tag usage site DECLARED rather than passed -- built on the
+   * instance's usage-site scope, see CoreScopeProps.usageValues */
+  usageValues?: { [key: string]: ValueData };
   children?: ScopeData[];
 }
 
@@ -744,6 +747,19 @@ function generateScope(scope: Scope, forClient: boolean, exps: Expressions, dev:
   }
 
   const props: ScopeData = { id: scope.id };
+  if (scope.usageValues?.size) {
+    // what the usage site DECLARED, kept apart from what it passed: the
+    // runtime builds these on the instance's usage-site scope, so they are
+    // reachable from the caller's markup and from nowhere in the definition
+    const usageValues: { [key: string]: ValueData } = {};
+    for (const [name, value] of scope.usageValues) {
+      // no `callSite`: these are built ON that scope rather than held by the
+      // instance on its behalf, so the scope they evaluate against is simply
+      // their own
+      usageValues[toRuntimeKey(name)] = generateValueProps(value, false, forClient, exps, dev);
+    }
+    props.usageValues = usageValues;
+  }
   if (scope.name) {
     props.name = scope.name;
   }

@@ -11,6 +11,7 @@ type Carried =
   | 'usesTemplate'
   | 'attributes'
   | 'callSiteValues'
+  | 'usageValues'
   | 'slotted'
   | 'lexicalParent';
 
@@ -73,10 +74,10 @@ export class Scope {
    * been handed to the instance and it has been spliced out of the tree.
    *
    * It keeps its parent link, and its values keep pointing at it, because an
-   * expression written at a usage site resolves there. But it does not exist
-   * at runtime -- those values live on the instance and resolve against the
-   * call site -- so resolution has to start one level up, at the scope this
-   * one stood in front of. See stage4's `resolvesFrom`.
+   * expression written at a usage site resolves there -- and what is left in
+   * its own `values` is exactly what the usage DECLARED rather than passed
+   * (see `usageValues`), so a name written beside another is found here and
+   * an argument goes on meaning what it means out there.
    */
   detachedUsageSite?: boolean;
   /** plain attributes supplied at a custom-tag usage site */
@@ -89,6 +90,24 @@ export class Scope {
    * definition's own expressions must not see the call site at all.
    */
   callSiteValues?: Set<string>;
+  /**
+   * What a usage site DECLARES rather than passes: the names the tag's
+   * definition has no parameter for, plus the per-item alias a `:for-each`
+   * on the tag introduces.
+   *
+   * A usage site is two things at once -- a call, and an element in the
+   * caller's markup -- and these belong to the second. Deliberately a map of
+   * their own rather than entries in `values`: that one is the INSTANCE's
+   * namespace, and a local landing in it would take the place of whatever
+   * the definition declared under the same name. Which is not hypothetical
+   * -- the alias is forced local whatever the tag accepts, so
+   * `<std-data :for-each=${urls} />` used to leave `std-data` with no `data`
+   * of its own at all.
+   *
+   * The runtime builds these on the instance's usage-site scope, where the
+   * caller's own markup resolves and the definition cannot reach.
+   */
+  usageValues?: Map<string, Value>;
   /**
    * Set on markup slotted into a custom tag: it lives under the instance
    * (that's where its DOM ends up) but was WRITTEN at the usage site, so it
@@ -160,6 +179,7 @@ export class Scope {
     copy.usesTemplate = this.usesTemplate;
     copy.attributes = this.attributes;
     copy.callSiteValues = this.callSiteValues && new Set(this.callSiteValues);
+    copy.usageValues = this.usageValues;
     copy.slotted = this.slotted;
     copy.lexicalParent = this.lexicalParent;
     return copy;

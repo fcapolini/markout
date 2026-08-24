@@ -75,6 +75,7 @@ function prune(page: Page, root: ServerElement) {
     for (const child of [...scope.children]) scopes(child);
     if (scope.e && nodes.has(scope.e)) {
       scope.values.clear();
+      scope.usageValues?.clear();
       scope.textValues.clear();
       detach(scope);
     }
@@ -84,6 +85,8 @@ function prune(page: Page, root: ServerElement) {
   // stylesheet's text belongs to the scope that contains it
   const strip = (scope: Scope) => {
     for (const [name, value] of [...scope.values]) nodes.has(value.node) && scope.values.delete(name);
+    for (const [name, value] of [...(scope.usageValues ?? [])])
+      nodes.has(value.node) && scope.usageValues!.delete(name);
     for (const [name, value] of [...scope.textValues]) nodes.has(value.node) && scope.textValues.delete(name);
     scope.children.forEach(strip);
   };

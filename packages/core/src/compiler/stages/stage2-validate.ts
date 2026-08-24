@@ -180,8 +180,10 @@ function validateScope(page: Page, scope: Scope) {
     );
   }
 
-  // Validate all user-defined values in this scope
-  for (const [name, value] of scope.values) {
+  // Validate all user-defined values in this scope, including the ones its
+  // usage site declared rather than passed -- those are user-written too, and
+  // the only scope holding them is this one
+  for (const [name, value] of [...scope.values, ...(scope.usageValues ?? [])]) {
     validateValue(page, name, value);
   }
 

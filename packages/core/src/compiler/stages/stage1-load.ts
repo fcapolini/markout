@@ -1070,7 +1070,16 @@ function expandCustomTagUsages(page: Page): void {
       // silently resolved slotted text against its own values instead of the
       // call site's, which is the one thing slotting must never do
       scope.callSiteValues ??= new Set();
+      const declared = usageDeclarations(loadedUsageScope, defScope);
       for (const [name, value] of loadedUsageScope.values) {
+        if (declared.has(name)) {
+          // the usage's OWN name, not the instance's: kept off `scope.values`
+          // so it cannot take the place of whatever the definition declares
+          // there, and kept on the usage scope so a name written beside it
+          // resolves to it
+          (scope.usageValues ??= new Map()).set(name, value);
+          continue;
+        }
         // deliberately NOT reassigned to `scope`: `value.scope` is what both
         // stage3/stage4 and the runtime resolve an expression against, and
         // this one was written at the usage site, so it keeps resolving
@@ -1078,6 +1087,12 @@ function expandCustomTagUsages(page: Page): void {
         // see that loop's `data`
         scope.values.set(name, value);
         scope.callSiteValues.add(name);
+        // an ARGUMENT, and so not a name the usage site itself holds: taken
+        // out of the scope those expressions resolve from, so that
+        // `<bs-badge :variant=${variant} />` goes on meaning "the variant
+        // from out here" rather than resolving to itself. The instance keeps
+        // it -- that is what makes it a parameter
+        loadedUsageScope.values.delete(name);
       }
       // spliced out of the tree (the instance scope stands in for it), but
       // its parent link stays intact -- that's the chain the values above
@@ -1113,6 +1128,37 @@ function expandCustomTagUsages(page: Page): void {
     parent.insertBefore(marker, usageEl);
     parent.removeChild(usageEl);
   }
+}
+
+/**
+ * Which of a usage site's values it DECLARES rather than passes.
+ *
+ * A custom tag's usage is a call and an element in the caller's markup at
+ * once, and its attributes divide the same way. A name the definition
+ * declares is an argument: it belongs to the instance, where it overrides
+ * the default, and the definition body reads it. Any other name belongs to
+ * the usage site alone -- state hung on the tag the way it can be hung on
+ * any native element -- and the definition must never see it.
+ *
+ * Two kinds are never arguments whatever the definition declares. The
+ * per-item alias a `:for-each` on the tag introduces is a declaration by
+ * construction: `<std-data :for-each=${urls} :url=${data} />` binds `data`
+ * here, and routing it into a `std-data` that happens to declare `:data`
+ * would hand the component its caller's loop item. And the `$`-keyed
+ * families are element-facing (`class$x`, `event$click`) or the runtime's
+ * own bookkeeping (`for$each`) -- they apply to the instance's element and
+ * are never read by name, so they stay where they have always been.
+ */
+function usageDeclarations(usage: Scope, defScope: Scope): Set<string> {
+  const declared = new Set<string>();
+  if (usage.values.has(FOR_EACH_VALUE) || usage.values.has(FOR_DATA_VALUE)) {
+    declared.add((usage.values.get(FOR_AS_VALUE)?.value as string) || FOR_DATA_DEFAULT_NAME);
+  }
+  for (const name of usage.values.keys()) {
+    if (name.includes('$') || defScope.values.has(name)) continue;
+    declared.add(name);
+  }
+  return declared;
 }
 
 /**
@@ -1270,13 +1316,14 @@ function slotUsage(
     const index = slotted.parent!.children.indexOf(slotted);
     index >= 0 && slotted.parent!.children.splice(index, 1);
     slotted.parent = scope;
-    // markup slotted into a REPLICATED usage resolves against the usage
-    // scope, which is where that `:for-each` declared its per-item name --
-    // slotted content is written at the usage site just like the attributes
-    // beside it. Anything else resolves where the usage sits, as before
-    slotted.lexicalParent = loadedUsageScope?.values.has(FOR_EACH_VALUE)
-      ? loadedUsageScope
-      : scope.parent;
+    // through the usage scope, which is where the site's own DECLARATIONS
+    // are -- a `:for-each`'s per-item name, and anything else the caller hung
+    // on the tag. Slotted content is written at the usage site just like the
+    // attributes beside it, and sees what they see; resolution carries on
+    // out to where the usage sits, which is where it went directly before
+    // the site had names of its own. The runtime takes the same step, for
+    // the same reason (CoreScope.callSiteScope)
+    slotted.lexicalParent = loadedUsageScope ?? scope.parent;
     slotted.slotted = true;
     scope.children.push(slotted);
   }

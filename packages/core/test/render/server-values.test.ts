@@ -242,3 +242,33 @@ describe('$origin', () => {
     expect(page.errors.map(e => e.msg).join()).toMatch(/Invalid name/);
   });
 });
+
+describe(':server- on a name a usage site declares', () => {
+  it('travels as a result, like any other', async () => {
+    // a local lives on the usage-site scope rather than on the instance, and
+    // is collected and rehydrated from there -- otherwise it would be a value
+    // the browser has neither an expression nor a result for, which is the one
+    // shape that fails in silence
+    sequence(0.25, 0.75);
+    const page = compile(
+      '<html><body>' +
+        '<:define tag="x-box:div" :tone=${"warm"}><:slot /></:define>' +
+        '<x-box :server-r=${Math.random()}>${r}</x-box>' +
+        '</body></html>'
+    );
+    expect(await renderPage(page)).toStrictEqual([]);
+    expect(page.source.doc.toString()).toContain('0.25');
+
+    const state = readState(page);
+    expect(state).toBeDefined();
+    // keyed by the usage-site scope, which is where the value lives
+    expect(Object.values(state!)).toContainEqual({ r: 0.25 });
+
+    // and the client, handed that state, reads the server's number off the
+    // usage-site scope rather than reaching for 0.75
+    const client = rehydrate(page, state);
+    const find = (scope: CoreScope): CoreScope | undefined =>
+      scope.usageSite ?? scope.children.reduce<CoreScope | undefined>((f, c) => f ?? find(c), undefined);
+    expect(find(client.root)?.values.r.get()).toBe(0.25);
+  });
+});
