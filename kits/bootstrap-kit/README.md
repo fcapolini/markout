@@ -27,7 +27,7 @@ its path instead.
 `all.htm` pulls in everything, and that is the ordinary thing to import: a
 component no tag on the page uses is dropped before the page is served, so
 what the whole kit costs is what you actually reach for. A page importing all
-of it and using one `bs-alert` serves 5.0KB where the same page with that
+of it and using one `bs-alert` serves 4.7KB where the same page with that
 pass turned off is 19.8KB.
 
 Importing parts by hand is for when you want to be explicit rather than to
@@ -48,12 +48,11 @@ when that definition is itself dropped — narrowing that needs the usage
 graph rather than a flat set, and getting it wrong deletes markup a page
 needs.
 
-What the hand-picked page does *not* get is `theme.htm`, so it has no colour
-modes: comparing the two only measures the treeshaker if both import it. The
-pre-paint script is page-wide rather than `bs-theme-toggle`'s own, which is
-why it carries no `:when-used` — a page with no toggle and a visitor whose
-stored preference is dark still needs it, or it flashes light and stays
-light.
+Both pages there do the same things, which is what makes the comparison mean
+anything. `theme.htm` used to be the exception: importing `all.htm` brought a
+pre-paint script the hand-picked page never got, so the whole-kit page was
+278 bytes larger for doing something more. Colour modes are opt-in now, so
+that difference belongs to whichever page asks for them.
 
 Every component below is shown one after another in the [kitchen
 sink](https://markout.dev/demos/kitchen-sink), and
@@ -244,8 +243,16 @@ variables, so restyling everything is setting one value at the import site:
 | `bsFontSans` | Bootstrap's system stack |
 | `bsLinkDecoration` | `underline` |
 
-Colour modes are `theme.htm`: an inline pre-paint script so the page never
-flashes the wrong mode, and `<bs-theme-toggle />` to switch it.
+Colour modes are `theme.htm`, and they are opt-in: write `<bs-theme-auto />`
+for the behaviour on its own — the page follows a stored choice, or the
+system — or a `<bs-theme-toggle />` for the behaviour and a button to drive
+it. Either keeps the inline pre-paint script that stops the page flashing the
+wrong mode; a page that writes neither ships neither, even having imported
+the whole kit.
+
+That is `:when-used` doing what it is for. Before it, importing `all.htm`
+gave every page colour modes whether it had asked or not, which is the one
+thing in this kit that DID something merely because a file was imported.
 
 ## Components
 
@@ -307,6 +314,7 @@ passed -- see *Values are read and written* above.
 | `bs-progress-stacked` | — |
 | `bs-scrollspy` | `target` `offset` `smooth` `height` |
 | `bs-spinner` | `variant` `type` `small` `label` |
+| `bs-theme-auto` | — (declares that the page uses colour modes) |
 | `bs-theme-toggle` | `variant` `outline` `size` |
 | `bs-toast` | `title` `time` `variant` `open` `autohide` `delay` |
 | `bs-toast-container` | `placement` |

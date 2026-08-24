@@ -220,7 +220,7 @@ NOTE: fragments compose — `all.htm` imports `parts/base.htm` and
 `parts/navbar.htm` — and importing the whole kit is the ordinary thing to
 do, because a definition no tag on the page uses is dropped before the page
 is served. Importing all of `bootstrap-kit` and using one component serves
-5.0KB where the same page with that pass turned off is 19.8KB, and 134 bytes
+4.7KB where the same page with that pass turned off is 19.8KB, and 134 bytes
 more than importing the one part by hand. Markup only: a definition's scope
 was never in the props, so those are the same size either way
 

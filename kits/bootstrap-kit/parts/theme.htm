@@ -10,6 +10,16 @@
     piece of this kit that cannot be reactive, because it has to happen
     before Markout exists.
 
+    It is also the one piece that would otherwise DO something merely because
+    a file was imported. `all.htm` pulls this file in, so every page taking
+    the whole kit used to get colour modes whether it asked for them or not —
+    which is the kind of action at a distance the rest of the kit has none
+    of. So the script waits on a tag: write `<bs-theme-auto />` for the
+    behaviour on its own, or a `<bs-theme-toggle />` for the behaviour and a
+    button to drive it, and a page that writes neither ships neither. Naming
+    a tag no `<:define>` declares is a compile error, which is what stops a
+    rename from leaving this waiting on a name nothing will ever use.
+
     From there `_theme` is an ordinary value, and it starts as whatever that
     script decided rather than as a literal: a served page knows nothing
     about this visitor, so a default written here would be a guess that the
@@ -28,7 +38,7 @@
     kit would rather say so at the point of use than pretend a server has
     them.
   -->
-  <script>
+  <script :when-used="bs-theme-auto bs-theme-toggle">
     (() => {
       const stored = localStorage.getItem('bs-theme');
       const theme = stored
@@ -36,6 +46,21 @@
       document.documentElement.setAttribute('data-bs-theme', theme);
     })();
   </script>
+
+  <!---
+    "This page uses colour modes", and nothing else. The script above does
+    the work; this is how a page asks for it without also asking for a
+    button, and it has no element, so what it costs the page is one empty
+    scope — 58 bytes on the counter example.
+
+    Deliberately holding no value. It could expose the current mode for a
+    page that needs it in an expression rather than in CSS, and that is 109
+    bytes of props on every page that opts in and doesn't read it, which is
+    all of them so far. A component whose job is to say one thing should
+    cost what saying it costs; the value can be added the day something
+    wants it, and adding it then breaks nothing.
+  -->
+  <:define tag="bs-theme-auto:logic" />
 
   <:define tag="bs-theme-toggle:button"
     type="button"
