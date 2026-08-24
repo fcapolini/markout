@@ -65,9 +65,9 @@ all of them.
 **Parameters for the chrome, the slot for the content.** What a card *has* —
 a title, a footer, an image — is a parameter. What it *contains* is slotted.
 
-**`:extra` adds classes.** A `class` written at a usage site *replaces* the
+**`::extra` adds classes.** A `class` written at a usage site *replaces* the
 one a definition sets, which is the language's rule and not something this
-kit overrides. So every component takes `:extra` for the utility classes a
+kit overrides. So every component takes `::extra` for the utility classes a
 caller wants on top:
 
 ```html
@@ -78,11 +78,11 @@ caller wants on top:
 stripped at parse time. A run of `//` lines reads as a stack of fragments;
 one block says it once.
 
-**Lists are arrays.** `:items`, `:options`, `:columns`, `:rows`, `:slides`.
+**Lists are arrays.** `::items`, `::options`, `::columns`, `::rows`, `::slides`.
 The default value of each is the shape it expects — read the definition to
 see it.
 
-**Callbacks are values, not events.** `:select`, `:check` and `:link` are
+**Callbacks are values, not events.** `::select`, `::check` and `::link` are
 functions the component calls. `:on-click` and friends stay what they are in
 the language: DOM events.
 
@@ -95,8 +95,8 @@ and a plugin left holding a removed element leaves its backdrop, its popper
 and the page's scroll lock behind.
 
 **Values are read and written.** `bs-input`, `bs-select`, `bs-check`,
-`bs-range`, `bs-modal`, `bs-offcanvas` and `bs-toast` keep `:value` or
-`:open` in step with what is on screen. Name the instance and read it from
+`bs-range`, `bs-modal`, `bs-offcanvas` and `bs-toast` keep `::value` or
+`::open` in step with what is on screen. Name the instance and read it from
 anywhere:
 
 ```html
@@ -155,7 +155,7 @@ it binds the item as `data`. The kit has no use for it: every optional region
 here renders a parameter it already has a name for.
 
 Optional parts of a component are parameters, and a named slot where markup
-belongs — `bs-card`'s header is both: `:header` sets the text, and a
+belongs — `bs-card`'s header is both: `::header` sets the text, and a
 `:slot="header"` replaces it with markup. A `<:slot>` may sit inside a
 `:for-data` but not inside a `:for-each`, which is what makes that possible.
 
@@ -220,7 +220,7 @@ flashes the wrong mode, and `<bs-theme-toggle />` to switch it.
 
 ## Components
 
-Every tag also takes `:extra`. Defaults are in the definitions, which are
+Every tag also takes `::extra`. Defaults are in the definitions, which are
 commented.
 
 ### Content
@@ -293,7 +293,7 @@ Bootstrap, and each says so in its own file:
   cannot reach it by name. `$host` is the instance it was slotted *into* —
   the one place the kit needs the structural relationship rather than the
   lexical one. No id is written by anyone.
-- **`bs-pagination` says `:current`, not `:page`.** `page` is already the
+- **`bs-pagination` says `::current`, not `::page`.** `page` is already the
   name of `<html>`'s own scope, so a parameter of that name would resolve to
   the scope rather than to the number.
 - **`bs-tooltip` and `bs-popover` construct their plugin from a

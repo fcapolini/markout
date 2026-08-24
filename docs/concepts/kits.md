@@ -45,11 +45,14 @@ syntax.
 
 ## Parameters and defaults
 
-A definition's own values are its parameters, and what it declares is the
-default. A usage site overrides them the same way it would set any value:
+A definition states its interface with `::`, and what it declares is the
+default. A usage site passes one with `::` too:
 
 ```html
-<:define tag="my-card:div" class="card" ::title="Untitled">
+<:define tag="my-card:div" class="card"
+  ::title="Untitled"                    // the interface
+  :_cls=${'card ' + (title ? '' : 'untitled')}   // private to the component
+>
   <h5>${title}</h5>
 </:define>
 
@@ -57,8 +60,24 @@ default. A usage site overrides them the same way it would set any value:
 <my-card ::title=${post.name} />
 ```
 
-Plain attributes work the same way — `<my-card class="card wide" />` replaces
-the definition's `class`.
+Two things follow from the interface being stated rather than inferred. A
+plain `:` on the definition's root — `:_cls` above — is the component's own
+and no usage can set it. And the tag **reserves** what it declares, so
+`<my-card :title="Hello" />` is a compile error naming the parameter rather
+than a value of your own that silently does nothing.
+
+Which leaves `:` at a usage site free to mean what it means anywhere else:
+
+```html
+<my-card ::title="Draft" :edits=${0} :on-click=${() => edits++}>${edits}</my-card>
+```
+
+`edits` is the caller's, the component never sees it, and each replica of a
+`:for-each` gets one of its own — see [a usage site is a call, and an
+element](../reference/syntax.md#a-usage-site-is-a-call-and-an-element).
+
+Plain attributes work the same way as before — `<my-card class="card wide" />`
+replaces the definition's `class`.
 
 ## Content
 

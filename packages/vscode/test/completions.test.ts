@@ -125,14 +125,19 @@ describe('in markup rather than in an expression', () => {
   });
 
   it("offers a tag's parameters, by the names it declares", async () => {
+    // spelled the way they are passed: `::` is what makes a name the
+    // component's rather than a value of the caller's own
     const names = await offered(page('<x-card :'), '<x-card :');
-    expect(names).toContain(':title');
-    expect(names).toContain(':tone');
+    expect(names).toContain('::title');
+    expect(names).toContain('::tone');
   });
 
   it('leaves out what is not the caller\u2019s to pass', async () => {
+    // and nothing here rests on the underscore any more: the interface is
+    // what the definition marked, so a private is absent by not being in it
     const names = await offered(page('<x-card :'), '<x-card :');
     expect(names).not.toContain(':_inner');
+    expect(names).not.toContain('::_inner');
   });
 
   it('offers nothing for a tag nobody defined', async () => {

@@ -1,4 +1,4 @@
-import { visibleFrom, type Visible } from '@markout-lang/core';
+import { PARAMETER_MARKER, visibleFrom, type Visible } from '@markout-lang/core';
 import { openReader } from './diagnostics';
 import { expressionAt, IDENT_PART } from './declarations';
 import { compilePage } from './pages';
@@ -102,15 +102,14 @@ async function markupCompletions(
   if (!definition) {
     return [];
   }
-  return [...definition.values.keys()]
-    // the runtime's own bookkeeping, and the privates a definition keeps for
-    // itself -- neither is anybody's to pass in
-    .filter(name => !name.includes('$') && !name.startsWith('_'))
-    .map(name => ({
-      name: `:${name}`,
-      kind: 'value',
-      detail: definition.values.get(name)?.node.loc.source ?? undefined,
-    }));
+  // the interface the definition STATES, rather than every value on its root
+  // filtered by a naming convention: what is not marked is the component's
+  // own and cannot be passed in at all, so there is nothing here to guess
+  return [...(definition.parameters ?? [])].map(name => ({
+    name: `${PARAMETER_MARKER}${name}`,
+    kind: 'value' as const,
+    detail: definition.values.get(name)?.node.loc.source ?? undefined,
+  }));
 }
 
 /** where a tag is being written, if the cursor is inside one */

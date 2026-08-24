@@ -448,7 +448,7 @@
 &lt;/head&gt;
 
 &lt;body&gt;
-  &lt;bs-navbar :items=${[
+  &lt;bs-navbar ::items=${[
     { name: 'Services', link: '#services' },
     { name: 'Our work', link: '#work' },
     { name: 'Insights', link: '#insights' },
@@ -602,10 +602,10 @@
 <pre class="mb-0"><code data-lang="html">&lt;:define tag="bs-button:a"
 
          // parameters
-         :href=${null}
-         :variant=${null}
-         :outline=${null}
-         :size=${'md'}
+         ::href=${null}
+         ::variant=${null}
+         ::outline=${null}
+         ::size=${'md'}
 
          // private
          class="btn btn-${size}${variant ? ` btn-${variant}` : ''}"
@@ -667,13 +667,13 @@
   class="mb-3"
 
   // parameters
-  :label=${null}
-  :type=${'text'}
-  :value=${''}
-  :placeholder=${''}
-  :required=${false}
-  :check=${(v) =&gt; true}
-  :message=${'Please check this value.'}
+  ::label=${null}
+  ::type=${'text'}
+  ::value=${''}
+  ::placeholder=${''}
+  ::required=${false}
+  ::check=${(v) =&gt; true}
+  ::message=${'Please check this value.'}
 
   // private
   :_empty=${value === '' || value == null}
@@ -793,13 +793,13 @@
 <pre class="mb-0"><code data-lang="html">&lt;bs-spinner :if=${loading} /&gt;
 
 &lt;bs-alert :else-if=${error}
-          :variant="danger"&gt;
+          ::variant="danger"&gt;
   ${error}
 &lt;/bs-alert&gt;
 
 &lt;bs-table :else
-          :columns=${columns}
-          :rows=${rows} /&gt;</code></pre>
+          ::columns=${columns}
+          ::rows=${rows} /&gt;</code></pre>
             <p :slot="note"
                class="mb-0">
               The first branch whose condition holds is the one that renders.
@@ -924,13 +924,16 @@
 
             <div class="col-md-4">
               <h3 class="h5">
-                <code class="rule-code">::</code> means constant
+                <code class="rule-code">:const-</code> means constant
               </h3>
               <p class="text-body-secondary mb-0">
                 A token that never changes shouldn't cost anything to watch.
-                Doubling the prefix marks a value as fixed at compile time: it
-                is worked out once while the page is built and substituted into
-                every reader, so nothing of it reaches the browser at all.
+                This one is fixed at compile time: worked out once while the
+                page is built and substituted into every reader, so nothing of
+                it reaches the browser at all. It is read as a plain
+                <code class="rule-code">${name}</code> like any other value
+                — which is what lets the page that needs one to move declare
+                it reactively instead, with nothing in the kit changing.
               </p>
             </div>
           </div>
@@ -1018,6 +1021,20 @@
               A value is visible to every descendant, with no separate
               wiring. An expression resolves where it was written — which is
               what lets a component move without changing meaning.
+            </p>
+          </page-step>
+        </div>
+
+        <div class="col-md-6">
+          <page-step ::n="05"
+                     ::heading="A component says what it takes">
+            <p class="text-body-secondary mb-0">
+              <code class="rule-code">::</code> marks a component's interface
+              — declared on the <code class="rule-code">&lt;:define&gt;</code>,
+              passed at the usage. Everything else on that tag is a plain
+              <code class="rule-code">:</code> and stays yours: the component
+              never sees it, and a name it does take cannot be quietly
+              borrowed for something else.
             </p>
           </page-step>
         </div>

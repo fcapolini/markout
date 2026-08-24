@@ -79,6 +79,11 @@ reactive web development. The whole language is a handful of rules:
   `:for-`, `:handle-`, `:server-`, `:slot` — plus `:name=${...}` to declare a
   value, `:const-name` to declare one the compiler works out and drops, and `:aka`
   to name a scope.
+- `::name` is the one mark that is about a name rather than a value: a
+  component's **interface**. A `<:define>` declares its parameters with it
+  and a usage site passes them with it, which is what tells "this is for the
+  component" from "this is mine" at a glance — see [a usage site is a call,
+  and an element](docs/reference/syntax.md#a-usage-site-is-a-call-and-an-element).
 - A few directives take a reserved word rather than a prefix — `:if`,
   `:else-if`, `:else` — and can, because a value has to be something an
   expression can say: `${if}` does not parse, so no page could ever have
@@ -88,7 +93,9 @@ reactive web development. The whole language is a handful of rules:
   descendant with no separate wiring — no `provide`/`inject`, no `Context`.
 - An expression resolves where it was *written*. A custom tag's body sees
   the scope it was defined in; what you pass at a usage site sees yours.
-  That is what lets a component be moved without its meaning changing.
+  That is what lets a component be moved without its meaning changing — and
+  a usage site can hold state of its own, `:count=${0}` on a `<my-row>`
+  meaning exactly what it means on a `<span>`.
 - Two intents get two spellings rather than one guessing from the shape of
   a value: `title=${v}` sets an attribute's value, `:attr-title=${v}` sets
   whether it is there at all.

@@ -203,7 +203,7 @@ element needed:
 
 This works because `:for-each` *declares* a name rather than passing a
 value, and it declares it where the instance scope is defined: at the usage
-site. `:title=${data.name}` is written in that same place, so it reads that
+site. `::title=${data.name}` is written in that same place, so it reads that
 name like any other call-site expression.
 
 Markup **slotted into** the tag is written at the usage site too, so it
@@ -215,10 +215,14 @@ reads that name as well:
 </my-card>
 ```
 
-Only that one name crosses over. The definition still resolves where it was
-defined, so a component whose body says `${data}` reads its own scope's
-value rather than the caller's item — and `:title=${title}` at the usage
-site still means the *caller's* `title`, never the definition's or itself.
+The alias is one of the names a usage site holds rather than a special
+case: anything else the caller declares there — `:draft=${''}` — lives
+beside it, one per replica, and is read the same way.
+
+None of them cross into the component. The definition resolves where it was
+defined, so a body that says `${data}` reads its own scope's value rather
+than the caller's item — and `::title=${title}` at the usage site still
+means the *caller's* `title`, never the definition's or itself.
 
 ## Conditionals
 

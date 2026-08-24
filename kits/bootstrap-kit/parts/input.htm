@@ -62,7 +62,7 @@
               .filter(s => s).join(' ')}
 
     // read from outside: is there a value, and does it pass?
-    ::valid=${!_empty && check(value)}
+    :valid=${!_empty && check(value)}
   >
     <!--- plain layout: label, control, feedback -->
     <div :if=${!floating}>
@@ -139,7 +139,7 @@
     :_invalid=${_empty ? required : !check(value)}
 
     // read from outside, as bs-input's is
-    ::valid=${!_empty && check(value)}
+    :valid=${!_empty && check(value)}
   >
     <label class="form-label"
       for=${_id}

@@ -167,9 +167,13 @@ Ranked by what a markout author actually feels, not by what is easy:
    the source cannot go stale.
 
 6. **Completion in markup**: `<x-` offers the tags a page can use, `<x-card :`
-   the parameters that tag declares. Both are `customTags` again, so a kit of
-   thirty components documents itself and its README stops being something
-   anyone has to have open. Two things this needed:
+   the parameters that tag declares — spelled `::title`, which is how they
+   are passed. Both are `customTags` again, so a kit of thirty components
+   documents itself and its README stops being something anyone has to have
+   open. What it offers is the definition's `parameters`, the set its root
+   marked, rather than every value on that root minus the ones starting with
+   an underscore: a stated interface leaves nothing here to infer. Two things
+   this needed:
 
    The compiler **tree-shakes unused definitions**, which is right for a page
    and wrong for an editor: shaken, `customTags` holds only the tags already
@@ -204,13 +208,17 @@ Ranked by what a markout author actually feels, not by what is easy:
    the target matched across those compiles by *where it is declared*, since
    the objects differ per compile and the file and offset do not.
 
-   **A usage site does not read the parameter**, it declares a value of its
-   own that the definition reads. Those attributes are not references and
-   `referencesTo` is right not to return them, but they carry the name.
+   **A usage site does not read the parameter**, it passes one — an
+   attribute rather than an expression, so `referencesTo` is right not to
+   return it, and it carries the name all the same. (This was subtler when
+   the two were indistinguishable: a usage-site attribute then *declared* a
+   value the definition happened to read, and only the definition's own
+   vocabulary said which. `::` states it, and the rename still has to rewrite
+   both ends.)
 
    **A read through an instance is a third thing again**: `intro.title`
-   resolves to the value the *usage* declared, not to the parameter, so it is
-   a second target rather than another reference to the first.
+   resolves to the value the *usage* passed, not to the parameter's default,
+   so it is a second target rather than another reference to the first.
 
    Which usages belong to a definition is settled by the tag the author
    wrote — `usesTemplate` holds a stencil built per usage, not the

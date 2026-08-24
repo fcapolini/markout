@@ -362,15 +362,15 @@ becomes something closer to a declaration, with its parts grouped and
 labelled:
 
 ```html
-<div class="my-component"
+<:define tag="my-component:div"
 
      // parameters
-     :width=${100}
+     ::width=${100}
 
      // private
      :_w="${width}px"
 
->${_w}</div>
+>${_w}</:define>
 ```
 
 Commenting out a single attribute works the way it does in code — the
@@ -381,9 +381,11 @@ end of the file, which shows up as the enclosing tag never being closed
 These belong to a tag. In text content they are ordinary text; use
 `<!-- … -->` there.
 
-> The leading underscore is a convention meaning "private" — a value the
-> component uses but no caller should set. Nothing in the language treats
-> `_` specially; it reads as private to a person, not to the compiler.
+> What makes `_w` private is the missing `::`, not the underscore: only what
+> a definition marks is part of its interface, so a plain `:` on that root
+> is the component's own and no usage site can set it. The underscore says
+> so to a reader at a glance, which is worth keeping — but nothing in the
+> language treats `_` specially, and it is the compiler that enforces this.
 
 ## Text that isn't markup
 
