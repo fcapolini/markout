@@ -77,8 +77,13 @@ describe("Middleware", () => {
     // same place -- and echoing it back into a Location would make a
     // PROTOCOL-RELATIVE url: a browser reads `//subdir/` as `http://subdir/`
     // and leaves the site. Flagged by CodeQL as
-    // js/server-side-unvalidated-url-redirection, and it reproduced
-    for (const asked of ["//subdir", "///subdir", "//subdir"]) {
+    // js/server-side-unvalidated-url-redirection, and it reproduced.
+    //
+    // The Location is the RESOLVER's pathname now, not the request's, so
+    // there is nothing of the request left in it to be tricked by -- which
+    // is why `\` needs no case of its own here, though it is the same trick
+    // with the separator some browsers accept for `/`
+    for (const asked of ["//subdir", "///subdir", "////subdir"]) {
       const res = await request(app).get(asked);
       expect(res.status, asked).toBe(301);
       expect(res.headers.location, asked).toBe("/subdir/");

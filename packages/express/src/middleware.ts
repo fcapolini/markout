@@ -496,16 +496,24 @@ export function markout(props: MarkoutProps) {
       res.locals.markoutNonce = nonce;
     }
 
-    if (i < 0 && !req.path.endsWith('/') && (await isDirectory(req.path, resolver))) {
-      // the CANONICAL path, not the one asked for. `//demos` is a request for
-      // the same directory -- the resolver joins it to the same place -- and
-      // echoing it back into a Location makes a protocol-relative URL: a
-      // browser reads `//demos/` as `http://demos/` and leaves the site.
-      // Only reachable for a name that IS a directory here, so it is not an
-      // open redirect to anywhere an attacker chooses, and it is still a
-      // redirect off the origin that this server had no reason to issue
-      res.redirect(301, `/${req.path.split('/').filter(Boolean).join('/')}/`);
-      return;
+    if (i < 0 && !req.path.endsWith('/')) {
+      // The RESOLVER's pathname, never the request's. `//demos` and `/demos`
+      // name the same directory, and echoing the request back into a
+      // Location made a protocol-relative url -- a browser reads `//demos/`
+      // as `http://demos/` and leaves the site. `/\demos` is the same trick
+      // with the separator some browsers accept for `/`.
+      //
+      // Answering with what the resolver already worked out closes both, and
+      // is not a sanitizer bolted onto the request: `Resolution.pathname` is
+      // this file's ONE logical identity -- leading slash, forward slashes,
+      // no escape, expressed through the root it belongs to -- arrived at by
+      // the same normalization that decided which file to stat. There is
+      // nothing of the request left in it to be tricked by
+      const dir = await directoryPathname(req.path, resolver);
+      if (dir) {
+        res.redirect(301, `${dir}/`);
+        return;
+      }
     }
 
     const pathname = await resolvePath(req, i, resolver, msg =>
@@ -686,19 +694,26 @@ export function isPageRequest(pathname: string): boolean {
   return extnameOf(pathname) === '.html';
 }
 
-async function isDirectory(requestPath: string, resolver: Resolver): Promise<boolean> {
+async function directoryPathname(
+  requestPath: string,
+  resolver: Resolver
+): Promise<string | undefined> {
   // through the resolver like every other path question, so that this one
   // does not become the place where containment was forgotten -- it used to
   // resolve against the docroot without checking, and only Express having
   // already normalized `..` out of `req.path` kept that from mattering
   const resolved = resolver.resolve(requestPath);
   if (!resolved.ok) {
-    return false;
+    return undefined;
   }
   try {
-    return (await fs.promises.stat(resolved.filePath)).isDirectory();
+    // the resolver's own pathname rather than the caller's, which is what
+    // makes it safe to put in a Location: see the redirect above
+    return (await fs.promises.stat(resolved.filePath)).isDirectory()
+      ? resolved.pathname
+      : undefined;
   } catch {
-    return false;
+    return undefined;
   }
 }
 
