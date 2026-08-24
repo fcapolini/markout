@@ -143,7 +143,7 @@ not cost a served page a byte: a side-car map from `scope.key` to
 `file:line`, shipped only when the server is in dev mode, and read by the
 overlay and by `formatRuntimeError`.
 
-## 4. There is no testing story for the people who use it
+## 4. There is no testing story for the people who use it -- **closed 2026-08-24**
 
 This repository has ~1,250 tests. Nothing anywhere tells a reader how to test
 a `<:define>` **they** wrote, and no package exports anything for it.
@@ -159,6 +159,38 @@ before it is scheduled, and the entry stays open until it is.
 Worth more than its size: a testing story is what a reader reads as "this is
 maintained", and its absence is read as the opposite regardless of the test
 count in CI.
+
+**Closed, and the guess above was right about the size and wrong about the
+reason.** It was one export --
+[`hydrate()`](packages/core/src/render/hydrate.ts), which mounts a compiled
+page against a DOM the caller supplies -- plus
+[docs/reference/testing.md](docs/reference/testing.md) and a suite that runs
+the documented recipe through the package's public surface only, so it fails
+if the recipe stops being writable with what is exported. The suite's other
+harnesses all reach for `WebContext`, `loadProps` and the seven stages
+directly, which is exactly why 1,250 passing tests were never evidence that
+anyone outside could do this.
+
+What the work turned up, and none of it was visible from the outside:
+
+- **A page with no expressions still has props**, because the scope tree is
+  there either way. So `!page.props` does not mean "static page", it means
+  the page did not compile -- and answering that with an empty root would be
+  a test that mounts nothing, asserts nothing and passes. It throws, naming
+  the first error.
+- **The state a `:server-` value produced is carried in a `<script>`, and no
+  test DOM runs it.** happy-dom and jsdom both ignore what `document.write`
+  puts in them, so the page mounted with no state and every `:server-` value
+  fell back to re-evaluating an expression the browser never re-evaluates --
+  against a `fetch` and a host handle that are not there. `hydrate` loads
+  them from the compiled page, the way the browser gets them by running the
+  script.
+- **`globals` was designed in and then removed.** `renderPage` takes one, so
+  it looked like symmetry; the browser runtime supplies none, and a supplied
+  name may only be read from a `:server-` value in the first place. Accepting
+  them would have let a test drive a page in a way no browser can, and pass.
+  The whole point of the entry point is to be the browser's arrangement, so
+  the option that makes it convenient is the option that breaks it.
 
 ## 5. There is no changelog, and the spelling moved twice -- **closed 2026-08-24**
 

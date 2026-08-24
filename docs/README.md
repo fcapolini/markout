@@ -45,6 +45,9 @@ calls that out explicitly.
 - [Running a page](reference/cli.md) - the CLI, building ahead of time, a CSS
   build step beside it, the Express middleware for an application with its own
   routes, and the error pages both delivery modes serve.
+- [Testing a page, and a component](reference/testing.md) - compiling, mounting
+  against a DOM of your own, driving a component through its tag, and which
+  seams to fake.
 
 ## Design notes
 

@@ -52,5 +52,9 @@ export { DOM_ERRORS_ID } from './runtime/web/web-context';
 
 // server-side rendering, and the browser bundle a rendered page asks for
 export { renderPage } from './render/render';
+// mounting a compiled page against a DOM the caller supplies, which is what
+// testing a component needs and what neither of the other two entry points
+// can be borrowed for: see docs/reference/testing.md
+export { hydrate, type Hydrated } from './render/hydrate';
 export { loadProps } from './render/props';
 export { loadClientCode, runtimeSrcFor, RUNTIME_CACHE_CONTROL, RUNTIME_BUNDLE_PATH } from './render/runtime-bundle';
