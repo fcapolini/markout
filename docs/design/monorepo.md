@@ -326,6 +326,15 @@ compounding it helps nobody — but write real `exports` maps in step 2, so a
 later dual build is additive rather than a second migration. The extension is
 the consumer that will eventually push back.
 
+**Update 2026-08-24: it was not the extension.** `entities` went ESM-only in
+8.0.0, and `decodeHTML` is called synchronously while parsing, so the dynamic
+`import()` TypeScript suggests would make the parser async. Majors on that
+package are ignored in [dependabot.yml](../../.github/dependabot.yml) until
+this is decided, and nothing is broken meanwhile — the range is `^7`. What
+changed is who holds the deadline: the next dependency to go ESM-only sets
+it, and one of them will eventually be a security fix. Tracked in
+[TODO.md](../../TODO.md).
+
 **What survives into the site.** `demo/` held the `setlist`, `shoelace` and
 `webawesome` stubs beside the real material, and two homepages. Settled in
 step 6: one homepage, and every demo kept but moved under

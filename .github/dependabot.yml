@@ -30,6 +30,19 @@ updates:
     # majors arrive on their own, since they are the ones with something to
     # read: grouping them hides the one breaking change among nine harmless
     # bumps
+    ignore:
+      # entities 8 is ESM-only, and this repository is `"type": "commonjs"`
+      # with Node16 resolution -- `decodeHTML` is imported by
+      # core/src/html/server-dom.ts and called synchronously in the parser's
+      # hot path, so TypeScript's suggested dynamic `import()` would make the
+      # parser async. Merging it is the CommonJS-or-ESM migration that
+      # docs/design/monorepo.md parked, wearing a dependency bump's clothes.
+      #
+      # Ignored at MAJOR only, so 7.x patches and minors still arrive -- this
+      # is "not until that decision is made", not "stop watching this". Lift
+      # it when the decision is made either way; see TODO.md.
+      - dependency-name: entities
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /
