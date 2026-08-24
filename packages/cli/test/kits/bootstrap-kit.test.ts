@@ -676,14 +676,19 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     // that possible without forking the page: it imports the kit exactly as
     // it does when served, and only where Bootstrap comes from changes
     const demo = fs.readFileSync(path.join(SITE_ROOT, 'demos/orbit.html'), 'utf8');
+    // the ELEMENT, anchored to its own line: `<head>` appears four times in
+    // the page's prose before it appears as markup, and replacing the first
+    // one rewrote a comment while the real head went on loading Bootstrap
+    // from the CDN -- which the guard below did not catch, because something
+    // had indeed been replaced
     const offline = demo.replace(
-      '<head>',
+      /^<head>$/m,
       '<head :const-bsCssUrl="/vendor/bootstrap.css"\n' +
         '      :const-bsJsUrl="/vendor/bootstrap.js"\n' +
         '      :const-bsCssIntegrity=${null}\n' +
         '      :const-bsJsIntegrity=${null}>'
     );
-    if (offline === demo) {
+    if (offline === demo || !/^<head :const-bsCssUrl=/m.test(offline)) {
       // a silent no-op here would put the CDN back in the test run
       throw new Error('orbit.html: no bare <head> to point at the stub');
     }
@@ -1095,6 +1100,103 @@ describe('the demo application', () => {
         await page.close();
       }
     });
+
+    /**
+     * Where the sidebar ends up must not depend on how the reader got there.
+     *
+     * Scrollspy drops events under a fast scroll: it clears the section that
+     * left the band and never processes the one that entered it, so what is
+     * marked when the page stops can be a section back, or nothing at all.
+     * Measured against the real plugin, arriving at 24 positions from above
+     * and from below disagreed at 8 of them and marked nothing at 2.
+     *
+     * So the page checks once more when the scrolling stops, and says what
+     * should be marked if the plugin has not. `refresh()` was the first thing
+     * tried and does not help -- it re-observes, but the callback still
+     * decides with the state that went stale.
+     *
+     * Bootstrap's own JS is stubbed here, so nothing else marks anything and
+     * this is the settle check alone: before it, the sidebar reported nothing
+     * at every position.
+     */
+    it('reaches no network, which is what the stub is for', async () => {
+      const { page } = await open('/orbit.html');
+      try {
+        // `<head>` appears in this page's prose before it appears as markup,
+        // and pointing the wrong one at the stub left the real Bootstrap
+        // loading from the CDN through every test in this block
+        const remote = await page.evaluate(
+          `[...document.querySelectorAll('script[src], link[href]')]
+             .map(e => e.src || e.href).filter(u => !u.startsWith(location.origin))`
+        ) as string[];
+        expect(remote).toStrictEqual([]);
+        expect(await page.evaluate('typeof window.__bsCalls')).toBe('object');
+      } finally {
+        await page.close();
+      }
+    });
+
+    it('agrees with itself however the reader arrives', async () => {
+      const { page } = await open('/orbit.html');
+      try {
+        const names = await page.evaluate(
+          `[...document.querySelectorAll('#dash-side-nav .nav-link')].map(a => a.textContent.trim())`
+        ) as string[];
+        expect(names.length).toBeGreaterThan(3);
+
+        const max = await page.evaluate(
+          'document.documentElement.scrollHeight - innerHeight'
+        ) as number;
+        expect(max).toBeGreaterThan(600);
+        const stops = [0.1, 0.2, 0.3, 0.45, 0.6, 0.8].map(f => Math.round(max * f));
+
+        /**
+         * Where the sidebar settles, having WHEELED there from `from`.
+         *
+         * Wheeled rather than jumped, because a burst of scroll events is
+         * what makes the plugin drop one: a single `scrollTo` it handles.
+         */
+        const arriveAt = async (from: number, to: number) => {
+          await page.evaluate(`window.scrollTo({ top: ${from}, behavior: 'instant' })`);
+          await page.waitForTimeout(250);
+          const step = to > from ? 200 : -200;
+          for (let i = 0; i < Math.ceil(Math.abs(to - from) / 200); i++) {
+            await page.mouse.wheel(0, step);
+            await page.waitForTimeout(16);
+          }
+          await page.evaluate(`window.scrollTo({ top: ${to}, behavior: 'instant' })`);
+          // until the page has stopped moving, and past the settle check
+          await page.waitForFunction(`(() => {
+            const y = Math.round(window.scrollY);
+            const same = window.__ly === y ? (window.__ln ?? 0) + 1 : 0;
+            window.__ly = y; window.__ln = same;
+            return same > 4;
+          })()`, null, { polling: 50, timeout: 10000 });
+          await page.waitForTimeout(400);
+          return page.evaluate(`(() => {
+            const a = document.querySelector('#dash-side-nav .active');
+            return a ? a.textContent.trim() : '(none)';
+          })()`) as Promise<string>;
+        };
+
+        const down: string[] = [];
+        const up: string[] = [];
+        for (const y of stops) down.push(await arriveAt(0, y));
+        for (const y of stops) up.push(await arriveAt(max, y));
+
+        // something is always marked, which is the half that went missing
+        expect(down).not.toContain('(none)');
+        expect(up).not.toContain('(none)');
+        // and the same thing, whichever way the page was scrolled
+        expect(up).toStrictEqual(down);
+        // reading further down the page as the page goes further down
+        const order = down.map(n => names.indexOf(n));
+        expect(order).toStrictEqual([...order].sort((a, b) => a - b));
+        expect(new Set(order).size).toBeGreaterThan(1);
+      } finally {
+        await page.close();
+      }
+    }, 60000);
 
     /**
      * The one place in the demo where a control's state and a sentence about

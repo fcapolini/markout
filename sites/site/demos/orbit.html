@@ -168,12 +168,47 @@
         const win = globalThis;
         const measure = () => win.document.querySelector('.dash-section')?.offsetTop ?? 0;
         let first = measure();
-        const onScroll = () => { _atStart = win.scrollY < first; };
+        let settle = 0;
+
+        /*
+          Where the band scrollspy watches ends, read from the same
+          declaration scrollspy reads rather than repeated as a number here:
+          a bottom margin of -60% leaves the top 40% of the viewport.
+        */
+        const band = () => {
+          const spec = /(-?[\d.]+)%\s*$/.exec(win.document.body.dataset.bsRootMargin ?? '');
+          return win.scrollY + win.innerHeight * (spec ? 1 + Number(spec[1]) / 100 : 1);
+        };
+
+        /* the section that band is in: the last one to have started by then */
+        const current = () => {
+          const bottom = band();
+          let found = null;
+          for (const section of win.document.querySelectorAll('.dash-section')) {
+            if (!found || section.offsetTop <= bottom) found = section;
+          }
+          return found;
+        };
+
+        const recheck = () => {
+          const nav = win.document.querySelector('#dash-side-nav');
+          const want = current();
+          const link = want && nav?.querySelector(`a[href="#${want.id}"]`);
+          if (!link || link.classList.contains('active')) return;
+          for (const other of nav.querySelectorAll('.active')) other.classList.remove('active');
+          link.classList.add('active');
+        };
+        const onScroll = () => {
+          _atStart = win.scrollY < first;
+          win.clearTimeout(settle);
+          settle = win.setTimeout(recheck, 150);
+        };
         const onResize = () => { first = measure(); onScroll(); };
         win.addEventListener('scroll', onScroll, { passive: true });
         win.addEventListener('resize', onResize, { passive: true });
         onScroll();
         _stopWatching = () => {
+          win.clearTimeout(settle);
           win.removeEventListener('scroll', onScroll);
           win.removeEventListener('resize', onResize);
         };
