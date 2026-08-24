@@ -24,14 +24,25 @@ logical root it declares. See [npm kits](../../docs/design/npm-kits.md) —
 including the other case, a kit vendored into a docroot, which is imported by
 its path instead.
 
-`all.htm` pulls in everything. Each part imports `base.htm` itself and a file
-is only imported once per page, so importing parts by hand never leaves
-Bootstrap out:
+`all.htm` pulls in everything, and that is the ordinary thing to import: a
+component no tag on the page uses is dropped before the page is served, so
+what the whole kit costs is what you actually reach for. A page importing all
+of it and using one component serves 5.2KB, against 19.8KB with that pass
+turned off.
+
+Importing parts by hand is for when you want to be explicit rather than to
+save weight — it is worth 0.6KB on that page. Each part imports `base.htm`
+itself and a file is only imported once, so it never leaves Bootstrap out:
 
 ```html
 <:import src="/npm/@markout-lang/bootstrap-kit/parts/button.htm" />
 <:import src="/npm/@markout-lang/bootstrap-kit/parts/card.htm" />
 ```
+
+That 0.6KB is the pass being careful rather than a component sneaking
+through: a tag named inside another definition's body counts as used even
+when that definition is itself dropped, and a kit's page-level markup — the
+theme's pre-paint script — is not a definition at all.
 
 Every component below is shown one after another in the [kitchen
 sink](https://markout.dev/demos/kitchen-sink), and
