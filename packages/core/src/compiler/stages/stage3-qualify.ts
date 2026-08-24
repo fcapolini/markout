@@ -275,6 +275,14 @@ function isLocalAccess(id: Node, stack: Node[]) {
         return true;
       }
     }
+    // a catch clause binds its parameter for the whole of its body, and the
+    // parameter is a full pattern -- `catch ({ message })` binds `message`.
+    // `catch { }` binds nothing at all, and `param` is null there
+    if (parent.type === 'CatchClause' && parent.param) {
+      if (isDeclaredByPatterns(identifier.name, [parent.param as unknown as Node])) {
+        return true;
+      }
+    }
     if (parent.type === 'ForOfStatement' || parent.type === 'ForInStatement') {
       if (
         parent.left.type === 'VariableDeclaration' &&

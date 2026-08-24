@@ -233,3 +233,80 @@ describe('destructuring: a binding or a target', () => {
     expect(handler('() => { const {a: {b}} = {a: {b: n}}; return b; }')).toContain('{a:{b}}');
   });
 });
+
+describe('the locals a JavaScript scope introduces', () => {
+  // `${...}` is plain JavaScript, so every shape that binds a name has to be
+  // recognised as one -- a name the author declared and then used is not a
+  // page value and must not be qualified, and must not be reported missing.
+  // `catch (err)` was the one this missed: the parameter was recognised as a
+  // binding and never qualified, but the walk that decides whether a USE of
+  // a name refers to a local asked about functions, blocks and the three
+  // `for` shapes and never about a catch clause, so `err` in the body
+  // compiled to `Unknown reference: "err"` on JavaScript that is correct.
+  function handler(body: string): string {
+    const page = new Page(
+      parse(
+        '<html><body :n=${1} :m=${2}><button :on-click=${' + body + '}>x</button></body></html>',
+        'test.html'
+      )
+    );
+    stage1load(page);
+    stage2validate(page);
+    stage3qualify(page);
+    stage4resolve(page);
+    stage7generate(page);
+    expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+    return page.props?.exps ?? '';
+  }
+
+  it('binds a catch parameter for its body', () => {
+    const exps = handler('() => { try { n++; } catch (err) { console.log(err); } }');
+    expect(exps).toContain('catch(err)');
+    expect(exps).toContain('console.log(err)');
+    // and the page value beside it is still qualified
+    expect(exps).toContain('$.n++');
+  });
+
+  it('binds a destructured catch parameter', () => {
+    const exps = handler('() => { try { n++; } catch ({ message }) { m = message; } }');
+    expect(exps).toContain('$.m=message');
+  });
+
+  it('leaves a catch with no parameter alone', () => {
+    expect(handler('() => { try { n++; } catch { m = 0; } }')).toContain('$.m=0');
+  });
+
+  it('does not let a catch parameter shadow past its own clause', () => {
+    // `err` is a local only inside the clause that binds it; the same name
+    // outside is an ordinary reference and has to be reported as one
+    const page = new Page(
+      parse(
+        '<html><body :n=${1}><button :on-click=${() => { try { n++; } catch (err) {} return err; }}>x</button></body></html>',
+        'test.html'
+      )
+    );
+    stage1load(page);
+    stage2validate(page);
+    stage3qualify(page);
+    stage4resolve(page);
+    expect(page.errors.map(e => e.msg)).toStrictEqual(['Unknown reference: "err"']);
+  });
+
+  // the neighbouring shapes, checked here so the next one to break is caught
+  // by the suite that owns the question rather than by someone writing a page
+  it('binds a for-of and a for-in name', () => {
+    expect(handler('() => { for (const x of [n]) { m = x; } }')).toContain('for(const x of[$.n])');
+    expect(handler('() => { for (const k in {a: n}) { m = k; } }')).toContain('$.m=k');
+  });
+
+  it('binds a classic for initialiser', () => {
+    expect(handler('() => { for (let i = 0; i < n; i++) { m = i; } }')).toContain('i<$.n');
+  });
+
+  it('binds destructured parameters and declarations', () => {
+    expect(handler('() => (({ a, b }) => a + b + n)({ a: 1, b: 2 })')).toContain('a+b+$.n');
+    expect(handler('() => { const [x, ...rest] = [n, m]; return x + rest.length; }')).toContain(
+      'const [x,...rest]=[$.n,$.m]'
+    );
+  });
+});
