@@ -183,7 +183,7 @@
             </bs-button-group>
           </div>
           <p class="small text-body-secondary mt-2 mb-0">
-            <code>:rows</code> is an expression, so sorting the table is
+            <code>::rows</code> is an expression, so sorting the table is
             sorting the array — there is no second place where the order lives.
           </p>
         </section>
@@ -228,7 +228,7 @@
             </bs-alert>
           </div>
           <p class="small text-body-secondary mt-2 mb-0">
-            <code>:aka</code> names the instance, and its <code>:value</code>
+            <code>:aka</code> names the instance, and its <code>::value</code>
             is an ordinary value — which is why the sentence above needs no
             event, no binding and no state of its own.
           </p>
@@ -462,7 +462,7 @@
           </bs-modal>
 
           <bs-modal :aka="stateModal" ::title="Opened by a value" ::centered>
-            <p>This one is opened by setting <code>open</code>, and sets it
+            <p>This one is opened by setting <code>::open</code>, and sets it
               back when Bootstrap closes it — so the value never disagrees
               with the screen.</p>
             <p class="mb-0 text-body-secondary">open = ${stateModal.open}</p>
@@ -485,7 +485,7 @@
                 because a pane holds markup.
               </bs-tab-pane>
               <bs-tab-pane ::name="pane-details">
-                Set <code>:toggle</code> and the entries become tab buttons
+                Set <code>::toggle</code> and the entries become tab buttons
                 instead of links.
               </bs-tab-pane>
               <bs-tab-pane ::name="pane-history">
@@ -523,7 +523,7 @@
             </p>
           </div>
           <p class="small text-body-secondary mt-2 mb-0">
-            <code>:select</code> is a function parameter, not a DOM event: the
+            <code>::select</code> is a function parameter, not a DOM event: the
             component calls it with the page number, and the page decides
             what that means.
           </p>
