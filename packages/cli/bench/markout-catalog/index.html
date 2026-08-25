@@ -3,7 +3,13 @@
       // seed data, combined into the catalog below
       :categories=${['Audio', 'Lighting', 'Desk', 'Outdoor', 'Kitchen', 'Studio']}
       :brands=${['Northwind', 'Bellhaven', 'Kestrel', 'Marlowe', 'Orrery', 'Tundra']}
-      :models=${['Atlas', 'Beacon', 'Cirrus', 'Delta', 'Ember', 'Fathom', 'Grove', 'Halcyon', 'Iris', 'Juniper']}
+      // Model0001..Model0010, matching shared/catalog.mjs exactly. These were
+      // hand-picked names once, which left this page -- and only at 300 rows,
+      // since gen-bench-pages rewrites the list for the scaled variants --
+      // holding different data from the other four ports. The filter step
+      // searches for "Model0001", so on this page it used to match nothing and
+      // destroy all 300 rows where the others destroyed 270.
+      :models=${['Model0001', 'Model0002', 'Model0003', 'Model0004', 'Model0005', 'Model0006', 'Model0007', 'Model0008', 'Model0009', 'Model0010']}
       :finishes=${['Ash', 'Brass', 'Cobalt', 'Slate', 'Terracotta']}
       :images=${[
         'https://images.unsplash.com/photo-1567375698348-5d9d5ae99de0?auto=format&fit=crop&w=900&q=80',
@@ -80,14 +86,14 @@
           : sort === 'Rating' ? [...matches].sort((a, b) => b.rating - a.rating)
           : sort === 'Name' ? [...matches].sort((a, b) => a.name.localeCompare(b.name))
           : matches}
-        :pages=${(((sorted.length + pageSize - 1) / pageSize) | 0) || 1}
+        :pages=${Math.max(1, Math.ceil(sorted.length / pageSize))}
         :shown=${sorted.slice((page - 1) * pageSize, page * pageSize)}>
 
     <section class="board">
       <mk-stat ::label="Catalog" ::value=${catalog.length} ::hint="items generated at load"></mk-stat>
       <mk-stat ::label="Matching" ::value=${matches.length} ::hint="after filters"></mk-stat>
       <mk-stat ::label="Average price"
-               ::value=${'$' + (matches.length === 0 ? 0 : (matches.reduce((t, i) => t + i.price, 0) / matches.length) | 0)}
+               ::value=${'$' + (matches.length === 0 ? 0 : Math.round(matches.reduce((t, i) => t + i.price, 0) / matches.length))}
                ::hint="across the current filter"></mk-stat>
       <mk-stat ::label="Low stock" ::value=${matches.filter(item => item.stock < 8).length} ::hint="fewer than 8 left"></mk-stat>
     </section>

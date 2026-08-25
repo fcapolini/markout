@@ -216,8 +216,8 @@ A comparison is only worth the care taken to keep it fair, so:
 ## Results
 
 Markout 0.6.0 — `@markout-lang/core` and `@markout-lang/cli`, runtime at
-`1c29d45`. The harness stamped `+dirty` on this run because the Vue port was
-still uncommitted, not the runtime. Alpine 3.16.3, React 18.3.1, Svelte 5.56.9
+`5005533`. The harness stamped `+dirty` on this run because the bench apps
+were uncommitted, not the runtime. Alpine 3.16.3, React 18.3.1, Svelte 5.56.9
 and Vue 3.6.0-rc.5 in Vapor mode, all four via Vite 5.4.21. Apple M1 Pro, macOS
 26.5.2, Node 24.4.0, Chromium 151.0.7922.34 (Playwright). Measured 2026-08-25.
 Timings are the median of 5; weight is a single pass.
@@ -230,21 +230,21 @@ numbers that replace these.
 
 | Target | Mount all | Filter | Sort | 20× add-to-cart |
 | --- | --- | --- | --- | --- |
-| Markout @ 300 | 45.3 | 5.4 | 29.3 | 16.1 |
-| Alpine @ 300 | 95.3 | 16.0 | 33.9 | 29.4 |
-| React @ 300 | 13.1 | 3.2 | 27.7 | 16.5 |
-| Svelte @ 300 | 10.6 | 5.6 | 25.7 | 17.6 |
-| Vue @ 300 | 13.3 | 5.4 | 27.5 | 16.5 |
-| Markout @ 1,020 | 139.9 | 21.1 | 87.9 | 23.1 |
-| Alpine @ 1,020 | 278.0 | 42.8 | 114.2 | 16.0 |
-| React @ 1,020 | 37.8 | 6.9 | 103.8 | 13.6 |
-| Svelte @ 1,020 | 29.1 | 8.6 | 116.0 | 16.3 |
-| Vue @ 1,020 | 35.9 | 8.2 | 87.8 | 15.8 |
-| Markout @ 10,020 | 1280.4 | 166.1 | 1046.8 | 278.3 |
-| Alpine @ 10,020 | 2512.3 | 348.8 | 991.2 | 63.2 |
-| React @ 10,020 | 503.5 | 67.5 | 956.8 | 66.5 |
-| Svelte @ 10,020 | 261.0 | 42.1 | 787.2 | 71.3 |
-| Vue @ 10,020 | 314.5 | 37.9 | 791.6 | 70.9 |
+| Markout @ 300 | 46.6 | 5.1 | 29.2 | 15.2 |
+| Alpine @ 300 | 98.5 | 16.6 | 33.7 | 32.4 |
+| React @ 300 | 13.4 | 3.3 | 31.4 | 16.7 |
+| Svelte @ 300 | 11.2 | 5.8 | 24.7 | 16.2 |
+| Vue @ 300 | 13.6 | 5.4 | 25.7 | 16.6 |
+| Markout @ 1,020 | 141.9 | 21.0 | 90.6 | 26.5 |
+| Alpine @ 1,020 | 277.0 | 43.1 | 117.8 | 16.0 |
+| React @ 1,020 | 39.1 | 7.6 | 110.4 | 15.6 |
+| Svelte @ 1,020 | 30.0 | 8.9 | 113.3 | 16.6 |
+| Vue @ 1,020 | 35.7 | 8.5 | 96.0 | 16.1 |
+| Markout @ 10,020 | 1287.1 | 171.1 | 1051.0 | 311.5 |
+| Alpine @ 10,020 | 2597.5 | 365.3 | 1036.9 | 69.3 |
+| React @ 10,020 | 511.4 | 80.0 | 977.6 | 72.7 |
+| Svelte @ 10,020 | 276.1 | 45.5 | 823.6 | 77.4 |
+| Vue @ 10,020 | 328.6 | 40.3 | 822.2 | 73.8 |
 
 ### First content
 
@@ -255,21 +255,21 @@ is unchanged.
 
 | Target | First card (ms) | Cards without JS | FCP (ms) |
 | --- | --- | --- | --- |
-| Markout @ 300 | **13.8** | **24** | 36.0 |
-| Alpine @ 300 | 34.2 | 0 | 20.0 |
-| React @ 300 | 21.1 | 0 | 48.0 |
-| Svelte @ 300 | 18.4 | 0 | 40.0 |
-| Vue @ 300 | 23.8 | 0 | 44.0 |
-| Markout @ 1,020 | **13.1** | **24** | 36.0 |
-| Alpine @ 1,020 | 41.3 | 0 | 28.0 |
-| React @ 1,020 | 21.1 | 0 | 48.0 |
-| Svelte @ 1,020 | 22.4 | 0 | 44.0 |
-| Vue @ 1,020 | 24.5 | 0 | 44.0 |
-| Markout @ 10,020 | **20.8** | **24** | 44.0 |
-| Alpine @ 10,020 | 42.2 | 0 | 20.0 |
-| React @ 10,020 | 24.2 | 0 | 48.0 |
-| Svelte @ 10,020 | 21.7 | 0 | 44.0 |
-| Vue @ 10,020 | 24.2 | 0 | 44.0 |
+| Markout @ 300 | **14.5** | **24** | 36.0 |
+| Alpine @ 300 | 34.7 | 0 | 20.0 |
+| React @ 300 | 24.3 | 0 | 44.0 |
+| Svelte @ 300 | 20.7 | 0 | 40.0 |
+| Vue @ 300 | 22.2 | 0 | 44.0 |
+| Markout @ 1,020 | **15.1** | **24** | 36.0 |
+| Alpine @ 1,020 | 39.9 | 0 | 28.0 |
+| React @ 1,020 | 25.5 | 0 | 52.0 |
+| Svelte @ 1,020 | 22.5 | 0 | 44.0 |
+| Vue @ 1,020 | 21.8 | 0 | 44.0 |
+| Markout @ 10,020 | **21.0** | **24** | 44.0 |
+| Alpine @ 10,020 | 49.9 | 0 | 28.0 |
+| React @ 10,020 | 25.1 | 0 | 52.0 |
+| Svelte @ 10,020 | 21.8 | 0 | 44.0 |
+| Vue @ 10,020 | 26.1 | 0 | 48.0 |
 
 **Read this as a delivery comparison, not a rendering one.** Markout's page is
 rendered by its own `Server` and arrives with its first rows in the markup; the
@@ -285,19 +285,29 @@ not exist until Alpine runs.
 
 **FCP is in this table because it is misleading, and that is worth showing
 once.** It fires on the first contentful paint of *anything*, and all five
-pages have a static header. Alpine posts the best FCP here — 20ms — while
-rendering none of the catalog. That is the `x-cloak` gap scoring well on the
-metric people quote. It is also why this benchmark reports no Lighthouse
-score: the composite would be built on that number, on a stress harness, over
-a CDN. **First card** is the column with the meaning.
+pages have a static header. Alpine posts the best FCP here — 20ms at 300 rows
+— while rendering none of the catalog, and is the slowest of the five to a
+real card at every size. That is the `x-cloak` gap scoring well on the metric
+people quote. It is also why this benchmark reports no Lighthouse score: the
+composite would be built on that number, on a stress harness, over a CDN.
+**First card** is the column with the meaning.
 
 ### Server and precompiled
 
 Markout's two delivery modes are **server** — the render runs per request —
 and **precompiled** — the same render, run once at build time by `markout
 build`. Not "static", which would imply the browser does the rendering: a
-precompiled page carries the same 26 `.card` in the same ~61KB as a served
-one. Neither mode has an empty-shell moment, which is the whole point of both.
+precompiled page carries the same **24 rendered cards** in the same ~61KB as a
+served one. Load it with JavaScript disabled and it reads "Atlas Ash",
+"Northwind", "$18", three stars lit, "Page 1 of 13" — the whole first page,
+populated, because `markout build` ran the real render and serialized the
+result. Neither mode has an empty-shell moment, which is the point of both.
+
+Two further `.card` sit in `<template>` blocks in `<head>`: the un-populated
+stencils that `:for-each` clones when the visitor pages or changes page size.
+They are not rendered content, `document.querySelectorAll` does not see them,
+and the parity count excludes them — which is why the raw file contains 26
+`class="card"` and the page shows 24.
 
 What separates them is the per-request render, over 25 requests each, median,
 warm:
@@ -322,21 +332,21 @@ other column.
 
 | Target | HTML (KB) | JS (KB) | CSS (KB) | Total gzip (KB) | Heap (MB) | DOM nodes |
 | --- | --- | --- | --- | --- | --- | --- |
-| Markout @ 300 | 59.8 | 27.4 | 6.0 | **17.5** | 11.3 | 6,699 |
+| Markout @ 300 | 60.1 | 27.4 | 6.0 | **17.5** | 11.3 | 6,699 |
 | Alpine @ 300 | 9.1 | 56.8 | 6.0 | 24.4 | 22.7 | 6,696 |
 | React @ 300 | 0.4 | 147.8 | 6.0 | 49.6 | 4.4 | 6,696 |
 | Svelte @ 300 | 0.4 | 47.9 | 6.0 | 20.2 | 4.6 | 6,696 |
 | Vue @ 300 | 0.4 | 116.6 | 6.0 | 45.4 | 5.2 | 6,696 |
-| Markout @ 1,020 | 60.3 | 27.4 | 6.0 | **17.5** | 33.0 | 22,539 |
-| Alpine @ 1,020 | 9.1 | 56.8 | 6.0 | 24.4 | 70.7 | 22,536 |
+| Markout @ 1,020 | 60.4 | 27.4 | 6.0 | **17.6** | 33.0 | 22,539 |
+| Alpine @ 1,020 | 9.1 | 56.8 | 6.0 | 24.4 | 70.5 | 22,536 |
 | React @ 1,020 | 0.4 | 147.8 | 6.0 | 49.6 | 8.9 | 22,536 |
 | Svelte @ 1,020 | 0.4 | 47.9 | 6.0 | 20.2 | 10.2 | 22,536 |
 | Vue @ 1,020 | 0.4 | 116.6 | 6.0 | 45.4 | 11.5 | 22,536 |
-| Markout @ 10,020 | 63.9 | 27.4 | 6.0 | **18.4** | 297.7 | 220,539 |
+| Markout @ 10,020 | 63.9 | 27.4 | 6.0 | **18.4** | 297.8 | 220,539 |
 | Alpine @ 10,020 | 9.1 | 56.8 | 6.0 | 24.4 | 669.7 | 220,536 |
 | React @ 10,020 | 0.4 | 147.8 | 6.0 | 49.6 | 64.5 | 220,536 |
 | Svelte @ 10,020 | 0.4 | 47.9 | 6.0 | 20.2 | 79.6 | 220,536 |
-| Vue @ 10,020 | 0.4 | 116.6 | 6.0 | 45.4 | 89.7 | 220,536 |
+| Vue @ 10,020 | 0.4 | 116.6 | 6.0 | 45.4 | 89.8 | 220,536 |
 
 **Markout is the lightest thing here over the wire, at every size.** 17.5 KB
 gzipped against Svelte's 20.2, Alpine's 24.4, Vue's 45.4 and React's 49.6 —
@@ -371,19 +381,19 @@ four are identical. That is the parity contract holding.
 
 **Against Alpine, which is the comparison that matters.** Markout wins the two
 columns that dominate a real catalog page, and wins them at every size: mount
-is about 2× faster (2.10×, 1.99×, 1.96× as rows grow), filter 2.0–3.0×
+is about 2× faster (2.11×, 1.95×, 2.02× as rows grow), filter 2.0–3.3×
 faster. That gap is stable across a 33× range of row counts, which is what
 makes it a property rather than a data point. Weight cuts the same way on the
 wire and the other way in memory — see above.
 
-**Sort is a wash for all five.** 26–34ms at 300 rows and 0.8–1.0s at 10,020,
+**Sort is a wash for all five.** 25–34ms at 300 rows and 0.8–1.1s at 10,020,
 regardless of tool. It is a keyed DOM reorder, and no reactivity system can
 avoid paying for the moves.
 
 **Markout is the outlier on repeated small mutations at scale.** 20×
-add-to-cart at 10,020 rows: Markout 278.3ms against Alpine's 63.2, React's
-66.5, Vue's 70.9 and Svelte's 71.3 — 3.9× the *slowest* of the other four. It
-is not a small-page problem: at 300 rows Markout is 16.1ms, the fastest of the
+add-to-cart at 10,020 rows: Markout 311.5ms against Alpine's 69.3, React's
+72.7, Vue's 73.8 and Svelte's 77.4 — 4.0× the *slowest* of the other four. It
+is not a small-page problem: at 300 rows Markout is 15.2ms, the fastest of the
 five, and at 1,020 it is 1.7× off the best. The cost appears with scale, which
 points at per-row structure rather than per-event work. This is the structural
 cost noted in the root `TODO.md` — a card builds 16 scopes, so the page builds
@@ -391,7 +401,7 @@ cost noted in the root `TODO.md` — a card builds 16 scopes, so the page builds
 above is the same cost weighed instead of timed. It is the number to fix, and
 the number not to omit.
 
-**Against the three framework ports, Markout loses mount by 2.5–4.9×.**
+**Against the three framework ports, Markout loses mount by 2.5–4.7×.**
 Compiling `Card.svelte` and reading the output says where that goes. Svelte
 emits ten `cloneNode` calls per card — the article shell, three spec `<li>`s,
 the rating span, five stars — plus ten `template_effect`s, two component
@@ -408,9 +418,9 @@ returned 46% of mount, and making each remaining scope allocate less returned
 **Vue Vapor lands where the technology says it should, which is worth
 recording because it was a prediction.** `Why these five` argues Vapor belongs
 on Svelte's axis rather than React's, and the numbers agree: at 10,020 rows Vue
-mounts in 314.5ms against Svelte's 261.0 and React's 503.5, and it is the
-*fastest* of all five on filter at 37.9ms. Its sort at 1,020 rows (87.8ms) ties
-Markout's 87.9 and beats both React and Svelte. Compiled-no-VDOM is a tier, and
+mounts in 328.6ms against Svelte's 276.1 and React's 511.4, and it is the
+*fastest* of all five on filter at 40.3ms. Its sort at 1,020 rows (96.0ms)
+beats both React and Svelte. Compiled-no-VDOM is a tier, and
 Vue is now in it — so a reader who knows Vue can locate the other four against
 a number they recognise.
 

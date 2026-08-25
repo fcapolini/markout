@@ -166,6 +166,7 @@ interface Weight {
   nodes: number;  // rendered DOM elements, <template> hosts excluded
   templates: number; // <template> hosts, which are a strategy artifact
   census: Record<string, number>; // body elements by tag.class, for parity
+  texts: Record<string, string>;  // key rendered strings, also for parity
 }
 
 // What the page weighs, as opposed to what it costs to run. Two of these are
@@ -212,7 +213,7 @@ async function measureWeight(browser: Browser, url: string): Promise<Weight> {
       return out;
     })()`) as { url: string; kind: 'html' | 'js' | 'css'; size: number }[];
 
-    const w: Weight = { html: 0, js: 0, css: 0, gzip: 0, heap: 0, nodes: 0, templates: 0, census: {} };
+    const w: Weight = { html: 0, js: 0, css: 0, gzip: 0, heap: 0, nodes: 0, templates: 0, census: {}, texts: {} };
     for (const a of assets) {
       const body = Buffer.from(await (await fetch(a.url)).arrayBuffer());
       w[a.kind] += a.size || body.byteLength;
@@ -256,6 +257,25 @@ async function measureWeight(browser: Browser, url: string): Promise<Weight> {
       }
       return c;
     })()`) as Record<string, number>;
+
+    // Structure parity is not output parity. Markout's average-price stat once
+    // read $105 where the other four read $106 -- it truncates with `| 0`
+    // because `${...}` cannot reach Math.round -- and every tag and class
+    // matched perfectly while the page said something different. So compare
+    // what a few known elements actually SAY, not just that they exist.
+    w.texts = await page.evaluate(`(() => {
+      const t = (sel) => (document.querySelector(sel) || {}).textContent || '(absent)';
+      const out = {};
+      [...document.querySelectorAll('.stat-value')].forEach((e, i) => { out['stat' + i] = e.textContent; });
+      out.pager = (t('.pager-label') || '').trim();
+      out.hits = t('.search-hits');
+      out.cardTitle = t('.card-title');
+      out.cardBrand = t('.card-brand');
+      out.cardPrice = t('.card-price');
+      out.cardStock = t('.card-stock');
+      out.starsOn = String(document.querySelectorAll('.card .star-on').length);
+      return out;
+    })()`) as Record<string, string>;
     await client.send('HeapProfiler.collectGarbage');
     const { usedSize } = await client.send('Runtime.getHeapUsage') as { usedSize: number };
     w.heap = usedSize;
@@ -519,12 +539,21 @@ function reportParity(names: string[], weights: Record<string, Weight | undefine
       if (counts.every(([, c]) => c === (base.census[key] || 0))) continue;
       lines.push(`  @ ${size}  ${key || '(no class)'}  ${counts.map(([n, c]) => `${n}=${c}`).join('  ')}`);
     }
+    const textKeys = [...new Set(have.flatMap(([, w]) => Object.keys(w.texts)))].sort();
+    for (const key of textKeys) {
+      const vals = have.map(([n, w]) => [n, w.texts[key] ?? '(absent)'] as const);
+      if (vals.every(([, v]) => v === (base.texts[key] ?? '(absent)'))) continue;
+      lines.push(`  @ ${size}  text:${key}  ${vals.map(([n, v]) => `${n}="${v}"`).join('  ')}`);
+    }
   }
   console.log('\nDOM parity -- every port renders the same markup, so every tag+class count');
   console.log('must agree. Two differences are structural and expected: the other four');
   console.log('each need a wrapper <div> to mount into that Markout does not, and Markout');
   console.log('wraps slotted content, so <span class=tagline> holds one more <span>. A');
-  console.log('line that is NOT one of those two is the ports drifting apart:\n');
+  console.log('line that is NOT one of those two is the ports drifting apart. text: lines');
+  console.log('compare what known elements SAY, because matching structure is not matching');
+  console.log('output -- one port rendering $105 where the rest render $106 passes every');
+  console.log('tag and class check ever written:\n');
   console.log(lines.length ? lines.join('\n') : '  (identical across all ports)');
 }
 
