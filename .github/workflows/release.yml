@@ -1,0 +1,88 @@
+# Publishes what `npm run version-packages` already decided.
+#
+# Deliberately NOT automatic. The canonical Changesets setup opens a "Version
+# Packages" pull request and publishes when it merges, which is right for a
+# repository where releases are somebody's job and wrong for one where they
+# are a decision -- a merge that publishes is a merge you cannot take back.
+# This runs when a person presses the button, and it publishes whatever
+# versions are on `main` at that moment.
+#
+# What it buys over publishing from a laptop is two things:
+#
+#   - **provenance.** `npm publish --provenance` from a workflow with
+#     `id-token: write` attaches a signed statement that the tarball was
+#     built from this repository at this commit, which is the one measure
+#     here that helps consumers rather than us. It cannot be produced from a
+#     laptop at all. See TODO.md, where it was parked precisely because
+#     publishing was manual.
+#   - **the commit rather than the tree.** A local publish ships whatever is
+#     in the working directory, which is not necessarily what was tested. A
+#     fresh checkout and `npm ci` cannot ship an uncommitted file.
+#
+# It also removes the reason this was painful by hand: npm asks for a
+# one-time password per package, and four publishes back to back is a race
+# against a thirty-second window. A token is not asked twice.
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  # to push the tags `changeset publish` creates
+  contents: write
+  # to mint the provenance attestation
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # every tag, so `changeset publish` can see which releases already
+          # exist and `git push --tags` has something to compare against
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          # writes the .npmrc that NODE_AUTH_TOKEN below is read into
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm ci --no-audit --no-fund
+
+      # Refuses to publish a tree that still has changesets in it: their
+      # presence means `version-packages` has not run, so the versions on
+      # this commit are the ones already on the registry and the publish
+      # would be a silent no-op reported as a success.
+      - name: refuse to publish unversioned changes
+        run: |
+          pending=$(find .changeset -name '*.md' ! -name 'README.md' | wc -l)
+          if [ "$pending" -ne 0 ]; then
+            echo "::error::$pending changeset(s) not applied -- run 'npm run version-packages' first"
+            find .changeset -name '*.md' ! -name 'README.md'
+            exit 1
+          fi
+
+      # The same suite the Test workflow ran on this commit, run again here
+      # rather than trusted: publishing is the one step that cannot be taken
+      # back, and a green tick on a sibling workflow is a claim about a
+      # different job's checkout.
+      - run: npm test
+
+      - name: publish
+        run: npx changeset publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # how provenance is asked for through Changesets, which has no flag
+          # of its own for it -- npm reads the config, and `changeset publish`
+          # shells out to npm
+          NPM_CONFIG_PROVENANCE: true
+
+      # `changeset publish` creates the tags and does not push them, so
+      # without this the release exists on npm and not in this repository's
+      # history. Runs even when nothing was published: then there are no new
+      # tags and this is a no-op.
+      - name: push the tags it created
+        if: always()
+        run: git push --tags

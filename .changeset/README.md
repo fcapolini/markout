@@ -17,6 +17,16 @@ The flow, and it is three commands:
 ```sh
 npm run changeset          # describe what changed, and how far it moves
 npm run version-packages   # apply them: versions, ranges, CHANGELOG.md
+git push                   # the versions and changelogs, and let CI see them
+```
+
+and then **the Release workflow**, from the Actions tab: it publishes what
+those versions say, from a fresh checkout of that commit, with provenance.
+
+By hand instead — the same thing without provenance, and shipping the working
+tree rather than the commit:
+
+```sh
 npm login                  # browser, and not skippable -- see below
 npm run release            # build, then publish what moved
 git push --follow-tags     # the tags publish just made, which it does not push
@@ -36,6 +46,14 @@ about changesets:
   build has already run. `npm whoami` answers in advance.
 - **`changeset publish` creates the git tags and does not push them.** The
   release exists on npm and not in the repository's history until you do.
+  The workflow does this for you; by hand it is the third line above.
+
+npm also asks for a one-time password **per package**, so four publishes back
+to back is a race against a thirty-second window. That is the friction the
+workflow removes rather than works around: a token is not asked twice, and
+the same token is what provenance needs. See
+[.github/workflows/release.yml](../.github/workflows/release.yml), which
+explains what it buys and why it is a button rather than a merge.
 
 And one thing it does that looks like a failure and is not: a package whose
 version is already on the registry is *skipped*, with a line saying how many
