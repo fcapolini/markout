@@ -7,6 +7,12 @@
 [![Coverage](https://github.com/fcapolini/markout/actions/workflows/coverage.yml/badge.svg?branch=main&event=push)](https://github.com/fcapolini/markout/actions/workflows/coverage.yml)
 [![CodeQL](https://github.com/fcapolini/markout/actions/workflows/codeql.yml/badge.svg?branch=main&event=push)](https://github.com/fcapolini/markout/actions/workflows/codeql.yml)
 
+[Website](https://markout.dev) ·
+[Live demos](https://markout.dev/demos/) ·
+[Docs](docs/) ·
+[Benchmark](packages/cli/bench/) ·
+[VS Code extension](packages/vscode/)
+
 Markout is an HTML extension that adds **modularity**, **reactivity** and
 **isomorphism** to plain HTML. It is not an application framework.
 Framework-shaped features live in *kits*, written in Markout itself rather
