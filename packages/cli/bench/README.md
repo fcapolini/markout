@@ -172,12 +172,27 @@ table:
 ## The catalog sizes
 
 `categories × models × finishes`, where categories (6) and finishes (5) are
-fixed and only the model count grows: **300**, **1,020** and **10,020** rows.
+fixed and only the model count grows: **30**, **300**, **1,020** and **10,020**
+rows.
 
-10,020 is past what any of these tools is really for, and past what real apps
-will most likely need. It is in the set because costs that are invisible at 300
-are legible at 10,020, and because the mount/filter columns are close to linear
-in row count — so a gap that only appears at the top is a real gap, not noise.
+**30 is the size that matters most**, and it is the one this benchmark went
+without for too long. It is one model — six categories, five finishes — and it
+is roughly the size a real page of this shape is. A cost that only shows at
+10,020 is a curiosity; a cost that shows at 30 is one a visitor waits for.
+
+10,020 is the other end, past what any of these tools is really for and past
+what real apps will most likely need. It is in the set because costs invisible
+at 300 are legible at 10,020, and because the mount and filter columns are
+close to linear in row count — so a gap that only appears at the top is a real
+gap, not noise. Having both ends is what shows which costs are structural and
+which are just scale.
+
+The filter step searches for `Model0001 Ash` rather than `Model0001`, and the
+30-row size is why: a 30-row catalog has exactly one model, so the shorter term
+matches every row, the card count never changes, and the harness waits forever
+for a change that cannot come. The longer term leaves exactly **6** rows
+standing at every size — the number destroyed scales with the catalog, the
+number surviving does not, which is the shape that column wants.
 
 The id formula spaces categories by `models × finishes` rather than a
 hardcoded constant. That is load-bearing: with a fixed spacing, ids collide
@@ -218,7 +233,7 @@ A comparison is only worth the care taken to keep it fair, so:
 ## Results
 
 Markout 0.6.0 — `@markout-lang/core` and `@markout-lang/cli`, runtime at
-`56000b4`. The harness stamped `+dirty` on this run because the bench apps
+`70724ab`. The harness stamped `+dirty` on this run because the bench apps
 were uncommitted, not the runtime. Alpine 3.16.3, React 18.3.1, Svelte 5.56.9
 and Vue 3.6.0-rc.5 in Vapor mode, all four via Vite 5.4.21. Apple M1 Pro, macOS
 26.5.2, Node 24.4.0, Chromium 151.0.7922.34 (Playwright). Measured 2026-08-25.
@@ -232,24 +247,30 @@ numbers that replace these.
 
 | Target | Mount all | Filter | Sort | 20× add-to-cart |
 | --- | --- | --- | --- | --- |
-| Markout (server) @ 300 | 47.1 | 5.0 | 27.1 | 13.2 |
-| Markout (build) @ 300 | 44.6 | 5.0 | 27.2 | 13.8 |
-| Alpine @ 300 | 98.3 | 15.9 | 33.5 | 30.6 |
-| React @ 300 | 14.2 | 3.5 | 31.9 | 16.5 |
-| Svelte @ 300 | 10.9 | 5.6 | 28.2 | 16.5 |
-| Vue @ 300 | 13.0 | 5.2 | 23.3 | 16.5 |
-| Markout (server) @ 1,020 | 139.2 | 21.0 | 85.1 | 25.2 |
-| Markout (build) @ 1,020 | 144.7 | 20.5 | 88.7 | 20.6 |
-| Alpine @ 1,020 | 271.2 | 42.8 | 111.8 | 16.0 |
-| React @ 1,020 | 38.8 | 7.0 | 104.2 | 11.3 |
-| Svelte @ 1,020 | 29.4 | 8.6 | 110.6 | 16.7 |
-| Vue @ 1,020 | 35.7 | 8.1 | 90.6 | 16.2 |
-| Markout (server) @ 10,020 | 1258.1 | 163.0 | 1023.5 | 236.3 |
-| Markout (build) @ 10,020 | 1312.6 | 160.1 | 1153.5 | 269.5 |
-| Alpine @ 10,020 | 2565.0 | 370.8 | 1009.5 | 64.6 |
-| React @ 10,020 | 501.0 | 78.4 | 965.1 | 72.1 |
-| Svelte @ 10,020 | 271.8 | 44.8 | 820.9 | 74.6 |
-| Vue @ 10,020 | 316.3 | 40.8 | 817.3 | 71.4 |
+| Markout (server) @ 30 | 2.0 | 1.4 | **4.2** | **13.5** |
+| Markout (build) @ 30 | 1.7 | 1.6 | 4.3 | 14.0 |
+| Alpine @ 30 | 2.9 | 3.1 | 10.8 | 16.7 |
+| React @ 30 | 2.2 | 1.0 | 8.9 | 16.6 |
+| Svelte @ 30 | 1.3 | 5.3 | 16.7 | 16.6 |
+| Vue @ 30 | 2.0 | 8.1 | 16.7 | 16.6 |
+| Markout (server) @ 300 | 43.7 | 5.2 | 26.4 | 17.0 |
+| Markout (build) @ 300 | 44.5 | 5.4 | 27.6 | 16.0 |
+| Alpine @ 300 | 95.0 | 14.7 | 28.3 | 26.6 |
+| React @ 300 | 12.8 | 3.2 | 27.9 | 16.6 |
+| Svelte @ 300 | 10.4 | 3.4 | 29.0 | 16.5 |
+| Vue @ 300 | 13.1 | 3.4 | 23.6 | 16.6 |
+| Markout (server) @ 1,020 | 137.0 | 20.6 | 87.3 | 25.9 |
+| Markout (build) @ 1,020 | 143.8 | 20.5 | 86.6 | 23.0 |
+| Alpine @ 1,020 | 271.9 | 40.1 | 111.3 | 15.5 |
+| React @ 1,020 | 38.2 | 7.2 | 104.4 | 14.7 |
+| Svelte @ 1,020 | 28.7 | 6.6 | 111.4 | 16.7 |
+| Vue @ 1,020 | 35.1 | 6.1 | 93.9 | 14.8 |
+| Markout (server) @ 10,020 | 1260.9 | 163.8 | 1027.2 | 235.8 |
+| Markout (build) @ 10,020 | 1295.0 | 158.2 | 1125.9 | 265.4 |
+| Alpine @ 10,020 | 2525.8 | 358.7 | 1000.4 | 64.7 |
+| React @ 10,020 | 509.4 | 70.9 | 939.7 | 64.7 |
+| Svelte @ 10,020 | 265.0 | 40.0 | 794.5 | 70.4 |
+| Vue @ 10,020 | 318.5 | 36.6 | 795.5 | 66.6 |
 
 ### First content
 
@@ -260,24 +281,30 @@ is unchanged.
 
 | Target | First card (ms) | Cards without JS | FCP (ms) |
 | --- | --- | --- | --- |
-| Markout (server) @ 300 | **15.8** | **24** | 36.0 |
-| Markout (build) @ 300 | 19.6 | 0 | 40.0 |
-| Alpine @ 300 | 39.2 | 0 | 24.0 |
-| React @ 300 | 21.3 | 0 | 48.0 |
-| Svelte @ 300 | 17.7 | 0 | 40.0 |
-| Vue @ 300 | 18.7 | 0 | 40.0 |
-| Markout (server) @ 1,020 | **13.5** | **24** | 36.0 |
-| Markout (build) @ 1,020 | 20.3 | 0 | 40.0 |
-| Alpine @ 1,020 | 33.0 | 0 | 20.0 |
-| React @ 1,020 | 20.0 | 0 | 40.0 |
-| Svelte @ 1,020 | 17.9 | 0 | 40.0 |
-| Vue @ 1,020 | 19.3 | 0 | 40.0 |
-| Markout (server) @ 10,020 | **19.8** | **24** | 44.0 |
-| Markout (build) @ 10,020 | 25.3 | 0 | 44.0 |
-| Alpine @ 10,020 | 41.9 | 0 | 20.0 |
-| React @ 10,020 | 24.3 | 0 | 44.0 |
-| Svelte @ 10,020 | 20.6 | 0 | 40.0 |
-| Vue @ 10,020 | 23.3 | 0 | 44.0 |
+| Markout (server) @ 30 | **14.1** | **24** | 36.0 |
+| Markout (build) @ 30 | 19.6 | 0 | 40.0 |
+| Alpine @ 30 | 34.3 | 0 | 24.0 |
+| React @ 30 | 20.9 | 0 | 48.0 |
+| Svelte @ 30 | 15.7 | 0 | 36.0 |
+| Vue @ 30 | 19.2 | 0 | 40.0 |
+| Markout (server) @ 300 | **12.2** | **24** | 32.0 |
+| Markout (build) @ 300 | 19.3 | 0 | 40.0 |
+| Alpine @ 300 | 33.6 | 0 | 20.0 |
+| React @ 300 | 19.7 | 0 | 44.0 |
+| Svelte @ 300 | 16.4 | 0 | 36.0 |
+| Vue @ 300 | 19.0 | 0 | 40.0 |
+| Markout (server) @ 1,020 | **12.3** | **24** | 32.0 |
+| Markout (build) @ 1,020 | 19.6 | 0 | 40.0 |
+| Alpine @ 1,020 | 32.6 | 0 | 20.0 |
+| React @ 1,020 | 20.3 | 0 | 44.0 |
+| Svelte @ 1,020 | 20.1 | 0 | 40.0 |
+| Vue @ 1,020 | 20.6 | 0 | 40.0 |
+| Markout (server) @ 10,020 | **20.1** | **24** | 44.0 |
+| Markout (build) @ 10,020 | 25.6 | 0 | 44.0 |
+| Alpine @ 10,020 | 41.7 | 0 | 20.0 |
+| React @ 10,020 | 24.3 | 0 | 48.0 |
+| Svelte @ 10,020 | 20.8 | 0 | 40.0 |
+| Vue @ 10,020 | 23.2 | 0 | 44.0 |
 
 **Read this as a delivery comparison, not a rendering one**, which is why
 Markout is here twice. Served, it arrives with its rows in the markup. Built,
@@ -288,9 +315,9 @@ ceiling. Alpine is the only one with no server story of its own to reach for.
 
 **On its own terms, Markout built is competitive and Alpine is not.** Ignore
 the served row and compare the five client-rendering artifacts: first card at
-19.6 / 20.3 / 25.3ms, ahead of React at two sizes of three, a shade behind
-Svelte and Vue, and roughly twice as fast as Alpine at every size — which is
-the comparison this benchmark exists for.
+19.6 / 19.3 / 19.6 / 25.6ms, ahead of React at three sizes of four, level with
+Vue, a shade behind Svelte, and 1.6–1.8× faster than Alpine at every size —
+which is the comparison this benchmark exists for.
 
 **`Cards without JS` is the same fact with no stopwatch**: load each page with
 JavaScript disabled and count what is on it. 24 for Markout served, 0 for
@@ -344,6 +371,12 @@ for a visitor with JavaScript off.
 
 | Target | HTML (KB) | JS (KB) | CSS (KB) | Total gzip (KB) | Heap (MB) | DOM nodes |
 | --- | --- | --- | --- | --- | --- | --- |
+| Markout (server) @ 30 | 60.0 | 27.4 | 6.0 | 17.4 | 3.2 | 748 |
+| Markout (build) @ 30 | 19.5 | 27.4 | 6.0 | **15.4** | 3.2 | 748 |
+| Alpine @ 30 | 9.1 | 56.8 | 6.0 | 24.4 | 4.6 | 748 |
+| React @ 30 | 0.4 | 147.8 | 6.0 | 49.6 | 2.6 | 748 |
+| Svelte @ 30 | 0.4 | 47.9 | 6.0 | 20.2 | 2.4 | 748 |
+| Vue @ 30 | 0.4 | 116.6 | 6.0 | 45.4 | 2.6 | 748 |
 | Markout (server) @ 300 | 60.1 | 27.4 | 6.0 | 17.5 | 11.3 | 6,688 |
 | Markout (build) @ 300 | 19.6 | 27.4 | 6.0 | **15.5** | 11.3 | 6,688 |
 | Alpine @ 300 | 9.1 | 56.8 | 6.0 | 24.4 | 22.7 | 6,688 |
@@ -351,22 +384,22 @@ for a visitor with JavaScript off.
 | Svelte @ 300 | 0.4 | 47.9 | 6.0 | 20.2 | 4.6 | 6,688 |
 | Vue @ 300 | 0.4 | 116.6 | 6.0 | 45.4 | 5.2 | 6,688 |
 | Markout (server) @ 1,020 | 60.4 | 27.4 | 6.0 | 17.6 | 33.0 | 22,528 |
-| Markout (build) @ 1,020 | 19.9 | 27.4 | 6.0 | **15.5** | 33.1 | 22,528 |
-| Alpine @ 1,020 | 9.1 | 56.8 | 6.0 | 24.4 | 70.7 | 22,528 |
+| Markout (build) @ 1,020 | 19.9 | 27.4 | 6.0 | **15.5** | 33.0 | 22,528 |
+| Alpine @ 1,020 | 9.1 | 56.8 | 6.0 | 24.4 | 70.5 | 22,528 |
 | React @ 1,020 | 0.4 | 147.8 | 6.0 | 49.6 | 8.9 | 22,528 |
-| Svelte @ 1,020 | 0.4 | 47.9 | 6.0 | 20.2 | 10.0 | 22,528 |
-| Vue @ 1,020 | 0.4 | 116.6 | 6.0 | 45.4 | 11.4 | 22,528 |
+| Svelte @ 1,020 | 0.4 | 47.9 | 6.0 | 20.2 | 10.2 | 22,528 |
+| Vue @ 1,020 | 0.4 | 116.6 | 6.0 | 45.4 | 11.5 | 22,528 |
 | Markout (server) @ 10,020 | 63.9 | 27.4 | 6.0 | 18.4 | 297.7 | 220,528 |
-| Markout (build) @ 10,020 | 23.4 | 27.4 | 6.0 | **16.3** | 296.6 | 220,528 |
+| Markout (build) @ 10,020 | 23.4 | 27.4 | 6.0 | **16.3** | 296.8 | 220,528 |
 | Alpine @ 10,020 | 9.1 | 56.8 | 6.0 | 24.4 | 669.7 | 220,528 |
 | React @ 10,020 | 0.4 | 147.8 | 6.0 | 49.6 | 64.5 | 220,528 |
 | Svelte @ 10,020 | 0.4 | 47.9 | 6.0 | 20.2 | 79.6 | 220,528 |
-| Vue @ 10,020 | 0.4 | 116.6 | 6.0 | 45.4 | 89.8 | 220,528 |
+| Vue @ 10,020 | 0.4 | 116.6 | 6.0 | 45.4 | 89.7 | 220,528 |
 
 **Markout is the lightest thing here over the wire, in both modes and at every
 size.** Built, 15.5 KB gzipped; served, 17.5 KB — against Svelte's 20.2,
 Alpine's 24.4, Vue's 45.4 and React's 49.6. Neither moves much with the
-catalog: 15.5 → 16.3 and 17.5 → 18.4 across a 33× row increase.
+catalog: 15.4 → 16.3 and 17.4 → 18.4 across a 334× row increase.
 
 The HTML/JS split is where the shape shows. Served, Markout ships a 60.1 KB
 document and a 27.4 KB runtime; built, the document falls to 19.6 KB because
@@ -390,9 +423,12 @@ lists. It also scales worse than linearly against the others: 2.5× Svelte at
 
 **Alpine is heavier still, which is the one place it loses outright.** 669.7 MB
 at 10,020 rows, 2.2× Markout and 8.4× Svelte, plus 20,048 `<template>` hosts
-that exist only to anchor its `x-for` loops.
+that exist only to anchor its `x-for` loops. It is the heaviest at 30 rows too
+— 4.6 MB against Markout's 3.2 and Svelte's 2.4 — so this one is not a scale
+artefact either.
 
-**DOM node counts agree exactly** — 6,688 / 22,528 / 220,528, every row.
+**DOM node counts agree exactly** — 748 / 6,688 / 22,528 / 220,528, every
+row.
 They count what the census counts: body elements, no `<template>`, no
 `<script>`. Counting scripts used to put the two Markout modes one apart, since
 a built page carries one more, which is not rendered content and not something
@@ -402,27 +438,39 @@ a parity check should have an opinion about. That is the contract holding.
 
 **Against Alpine, which is the comparison that matters.** Markout wins the two
 columns that dominate a real catalog page, and wins them at every size: mount
-is about 2× faster (2.09×, 1.95×, 2.04× as rows grow), filter 2.0–3.2×
-faster. That gap is stable across a 33× range of row counts, which is what
-makes it a property rather than a data point. Weight cuts the same way on the
-wire and the other way in memory — see above.
+is about 2× faster from 300 rows up (2.17×, 1.98×, 2.00×), filter 2.0–2.8×
+faster at every size. That gap is stable across a 33× range of row counts,
+which is what makes it a property rather than a data point. At 30 rows the
+mount gap narrows to 1.5× — both are fast enough there that it stops
+mattering, which is worth saying rather than quoting the biggest number.
+Weight cuts the same way on the wire and the other way in memory — see above.
 
-**Sort is a wash for everyone.** 23–34ms at 300 rows and 0.8–1.2s at 10,020,
-regardless of tool. It is a keyed DOM reorder, and no reactivity system can
-avoid paying for the moves.
+**Sort is a wash for everyone above 30 rows.** 24–29ms at 300 and 0.8–1.1s at
+10,020, regardless of tool: it is a keyed DOM reorder, and no reactivity system
+avoids paying for the moves. At 30 rows it is not a wash at all — Markout sorts
+in 4.2ms against React's 8.9 and Svelte's and Vue's 16.7, which is 2–4× and the
+largest margin Markout has anywhere in this file.
 
 **Markout is the outlier on repeated small mutations at scale.** 20×
-add-to-cart at 10,020 rows: Markout 236.3ms served against Alpine's 64.6,
-React's 72.1, Vue's 71.4 and Svelte's 74.6 — 3.2× the *slowest* of the other
-four. It is not a small-page problem: at 300 rows Markout is 13.2ms, the
-fastest of all six, and at 1,020 it is 2.2× off the best. The cost appears
+add-to-cart at 10,020 rows: Markout 235.8ms served against Alpine's and
+React's 64.7, Vue's 66.6 and Svelte's 70.4 — 3.3× the *slowest* of the other
+four. It is emphatically not a small-page problem: at 30 rows Markout is the
+fastest of all six at 13.5ms, and at 300 it still is. The cost appears
 with scale, which points at per-row structure rather than per-event work. This
 is the structural cost noted in the root `TODO.md` — a card builds 16 scopes,
 so the page builds ~160,000 of them — showing up on mutation rather than on
 mount. The heap column above is the same cost weighed instead of timed. It is
 the number to fix, and the number not to omit.
 
-**Against the three framework ports, Markout loses mount by 2.5–4.7×.**
+**At 30 rows the mount gap is gone.** Markout builds the page in 1.7ms
+against Svelte's 1.3, React's 2.2 and Vue's 2.0 — level with the fastest, ahead
+of two of them. That matters more than it looks: 16 scopes per card is a
+*scale* cost, and at the size most pages of this shape actually are, it does
+not show. Everything below about mount is about what happens when a page is
+ten to three hundred times bigger than that.
+
+**Against the three framework ports, from 300 rows up, Markout loses mount by
+2.5–4.8×.**
 Compiling `Card.svelte` and reading the output says where that goes. Svelte
 emits ten `cloneNode` calls per card — the article shell, three spec `<li>`s,
 the rating span, five stars — plus ten `template_effect`s, two component
@@ -438,12 +486,13 @@ returned 46% of mount, and making each remaining scope allocate less returned
 
 **Vue Vapor lands where the technology says it should, which is worth
 recording because it was a prediction.** `Why these five` argues Vapor belongs
-on Svelte's axis rather than React's, and the numbers agree: at 10,020 rows Vue
-mounts in 316.3ms against Svelte's 271.8 and React's 501.0, and it is the
-*fastest* of the four SPA ports on filter at 40.8ms. Its sort at 1,020 rows
-(90.6ms) beats both React and Svelte. Compiled-no-VDOM is a tier, and
-Vue is now in it — so a reader who knows Vue can locate the others against
-a number they recognise.
+on Svelte's axis rather than React's, and the numbers agree: at 10,020 rows
+Vue mounts in 318.5ms against Svelte's 265.0 and React's 509.4, and it is the
+*fastest* of all six on filter at 36.6ms. Its sort at 1,020 rows (93.9ms)
+beats both React and Svelte. Its one weak spot is the opposite end: at 30 rows
+it filters in 8.1ms, the slowest of the six, where Markout takes 1.4.
+Compiled-no-VDOM is a tier, and Vue is now in it — so a reader who knows Vue
+can locate the others against a number they recognise.
 
 Its weight tells the other half: 45.4 KB gzipped, second heaviest after React,
 because Vapor changes how a component renders and not how much framework ships
@@ -470,8 +519,10 @@ Worth being explicit about, since a benchmark's silences get read as claims:
 - **Anything about correctness, ergonomics or what a mistake costs**, which is
   where the root README's Alpine comparison actually rests — and which is the
   argument that matters more than any column here.
-- **Small pages.** Nothing here says what a 30-row page costs, and that is most
-  pages.
+- **Pages that are not this shape.** A catalog is a lot of small components
+  over one dominant list. A form-heavy page, a dashboard of independent
+  widgets, a document — none of those are measured, and their costs need not
+  look like these.
 
 ## Adding a port
 

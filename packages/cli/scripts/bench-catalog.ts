@@ -6,6 +6,7 @@ import { chromium } from 'playwright';
 import { Server } from '../src/server';
 
 const PAGES = [
+  { path: 'markout-catalog/bench-30.html', label: '30 rows' },
   { path: 'markout-catalog/index.html', label: '300 rows' },
   { path: 'markout-catalog/bench-1000.html', label: '1,020 rows' },
   { path: 'markout-catalog/bench-10000.html', label: '10,020 rows' },
@@ -59,7 +60,12 @@ const MEASURE_SCRIPT = `(() => {
   const input = document.querySelector('input[type=search]');
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
   t0 = performance.now();
-  setter.call(input, 'Model0001');
+  // 'Model0001 Ash' rather than 'Model0001': at the 30-row size the catalog
+  // has exactly one model, so the shorter term matches every row, the count
+  // never changes and the wait never returns. This one leaves 6 rows standing
+  // at EVERY size, which is the constant the filter column wants -- the number
+  // destroyed scales with the catalog, the number surviving does not.
+  setter.call(input, 'Model0001 Ash');
   input.dispatchEvent(new Event('input', { bubbles: true }));
   r.filter = performance.now() - t0;
 

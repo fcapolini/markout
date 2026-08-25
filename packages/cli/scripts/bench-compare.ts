@@ -14,7 +14,7 @@ import { build } from '../src/server/build';
 import http from 'node:http';
 import fs from 'node:fs';
 
-const ROWS = [300, 1020, 10020];
+const ROWS = [30, 300, 1020, 10020];
 const REPEATS = 5; // + 1 discarded warm-up
 
 const REACT_DIR = path.resolve(__dirname, '../bench/react-catalog');
@@ -26,6 +26,16 @@ const SVELTE_PORT = 4411;
 const ALPINE_PORT = 4412;
 const VUE_PORT = 4413;
 const MARKOUT_BUILD_PORT = 4414;
+
+// One place that says which generated page is which size, since three things
+// need to agree about it: the served target, the built target, and the list of
+// pages handed to `build`.
+const PAGE_FOR_ROWS: Record<number, string> = {
+  30: 'bench-30.html',
+  300: 'index.html',
+  1020: 'bench-1000.html',
+  10020: 'bench-10000.html',
+};
 
 const MEASURE_SCRIPT = `(async () => {
   // An unstyled page lays out differently and would still produce numbers, so
@@ -69,7 +79,12 @@ const MEASURE_SCRIPT = `(async () => {
   const input = document.querySelector('input[type=search]');
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
   t0 = performance.now();
-  setter.call(input, 'Model0001');
+  // 'Model0001 Ash' rather than 'Model0001': at the 30-row size the catalog
+  // has exactly one model, so the shorter term matches every row, the count
+  // never changes and the wait never returns. This one leaves 6 rows standing
+  // at EVERY size, which is the constant the filter column wants -- the number
+  // destroyed scales with the catalog, the number surviving does not.
+  setter.call(input, 'Model0001 Ash');
   input.dispatchEvent(new Event('input', { bubbles: true }));
   await waitUntil(() => cardCount() !== targetCount);
   r.filter = performance.now() - t0;
@@ -399,11 +414,7 @@ async function buildMarkoutClientMode(): Promise<{ dir: string; stop: () => void
   // because the next run would compile its own output
   const dir = path.resolve(__dirname, '../.built-catalog');
   fs.rmSync(dir, { recursive: true, force: true });
-  const pages = [
-    '/markout-catalog/index.html',
-    '/markout-catalog/bench-1000.html',
-    '/markout-catalog/bench-10000.html',
-  ];
+  const pages = Object.values(PAGE_FOR_ROWS).map((f) => `/markout-catalog/${f}`);
   const result = await build({ docroot, outdir: dir, pages, prerender: false });
   if (result.errors.length) {
     throw new Error(`markout build failed: ${result.errors.map(e => e.msg ?? e).join('; ')}`);
@@ -475,17 +486,11 @@ async function run(server: Server) {
     // compiled artifact that resolves in the browser, like the four below it.
     {
       name: 'Markout (server)',
-      urlFor: (rows) => {
-        const file = rows === 300 ? 'index.html' : rows === 1020 ? 'bench-1000.html' : 'bench-10000.html';
-        return `http://127.0.0.1:${server.port}/markout-catalog/${file}`;
-      },
+      urlFor: (rows) => `http://127.0.0.1:${server.port}/markout-catalog/${PAGE_FOR_ROWS[rows]}`,
     },
     {
       name: 'Markout (build)',
-      urlFor: (rows) => {
-        const file = rows === 300 ? 'index.html' : rows === 1020 ? 'bench-1000.html' : 'bench-10000.html';
-        return `http://127.0.0.1:${MARKOUT_BUILD_PORT}/markout-catalog/${file}`;
-      },
+      urlFor: (rows) => `http://127.0.0.1:${MARKOUT_BUILD_PORT}/markout-catalog/${PAGE_FOR_ROWS[rows]}`,
     },
     // Alpine second, right after Markout: it is the tool this audience is
     // actually choosing between, so it belongs next to the row it is read

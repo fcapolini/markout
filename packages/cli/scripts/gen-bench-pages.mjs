@@ -10,7 +10,11 @@ const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../bench
 const src = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
 
 // categories.length (6) * finishes.length (5) = 30 rows per model
-const variants = { 'bench-1000.html': 34, 'bench-10000.html': 334 };
+// 30 rows is one model: 6 categories x 1 model x 5 finishes. It is in the set
+// because it is the size a real page of this shape usually is, and every cost
+// here that matters scales -- a gap visible only at 10,020 is a curiosity,
+// while one visible at 30 is what a visitor actually waits for.
+const variants = { 'bench-30.html': 1, 'bench-1000.html': 34, 'bench-10000.html': 334 };
 
 for (const [file, modelCount] of Object.entries(variants)) {
   const rows = modelCount * 6 * FINISHES.length;
