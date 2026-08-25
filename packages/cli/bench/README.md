@@ -246,6 +246,78 @@ numbers that replace these.
 | Svelte @ 10,020 | 261.0 | 42.1 | 787.2 | 71.3 |
 | Vue @ 10,020 | 314.5 | 37.9 | 791.6 | 70.9 |
 
+### First content
+
+When content appears, as opposed to how fast it updates once it is there.
+Unsplash is stubbed with a 1×1 PNG so this measures the tool rather than a CDN;
+the CSS sizes every card image with `aspect-ratio: 1.4; width: 100%`, so layout
+is unchanged.
+
+| Target | First card (ms) | Cards without JS | FCP (ms) |
+| --- | --- | --- | --- |
+| Markout @ 300 | **13.8** | **24** | 36.0 |
+| Alpine @ 300 | 34.2 | 0 | 20.0 |
+| React @ 300 | 21.1 | 0 | 48.0 |
+| Svelte @ 300 | 18.4 | 0 | 40.0 |
+| Vue @ 300 | 23.8 | 0 | 44.0 |
+| Markout @ 1,020 | **13.1** | **24** | 36.0 |
+| Alpine @ 1,020 | 41.3 | 0 | 28.0 |
+| React @ 1,020 | 21.1 | 0 | 48.0 |
+| Svelte @ 1,020 | 22.4 | 0 | 44.0 |
+| Vue @ 1,020 | 24.5 | 0 | 44.0 |
+| Markout @ 10,020 | **20.8** | **24** | 44.0 |
+| Alpine @ 10,020 | 42.2 | 0 | 20.0 |
+| React @ 10,020 | 24.2 | 0 | 48.0 |
+| Svelte @ 10,020 | 21.7 | 0 | 44.0 |
+| Vue @ 10,020 | 24.2 | 0 | 44.0 |
+
+**Read this as a delivery comparison, not a rendering one.** Markout's page is
+rendered by its own `Server` and arrives with its first rows in the markup; the
+other four serve an empty shell and build everything once their bundle runs.
+React and Vue *can* render on the server and these ports do not — that is each
+tool's default setup, not its ceiling. Alpine is the only one of the five with
+no server story of its own to reach for.
+
+**`Cards without JS` is the same fact with no stopwatch**: load each page with
+JavaScript disabled and count what is on it. 24 against 0, 0, 0, 0. A
+`<template>` is inert, so Alpine's markup correctly counts zero — its rows do
+not exist until Alpine runs.
+
+**FCP is in this table because it is misleading, and that is worth showing
+once.** It fires on the first contentful paint of *anything*, and all five
+pages have a static header. Alpine posts the best FCP here — 20ms — while
+rendering none of the catalog. That is the `x-cloak` gap scoring well on the
+metric people quote. It is also why this benchmark reports no Lighthouse
+score: the composite would be built on that number, on a stress harness, over
+a CDN. **First card** is the column with the meaning.
+
+### Server and precompiled
+
+Markout's two delivery modes are **server** — the render runs per request —
+and **precompiled** — the same render, run once at build time by `markout
+build`. Not "static", which would imply the browser does the rendering: a
+precompiled page carries the same 26 `.card` in the same ~61KB as a served
+one. Neither mode has an empty-shell moment, which is the whole point of both.
+
+What separates them is the per-request render, over 25 requests each, median,
+warm:
+
+| Rows | Server | Precompiled | Cost of the render |
+| --- | --- | --- | --- |
+| 300 | 5.30ms | 0.54ms | 4.8ms |
+| 1,020 | 5.59ms | 0.43ms | 5.2ms |
+| 10,020 | 11.27ms | 0.54ms | 10.7ms |
+
+That is the honest answer to "what does putting Node in the request path
+cost": about 5ms on this page, about 11ms at a catalog size nobody ships. It
+buys `:server-` values and per-request data, which this app does not use.
+
+It also means **every Markout number in the tables above is the conservative
+one**. The comparison runs in server mode, so its first-card column carries
+~5ms of render that a precompiled deployment would not pay. The two modes are
+not separate rows in those tables because they would be identical in every
+other column.
+
 ### Weight
 
 | Target | HTML (KB) | JS (KB) | CSS (KB) | Total gzip (KB) | Heap (MB) | DOM nodes |

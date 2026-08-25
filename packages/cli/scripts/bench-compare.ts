@@ -265,6 +265,98 @@ async function measureWeight(browser: Browser, url: string): Promise<Weight> {
   }
 }
 
+interface FirstPaint {
+  fcp: number;       // first contentful paint, ms
+  firstCard: number; // first .card in the DOM, ms from navigation start
+  noJsCards: number; // .card elements present with JavaScript disabled
+}
+
+// A 1x1 transparent PNG standing in for the six Unsplash photos. The CSS sizes
+// every card image with `aspect-ratio: 1.4; width: 100%`, so intrinsic size is
+// irrelevant and layout is byte-for-byte what it was -- but the CDN is out of
+// the measurement, which matters because a paint metric taken over the public
+// internet measures Unsplash rather than the tool.
+const STUB_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+// When content appears, as opposed to how fast it updates once it is there.
+//
+// This is a DELIVERY comparison and has to be read as one. Markout's page is
+// rendered by its own Server, so it arrives with its first rows already in the
+// markup; the other four ports serve an empty shell and build everything after
+// their bundle runs. React and Vue can render on the server and these ports do
+// not -- that is each tool's DEFAULT setup, not its ceiling. Alpine is the only
+// one with no server story of its own to reach for.
+//
+// noJsCards is the same fact without a stopwatch: load the page with JavaScript
+// turned off and count what is on it. A <template> is inert, so Alpine's markup
+// counts zero, which is correct -- nothing is rendered.
+//
+// FCP is reported because people know it, and DISTRUSTED because on these pages
+// it is close to meaningless. It fires on the first contentful paint of
+// anything, and every port has a static header; Alpine posts the fastest FCP on
+// this page while rendering none of the catalog, which is the x-cloak gap
+// flattering itself. `firstCard` is the metric with the meaning: when the first
+// row of actual content exists. Quote that one.
+async function measureFirstPaint(browser: Browser, url: string): Promise<FirstPaint> {
+  const ctx = await browser.newContext();
+  await ctx.route('**://images.unsplash.com/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: STUB_PNG }),
+  );
+  const page = await ctx.newPage();
+  // LCP keeps being revised until interaction or hide, so record every entry
+  // and read the last one once content has settled.
+  // MutationObserver rather than a rAF poll: a served-rendered page has its
+  // cards before the first frame, and a 16ms polling granularity would round
+  // exactly the difference this column exists to show.
+  await page.addInitScript(`
+    window.__firstCard = null;
+    const stamp = () => {
+      if (window.__firstCard === null && document.querySelector('.card')) {
+        window.__firstCard = performance.now();
+        return true;
+      }
+      return window.__firstCard !== null;
+    };
+    if (!stamp()) {
+      const obs = new MutationObserver(() => { if (stamp()) obs.disconnect(); });
+      obs.observe(document, { childList: true, subtree: true });
+    }
+  `);
+  let fcp = 0;
+  let firstCard = 0;
+  try {
+    await page.goto(url);
+    await page.waitForSelector('.card');
+    await page.evaluate('new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))');
+    const paints = await page.evaluate(`(() => {
+      const p = performance.getEntriesByType('paint').find(e => e.name === 'first-contentful-paint');
+      return { fcp: p ? p.startTime : 0, firstCard: window.__firstCard || 0 };
+    })()`) as { fcp: number; firstCard: number };
+    fcp = paints.fcp;
+    firstCard = paints.firstCard;
+  } finally {
+    await ctx.close();
+  }
+
+  const noJs = await browser.newContext({ javaScriptEnabled: false });
+  await noJs.route('**://images.unsplash.com/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: STUB_PNG }),
+  );
+  let noJsCards = 0;
+  try {
+    const p2 = await noJs.newPage();
+    await p2.goto(url);
+    noJsCards = await p2.evaluate('document.querySelectorAll(".card").length') as number;
+  } finally {
+    await noJs.close();
+  }
+
+  return { fcp, firstCard, noJsCards };
+}
+
 async function main() {
   // Warnings, not silence. A compile warning means the page is not the page
   // the author thinks it is -- `class` on a component usage REPLACING the
@@ -321,6 +413,7 @@ async function run(server: Server) {
 
   const results: Record<string, Record<keyof Timings, number[]>> = {};
   const weights: Record<string, Weight | undefined> = {};
+  const paints: Record<string, FirstPaint | undefined> = {};
   const crashed: Record<string, boolean> = {};
 
   for (const rows of ROWS) {
@@ -343,6 +436,11 @@ async function run(server: Server) {
           weights[label] = await measureWeight(browser, target.urlFor(rows));
         } catch (err) {
           console.log(`  ${label}: weight failed (${(err as Error).message.split('\n')[0]})`);
+        }
+        try {
+          paints[label] = await measureFirstPaint(browser, target.urlFor(rows));
+        } catch (err) {
+          console.log(`  ${label}: first paint failed (${(err as Error).message.split('\n')[0]})`);
         }
       }
     }
@@ -371,6 +469,25 @@ async function run(server: Server) {
          `${w.nodes.toLocaleString()} +${w.templates}t`]
       : [label, '-', '-', '-', '-', '-', '-'];
   });
+
+  const paintHeaders = ['Target', 'First card (ms)', 'Cards without JS', 'FCP (ms)'];
+  const paintRows = Object.keys(results).map((label) => {
+    const fp = paints[label];
+    return fp
+      ? [label, fp.firstCard.toFixed(1), String(fp.noJsCards), fp.fcp.toFixed(1)]
+      : [label, '-', '-', '-'];
+  });
+  console.log('\nFirst content. Unsplash is stubbed with a 1x1 PNG so this measures the');
+  console.log('tool and not a CDN; the CSS sizes every card image, so layout is unchanged.');
+  console.log('Read this as a DELIVERY comparison, not a rendering one: Markout is served');
+  console.log('by its own Server and arrives with rows in the markup, while the other four');
+  console.log('serve an empty shell. React and Vue CAN render on the server and these ports');
+  console.log('do not -- that is each tool\'s default setup, not its ceiling. Alpine is the');
+  console.log('one with no server story of its own to reach for.\n');
+  console.log('FCP is last and least: it fires on the first paint of ANYTHING, and every');
+  console.log('port has a static header, so a page that paints chrome before it has any');
+  console.log('content scores well on it. First card is the column with the meaning.\n');
+  console.log(toMarkdownTable(paintHeaders, paintRows));
 
   reportParity(targets.map((t) => t.name), weights);
 
