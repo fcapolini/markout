@@ -1,5 +1,5 @@
 import { Application } from 'express';
-import { eventually } from './eventually';
+import { eventually, quiesced } from './eventually';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -167,8 +167,13 @@ describe('several requests for a page nobody has compiled yet', () => {
     // FSEvents delivers when it gets round to it -- so an event about the
     // setup can still arrive, empty the cache, and turn a count of one into
     // two. Waited out once here rather than tolerated in every assertion,
-    // since the count IS the claim these tests make
-    await new Promise(r => setTimeout(r, 400));
+    // since the count IS the claim these tests make.
+    //
+    // Watched rather than slept through. This was 400ms, which is enough on
+    // an idle machine and not on a loaded one: the backlog ran past a second
+    // when measured, and these failed about twice in twenty full-suite runs
+    // while passing alone every time
+    await quiesced(dir);
     compiles = vi.spyOn(Compiler.prototype, 'compile');
   });
 

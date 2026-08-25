@@ -36,3 +36,56 @@ export async function eventually<T>(
   }
   return seen;
 }
+
+/**
+ * Waits until a directory has stopped producing watcher events.
+ *
+ * The mirror of `eventually` above, for the other half of the same platform
+ * behaviour. That one waits for an event that may never have been armed in
+ * time; this one waits for events that were armed BEFORE anyone was
+ * listening and arrive whenever the platform gets to them.
+ *
+ * Writing a fixture and then starting a server watches a directory that was
+ * being written a moment ago, and FSEvents delivers that backlog after the
+ * watcher is established -- so the server's page cache is emptied at an
+ * arbitrary moment shortly after startup, by changes that predate it.
+ * Measured on this machine: a watcher established right after 41 file writes
+ * saw 0, 3 and 6 such events across three rounds, spread over more than a
+ * second.
+ *
+ * Which is why a fixed sleep is the wrong shape and was the bug: 400ms is
+ * enough on an idle machine and not enough on a loaded one, so the test that
+ * used one failed about twice in twenty full-suite runs and passed alone
+ * every time. A queue that drains on its own schedule is waited out by
+ * watching it drain.
+ *
+ * Returns how many events it saw, which is what makes it possible to tell
+ * "waited and nothing was pending" from "waited out a backlog".
+ */
+export async function quiesced(dir: string, quietMs = 300, capMs = 8000): Promise<number> {
+  const fs = await import('fs');
+  return new Promise<number>(resolve => {
+    let events = 0;
+    let quiet: NodeJS.Timeout;
+    // a watcher of our own, established where the server's was: it receives
+    // the same backlog, so its going quiet is the server's going quiet
+    const watcher = fs.watch(dir, { recursive: true }, () => {
+      events++;
+      arm();
+    });
+    const finish = () => {
+      clearTimeout(quiet);
+      clearTimeout(cap);
+      watcher.close();
+      resolve(events);
+    };
+    const arm = () => {
+      clearTimeout(quiet);
+      quiet = setTimeout(finish, quietMs);
+    };
+    // a directory that never goes quiet is a test that should fail on its own
+    // assertion rather than here
+    const cap = setTimeout(finish, capMs);
+    arm();
+  });
+}
