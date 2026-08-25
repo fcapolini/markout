@@ -1,5 +1,5 @@
 import path from 'path';
-import request from 'supertest';
+import type { Server } from 'node:http';
 import { describe, expect, it } from 'vitest';
 import { createSite } from '../../../../sites/site/server';
 
@@ -20,76 +20,91 @@ import { createSite } from '../../../../sites/site/server';
  * Every path below is one that does NOT exist, deliberately. The limiter
  * runs before markout and decides on the shape of the path alone, so a
  * missing page is counted exactly as a real one is and costs a 404 instead
- * of a render. Reaching a budget of 300 four times over is then a second of
- * work rather than twenty, and the first version of this file -- which
- * rendered the homepage three hundred times -- was flaky under a full-suite
- * run for exactly that reason.
+ * of a render.
+ *
+ * And every test drives ONE listening server rather than `request(app)`,
+ * which is the part that took two goes. supertest stands a server up and
+ * tears it down per call; a budget of 300 means 300 of those per test, and
+ * under a full-suite run the sockets give out -- `Error: socket hang up`,
+ * about one run in three, on whichever of these reached it first. The first
+ * attempt read that as slowness and raised the timeout, which is why it came
+ * back. One listen and 300 keep-alive requests is both the honest shape and
+ * much the faster one.
  */
 
 const docroot = path.resolve(__dirname, '../../../../sites/site');
 
-/** the site as it ships, budget included; a fresh one has a fresh budget */
-function site() {
-  return createSite({ docroot });
-}
-
 /** the real budget, which is not tunable from out here on purpose */
 const BUDGET = 300;
+
+/** the site as it ships, listening; a fresh one has a fresh budget */
+async function site() {
+  const server: Server = createSite({ docroot }).listen(0);
+  await new Promise<void>(resolve => server.once('listening', () => resolve()));
+  const { port } = server.address() as { port: number };
+  return {
+    get: async (pathname: string) => {
+      const res = await fetch(`http://127.0.0.1:${port}${pathname}`);
+      // drained rather than abandoned: an unread body holds the socket, and
+      // the next request then waits on a connection that is never finished
+      await res.arrayBuffer();
+      return res.status;
+    },
+    close: () => new Promise<void>(resolve => server.close(() => resolve())),
+  };
+}
 
 /**
  * Spends the whole page budget, and returns once it is gone.
  *
- * Every test below that asks "is this outside the budget" asks it of an app
- * whose budget is already spent, which is both the stronger claim -- it
- * still answers when a page would not -- and the cheaper one: 300 missing
- * pages cost a 404 each, where 320 requests to the route under test cost
- * whatever that route costs, and did not fit in a default timeout under a
- * full-suite run.
+ * Every test that asks "is this outside the budget" asks it of a site whose
+ * budget is already spent, which is the stronger claim: it still answers
+ * when a page would not.
  */
-async function exhaust(app: ReturnType<typeof site>) {
+async function exhaust(s: { get: (p: string) => Promise<number> }) {
   for (let i = 0; i < BUDGET + 5; i++) {
-    const res = await request(app).get('/no-such-page.html');
-    if (res.status === 429) return;
+    if ((await s.get('/no-such-page.html')) === 429) return;
   }
   throw new Error(`the budget was not spent after ${BUDGET + 5} page requests`);
 }
 
-// Every test here makes 300+ sequential round trips, because the budget is
-// 300 and is not tunable from out here -- the arrangement under test is the
-// one that ships. That is a second or two on an idle machine and more than
-// vitest's 5s default on a loaded one, which is how the first version of
-// this file came to fail once in three full-suite runs while passing alone.
-// A real bound, generously set, rather than a default that measures the
-// machine.
-describe('the site under a page budget', { timeout: 60_000 }, () => {
+describe('the site under a page budget', () => {
   it('counts page requests, and answers 429 past the budget', async () => {
-    const app = site();
-    let last = 404;
-    for (let i = 0; i < BUDGET + 5 && last !== 429; i++) {
-      last = (await request(app).get('/no-such-page.html')).status;
+    const s = await site();
+    try {
+      await exhaust(s);
+    } finally {
+      await s.close();
     }
-    expect(last).toBe(429);
   });
 
   it('counts an extensionless path, which is a page request too', async () => {
     // markout's rule, and the reason the limiter imports `isPageRequest`
     // rather than restating it: no extension means a page
-    const app = site();
-    let last = 404;
-    for (let i = 0; i < BUDGET + 5 && last !== 429; i++) {
-      last = (await request(app).get('/no-such-page')).status;
+    const s = await site();
+    try {
+      let last = 404;
+      for (let i = 0; i < BUDGET + 5 && last !== 429; i++) {
+        last = await s.get('/no-such-page');
+      }
+      expect(last).toBe(429);
+    } finally {
+      await s.close();
     }
-    expect(last).toBe(429);
   });
 
   it('does not count what it does not render', async () => {
     // anything with an extension that is not `.html` is served past the
     // middleware and costs no render, so it neither spends the budget nor
     // notices that the budget is gone
-    const app = site();
-    await exhaust(app);
-    expect((await request(app).get('/no-such-asset.svg')).status).not.toBe(429);
-    expect((await request(app).get('/favicon.svg')).status).toBe(200);
+    const s = await site();
+    try {
+      await exhaust(s);
+      expect(await s.get('/no-such-asset.svg')).not.toBe(429);
+      expect(await s.get('/favicon.svg')).toBe(200);
+    } finally {
+      await s.close();
+    }
   });
 
   it('leaves the health check outside the budget', async () => {
@@ -98,9 +113,13 @@ describe('the site under a page budget', { timeout: 60_000 }, () => {
     // budget a visitor shares. `/healthz` has no extension, so left to the
     // limiter's rule alone it WOULD be counted -- the mount order is what
     // keeps it out, and that is the thing being pinned
-    const app = site();
-    await exhaust(app);
-    expect((await request(app).get('/healthz')).status).toBe(200);
+    const s = await site();
+    try {
+      await exhaust(s);
+      expect(await s.get('/healthz')).toBe(200);
+    } finally {
+      await s.close();
+    }
   });
 
   it("leaves the desk demo's own API outside it", async () => {
@@ -110,8 +129,12 @@ describe('the site under a page budget', { timeout: 60_000 }, () => {
     // the desk router declines falls through, and is then a page request
     // like any other -- which is right, because markout is about to render
     // it. `/me` is the cheap one of the four
-    const app = site();
-    await exhaust(app);
-    expect((await request(app).get('/demos/desk/api/me')).status).toBe(200);
+    const s = await site();
+    try {
+      await exhaust(s);
+      expect(await s.get('/demos/desk/api/me')).toBe(200);
+    } finally {
+      await s.close();
+    }
   });
 });
