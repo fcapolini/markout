@@ -334,8 +334,8 @@ pre-cloned inside each replica is now one `cloneNode` per region that
 shows — about 6µs each, five hundred times.
 
 That is the worst case the trade has, and it is worth saying how little of
-it a real page sees. `bench/medium` is the same app at three catalog sizes,
-driven in Chromium (`npm run bench:medium`), and the mount cost does not
+it a real page sees. `bench/markout-catalog` is the same app at three catalog sizes,
+driven in Chromium (`npm run bench:catalog`), and the mount cost does not
 move:
 
 | Rows | Mount before | Mount after | Filter | Sort | 20× add-to-cart |

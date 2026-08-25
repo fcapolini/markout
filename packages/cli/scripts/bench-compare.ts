@@ -1,8 +1,9 @@
-// Combined perf comparison: Markout's bench/medium vs hand-written, idiomatic
-// React and Svelte 5 ports of the exact same app (same components, same
-// catalog generator -- see bench/shared/catalog.mjs -- same CSS, same
-// interactions). Same MEASURE_SCRIPT as bench-medium.ts, run against all
-// three, since all three markups reuse the same class names on purpose.
+// Combined perf comparison: Markout's bench/markout-catalog against
+// hand-written, idiomatic Alpine 3, React and Svelte 5 ports of the exact same
+// app (same components, same catalog generator -- see bench/shared/catalog.mjs
+// -- same CSS, same interactions). Same MEASURE_SCRIPT as bench-catalog.ts,
+// run against all four, since all four markups reuse the same class names on
+// purpose.
 import { execSync, spawn, ChildProcessWithoutNullStreams } from 'node:child_process';
 import path from 'node:path';
 import { chromium, Browser } from 'playwright';
@@ -11,20 +12,32 @@ import { Server } from '../src/server';
 const ROWS = [300, 1020, 10020];
 const REPEATS = 5; // + 1 discarded warm-up
 
-const REACT_DIR = path.resolve(__dirname, '../bench/react-medium');
-const SVELTE_DIR = path.resolve(__dirname, '../bench/svelte-medium');
+const REACT_DIR = path.resolve(__dirname, '../bench/react-catalog');
+const SVELTE_DIR = path.resolve(__dirname, '../bench/svelte-catalog');
+const ALPINE_DIR = path.resolve(__dirname, '../bench/alpine-catalog');
 const REACT_PORT = 4410;
 const SVELTE_PORT = 4411;
+const ALPINE_PORT = 4412;
 
 const MEASURE_SCRIPT = `(async () => {
+  // An unstyled page lays out differently and would still produce numbers, so
+  // a stylesheet that failed to load must fail the run rather than quietly
+  // change what is being measured. Two directory renames have broken this link
+  // already and neither showed up in the results. Checking document.styleSheets
+  // does NOT catch it -- a 404'd <link> is still listed there, just with no
+  // rules -- so this asserts the style APPLIED. All four ports share app.css,
+  // whose body background is var(--mist); without it the body is transparent.
+  if (getComputedStyle(document.body).backgroundColor === 'rgba(0, 0, 0, 0)') {
+    throw new Error('app.css did not apply -- check the page\\'s <link href>');
+  }
   const byText = (sel, text) =>
     [...document.querySelectorAll(sel)].find(el => el.textContent && el.textContent.trim() === text);
   const cardCount = () => document.querySelectorAll('.card').length;
-  // React/Svelte batch DOM updates onto a scheduler tick after a click
-  // handler returns -- Markout happens to be synchronous, but bracketing
-  // t0/t1 around .click() only measures "handler dispatched", not "DOM
-  // updated", for the other two. Poll via rAF for the real, comparable,
-  // user-perceived latency instead.
+  // React/Svelte/Alpine batch DOM updates onto a scheduler tick after a
+  // click handler returns -- Markout happens to be synchronous, but
+  // bracketing t0/t1 around .click() only measures "handler dispatched",
+  // not "DOM updated", for the other three. Poll via rAF for the real,
+  // comparable, user-perceived latency instead.
   const waitUntil = (cond, timeoutMs = 30000) => new Promise((resolve, reject) => {
     const start = performance.now();
     const tick = () => {
@@ -70,6 +83,22 @@ const MEASURE_SCRIPT = `(async () => {
 
   return r;
 })()`;
+
+// Stamp what was measured onto the output. A whole release cycle of runtime
+// work lands under one version, so the commit is the part that identifies a
+// run -- and a table pasted somewhere without it cannot be re-checked later.
+function provenance(): string {
+  const version = require('../package.json').version;
+  let commit = 'unknown commit';
+  try {
+    const head = execSync('git rev-parse --short HEAD', { cwd: __dirname, encoding: 'utf8' }).trim();
+    // The runtime, the harness and the bench apps all decide what a number
+    // means, so any of them being uncommitted makes the run unreproducible.
+    const dirty = execSync('git status --porcelain -- ../../cli ../../core', { cwd: __dirname, encoding: 'utf8' }).trim();
+    commit = dirty ? `${head}+dirty` : head;
+  } catch { /* not a checkout, or no git */ }
+  return `Markout ${version} (${commit}), Node ${process.version}, ${process.platform}-${process.arch}`;
+}
 
 function median(nums: number[]) {
   const s = [...nums].sort((a, b) => a - b);
@@ -126,16 +155,29 @@ async function measure(browser: Browser, url: string): Promise<Timings> {
 }
 
 async function main() {
-  const server = await new Server({ docroot: path.resolve(__dirname, '../bench'), port: 0, logger: () => {} }).start();
+  // Warnings, not silence. A compile warning means the page is not the page
+  // the author thinks it is -- `class` on a component usage REPLACING the
+  // definition's own `class` cost this benchmark its Markout/React/Svelte/Alpine
+  // parity for weeks, and the harness was passing `logger: () => {}` over the
+  // top of the warning that said so. `info` is still dropped; it is one line
+  // per request.
+  const server = await new Server({
+    docroot: path.resolve(__dirname, '../bench'),
+    port: 0,
+    logger: (level, ...args) => level !== 'info' && console.log(`[server:${level}]`, ...args),
+  }).start();
   let reactProc: ChildProcessWithoutNullStreams | undefined;
   let svelteProc: ChildProcessWithoutNullStreams | undefined;
+  let alpineProc: ChildProcessWithoutNullStreams | undefined;
   try {
     reactProc = await startPreview(REACT_DIR, REACT_PORT);
     svelteProc = await startPreview(SVELTE_DIR, SVELTE_PORT);
+    alpineProc = await startPreview(ALPINE_DIR, ALPINE_PORT);
     await run(server);
   } finally {
     reactProc?.kill();
     svelteProc?.kill();
+    alpineProc?.kill();
     await server.stop();
   }
 }
@@ -148,9 +190,13 @@ async function run(server: Server) {
       name: 'Markout',
       urlFor: (rows) => {
         const file = rows === 300 ? 'index.html' : rows === 1020 ? 'bench-1000.html' : 'bench-10000.html';
-        return `http://127.0.0.1:${server.port}/medium/${file}`;
+        return `http://127.0.0.1:${server.port}/markout-catalog/${file}`;
       },
     },
+    // Alpine second, right after Markout: it is the tool this audience is
+    // actually choosing between, so it belongs next to the row it is read
+    // against rather than at the bottom of the table.
+    { name: 'Alpine', urlFor: (rows) => `http://localhost:${ALPINE_PORT}/?rows=${rows}` },
     { name: 'React', urlFor: (rows) => `http://localhost:${REACT_PORT}/?rows=${rows}` },
     { name: 'Svelte', urlFor: (rows) => `http://localhost:${SVELTE_PORT}/?rows=${rows}` },
   ];
@@ -174,6 +220,7 @@ async function run(server: Server) {
     }
   }
 
+  const browserVersion = browser.version();
   await browser.close();
 
   const headers = ['Target', 'Mount all (ms)', 'Filter (ms)', 'Sort (ms)', '20x add-to-cart (ms)'];
@@ -183,7 +230,8 @@ async function run(server: Server) {
       : [label, median(m.mount).toFixed(1), median(m.filter).toFixed(1), median(m.sort).toFixed(1), median(m.cart).toFixed(1)],
   );
 
-  console.log(`\n${REPEATS} timed repeats per size (+1 discarded warm-up), median ms:\n`);
+  console.log(`\n${provenance()}, Chromium ${browserVersion}`);
+  console.log(`${REPEATS} timed repeats per size (+1 discarded warm-up), median ms:\n`);
   console.log(toMarkdownTable(headers, rows));
 }
 

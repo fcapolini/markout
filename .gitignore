@@ -3,6 +3,6 @@ dist/
 out/
 *.vsix
 coverage/
-packages/cli/bench/medium/bench-*.html
+packages/cli/bench/markout-catalog/bench-*.html
 *.tsbuildinfo
 .tw-scan/

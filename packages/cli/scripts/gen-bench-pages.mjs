@@ -1,4 +1,4 @@
-// Generates scaled-catalog variants of bench/medium/index.html for perf benchmarking.
+// Generates scaled-catalog variants of bench/markout-catalog/index.html for perf benchmarking.
 // Same app, same components -- only the `:models` seed array grows, so the
 // generated catalog (categories x models x finishes) reaches the target row count.
 import fs from 'node:fs';
@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { makeModels, FINISHES } from '../bench/shared/catalog.mjs';
 
-const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../bench/medium');
+const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../bench/markout-catalog');
 const src = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
 
 // categories.length (6) * finishes.length (5) = 30 rows per model
@@ -25,7 +25,7 @@ for (const [file, modelCount] of Object.entries(variants)) {
     .replace('const n = c * 50 + m * 5 + f;', `const n = c * (${modelCount} * 5) + m * 5 + f;`)
     // largest page-size chip becomes "show everything", to benchmark a full mount
     .replace(':for-each=${[12, 24, 48, 300]}', `:for-each=\${[12, 24, 48, ${rows}]}`)
-    .replace('<title>Medium | Catalog benchmark</title>', `<title>Medium bench (${rows} rows)</title>`);
+    .replace('<title>Catalog benchmark</title>', `<title>Catalog bench (${rows} rows)</title>`);
   fs.writeFileSync(path.join(dir, file), out);
-  console.log(`wrote bench/medium/${file}: ${modelCount} models -> ${rows} rows`);
+  console.log(`wrote bench/markout-catalog/${file}: ${modelCount} models -> ${rows} rows`);
 }

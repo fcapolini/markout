@@ -14,9 +14,9 @@
         'https://images.unsplash.com/photo-1692561796478-3c43d6656e42?auto=format&fit=crop&w=900&q=80',
       ]}>
 <head>
-  <:import src="/medium-kit/all.htm" />
-  <title>Medium | Catalog benchmark</title>
-  <link rel="stylesheet" href="/medium/app.css">
+  <:import src="app-kit/all.htm" />
+  <title>Catalog benchmark</title>
+  <link rel="stylesheet" href="app.css">
 </head>
 <body
 
@@ -48,8 +48,8 @@
 
       // the cart's ids, as a set, because every card asks whether it is in
       // there -- a linear scan per card would be the app's own cost rather
-      // than the runtime's, and the React and Svelte ports both derive the
-      // same set for the same reason
+      // than the runtime's, and the React, Svelte and Alpine ports all keep
+      // the same set for the same reason
       :inCartIds=${new Set(cart.map(line => line.id))}
 
       // actions
@@ -93,7 +93,7 @@
     </section>
 
     <div class="layout">
-      <mk-section class="catalog" ::kicker="Inventory" ::heading="Browse the catalog">
+      <mk-section ::kicker="Inventory" ::heading="Browse the catalog">
 
         <div :slot="actions" class="sizes">
           <button :for-each=${[12, 24, 48, 300]}

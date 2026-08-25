@@ -1,9 +1,9 @@
-// Single source of truth for the "medium" catalog benchmark's seed data and
+// Single source of truth for the catalog benchmark's seed data and
 // item-generation formula, shared by the Markout demo's bench-page generator
-// and the React/Svelte comparison apps -- so all three benchmark the exact
-// same dataset shape at the exact same row count, not three approximations
+// and the React/Svelte/Alpine comparison apps -- so all four benchmark the exact
+// same dataset shape at the exact same row count, not four approximations
 // of it. Plain zero-dependency JS so it's importable from a bare `node`
-// script (Markout side) and from a Vite build (React/Svelte side) alike.
+// script (Markout side) and from a Vite build (React/Svelte/Alpine side) alike.
 
 export const CATEGORIES = ['Audio', 'Lighting', 'Desk', 'Outdoor', 'Kitchen', 'Studio'];
 export const BRANDS = ['Northwind', 'Bellhaven', 'Kestrel', 'Marlowe', 'Orrery', 'Tundra'];
@@ -24,11 +24,11 @@ export function makeModels(modelCount) {
 
 /**
  * categories.length x models.length x finishes.length items, using the same
- * id/price/rating/reviews/stock/specs formulas as bench/medium/index.html.
+ * id/price/rating/reviews/stock/specs formulas as bench/markout-catalog/index.html.
  * The id's category spacing is `models.length * finishes.length` -- NOT a
  * hardcoded 50 -- so ids stay collision-free (and :for-key-equivalent
  * lookups stay correct) at any model count. See markout-authoring memory:
- * the original demo/medium bench pages hit this exact bug when scaled.
+ * the original demo/catalog bench pages hit this exact bug when scaled.
  */
 export function buildCatalog(modelCount) {
   const models = makeModels(modelCount);

@@ -1,4 +1,4 @@
-// Perf harness for bench/medium: same app, three catalog sizes (300 / 1,020 /
+// Perf harness for bench/markout-catalog: same app, three catalog sizes (300 / 1,020 /
 // 10,020 rows, see gen-bench-pages.mjs), measuring mount/filter/sort/cart-update
 // cost in a real browser. Run `node scripts/gen-bench-pages.mjs` first.
 import path from 'node:path';
@@ -6,9 +6,9 @@ import { chromium } from 'playwright';
 import { Server } from '../src/server';
 
 const PAGES = [
-  { path: 'medium/index.html', label: '300 rows' },
-  { path: 'medium/bench-1000.html', label: '1,020 rows' },
-  { path: 'medium/bench-10000.html', label: '10,020 rows' },
+  { path: 'markout-catalog/index.html', label: '300 rows' },
+  { path: 'markout-catalog/bench-1000.html', label: '1,020 rows' },
+  { path: 'markout-catalog/bench-10000.html', label: '10,020 rows' },
 ];
 
 const REPEATS = 5; // plus one discarded warm-up run
@@ -35,6 +35,16 @@ interface Timings {
 // function reference: tsx/esbuild's `__name` helper injection doesn't survive
 // Playwright's function-to-string serialization, so this sidesteps it.
 const MEASURE_SCRIPT = `(() => {
+  // An unstyled page lays out differently and would still produce numbers, so
+  // a stylesheet that failed to load must fail the run rather than quietly
+  // change what is being measured. Two directory renames have broken this link
+  // already and neither showed up in the results. Checking document.styleSheets
+  // does NOT catch it -- a 404'd <link> is still listed there, just with no
+  // rules -- so this asserts the style APPLIED. All four ports share app.css,
+  // whose body background is var(--mist); without it the body is transparent.
+  if (getComputedStyle(document.body).backgroundColor === 'rgba(0, 0, 0, 0)') {
+    throw new Error('app.css did not apply -- check the page\\'s <link href>');
+  }
   const byText = (sel, text) =>
     [...document.querySelectorAll(sel)].find(el => el.textContent && el.textContent.trim() === text);
   const r = {};
@@ -78,7 +88,8 @@ async function main() {
   const server = await new Server({
     docroot: path.resolve(__dirname, '../bench'),
     port: 0,
-    logger: () => {},
+    // warnings, not silence -- see the note in bench-compare.ts
+    logger: (level, ...args) => level !== 'info' && console.log(`[server:${level}]`, ...args),
   }).start();
 
   let browser = await chromium.launch();

@@ -23,7 +23,7 @@
     "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
     "dev": "npm run dev -w @markout-lang/site",
     "dev:bench": "npm run dev:bench -w @markout-lang/cli --",
-    "bench:medium": "npm run bench:medium -w @markout-lang/cli --",
+    "bench:catalog": "npm run bench:catalog -w @markout-lang/cli --",
     "bench:compare": "npm run bench:compare -w @markout-lang/cli --",
     "start": "npm run start -w @markout-lang/site"
   },

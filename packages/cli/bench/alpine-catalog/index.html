@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Catalog benchmark (Alpine)</title>
+    <link rel="stylesheet" href="/app.css" />
+  </head>
+  <body>
+    <!--
+      The same catalog app as bench/markout-catalog (Markout), bench/react-catalog
+      bench/svelte-catalog: same components, same shared catalog generator, same
+      CSS, same interactions. Written the way Alpine asks for it -- all of the
+      markup is here, in the page, and src/main.js holds only the state and the
+      actions. Alpine has no component system, so the pieces the other three
+      ports factor out (mk-card / <Card>) are written inline, once, where they
+      are used; that difference is the point of the comparison, not a handicap.
+    -->
+    <div x-data="catalog" x-id="['search']">
+      <header class="app-header">
+        <div class="brand-block">
+          <span class="brand">Markout</span>
+          <span class="tagline" x-text="catalogLength + ' items, one page, no framework'"></span>
+        </div>
+        <div class="header-actions">
+          <button class="ghost" @click="reset()">Reset view</button>
+          <span class="header-cart">
+            <strong x-text="cartCount"></strong> in cart &middot; <strong x-text="'$' + cartTotal"></strong>
+          </span>
+        </div>
+      </header>
+
+      <main class="app-shell">
+        <section class="board">
+          <div class="stat">
+            <span class="stat-label">Catalog</span>
+            <strong class="stat-value" x-text="catalogLength"></strong>
+            <span class="stat-hint">items generated at load</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Matching</span>
+            <strong class="stat-value" x-text="sorted.length"></strong>
+            <span class="stat-hint">after filters</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Average price</span>
+            <strong class="stat-value" x-text="'$' + averagePrice"></strong>
+            <span class="stat-hint">across the current filter</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Low stock</span>
+            <strong class="stat-value" x-text="lowStock"></strong>
+            <span class="stat-hint">fewer than 8 left</span>
+          </div>
+        </section>
+
+        <div class="layout">
+          <section class="panel">
+            <header class="panel-head">
+              <div>
+                <p class="kicker">Inventory</p>
+                <h2>Browse the catalog</h2>
+              </div>
+              <div class="panel-actions">
+                <div class="sizes">
+                  <template x-for="size in sizeOptions" :key="size">
+                    <button class="chip" :class="{ 'chip-on': size === pageSize }"
+                            @click="pickSize(size)" x-text="size + '/page'"></button>
+                  </template>
+                </div>
+              </div>
+            </header>
+
+            <div class="filters">
+              <label class="search">
+                <span class="facet-label" :id="$id('search')">Search</span>
+                <input type="search" placeholder="Filter by name or brand"
+                       :value="query" :aria-labelledby="$id('search')"
+                       @input="onSearch($event.target.value)" />
+                <span class="search-hits" x-text="sorted.length + ' matching'"></span>
+              </label>
+
+              <div class="facet">
+                <p class="facet-label">Category</p>
+                <div class="facet-options">
+                  <template x-for="opt in categoryOptions" :key="opt">
+                    <button class="chip" :class="{ 'chip-on': opt === activeCategory }"
+                            @click="pickCategory(opt)" x-text="opt"></button>
+                  </template>
+                </div>
+              </div>
+
+              <div class="facet">
+                <p class="facet-label">Brand</p>
+                <div class="facet-options">
+                  <template x-for="opt in brandOptions" :key="opt">
+                    <button class="chip" :class="{ 'chip-on': opt === activeBrand }"
+                            @click="pickBrand(opt)" x-text="opt"></button>
+                  </template>
+                </div>
+              </div>
+
+              <div class="facet">
+                <p class="facet-label">Sort</p>
+                <div class="facet-options">
+                  <template x-for="opt in sortOptions" :key="opt">
+                    <button class="chip" :class="{ 'chip-on': opt === sort }"
+                            @click="pickSort(opt)" x-text="opt"></button>
+                  </template>
+                </div>
+              </div>
+            </div>
+
+            <div class="catalog-body">
+              <template x-if="sorted.length === 0">
+                <p class="empty">Nothing matches those filters.</p>
+              </template>
+
+              <div class="grid">
+                <template x-for="item in shown" :key="item.id">
+                  <article class="card">
+                    <div class="card-media">
+                      <img :src="item.image" :alt="item.name" loading="lazy" />
+                      <span class="card-tag" x-text="item.category"></span>
+                    </div>
+                    <div class="card-body">
+                      <p class="card-brand" x-text="item.brand"></p>
+                      <h3 class="card-title" x-text="item.name"></h3>
+                      <span class="rating">
+                        <template x-for="n in 5" :key="n">
+                          <span class="star" :class="{ 'star-on': n <= item.rating }">&#9733;</span>
+                        </template>
+                        <span class="rating-count"
+                              x-text="item.rating.toFixed(1) + ' (' + item.reviews + ')'"></span>
+                      </span>
+                      <ul class="card-specs">
+                        <template x-for="spec in item.specs" :key="spec">
+                          <li x-text="spec"></li>
+                        </template>
+                      </ul>
+                      <p class="card-stock" :class="{ 'card-stock-low': item.stock < 8 }"
+                         x-text="item.stock === 0 ? 'Back-ordered' : item.stock + ' in stock'"></p>
+                      <div class="card-foot">
+                        <span class="card-price" x-text="'$' + item.price"></span>
+                        <button class="buy" :disabled="inCart(item.id)" @click="add(item)"
+                                x-text="inCart(item.id) ? 'In cart' : 'Add'"></button>
+                      </div>
+                    </div>
+                  </article>
+                </template>
+              </div>
+
+              <nav class="pager">
+                <button class="ghost" :disabled="page <= 1" @click="page -= 1">Previous</button>
+                <span class="pager-label" x-text="'Page ' + page + ' of ' + pages"></span>
+                <button class="ghost" :disabled="page >= pages" @click="page += 1">Next</button>
+              </nav>
+            </div>
+          </section>
+
+          <aside class="cart">
+            <header class="cart-head">
+              <h2>Cart</h2>
+              <button class="ghost" :disabled="cart.length === 0" @click="clearCart()">Clear</button>
+            </header>
+            <template x-if="cart.length === 0">
+              <p class="cart-empty">Nothing yet &mdash; add something from the catalog.</p>
+            </template>
+            <ul class="cart-lines">
+              <template x-for="line in cart" :key="line.id">
+                <li class="cart-line">
+                  <div class="cart-line-main">
+                    <span class="cart-line-name" x-text="line.name"></span>
+                    <span class="cart-line-meta" x-text="line.brand + ' · $' + line.price + ' each'"></span>
+                  </div>
+                  <div class="cart-line-qty">
+                    <button class="ghost" @click="bump(line.id, -1)"
+                            :aria-label="'One fewer ' + line.name">&minus;</button>
+                    <span class="qty" x-text="line.qty"></span>
+                    <button class="ghost" @click="bump(line.id, 1)"
+                            :aria-label="'One more ' + line.name">+</button>
+                    <button class="ghost drop" @click="drop(line.id)"
+                            :aria-label="'Remove ' + line.name">&times;</button>
+                  </div>
+                  <span class="cart-line-total" x-text="'$' + line.price * line.qty"></span>
+                </li>
+              </template>
+            </ul>
+            <footer class="cart-foot">
+              <span>Total</span>
+              <strong x-text="'$' + cartTotal"></strong>
+            </footer>
+          </aside>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
