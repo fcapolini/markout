@@ -247,12 +247,12 @@ exists.
 So the proof has to come from the two tiers above it, and now does:
 
 - **Values that are read *and* written.** `bs-input`, `bs-select`, `bs-check`,
-  `bs-range`, `bs-modal`, `bs-offcanvas` and `bs-toast` keep `:value` or
-  `:open` in step with the screen, so `<bs-input :aka="email" />` and
-  `<bs-button :disabled=${!email.value}>` is the whole wiring. Validity is the
+  `bs-range`, `bs-modal`, `bs-offcanvas` and `bs-toast` keep `::value` or
+  `::open` in step with the screen, so `<bs-input :aka="email" />` and
+  `<bs-button ::disabled=${!email.value}>` is the whole wiring. Validity is the
   sharpest case, because Bootstrap ships the *styles* for it (`.is-invalid`,
   `.invalid-feedback`) and leaves the toggling to you: `bs-input`'s `:_invalid`
-  is one expression over its own `:value`, which is why the homepage's
+  is one expression over its own `::value`, which is why the homepage's
   reactivity section shows a form driving Bootstrap's classes rather than a
   counter.
 - **A whole application.** Orbit is the argument the component gallery cannot
@@ -282,7 +282,7 @@ libraries.
 
 Reaching for `bs-input` should feel like reaching for the markup it replaces.
 When a component does more than the plain version — `bs-navbar` taking an
-`:items` array, `bs-input` deciding when a value counts as invalid — that is
+`::items` array, `bs-input` deciding when a value counts as invalid — that is
 discoverable where it should be: in the docs, or in the fragment itself, which
 is a click away and readable. The kit holds itself to that: every part carries
 a comment saying up front what it decides on the caller's behalf.
@@ -303,20 +303,31 @@ Two things worth keeping from the exercise:
 - The distinction is real and belongs *in the component*, not in its name. Each
   fragment says up front what it decides on the caller's behalf.
 - "No new concepts, only Bootstrap's own, reached through attributes" was never
-  quite true anyway. `bs-button` takes `:variant`/`:outline`/`:size` — Bootstrap
-  concepts, but not Bootstrap spellings — and `bs-navbar` takes an `:items`
-  shape that Bootstrap has no equivalent for. Any promise about the prefix
-  would have been overstated on contact.
+  quite true anyway. `bs-button` takes `::variant`/`::outline`/`::size` —
+  Bootstrap concepts, but not Bootstrap spellings — and `bs-navbar` takes an
+  `::items` shape that Bootstrap has no equivalent for. Any promise about the
+  prefix would have been overstated on contact.
 
-The completed kit added one more thing to be honest about: **`:extra`**. A
-`class` written at a usage site *replaces* the one a definition sets — the
-language's rule, deliberately, and not something a kit should override — so
-every component takes `:extra` for the utility classes a caller wants on top.
-It is a small tax that a Bootstrap user pays on their most reflexive habit,
-and the docs should show it in the first example rather than let it be
-discovered. There is a language-level answer queued in
-[TODO.md](TODO.md) for cumulative classes; until it lands, `:extra` is the
-kit's own convention and reads as one.
+The completed kit had one more thing to be honest about, and the language has
+since answered it. A `class` written at a usage site *replaces* the one a
+definition sets — the language's rule, deliberately — so every component used
+to declare an `::extra` parameter for the utility classes a caller wants on
+top: 28 files agreeing on a convention, and a tax a Bootstrap user paid on
+their most reflexive habit.
+
+`class+=` is that convention promoted into the language, with `class-=` beside
+it, and writing a bare `class` on a component now warns and names it:
+
+```html
+<bs-alert ::variant="warning" class+="mb-0">Careful</bs-alert>
+<bs-alert ::dismissible class-="fade">No animation, please</bs-alert>
+```
+
+One `::bodyExtra` survives, on `bs-card`, and it says why the other 27 went:
+`class+=` reaches a component's own element, and a card's *body* is a
+different element. That is the shape of a good outcome for this kind of tax —
+the general case became a language spelling, and what is left is genuinely
+specific rather than a convention nobody could remember.
 
 A related idea also parked: having the extended component build on a plain one
 (`<:define tag="bsx-input:bs-input">`) so the pair could not drift. That needs
@@ -338,7 +349,7 @@ all — Bootstrap starts each of them itself from `data-bs-` attributes, and the
 component's entire job is writing the ids that connect the two elements.
 What actually needed a hook was a different five: `bs-modal`, `bs-offcanvas`,
 `bs-toast`, `bs-tooltip` and `bs-popover`. The first three because their
-`:open` is a value the page owns and `show()`/`hide()` are verbs no markup
+`::open` is a value the page owns and `show()`/`hide()` are verbs no markup
 expresses; the last two because they are the only components Bootstrap does
 not start on its own, and the usual answer — a page-level loop over
 `[data-bs-toggle="tooltip"]` — misses anything added later.
@@ -354,7 +365,7 @@ it.
 
 The general rule survived intact and is the one to repeat: anything expressible
 as *derived state* needs no lifecycle hook. `bs-input`'s `:_invalid` is an
-expression over its `:value`, and `:on-` handlers already worked. The
+expression over its `::value`, and `:on-` handlers already worked. The
 imperative half of the DOM is reached through `:handle-` — a value changed, run
 this — and out of thirty components only those five and the colour-mode toggle
 reach for it.
