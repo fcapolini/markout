@@ -17,13 +17,31 @@ The flow, and it is three commands:
 ```sh
 npm run changeset          # describe what changed, and how far it moves
 npm run version-packages   # apply them: versions, ranges, CHANGELOG.md
+npm login                  # browser, and not skippable -- see below
 npm run release            # build, then publish what moved
+git push --follow-tags     # the tags publish just made, which it does not push
 ```
 
 `npm run changeset` asks which packages moved and whether each move is a
 patch, a minor or a major, then writes a markdown file here. Commit it with
 the change it describes — that is the point of the file existing separately
 from the version number.
+
+The two lines that are easy to leave out of a runbook, because neither is
+about changesets:
+
+- **`npm login` goes through a browser**, so `npm run release` is a step a
+  person runs rather than something CI or an agent can do on their behalf.
+  Without it the publish fails on the first package with a 401, after the
+  build has already run. `npm whoami` answers in advance.
+- **`changeset publish` creates the git tags and does not push them.** The
+  release exists on npm and not in the repository's history until you do.
+
+And one thing it does that looks like a failure and is not: a package whose
+version is already on the registry is *skipped*, with a line saying how many
+were. `std-kit` hits this whenever a release changes nothing in it. Running
+`npm publish` on such a package by hand errors instead —
+`changeset publish` asks the registry first.
 
 ## Links in a changeset are read somewhere else
 
