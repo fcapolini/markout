@@ -30,6 +30,7 @@ tree rather than the commit:
 npm login                  # browser, and not skippable -- see below
 npm run release            # build, then publish what moved
 git push --follow-tags     # the tags publish just made, which it does not push
+node scripts/github-releases.mjs   # the Releases those tags do not create
 ```
 
 `npm run changeset` asks which packages moved and whether each move is a
@@ -37,8 +38,8 @@ patch, a minor or a major, then writes a markdown file here. Commit it with
 the change it describes — that is the point of the file existing separately
 from the version number.
 
-The two lines that are easy to leave out of a runbook, because neither is
-about changesets:
+The three lines that are easy to leave out of a runbook, because none of them
+is about changesets:
 
 - **`npm login` goes through a browser**, so `npm run release` is a step a
   person runs rather than something CI or an agent can do on their behalf.
@@ -47,6 +48,15 @@ about changesets:
 - **`changeset publish` creates the git tags and does not push them.** The
   release exists on npm and not in the repository's history until you do.
   The workflow does this for you; by hand it is the third line above.
+- **A tag is not a GitHub Release.** The Release is a separate object with a
+  title and a body, created through the API, and changesets has no notion of
+  it -- which is how this repository's Releases page came to end at `v0.1.4`
+  while a dozen tags went past it. The workflow runs
+  [`scripts/github-releases.mjs`](../scripts/github-releases.mjs), which
+  fills in every package tag that has no Release yet, taking each body from
+  the `CHANGELOG.md` section that `changeset version` already wrote. By hand
+  it is the fourth line above, and it is safe to run at any time: it skips
+  what already exists.
 
 npm also asks for a one-time password **per package**, so four publishes back
 to back is a race against a thirty-second window. That is the friction the

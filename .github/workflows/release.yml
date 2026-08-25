@@ -86,3 +86,14 @@ jobs:
       - name: push the tags it created
         if: always()
         run: git push --tags
+
+      # A tag is not a Release: `changeset publish` makes the first and has
+      # no notion of the second, so without this the Releases page stays
+      # frozen at the last one somebody made by hand. Idempotent, hence
+      # `always()` -- a re-run after a half-finished publish fills in the
+      # Releases whose tags got pushed and skips the rest.
+      - name: create the GitHub Releases for those tags
+        if: always()
+        run: node scripts/github-releases.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
