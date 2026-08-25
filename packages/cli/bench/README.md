@@ -78,17 +78,17 @@ Its stylesheet is linked the same way — `href="app.css"`, not
 `/markout-catalog/app.css` — so the whole app is one directory that can be
 renamed or moved without editing anything inside it.
 
-All four share `shared/catalog.mjs`, the single source of truth for the seed
+All five share `shared/catalog.mjs`, the single source of truth for the seed
 data and the item-generation formula. It is plain zero-dependency JS so the
 same file is importable from a bare `node` script (the Markout side, which
 generates its scaled pages ahead of time) and from a Vite build (the other
 three). They also share `markout-catalog/app.css` byte for byte, and the same
 class names on the same elements — which is what lets one measurement script
-drive all four.
+drive all six rows.
 
 ### The rating stars are deliberately naive
 
-All four ports build the five-star rating by iterating — `:for-each`, `.map`,
+All five ports build the five-star rating by iterating — `:for-each`, `.map`,
 `{#each}`, `x-for` — over `[1, 2, 3, 4, 5]` and emitting a `<span>` per star.
 An app that cared would not do this. It would render one element and clip it
 with a CSS width, or emit a single string of five glyphs and colour a prefix,
@@ -107,7 +107,7 @@ The same applies to the three-item spec list under each card.
 
 ```
 npm run bench:catalog    # Markout only, three catalog sizes
-npm run bench:compare    # all five, three catalog sizes
+npm run bench:compare    # all six rows, three catalog sizes
 ```
 
 Both regenerate the scaled Markout pages first — `scripts/gen-bench-pages.mjs`
@@ -140,10 +140,10 @@ median. A fresh page per repeat.
 batch
 DOM updates onto a scheduler tick after the click handler returns; Markout
 happens to be synchronous. Timing from `.click()` to the next statement would
-measure "handler dispatched" for four of the five and "DOM updated" for
+measure "handler dispatched" for every port but Markout, and "DOM updated" for
 Markout — a comparison Markout would lose for a reason that isn't real. So the
 harness polls on `requestAnimationFrame` until the DOM actually reflects the
-change, which is the latency a user perceives, for all five.
+change, which is the latency a user perceives, for all of them.
 
 ## What weight is measured
 
@@ -202,8 +202,8 @@ A comparison is only worth the care taken to keep it fair, so:
   where they appear. Writing it the naive way would have produced a number that
   says more about the port than about Alpine.
 - Nobody's catalog constant is handed to a deep reactive proxy. It is a
-  constant in all four.
-- All four render the same DOM, and that is checked rather than assumed. The
+  constant in all five.
+- All five render the same DOM, and that is checked rather than assumed. The
   Markout port once wrote `<mk-section class="catalog">`, which **replaces**
   the definition's own `class="panel"` rather than adding to it (`class+=`
   adds) — so its panel rendered with no background, no border and 51px more
@@ -392,33 +392,35 @@ lists. It also scales worse than linearly against the others: 2.5× Svelte at
 at 10,020 rows, 2.2× Markout and 8.4× Svelte, plus 20,048 `<template>` hosts
 that exist only to anchor its `x-for` loops.
 
-**DOM node counts agree to within 3.** Markout's three are a runtime script, a
-props script and the extra `<span>` from wrapping slotted content; the other
-four are identical. That is the parity contract holding.
+**DOM node counts agree exactly** — 6,688 / 22,528 / 220,528, every row.
+They count what the census counts: body elements, no `<template>`, no
+`<script>`. Counting scripts used to put the two Markout modes one apart, since
+a built page carries one more, which is not rendered content and not something
+a parity check should have an opinion about. That is the contract holding.
 
 ### Reading them
 
 **Against Alpine, which is the comparison that matters.** Markout wins the two
 columns that dominate a real catalog page, and wins them at every size: mount
-is about 2× faster (2.11×, 1.95×, 2.02× as rows grow), filter 2.0–3.3×
+is about 2× faster (2.09×, 1.95×, 2.04× as rows grow), filter 2.0–3.2×
 faster. That gap is stable across a 33× range of row counts, which is what
 makes it a property rather than a data point. Weight cuts the same way on the
 wire and the other way in memory — see above.
 
-**Sort is a wash for all five.** 25–34ms at 300 rows and 0.8–1.1s at 10,020,
+**Sort is a wash for everyone.** 23–34ms at 300 rows and 0.8–1.2s at 10,020,
 regardless of tool. It is a keyed DOM reorder, and no reactivity system can
 avoid paying for the moves.
 
 **Markout is the outlier on repeated small mutations at scale.** 20×
-add-to-cart at 10,020 rows: Markout 311.5ms against Alpine's 69.3, React's
-72.7, Vue's 73.8 and Svelte's 77.4 — 4.0× the *slowest* of the other four. It
-is not a small-page problem: at 300 rows Markout is 15.2ms, the fastest of the
-five, and at 1,020 it is 1.7× off the best. The cost appears with scale, which
-points at per-row structure rather than per-event work. This is the structural
-cost noted in the root `TODO.md` — a card builds 16 scopes, so the page builds
-~160,000 of them — showing up on mutation rather than on mount. The heap column
-above is the same cost weighed instead of timed. It is the number to fix, and
-the number not to omit.
+add-to-cart at 10,020 rows: Markout 236.3ms served against Alpine's 64.6,
+React's 72.1, Vue's 71.4 and Svelte's 74.6 — 3.2× the *slowest* of the other
+four. It is not a small-page problem: at 300 rows Markout is 13.2ms, the
+fastest of all six, and at 1,020 it is 2.2× off the best. The cost appears
+with scale, which points at per-row structure rather than per-event work. This
+is the structural cost noted in the root `TODO.md` — a card builds 16 scopes,
+so the page builds ~160,000 of them — showing up on mutation rather than on
+mount. The heap column above is the same cost weighed instead of timed. It is
+the number to fix, and the number not to omit.
 
 **Against the three framework ports, Markout loses mount by 2.5–4.7×.**
 Compiling `Card.svelte` and reading the output says where that goes. Svelte
@@ -437,10 +439,10 @@ returned 46% of mount, and making each remaining scope allocate less returned
 **Vue Vapor lands where the technology says it should, which is worth
 recording because it was a prediction.** `Why these five` argues Vapor belongs
 on Svelte's axis rather than React's, and the numbers agree: at 10,020 rows Vue
-mounts in 328.6ms against Svelte's 276.1 and React's 511.4, and it is the
-*fastest* of all five on filter at 40.3ms. Its sort at 1,020 rows (96.0ms)
-beats both React and Svelte. Compiled-no-VDOM is a tier, and
-Vue is now in it — so a reader who knows Vue can locate the other four against
+mounts in 316.3ms against Svelte's 271.8 and React's 501.0, and it is the
+*fastest* of the four SPA ports on filter at 40.8ms. Its sort at 1,020 rows
+(90.6ms) beats both React and Svelte. Compiled-no-VDOM is a tier, and
+Vue is now in it — so a reader who knows Vue can locate the others against
 a number they recognise.
 
 Its weight tells the other half: 45.4 KB gzipped, second heaviest after React,
@@ -451,7 +453,7 @@ to render it.
 rendering of the whole catalog, which is the thing Markout's served-markup
 story says you should not be doing — a Markout page can arrive with its rows
 already in the HTML, and none of `mount all` measures that. The benchmark
-makes all four do the same client-side work because that is the only way the
+makes every port do the same client-side work because that is the only way the
 column compares. Read it as a stress test of the runtime, not as what a
 Markout page costs a visitor.
 

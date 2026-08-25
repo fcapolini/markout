@@ -374,13 +374,14 @@ reusable piece of UI is split in Alpine — its markup belongs to whatever
 renders the page, its behavior to `Alpine.data()` — where `<:define>` keeps
 both together, in the page's own language.
 
-Speed is deliberately not a row in that table. There is a benchmark —
-[the catalog benchmark](packages/cli/bench/README.md) runs the same app in
-Markout, Alpine, React and Svelte and measures mount, filter, sort and
-repeated mutation — but it is an optimization tool for us, not an official
-ranking of anybody. It is one app, at three sizes, on one machine, written
-by the people who wrote one of the four entrants. We keep it to find out
-which columns Markout needs work in, and those are the columns worth your
+Speed is deliberately not a row in that table. There is a benchmark — [the
+catalog benchmark](packages/cli/bench/README.md) runs the same app in
+Markout, Alpine, React, Svelte and Vue, and measures how fast it updates,
+what it weighs over the wire and in memory, and when its content first
+appears — but it is an optimization tool for us, not an official ranking of
+anybody. It is one app, at three sizes, on one machine, written by the
+people who wrote one of the five entrants. We keep it to find out which
+columns Markout needs work in, and those are the columns worth your
 attention there.
 
 ## Two decisions, not one
