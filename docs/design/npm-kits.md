@@ -371,6 +371,30 @@ cannot use that trick, since it lives under the editor's extensions directory
 and `process.execPath` is the editor rather than the user's node, so it asks
 `npm root -g` once per language server and passes the answer in.
 
+Asking is two questions, though, because the obvious one frequently has no
+one to answer it. The language server is a child of the extension host, and
+an editor started from the Dock or the Finder on macOS is a child of launchd,
+whose PATH is `/usr/bin:/bin:/usr/sbin:/sbin` — no Homebrew, no nvm, no fnm,
+no volta, and so no npm. VS Code resolves the login shell's environment to
+paper over exactly this, but it is best-effort: skipped when the editor was
+started from a terminal that already had a good PATH, able to time out, and
+turned off by `terminal.integrated.inheritEnv: false`. When it does not
+happen the spawn fails with ENOENT, the answer is "no global kits", and it is
+silent — for precisely the audience the fallback was built for, whose pages
+then report every tag their kit defines as an unknown one.
+
+So the second question goes to the login shell (`$SHELL -ilc 'npm root -g'`),
+which is where a version manager put npm on the PATH to begin with —
+*interactive* as well as login, since nvm, fnm and asdf define themselves in
+`.zshrc`/`.bashrc`, which a non-interactive login shell never reads. It is
+second and not first because it is slow: an interactive zsh with a prompt
+framework in it can take seconds, and `kitsFor` is synchronous, so a compile
+would wait on it. It therefore runs in the BACKGROUND — the lookup answers
+"none yet" and the real answer lands in time for the next scan a few seconds
+later, which is a kit appearing shortly after the window opens. That is the
+same thing the scan's TTL already does for a kit installed while the window
+is open, so it needs no new behaviour to be understood by.
+
 The fallback is taken only when the docroot walk found **no kits at all**.
 Appending it unconditionally would be worse than useless: a project with its
 own copy of a kit, on a machine that also has a global copy, would find both —

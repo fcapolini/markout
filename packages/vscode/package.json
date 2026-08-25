@@ -1,6 +1,6 @@
 {
   "name": "markout-vscode",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "description": "Markout language support for VS Code: the compiler's diagnostics, in the editor",
   "keywords": [

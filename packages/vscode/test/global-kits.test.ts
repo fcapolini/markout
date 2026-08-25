@@ -1,9 +1,13 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { kitsFor } from '../src/pages';
-import { resetGlobalNodeModules, setGlobalNodeModules } from '../src/global-kits';
+import {
+  globalNodeModules,
+  resetGlobalNodeModules,
+  setGlobalNodeModules,
+} from '../src/global-kits';
 
 /**
  * The editor has to see the same kits the compiler does, including the ones
@@ -62,6 +66,65 @@ describe('globally installed kits, from the editor', () => {
     expect(kitsFor(bareDocroot(), fakeClock())).toEqual([]);
   });
 });
+
+/**
+ * The editor host's PATH is not the user's, and on macOS it usually is not:
+ * an editor started from the Dock inherits launchd's, which holds no
+ * Homebrew and no version manager. So `npm` on the PATH is the fast way of
+ * asking, not the only one -- see `src/global-kits.ts`.
+ */
+describe('asking npm where global packages are', () => {
+  // these tests are about the lookup itself, so they undo what test/setup.ts
+  // pins for everybody else
+  beforeEach(resetGlobalNodeModules);
+
+  it('takes what npm printed', () => {
+    expect(globalNodeModules({ npm: () => '/opt/homebrew/lib/node_modules\n' })).toBe(
+      '/opt/homebrew/lib/node_modules'
+    );
+  });
+
+  it('answers "none yet" while the login shell is being asked', () => {
+    let asked: (out: string | null) => void = () => {};
+    const shell = (done: (out: string | null) => void) => (asked = done);
+    expect(globalNodeModules({ npm: () => null, shell })).toBe(null);
+    asked('/Users/x/.nvm/versions/node/v24.0.0/lib/node_modules');
+    expect(globalNodeModules({ npm: notCalled, shell })).toBe(
+      '/Users/x/.nvm/versions/node/v24.0.0/lib/node_modules'
+    );
+  });
+
+  it('asks the login shell once, however often it is asked', () => {
+    let asks = 0;
+    const shell = () => {
+      asks++;
+    };
+    globalNodeModules({ npm: () => null, shell });
+    globalNodeModules({ npm: notCalled, shell });
+    globalNodeModules({ npm: notCalled, shell });
+    expect(asks).toBe(1);
+  });
+
+  it('settles on nothing when the login shell has none either', () => {
+    const shell = (done: (out: string | null) => void) => done(null);
+    expect(globalNodeModules({ npm: () => null, shell })).toBe(null);
+    expect(globalNodeModules({ npm: notCalled, shell: notCalled })).toBe(null);
+  });
+
+  it('ignores whatever an interactive shell printed before the answer', () => {
+    const shell = (done: (out: string | null) => void) =>
+      done('nvm: version 0.40.1\n/usr/local/lib/node_modules\n');
+    globalNodeModules({ npm: () => null, shell });
+    expect(globalNodeModules({ npm: notCalled, shell: notCalled })).toBe(
+      '/usr/local/lib/node_modules'
+    );
+  });
+});
+
+/** a probe that must not run: calling it fails the test rather than lying */
+function notCalled(): never {
+  throw new Error('asked again after the answer was known');
+}
 
 /** kitsFor caches per docroot; a moving clock keeps tests from sharing it */
 let tick = 0;
