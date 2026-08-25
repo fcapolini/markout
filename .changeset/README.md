@@ -25,6 +25,21 @@ patch, a minor or a major, then writes a markdown file here. Commit it with
 the change it describes — that is the point of the file existing separately
 from the version number.
 
+## Links in a changeset are read somewhere else
+
+Write them **absolute**, `https://github.com/fcapolini/markout/blob/main/...`,
+not relative.
+
+A changeset lives in `.changeset/` and its text ends up in a package's
+`CHANGELOG.md`, so a relative path is wrong by however many directories
+apart those are -- caught the first time by the docs-link check, on a
+`../docs/reference/testing.md` that was right where it was written and one
+level short where it landed.
+
+The deeper reason is the one the check cannot see: a changelog's main reader
+is on **npm**, where there is no repository around it and no relative link
+resolves at all.
+
 ## What the configuration decides, and why
 
 - **`updateInternalDependencies: "patch"`** is the whole reason for the tool.

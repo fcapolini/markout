@@ -10,7 +10,7 @@ work. Anything older than 0.4.0 is in the git history rather than here.
 ### Minor Changes
 
 - Rewritten against
-  [`@markout-lang/core@0.5.0`](../../packages/core/CHANGELOG.md):
+  [`@markout-lang/core@0.5.0`](https://github.com/fcapolini/markout/blob/main/packages/core/CHANGELOG.md):
   `std-data`'s parameters are declared and passed with `::`.
 
 ## 0.2.x
@@ -18,4 +18,4 @@ work. Anything older than 0.4.0 is in the git history rather than here.
 `std-data`, the datasource component — a value whose contents are fetched
 rather than written down, computed while the page renders and carried to the
 browser with it. A component rather than a language feature, which is the
-point: [kits carry the framework layer](../../docs/concepts/kits.md).
+point: [kits carry the framework layer](https://github.com/fcapolini/markout/blob/main/docs/concepts/kits.md).

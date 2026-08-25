@@ -1,6 +1,6 @@
 {
   "name": "@markout-lang/bootstrap-kit",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Bootstrap 5.3 as Markout components: one part per component, with the id wiring, the ARIA attributes and the repetition written once",
   "repository": {
     "type": "git",
