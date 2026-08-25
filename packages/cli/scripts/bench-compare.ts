@@ -1,14 +1,18 @@
-// Combined perf comparison: Markout's bench/markout-catalog against
-// hand-written, idiomatic Alpine 3, React, Svelte 5 and Vue 3.6 Vapor ports of
-// the exact same app -- same components, same catalog generator (see
+// Combined perf comparison: Markout's bench/markout-catalog, in both of the
+// delivery modes an app like this would actually use, against hand-written,
+// idiomatic Alpine 3, React, Svelte 5 and Vue 3.6 Vapor ports of the exact
+// same app -- same components, same catalog generator (see
 // bench/shared/catalog.mjs), same CSS, same interactions. One MEASURE_SCRIPT
-// drives all five, which works because all five markups reuse the same class
+// drives all six, which works because all six markups reuse the same class
 // names on purpose; bench-catalog.ts uses the same script for Markout alone.
 import { execSync, spawn, ChildProcessWithoutNullStreams } from 'node:child_process';
 import path from 'node:path';
 import { chromium, Browser } from 'playwright';
 import { gzipSync } from 'node:zlib';
 import { Server } from '../src/server';
+import { build } from '../src/server/build';
+import http from 'node:http';
+import fs from 'node:fs';
 
 const ROWS = [300, 1020, 10020];
 const REPEATS = 5; // + 1 discarded warm-up
@@ -21,6 +25,7 @@ const REACT_PORT = 4410;
 const SVELTE_PORT = 4411;
 const ALPINE_PORT = 4412;
 const VUE_PORT = 4413;
+const MARKOUT_BUILD_PORT = 4414;
 
 const MEASURE_SCRIPT = `(async () => {
   // An unstyled page lays out differently and would still produce numbers, so
@@ -28,7 +33,7 @@ const MEASURE_SCRIPT = `(async () => {
   // change what is being measured. Two directory renames have broken this link
   // already and neither showed up in the results. Checking document.styleSheets
   // does NOT catch it -- a 404'd <link> is still listed there, just with no
-  // rules -- so this asserts the style APPLIED. All four ports share app.css,
+  // rules -- so this asserts the style APPLIED. Every port shares app.css,
   // whose body background is var(--mist); without it the body is transparent.
   if (getComputedStyle(document.body).backgroundColor === 'rgba(0, 0, 0, 0)') {
     throw new Error('app.css did not apply -- check the page\\'s <link href>');
@@ -39,7 +44,7 @@ const MEASURE_SCRIPT = `(async () => {
   // Alpine, React, Svelte and Vue all batch DOM updates onto a scheduler
   // tick after a click handler returns -- Markout happens to be synchronous,
   // but bracketing t0/t1 around .click() only measures "handler dispatched",
-  // not "DOM updated", for the other four. Poll via rAF for the real,
+  // not "DOM updated", for the others. Poll via rAF for the real,
   // comparable, user-perceived latency instead.
   const waitUntil = (cond, timeoutMs = 30000) => new Promise((resolve, reject) => {
     const start = performance.now();
@@ -177,7 +182,7 @@ interface Weight {
 //     happens to compress is a property of the server, not of the tool, and
 //     Markout is served by its own Server while the other ports go through
 //     `vite preview` -- reading transferSize would compare configurations.
-//     Images are excluded: all four load the identical Unsplash URLs, and they
+//     Images are excluded: every port loads the identical Unsplash URLs, and they
 //     are the app's content rather than the tool's weight. The HTML/JS split
 //     matters because Markout carries its app in the document where the other
 //     three carry theirs in a bundle, so only the total is comparable.
@@ -241,13 +246,10 @@ async function measureWeight(browser: Browser, url: string): Promise<Weight> {
     // <template> is excluded on purpose. Alpine hosts every x-for on one and
     // Markout parks its stencils in <head>, so counting them would compare
     // rendering strategies; template CONTENT already sits in a fragment
-    // outside the document, so this counts exactly what is rendered.
-    const counts = await page.evaluate(`(() => ({
-      all: document.getElementsByTagName('*').length,
-      templates: document.getElementsByTagName('template').length,
-    }))()`) as { all: number; templates: number };
-    w.nodes = counts.all - counts.templates;
-    w.templates = counts.templates;
+    // outside the document, so nothing rendered is lost by skipping them.
+    w.templates = await page.evaluate(
+      'document.getElementsByTagName("template").length',
+    ) as number;
     w.census = await page.evaluate(`(() => {
       const c = {};
       for (const el of document.body.getElementsByTagName('*')) {
@@ -257,9 +259,14 @@ async function measureWeight(browser: Browser, url: string): Promise<Weight> {
       }
       return c;
     })()`) as Record<string, number>;
+    // Exactly what the census counts, so the two can never disagree: body
+    // elements, no <template>, no <script>. Counting <script> put the two
+    // Markout modes one apart -- a built page carries one more than a served
+    // one -- for a difference that is not rendered content at all.
+    w.nodes = Object.values(w.census).reduce((n, c) => n + c, 0);
 
     // Structure parity is not output parity. Markout's average-price stat once
-    // read $105 where the other four read $106 -- it truncates with `| 0`
+    // read $105 where the other ports read $106 -- it truncates with `| 0`
     // because `${...}` cannot reach Math.round -- and every tag and class
     // matched perfectly while the page said something different. So compare
     // what a few known elements actually SAY, not just that they exist.
@@ -305,7 +312,7 @@ const STUB_PNG = Buffer.from(
 //
 // This is a DELIVERY comparison and has to be read as one. Markout's page is
 // rendered by its own Server, so it arrives with its first rows already in the
-// markup; the other four ports serve an empty shell and build everything after
+// markup; the client-rendering ports serve an empty shell and build everything after
 // their bundle runs. React and Vue can render on the server and these ports do
 // not -- that is each tool's DEFAULT setup, not its ceiling. Alpine is the only
 // one with no server story of its own to reach for.
@@ -377,6 +384,54 @@ async function measureFirstPaint(browser: Browser, url: string): Promise<FirstPa
   return { fcp, firstCard, noJsCards };
 }
 
+// Markout in its OTHER ahead-of-time mode. `markout build` compiles and stops:
+// values resolve in the browser, so this artifact is the same shape as the
+// four SPA ports and is the row that compares like for like with them. The
+// served mode above is the other realistic deployment for an app like this.
+//
+// `markout prerender` is deliberately not measured. It is the right mode for a
+// documentation site, whose content is genuinely fixed at build time; a
+// catalog's rows are the kind of thing that changes without a redeploy, and
+// freezing them into the artifact is not what anyone would ship.
+async function buildMarkoutClientMode(): Promise<{ dir: string; stop: () => void; port: number }> {
+  const docroot = path.resolve(__dirname, '../bench');
+  // beside bench/, not inside it: build refuses an outdir under the docroot,
+  // because the next run would compile its own output
+  const dir = path.resolve(__dirname, '../.built-catalog');
+  fs.rmSync(dir, { recursive: true, force: true });
+  const pages = [
+    '/markout-catalog/index.html',
+    '/markout-catalog/bench-1000.html',
+    '/markout-catalog/bench-10000.html',
+  ];
+  const result = await build({ docroot, outdir: dir, pages, prerender: false });
+  if (result.errors.length) {
+    throw new Error(`markout build failed: ${result.errors.map(e => e.msg ?? e).join('; ')}`);
+  }
+  // `pages` restricts the build, which also skips the asset copy -- and the
+  // measure script refuses a page whose stylesheet did not apply, correctly.
+  fs.copyFileSync(
+    path.join(docroot, 'markout-catalog/app.css'),
+    path.join(dir, 'markout-catalog/app.css'),
+  );
+
+  const server = http.createServer((req, res) => {
+    const rel = decodeURIComponent((req.url || '/').split('?')[0]);
+    const file = path.join(dir, rel);
+    fs.readFile(file, (err, body) => {
+      if (err) { res.statusCode = 404; res.end(); return; }
+      const type = file.endsWith('.css') ? 'text/css'
+        : file.endsWith('.js') ? 'text/javascript'
+        : 'text/html';
+      res.setHeader('content-type', type);
+      res.end(body);
+    });
+  });
+  freePort(MARKOUT_BUILD_PORT);
+  await new Promise<void>((resolve) => server.listen(MARKOUT_BUILD_PORT, resolve));
+  return { dir, port: MARKOUT_BUILD_PORT, stop: () => { server.close(); fs.rmSync(dir, { recursive: true, force: true }); } };
+}
+
 async function main() {
   // Warnings, not silence. A compile warning means the page is not the page
   // the author thinks it is -- `class` on a component usage REPLACING the
@@ -393,17 +448,20 @@ async function main() {
   let svelteProc: ChildProcessWithoutNullStreams | undefined;
   let alpineProc: ChildProcessWithoutNullStreams | undefined;
   let vueProc: ChildProcessWithoutNullStreams | undefined;
+  let markoutBuild: { dir: string; stop: () => void; port: number } | undefined;
   try {
     reactProc = await startPreview(REACT_DIR, REACT_PORT);
     svelteProc = await startPreview(SVELTE_DIR, SVELTE_PORT);
     alpineProc = await startPreview(ALPINE_DIR, ALPINE_PORT);
     vueProc = await startPreview(VUE_DIR, VUE_PORT);
+    markoutBuild = await buildMarkoutClientMode();
     await run(server);
   } finally {
     reactProc?.kill();
     svelteProc?.kill();
     alpineProc?.kill();
     vueProc?.kill();
+    markoutBuild?.stop();
     await server.stop();
   }
 }
@@ -412,11 +470,21 @@ async function run(server: Server) {
   const browser = await chromium.launch();
 
   const targets: { name: string; urlFor: (rows: number) => string }[] = [
+    // The two deployments an app like this would actually have. `server` puts
+    // Node in the request path and the page arrives rendered; `build` ships a
+    // compiled artifact that resolves in the browser, like the four below it.
     {
-      name: 'Markout',
+      name: 'Markout (server)',
       urlFor: (rows) => {
         const file = rows === 300 ? 'index.html' : rows === 1020 ? 'bench-1000.html' : 'bench-10000.html';
         return `http://127.0.0.1:${server.port}/markout-catalog/${file}`;
+      },
+    },
+    {
+      name: 'Markout (build)',
+      urlFor: (rows) => {
+        const file = rows === 300 ? 'index.html' : rows === 1020 ? 'bench-1000.html' : 'bench-10000.html';
+        return `http://127.0.0.1:${MARKOUT_BUILD_PORT}/markout-catalog/${file}`;
       },
     },
     // Alpine second, right after Markout: it is the tool this audience is
@@ -499,11 +567,14 @@ async function run(server: Server) {
   });
   console.log('\nFirst content. Unsplash is stubbed with a 1x1 PNG so this measures the');
   console.log('tool and not a CDN; the CSS sizes every card image, so layout is unchanged.');
-  console.log('Read this as a DELIVERY comparison, not a rendering one: Markout is served');
-  console.log('by its own Server and arrives with rows in the markup, while the other four');
-  console.log('serve an empty shell. React and Vue CAN render on the server and these ports');
-  console.log('do not -- that is each tool\'s default setup, not its ceiling. Alpine is the');
-  console.log('one with no server story of its own to reach for.\n');
+  console.log('This is a DELIVERY comparison, not a rendering one, which is why Markout');
+  console.log('is here twice. Served, it arrives with its rows already in the markup.');
+  console.log('Built, it ships a compiled artifact that fills itself in -- the same shape');
+  console.log('as the four SPA ports, and the row to read against them. `prerender` is');
+  console.log('not measured: it suits a documentation site, not a catalog whose rows');
+  console.log('change without a redeploy. React and Vue CAN render on the server and');
+  console.log('these ports do not -- their default setup, not their ceiling; Alpine is');
+  console.log('the one with no server story of its own to reach for.\n');
   console.log('FCP is last and least: it fires on the first paint of ANYTHING, and every');
   console.log('port has a static header, so a page that paints chrome before it has any');
   console.log('content scores well on it. First card is the column with the meaning.\n');
@@ -514,7 +585,7 @@ async function run(server: Server) {
   console.log('\nWeight, one pass per size. Bytes are uncompressed and gzipped here');
   console.log('rather than read off the wire, so the numbers are the tool\'s and not the');
   console.log('server\'s. Heap is after a forced GC with the whole catalog mounted.');
-  console.log('DOM nodes is a parity check -- all five render the same markup, so the');
+  console.log('DOM nodes is a parity check -- every port renders the same markup, so the');
   console.log('counts must agree; +Nt is the <template> hosts each strategy needs, which');
   console.log('render nothing and are excluded from the count:\n');
   console.log(toMarkdownTable(weightHeaders, weightRows));
@@ -547,7 +618,7 @@ function reportParity(names: string[], weights: Record<string, Weight | undefine
     }
   }
   console.log('\nDOM parity -- every port renders the same markup, so every tag+class count');
-  console.log('must agree. Two differences are structural and expected: the other four');
+  console.log('must agree. Two differences are structural and expected: the other ports');
   console.log('each need a wrapper <div> to mount into that Markout does not, and Markout');
   console.log('wraps slotted content, so <span class=tagline> holds one more <span>. A');
   console.log('line that is NOT one of those two is the ports drifting apart. text: lines');
