@@ -198,9 +198,9 @@ crosses frozen, with a result and no expression, so nothing re-runs it. That
 that would not compile.
 
 That is the failure this mode invites, since a prerendered page has no request
-behind it and so no `$origin`. A datasource with a relative `:url` therefore
-fails and says to mark it `:client` — after which the browser fetches it on
-arrival. An *absolute* `:url` still fetches while rendering and bakes the answer
+behind it and so no `$origin`. A datasource with a relative `::url` therefore
+fails and says to mark it `::client` — after which the browser fetches it on
+arrival. An *absolute* `::url` still fetches while rendering and bakes the answer
 into the page, which is static site generation and worth having when the data
 is what you meant to ship.
 
@@ -212,7 +212,7 @@ markout ./site                                       # in one terminal
 markout prerender ./site ./dist -o http://127.0.0.1:3000
 ```
 
-It says what `$origin` is while the pages are rendered, so a relative `:url`
+It says what `$origin` is while the pages are rendered, so a relative `::url`
 resolves exactly as it does when served. Any server for the same directory will
 do — the one above, or the host the pages are being deployed to. This is what
 lets a page fetch its own data and still be a static deployment: the fetching

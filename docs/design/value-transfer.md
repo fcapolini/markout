@@ -419,7 +419,7 @@ moved to the demo that has a server: `sites/site/demos/desk/`.
 
 Writing the component turned up one gap that is about the language rather
 than about this design: **a page cannot know its own origin**, so a served
-fetch needs an absolute URL while a `:client` one takes a plain path. The
+fetch needs an absolute URL while a `::client` one takes a plain path. The
 showcase works around it by stating `:origin` once, which also makes it
 sensitive to the dev server's port. Recorded in TODO.md, since the fix is a
 request context and that is a larger question — it would be the first thing

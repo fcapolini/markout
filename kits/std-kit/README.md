@@ -70,15 +70,15 @@ The server fetches while it renders, waits, and sends the result with the
 page. So the rows are in the served HTML, the browser fetches nothing, and
 there is no flash — `${rows}` in the page is `${rows}` in the markup.
 
-> **A relative `:url` needs something serving the page.** A build has no
+> **A relative `::url` needs something serving the page.** A build has no
 > request to take an origin from, so a page compiled ahead of time needs an
-> absolute `:url`, a `:client` datasource, or `markout build --origin`.
+> absolute `::url`, a `::client` datasource, or `markout build --origin`.
 > Without one of those the build stops and names the datasource.
 
 | Parameter | Default | Meaning |
 | --- | --- | --- |
-| `:url` | `""` | Where to fetch. Nothing happens without one. Page-relative is fine while something is serving the page — see above. |
-| `:client` | `false` | Fetch in the browser instead of while rendering. |
+| `::url` | `""` | Where to fetch. Nothing happens without one. Page-relative is fine while something is serving the page — see above. |
+| `::client` | `false` | Fetch in the browser instead of while rendering. |
 
 | Reads | Meaning |
 | --- | --- |
@@ -92,14 +92,14 @@ is where its name resolves, so put it at the top of the region that reads it.
 
 ### The URL means the same thing in both modes
 
-`:url="/people.json"` works served or `:client`, because the component
+`::url="/people.json"` works served or `::client`, because the component
 resolves it against `$origin` — which the server takes from the request and
 the browser from `location`. Without that the two would disagree: a server
 has no page to be relative *to*, so a bare path there is not a different
 address, it is not an address at all.
 
 Which is also why `markout prerender` is the delivery to watch. It has no
-request behind the render, so there is no `$origin`, and a relative `:url` has
+request behind the render, so there is no `$origin`, and a relative `::url` has
 nothing to resolve against at the moment it would be fetched:
 
 ```
@@ -108,7 +108,7 @@ serving this page, so there is no address to resolve it against.
 ```
 
 The prerender stops there rather than writing a page with a hole in it. Give
-the datasource an absolute `:url`, mark it `:client` so the browser resolves it
+the datasource an absolute `::url`, mark it `::client` so the browser resolves it
 against a real `location.origin`, or say what the pages are being rendered for
 — `markout prerender --origin http://127.0.0.1:3000`, with the docroot served
 from another terminal, which is how a page whose data is files in its own
@@ -128,14 +128,14 @@ change happened:
 
 The first evaluation is the one that differs between the modes. A served
 datasource already has its answer and does not fetch again on arrival — that
-second request is the thing this design exists to avoid. A `:client` one has
+second request is the thing this design exists to avoid. A `::client` one has
 nothing yet, so it does.
 
-### `:client`, and what not to publish
+### `::client`, and what not to publish
 
 A served result is written into the page as plain text. Anything the page
 should not hand to whoever views the source — a session, a credential,
-another user's row — belongs behind `:client`, which leaves the render alone
+another user's row — belongs behind `::client`, which leaves the render alone
 and fetches on arrival:
 
 ```html
@@ -143,7 +143,7 @@ and fetches on arrival:
 <p>${mine.loading ? 'Loading…' : mine.data?.name}</p>
 ```
 
-That is the trade the two modes are: `:client` costs a request and a flash
+That is the trade the two modes are: `::client` costs a request and a flash
 and publishes nothing; the default costs neither and publishes everything it
 fetched.
 
@@ -178,7 +178,7 @@ two.
 ## Notes on the awkward corners
 
 - **`:handle-`, not `:did-init`.** The browser fetch hangs off a `:handle-`
-  on the resolved URL rather than an init callback, so a `:url` that changes
+  on the resolved URL rather than an init callback, so a `::url` that changes
   refetches instead of being read once. A `_started` flag is what makes the
   *first* call behave differently in the two modes.
 - **`_served` is the only value that crosses.** Everything else here is

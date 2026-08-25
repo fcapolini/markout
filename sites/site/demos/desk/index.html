@@ -34,7 +34,7 @@
                      `:on-click` handler, then `reload()`. Nothing in markout
                      is involved, and nothing needs to be.
 
-    a secret         who is at the desk is fetched with `:client`, in the
+    a secret         who is at the desk is fetched with `::client`, in the
                      browser. A served value is written into the markup in
                      plain text, so anything that should not be published
                      must not be fetched while rendering.
@@ -42,7 +42,7 @@
   What to do with it: view the source of what is served. The tickets and the
   thread are in the HTML, fetched while this page rendered — no spinner, no
   request from the browser, nothing to hydrate into place. The name in the
-  corner is not, because that one is `:client`.
+  corner is not, because that one is `::client`.
 
     npm run dev      then http://localhost:3000/demos/desk/
 
@@ -166,14 +166,14 @@
               : (listSrc.data?.[0]?.id ?? null)} />
 
   <!---
-    The second link of the chain. An empty `:url` fetches nothing, which is
+    The second link of the chain. An empty `::url` fetches nothing, which is
     what "no ticket matched" has to mean here.
   -->
   <std-data :aka="threadSrc"
             ::url=${ui.openId ? apiBase + '/tickets/' + ui.openId : ''} />
 
   <!---
-    `:client`, so the server renders nothing for it and the browser fetches
+    `::client`, so the server renders nothing for it and the browser fetches
     it on arrival. This is the one value on the page that must not be
     published: a served value is written into the markup as plain text.
   -->

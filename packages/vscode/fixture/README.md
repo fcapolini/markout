@@ -46,7 +46,7 @@ The standard kit ships with the compiler and is spliced into every page, so
 there is nothing here to install and nothing to write. Then ctrl-click the
 tag: it opens `@markout-lang/std-kit/parts/data.htm` in `node_modules`, which
 is the point of having done it as a real kit rather than as something the
-compiler conjures — the definition is a file, and you can read it. `:url`
+compiler conjures — the definition is a file, and you can read it. `::url`
 goes to the same place, and typing `<std-` or a `:` inside the tag offers
 what the kit defines. `people.json` beside it is what the page fetches if you
 ever serve this folder.

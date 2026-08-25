@@ -4,7 +4,7 @@
   <!---
     Bootstrap's button, as a real `<button>`.
 
-    `:toggle`/`:target`/`:dismiss` write the `data-bs-*` triplet every
+    `::toggle`/`::target`/`::dismiss` write the `data-bs-*` triplet every
     JS-driven component in this kit is opened and closed by, so a trigger for
     a modal, an offcanvas or a collapse is this same tag rather than a
     component of its own:
@@ -51,8 +51,8 @@
 
   <!---
     The same styling on an `<a>`, for a link that is meant to look like a
-    button. Left as it is, it is an ordinary link; `:button` turns it into
-    one, and `:variant` then means what it means on `bs-button`.
+    button. Left as it is, it is an ordinary link; `::button` turns it into
+    one, and `::variant` then means what it means on `bs-button`.
   -->
   <:define tag="bs-link:a"
 
@@ -88,7 +88,7 @@
   </:define>
 
   <!---
-    A button group. `:label` is Bootstrap's requirement, not this kit's: the
+    A button group. `::label` is Bootstrap's requirement, not this kit's: the
     group needs an accessible name of its own, since the buttons inside only
     name themselves.
   -->

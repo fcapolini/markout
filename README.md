@@ -435,7 +435,7 @@ JavaScript. This is not "client-side rendering": the same render pass runs
 once, at build time, so the markup is in the file and a page's static content
 does not flash in after JavaScript loads. What it cannot carry is what a
 request would have supplied — a `:server-` value has no result, and a
-datasource needs `:client` so the browser fetches it on arrival.
+datasource needs `::client` so the browser fetches it on arrival.
 
 **Built** with `markout build`, which compiles and stops there. Values resolve
 in the browser, the way any client-side framework does it, and the artifact

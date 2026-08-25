@@ -112,14 +112,14 @@ and there is no flash. See [server-only
 values](../design/value-transfer.md).
 
 Two modes. **Served** is the default and is the one that renders: one request
-per page load, and the data is in the source. **`:client`** does nothing on
+per page load, and the data is in the source. **`::client`** does nothing on
 the server and fetches on arrival, which is what anything the page should not
 publish needs — a session, another user's row — since a served value is
 written into the page as plain text where anyone can read it.
 
 The served mode wants a server, which matters when there isn't one: a page run
 through `markout prerender` has no request to take an origin from, so a
-relative `:url` needs an absolute one, `:client`, or `markout prerender
+relative `::url` needs an absolute one, `::client`, or `markout prerender
 --origin` before the page will prerender. `markout build` sidesteps the
 question entirely by evaluating nothing — the fetch happens in the browser,
 where there is always an origin. See [the std kit's

@@ -2,14 +2,14 @@
   <:import src="base.htm" />
 
   <!---
-    A table from `:columns` and `:rows`.
+    A table from `::columns` and `::rows`.
 
     A column is `{ key, name, class }`; a row is any object the columns can
     be read out of. That is the one place in this kit where markup is
     generated from data twice over — once per column, once per row — and it
     is the case where writing it by hand hurts most.
 
-    `:responsive` is a class on the same element rather than an extra
+    `::responsive` is a class on the same element rather than an extra
     wrapper: `.table-responsive` only sets `overflow-x`, so it costs nothing
     when off.
   -->

@@ -76,12 +76,12 @@ work perfectly well here. One that reads nothing of the request runs at build
 time and its answer is baked into the markup — which is what static site
 generation *is*. And whether a given value needs a request is decided while it
 runs, not while it compiles: `std-data` holds the same `:server-` value whether
-it is inert or a fetch, depending on `:client`, so no static check could tell
+it is inert or a fetch, depending on `::client`, so no static check could tell
 those apart. The render can.
 
 For a datasource that means:
 
-| `:url` | `served` (default) | `:client` |
+| `::url` | `served` (default) | `::client` |
 | --- | --- | --- |
 | relative (`/api/rows`) | **fails the build** — nothing to resolve it against, and it says so | fetched by the browser on arrival |
 | relative, with `--origin` | resolved against it and fetched while building | fetched by the browser on arrival |

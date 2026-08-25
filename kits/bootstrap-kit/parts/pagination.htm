@@ -3,15 +3,15 @@
 
   <!---
     Pagination driven by a page number rather than by markup: give it the
-    `:current` page and the total `:pages` and it works out which entry is
+    `::current` page and the total `::pages` and it works out which entry is
     active and when the arrows are dead.
 
-    The current page is `:current` rather than `:page`, because `page` is
+    The current page is `::current` rather than `:page`, because `page` is
     already the name of `<html>`'s own scope — a parameter of that name would
     resolve to the scope instead of to the number.
 
-    `:link` and `:select` are the two ways to answer "what does a click do".
-    `:link` builds an href per page for a server-rendered list; `:select` is
+    `::link` and `::select` are the two ways to answer "what does a click do".
+    `::link` builds an href per page for a server-rendered list; `::select` is
     called with the page number for one that stays on the page. Both are
     ordinary function parameters — a callback the component calls, not a DOM
     event, so it is a value and not an `:on-` handler.

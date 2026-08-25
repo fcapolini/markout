@@ -4,9 +4,9 @@
   <!---
     Checkbox, radio and switch are one component: in Bootstrap a switch IS a
     checkbox with `.form-switch` on the wrapper, and a radio differs only by
-    `type`. `:type` picks between them.
+    `type`. `::type` picks between them.
 
-    A group of radios shares one `:name`, as it does in plain HTML — that is
+    A group of radios shares one `::name`, as it does in plain HTML — that is
     what makes them exclusive, and the kit doesn't hide it.
   -->
   <:define tag="bs-check:div"
@@ -54,13 +54,13 @@
 
   <!---
     A whole group of radios or checkboxes from one array, sharing a name and
-    reporting the selection back through `:value`. Entries are strings or
+    reporting the selection back through `::value`. Entries are strings or
     `{ name, value, disabled }`, as in `bs-select`.
 
-    What `:value` HOLDS is decided by `:type`, because that is what the two
+    What `::value` HOLDS is decided by `::type`, because that is what the two
     controls mean: a radio group submits one value and a checkbox group
     submits every box that is ticked, under the same name. So a radio group's
-    `:value` is the selected value or `null`, and a checkbox or switch
+    `::value` is the selected value or `null`, and a checkbox or switch
     group's is an ARRAY, in the order the options were given rather than the
     order they were clicked — a summary sentence reading it should not
     reorder itself under the reader.
@@ -68,7 +68,7 @@
     It used to be one value either way, which made a checkbox group behave
     like a radio group that could not make up its mind: ticking a second box
     unticked the first, and unticking a box left it ticked. Not a shape
-    guessed from a value — `:type` is declared, and it is the same thing that
+    guessed from a value — `::type` is declared, and it is the same thing that
     already picks the input's type and the switch class.
   -->
   <:define tag="bs-check-group:div"
@@ -87,7 +87,7 @@
     :_name=${`bs-check-group-${$id}`}
     :_legendId=${`bs-check-group-legend-${$id}`}
     :_multi=${type !== 'radio'}
-    // a lone value read as a list of one, the way `:options` reads a lone
+    // a lone value read as a list of one, the way `::options` reads a lone
     // string as an entry: passing `:value="Slack"` to a checkbox group says
     // something unambiguous, and spreading a string into characters is not it
     :_selected=${!_multi ? [] : Array.isArray(value) ? value : value == null ? [] : [value]}
@@ -152,8 +152,8 @@
     :_id=${`bs-range-${$id}`}
   >
     <!---
-      The label row, which either half can be alone in: `:showValue` with no
-      `:label` used to render nothing at all, since the row was gated on the
+      The label row, which either half can be alone in: `::showValue` with no
+      `::label` used to render nothing at all, since the row was gated on the
       label.
 
       A row rather than a `<label>` wrapping both, so the readout stays out

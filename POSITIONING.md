@@ -200,7 +200,7 @@ A built page also refuses what it cannot deliver, as of the same day: a
 such a value crosses frozen and the browser cannot make up for it. So the
 claim above is safe to make in public -- "compile ahead of time and deploy
 static assets" cannot quietly produce a page with no data in it. A datasource
-that needed a server says so, and names the one-word fix (`:client`).
+that needed a server says so, and names the one-word fix (`::client`).
 
 ## There is one Bootstrap kit, and it is a package
 

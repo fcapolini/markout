@@ -16,7 +16,7 @@
 
     - **served** (default). The server fetches, and the result crosses in the
       page. One request per page load, and the data is in the source.
-    - **`:client`**. The server does nothing and the browser fetches on
+    - **`::client`**. The server does nothing and the browser fetches on
       arrival. For anything the page should NOT publish — a session, another
       user's row — since a served value is written into the page as plain
       text where anyone can read it.
@@ -47,7 +47,7 @@
       of time -- there is no request behind that render and the deploy
       host is unknown, so there is nothing to resolve against. It used to
       resolve anyway and `new URL('/x', undefined)` threw, which took a
-      `:client` datasource down with it: this value is computed either
+      `::client` datasource down with it: this value is computed either
       way, so the mode meant to work in a built page was the one that
       could not. Relative is exactly right there, since the browser
       re-derives this against a real `location.origin`.
@@ -118,13 +118,13 @@
     /*
       `:handle-` rather than `:did-init`, because it takes the URL:
       it runs once when the page comes up AND again whenever that URL
-      becomes a different one, which is what makes `:url` behave the
+      becomes a different one, which is what makes `::url` behave the
       way it reads. Browser-only, so none of this touches the render.
 
       The first call is the one that differs between the modes. A
       served datasource already HAS its answer, so fetching again on
       arrival would be the second request this whole design exists to
-      avoid; a `:client` one has nothing yet, so it must. Every later
+      avoid; a `::client` one has nothing yet, so it must. Every later
       call means the URL genuinely changed, and both modes refetch.
     */
     :_started=${false}

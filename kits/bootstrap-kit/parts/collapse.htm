@@ -4,12 +4,12 @@
   <!---
     A collapsible region. The trigger is deliberately not part of it —
     anything can open a collapse, and often several things do — so the region
-    takes a `:name` and a `bs-button` points at it:
+    takes a `::name` and a `bs-button` points at it:
 
       <bs-button ::toggle="collapse" ::target="#details">Details</bs-button>
       <bs-collapse ::name="details">…</bs-collapse>
 
-    `:horizontal` collapses width instead of height, in which case Bootstrap
+    `::horizontal` collapses width instead of height, in which case Bootstrap
     needs the content to have a width of its own.
   -->
   <:define tag="bs-collapse:div"
