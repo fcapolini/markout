@@ -19,9 +19,43 @@ components, a lot of derived state, and one list that dominates everything.
 | | Source | Components |
 | --- | --- | --- |
 | Markout | `markout-catalog/` | 10 `<:define>`s |
-| Alpine | `alpine-catalog/` | none — Alpine has no component system |
+| Alpine | `alpine-catalog/` | 1 `Alpine.data()`, no markup components |
 | React | `react-catalog/` | 10 `.tsx` components |
 | Svelte | `svelte-catalog/` | 10 `.svelte` components |
+
+That Alpine row needs a word, because "no components" would be too blunt.
+Alpine reuses *behavior* perfectly well: `Alpine.data(name, fn)` registers a
+state-and-methods object that any element can adopt with `x-data="name"`, and
+`Alpine.bind(name, fn)` does the same for a bundle of attributes. What it has
+no primitive for is reusable *markup* — there is no way to declare a
+parameterized chunk of HTML and instantiate it, the way `<:define>`, a `.tsx`
+function and a `.svelte` file all do. Alpine's answer is that markup reuse
+belongs to whatever renders the page — Blade, ERB, Twig, a Django include — or
+is written out where it is used. This app has no such layer, so the card is
+written once, inline. That is a fair reflection of Alpine, not a handicap
+imposed on it.
+
+### Why these four
+
+One port per rendering technology, not one per popular framework. Markout
+hangs a scope graph on the real DOM; Alpine walks the real DOM from
+attributes, with no build step; React diffs a virtual DOM at runtime; Svelte
+compiles to direct DOM operations with no virtual DOM at all. Four strategies,
+four ports — and a fifth is only worth its parity cost if it brings a fifth
+strategy.
+
+That is why there is no Vue here. Vue 3 is a virtual-DOM framework in the same
+family as React; its compiler's patch flags let it skip static subtrees, and
+its proxy reactivity re-renders only what actually changed, so it sits a little
+to Svelte's side of React — but it is a second point on an axis this set
+already has, not a new axis. A port of it would tell us where Vue lands between
+two numbers we already measure.
+
+The one Vue that would earn a slot is its global build with in-DOM templates:
+script tag, markup in the page, no build step. That is a *delivery* mode the
+set is missing rather than a rendering strategy it is missing, and it is the
+mode Markout itself claims. (`petite-vue`, the obvious candidate there, last
+published 0.4.1 in May 2022.)
 
 The Markout port is laid out the way a modular Markout app is meant to be —
 the page at `markout-catalog/index.html`, its components beside it in

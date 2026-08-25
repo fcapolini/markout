@@ -356,7 +356,7 @@ is the honest comparison rather than one that flatters us.
 | Mistakes caught before the page loads | no, silent at runtime | n/a | yes, with a file and a line |
 | Content present in the served HTML | no, `x-cloak` hides the gap | yes, the server wrote it | yes, in both delivery modes |
 | Same source renders on the server | no, client only | server owns the HTML | yes |
-| Reusable components in markup | `x-data` + `<template>` | server-side partials | `<:define>` + `<:slot>` |
+| Reusable components in markup | no — `x-data` reuses behavior; markup comes from the server | server-side partials | `<:define>` + `<:slot>` |
 | Parametric CSS | inline styles, or CSS variables set inline | whatever the server renders | `${...}` inside `<style>` |
 | Interaction without a server round-trip | yes | no, by design | yes |
 
@@ -367,9 +367,21 @@ backend — where Markout wants Node in the request path or a build step. htmx
 is solving a different problem, server-driven UI, and composes fine with
 either.
 
-The row that is worth the trade, if any is: a mistake in an Alpine attribute
-is silent until someone loads the page and notices. Here it is a compile
-error naming the file and the line, in the terminal or in the editor.
+Two rows are worth the trade, if any are. A mistake in an Alpine attribute is
+silent until someone loads the page and notices; here it is a compile error
+naming the file and the line, in the terminal or in the editor. And a
+reusable piece of UI is split in Alpine — its markup belongs to whatever
+renders the page, its behavior to `Alpine.data()` — where `<:define>` keeps
+both together, in the page's own language.
+
+Speed is deliberately not a row in that table. There is a benchmark —
+[the catalog benchmark](packages/cli/bench/README.md) runs the same app in
+Markout, Alpine, React and Svelte and measures mount, filter, sort and
+repeated mutation — but it is an optimization tool for us, not an official
+ranking of anybody. It is one app, at three sizes, on one machine, written
+by the people who wrote one of the four entrants. We keep it to find out
+which columns Markout needs work in, and those are the columns worth your
+attention there.
 
 ## Two decisions, not one
 

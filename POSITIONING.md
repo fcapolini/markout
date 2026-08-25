@@ -92,7 +92,7 @@ The honest differences:
 | Mistakes caught before the page loads | no, silent at runtime | n/a | yes, with a file and a line |
 | Content present in the served HTML | no, `x-cloak` hides the gap | yes, the server wrote it | yes, in both delivery modes |
 | Same source renders on the server | no, client only | server owns the HTML | yes |
-| Reusable components in markup | `x-data` + `<template>` | server-side partials | `<:define>` + `<:slot>` |
+| Reusable components in markup | no — `x-data` reuses behavior; markup comes from the server | server-side partials | `<:define>` + `<:slot>` |
 | Parametric CSS | inline styles, or CSS variables set inline | whatever the server renders | `${…}` inside `<style>` |
 | Interaction without a server round-trip | yes | no, by design | yes |
 
@@ -103,6 +103,58 @@ asks for Node in the request path or a build step (see below). htmx is solving a
 different problem — server-driven UI — and composes fine with either. Where the
 React/Vue/Angular comparison still belongs is in explaining *why the reader is
 on Bootstrap in the first place*, not in explaining what to use for logic.
+
+## "The frameworks are moving your way" — half true, and the half matters
+
+This will come up in a launch thread, so it is worth having an answer that
+survives someone who knows the field.
+
+**Do not argue it from Vue's in-DOM templates.** That mode — script tag, `{{ }}`
+in HTML you already have — is Vue's *oldest*, not its newest. Vue 1 and 2 were
+built that way; Vue 3 keeps it as the no-build fallback while steering everyone
+to SFCs and Vite, and it carries real caveats (HTML parsing rules,
+case-insensitivity, kebab-case). Pointing at it as evidence of a trend invites a
+correction that takes the rest of the argument down with it.
+
+**Two convergences are real, and they are the better argument.** The first is
+away from the virtual DOM and toward fine-grained reactivity driving the real
+DOM: Svelte 5 runes, Vue Vapor (`3.6.0-rc.5` as of 2026-08-25), Angular signals,
+Solid, Preact signals. That is the field arriving at a dependency graph updating
+nodes directly, which is what compile-time dependency extraction and the scope
+graph already are. The second is HTML-first delivery: RSC, Astro islands, Qwik
+resumability, htmx, Hotwire, LiveView. The industry walked back to "the markup
+arrives with content in it", which is what the two delivery modes are about.
+
+**The threat inside the validation.** If the big frameworks land on these
+properties while keeping their ecosystems, "we are where they are heading"
+becomes "so use theirs, later". Convergence is not a moat; being early to a
+place everyone is walking toward is only worth something if something about
+arriving first is durable.
+
+**Two things are.** The first is that a converged framework is still a *pivot*,
+and their SSR is the precedent for how that goes: bolted onto a client-first
+model years in, and the seams are permanent — hydration mismatches, and
+`"use client"` / `"use server"` directives marking which half of a codebase
+runs where, which every developer then has to carry as a mental model because
+the framework could not make it disappear. Markout renders in both places
+because it was never a client-first model that later needed a server story.
+
+Be precise about that rather than smug, because Markout has a marker too:
+`:server-`. The difference is which way the default points. Markout's default
+is that a value runs in both places and `:server-` marks the narrow case that
+genuinely needs the request; the retrofitted model's default is that client and
+server are different worlds, so the boundary has to be declared wherever it
+falls. One is an exception you reach for, the other is a partition you
+maintain. Retrofits do succeed commercially — often — but they charge their
+users an ongoing tax that a designed-in property does not, and naming that tax
+concretely is the argument. Sneering at it is not.
+
+The second is the authoring model, which none of the convergence touches.
+Vapor still needs `.vue` files and a build; signals did not change that. The
+claim that survives is narrower than "they are moving toward us" and stronger
+for it: **the reactivity model is settling on what Markout does; the authoring
+model is not.** Markup and behavior in the same HTML file, no separate
+component language, and mistakes caught at compile time with a file and a line.
 
 ## Delivery decides how big the beachhead actually is
 

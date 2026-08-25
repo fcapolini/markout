@@ -8,13 +8,18 @@
   </head>
   <body>
     <!--
-      The same catalog app as bench/markout-catalog (Markout), bench/react-catalog
-      bench/svelte-catalog: same components, same shared catalog generator, same
-      CSS, same interactions. Written the way Alpine asks for it -- all of the
-      markup is here, in the page, and src/main.js holds only the state and the
-      actions. Alpine has no component system, so the pieces the other three
-      ports factor out (mk-card / <Card>) are written inline, once, where they
-      are used; that difference is the point of the comparison, not a handicap.
+      The same catalog app as bench/markout-catalog (Markout),
+      bench/react-catalog and bench/svelte-catalog: same components, same
+      shared catalog generator, same CSS, same interactions. Written the way
+      Alpine asks for it -- all of the markup is here, in the page, and
+      src/main.js holds only the state and the actions.
+
+      Alpine reuses BEHAVIOR through Alpine.data(), which is what x-data
+      names below. What it has no primitive for is reusable MARKUP: that is
+      left to whatever renders the page -- Blade, ERB, Twig, a Django include
+      -- and this app has no such layer. So the pieces the other three ports
+      factor out (mk-card / <Card>) are written inline, once, where they are
+      used; that difference is the point of the comparison, not a handicap.
     -->
     <div x-data="catalog" x-id="['search']">
       <header class="app-header">
