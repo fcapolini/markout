@@ -117,10 +117,12 @@ the server and fetches on arrival, which is what anything the page should not
 publish needs — a session, another user's row — since a served value is
 written into the page as plain text where anyone can read it.
 
-The served mode wants a server, which matters when there isn't one: a page
-compiled by `markout build` has no request to take an origin from, so a
-relative `:url` needs an absolute one, `:client`, or `markout build --origin`
-before the page will build. See [the std kit's
+The served mode wants a server, which matters when there isn't one: a page run
+through `markout prerender` has no request to take an origin from, so a
+relative `:url` needs an absolute one, `:client`, or `markout prerender
+--origin` before the page will prerender. `markout build` sidesteps the
+question entirely by evaluating nothing — the fetch happens in the browser,
+where there is always an origin. See [the std kit's
 notes](../../kits/std-kit/README.md#the-url-means-the-same-thing-in-both-modes).
 
 That a framework-shaped feature lives in a kit rather than in the language is

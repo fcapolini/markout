@@ -292,15 +292,19 @@ people quote. It is also why this benchmark reports no Lighthouse score: the
 composite would be built on that number, on a stress harness, over a CDN.
 **First card** is the column with the meaning.
 
-### Server and precompiled
+### Server and prerendered
 
-Markout's two delivery modes are **server** — the render runs per request —
-and **precompiled** — the same render, run once at build time by `markout
-build`. Not "static", which would imply the browser does the rendering: a
-precompiled page carries the same **24 rendered cards** in the same ~61KB as a
+Markout's delivery modes are **server** — the render runs per request — and
+**prerendered** — the same render, run once at build time by `markout
+prerender`. (A third, `markout build`, compiles without rendering at all and
+leaves everything to the browser; the benchmark does not use it, because a
+Markout page that renders client-side is what the other four ports already
+are.) Not "static", which would imply the browser does the rendering — that is
+what `markout build` is for: a
+prerendered page carries the same **24 rendered cards** in the same ~61KB as a
 served one. Load it with JavaScript disabled and it reads "Atlas Ash",
 "Northwind", "$18", three stars lit, "Page 1 of 13" — the whole first page,
-populated, because `markout build` ran the real render and serialized the
+populated, because `markout prerender` ran the real render and serialized the
 result. Neither mode has an empty-shell moment, which is the point of both.
 
 Two further `.card` sit in `<template>` blocks in `<head>`: the un-populated
@@ -312,7 +316,7 @@ and the parity count excludes them — which is why the raw file contains 26
 What separates them is the per-request render, over 25 requests each, median,
 warm:
 
-| Rows | Server | Precompiled | Cost of the render |
+| Rows | Server | Prerendered | Cost of the render |
 | --- | --- | --- | --- |
 | 300 | 5.30ms | 0.54ms | 4.8ms |
 | 1,020 | 5.59ms | 0.43ms | 5.2ms |
@@ -324,7 +328,7 @@ buys `:server-` values and per-request data, which this app does not use.
 
 It also means **every Markout number in the tables above is the conservative
 one**. The comparison runs in server mode, so its first-card column carries
-~5ms of render that a precompiled deployment would not pay. The two modes are
+~5ms of render that a prerendered deployment would not pay. The two modes are
 not separate rows in those tables because they would be identical in every
 other column.
 

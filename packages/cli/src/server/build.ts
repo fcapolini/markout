@@ -66,6 +66,24 @@ export interface BuildProps {
    */
   origin?: string;
   /**
+   * Run each page's render before writing it.
+   *
+   * Off by default, and that default is the whole distinction between the two
+   * commands. `markout build` compiles: directives become a props object and a
+   * runtime link, and every value is resolved in the browser, the way any
+   * client-side framework does it. `markout prerender` additionally runs the
+   * render here, resolving values and writing their results into the markup,
+   * which is what makes a page arrive with its content already in it.
+   *
+   * The reason this is a choice and not a default is `origin` above. A render
+   * performs a page's `:server-` fetches, so pre-rendering a page whose data
+   * comes from a backend requires that backend reachable FROM THE BUILD --
+   * unbuildable without it, not merely unrendered -- and bakes that moment's
+   * answer into the artifact. Neither is a thing a compile step should do
+   * without being asked.
+   */
+  prerender?: boolean;
+  /**
    * Append a `<template>` to every built page naming the classes its
    * `:class-` toggles can put on it, so a CSS generator reading the output
    * finds them -- see docs/design/tailwind-support.md.
@@ -309,21 +327,27 @@ export async function build(props: BuildProps): Promise<BuildResult> {
     const page = await compiler.compile(pathname);
     collectDiagnostics(result, pathname, page);
     if (page.hasErrors) continue;
-    const errors = await renderPage(page, { origin: props.origin });
-    const fatal = errors.filter(e => e.serverOnly);
-    fatal.forEach(error => result.serverErrors.push({ pathname, error }));
-    errors
-      .filter(e => !e.serverOnly)
-      .forEach(error => result.runtimeErrors.push({ pathname, error }));
-    if (fatal.length) {
-      continue;
+    if (props.prerender) {
+      const errors = await renderPage(page, { origin: props.origin });
+      const fatal = errors.filter(e => e.serverOnly);
+      fatal.forEach(error => result.serverErrors.push({ pathname, error }));
+      errors
+        .filter(e => !e.serverOnly)
+        .forEach(error => result.runtimeErrors.push({ pathname, error }));
+      if (fatal.length) {
+        continue;
+      }
     }
     const text = page.source.doc.toString();
     await write(outdir, pathname, '<!doctype html>\n' + text);
     result.pages.push(pathname);
     // what this page MENTIONS, which is not what it imported: a page naming
     // `/bootstrap-kit/res/logo.png` and importing nothing still needs the
-    // kit's files. Read off the rendered output for that reason
+    // kit's files. Read off the written output for that reason -- and note the
+    // evidence is weaker without a prerender, since a url a value would have
+    // produced is not in the text yet. The flag is opt-in for someone who
+    // knows their pages do not build urls at runtime; without a prerender that
+    // is a stronger thing to know.
     if (props.pruneKits) {
       for (const kit of discovered.kits) {
         text.includes(kit.root) && referenced.add(kit.root);

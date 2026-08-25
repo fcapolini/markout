@@ -195,7 +195,7 @@ for a CSS tool to do in the request path.
 
 Note also that ahead-of-time compilation is **not** client-side rendering: the
 same `renderPage` runs at build time, so the markup is in the file. See
-[isomorphism](../concepts/isomorphism.md#two-ways-to-deliver-a-page). The
+[isomorphism](../concepts/isomorphism.md#three-ways-to-deliver-a-page). The
 difference between the modes is request-time data, not rendering — and it is
 orthogonal to CSS.
 

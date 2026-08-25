@@ -354,7 +354,7 @@ is the honest comparison rather than one that flatters us.
 | Behavior written in HTML attributes | yes | yes | yes |
 | What it needs to run | a `<script>` tag | a `<script>` tag | Node serving the page, or a build step |
 | Mistakes caught before the page loads | no, silent at runtime | n/a | yes, with a file and a line |
-| Content present in the served HTML | no, `x-cloak` hides the gap | yes, the server wrote it | yes, in both delivery modes |
+| Content present in the served HTML | no, `x-cloak` hides the gap | yes, the server wrote it | yes, served or prerendered |
 | Same source renders on the server | no, client only | server owns the HTML | yes |
 | Reusable components in markup | no — `x-data` reuses behavior; markup comes from the server | server-side partials | `<:define>` + `<:slot>` |
 | Parametric CSS | inline styles, or CSS variables set inline | whatever the server renders | `${...}` inside `<style>` |
@@ -409,11 +409,11 @@ NOTE: the honest cost — the framework-neutral component ecosystem is
 smaller and shallower than React's. Decoupling buys freedom at the price of
 reach, and that trade is only worth it if the components you need exist
 
-## Two ways to deliver a page
+## Three ways to deliver a page
 
-A compiled page is one artifact, and it runs in two places, so there are two
-ways to put it in front of a visitor. Which one you pick decides how much of the
-page arrives already rendered — not how it is written.
+A compiled page is one artifact, and it runs in two places, so there is more
+than one way to put it in front of a visitor. Which one you pick decides how
+much of the page arrives already rendered — not how it is written.
 
 **Served by Node**, with the CLI below or the Express middleware. The render
 runs per request, so the page can read what a request has: `:server-` values
@@ -421,22 +421,31 @@ run on the server, and a datasource fetches before the page is serialized. The
 visitor gets finished HTML that then comes alive. This is the isomorphic mode,
 and it is the one that makes SSR come for free.
 
-**Compiled ahead of time** into static assets, for everyone else — a project
-served by Rails, Django, Laravel, PHP, or a bucket behind a CDN. Markout
-becomes a build step rather than something in your request path: the backend
-stays exactly as it is, and what it serves is plain HTML and JavaScript.
+**Prerendered** with `markout prerender`, for a project served by Rails,
+Django, Laravel, PHP, or a bucket behind a CDN. Markout becomes a build step
+rather than something in your request path, and what ships is plain HTML and
+JavaScript. This is not "client-side rendering": the same render pass runs
+once, at build time, so the markup is in the file and a page's static content
+does not flash in after JavaScript loads. What it cannot carry is what a
+request would have supplied — a `:server-` value has no result, and a
+datasource needs `:client` so the browser fetches it on arrival.
 
-The second mode is not "client-side rendering" in the usual sense. The same
-render pass runs at build time, so the markup is in the file — a page's static
-content does not flash in after JavaScript loads. What it cannot carry is only
-what a request would have supplied: a `:server-` value has no result, and a
-datasource has to be marked `:client` so the browser fetches it on arrival.
-[Isomorphism](docs/concepts/isomorphism.md#two-ways-to-deliver-a-page) has the
+**Built** with `markout build`, which compiles and stops there. Values resolve
+in the browser, the way any client-side framework does it, and the artifact
+asks nothing of the world around it: no server, no reachable backend, nothing
+to have up when the build runs. A page whose data comes from an API fetches it
+on arrival rather than shipping a copy that was true once.
+
+The difference between the last two is worth stating plainly, because it is a
+trade and not a ranking. `prerender` buys content-in-the-markup at the price
+of needing whatever the page fetches reachable from the build machine, and of
+freezing that moment's answer into the artifact. `build` gives that up and
+needs nothing.
+[Isomorphism](docs/concepts/isomorphism.md#three-ways-to-deliver-a-page) has the
 details.
 
-`markout build` below is what produces the second kind. It is what lets the
-server-rendered majority of projects adopt Markout without moving off the stack
-they already run.
+The two ahead-of-time modes are what let the server-rendered majority of
+projects adopt Markout without moving off the stack they already run.
 
 ## CLI
 

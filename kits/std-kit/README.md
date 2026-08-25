@@ -98,21 +98,26 @@ the browser from `location`. Without that the two would disagree: a server
 has no page to be relative *to*, so a bare path there is not a different
 address, it is not an address at all.
 
-Which is also why the third delivery is the one to watch. `markout build` has
-no request behind the render, so there is no `$origin`, and a relative `:url`
-has nothing to resolve against at the moment it would be fetched:
+Which is also why `markout prerender` is the delivery to watch. It has no
+request behind the render, so there is no `$origin`, and a relative `:url` has
+nothing to resolve against at the moment it would be fetched:
 
 ```
 cannot fetch "/people.json" while rendering: it is relative and nothing is
 serving this page, so there is no address to resolve it against.
 ```
 
-The build stops there rather than writing a page with a hole in it. Give the
-datasource an absolute `:url`, mark it `:client` so the browser resolves it
-against a real `location.origin`, or tell the build what it is being built
-for — `markout build --origin http://127.0.0.1:3000`, with the docroot served
+The prerender stops there rather than writing a page with a hole in it. Give
+the datasource an absolute `:url`, mark it `:client` so the browser resolves it
+against a real `location.origin`, or say what the pages are being rendered for
+— `markout prerender --origin http://127.0.0.1:3000`, with the docroot served
 from another terminal, which is how a page whose data is files in its own
-docroot gets built at all.
+docroot gets prerendered at all.
+
+`markout build` never meets this, because it evaluates nothing: the datasource
+is compiled and the browser fetches it on arrival, where `location.origin` is
+always there. That is the trade — no content in the markup, and nothing needed
+at build time.
 
 A URL that *changes* refetches, in the browser, since that is where the
 change happened:

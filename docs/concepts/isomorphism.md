@@ -8,12 +8,13 @@ DOM under it.
 That is also what lets one page be delivered two ways, and the choice decides
 how much of it arrives already rendered rather than how it is written.
 
-## Two ways to deliver a page
+## Three ways to deliver a page
 
 The compiled props object is the same artifact wherever it runs, which is what
-lets a page be delivered two ways. The difference is not what the page is, it
-is *when the render happens* — and therefore whether the page may read
-anything only a server has.
+lets a page be delivered more than one way. The difference is not what the page
+is, it is *when the render happens* — per request, once at build time, or in
+the browser — and therefore whether the page may read anything only a server
+has.
 
 **Served by Node** — `markout <docroot>` (or bare `markout`, which serves
 `./markout`; see the README on that convention), or the Express middleware.
@@ -23,24 +24,40 @@ values run there, `$origin` comes from the request, and a datasource fetches
 before the page is serialized. The browser receives finished markup and
 hydrates it.
 
-**Compiled ahead of time** — one build, then plain static files on any host.
-The same render pass runs at build time instead of per request, so the output
-still carries its markup, not an empty page waiting for JavaScript: everything
-derivable from the page's own values is already there, and the runtime picks it
-up exactly as it picks up a served page. What is missing is only what a request
-would have supplied. This is the mode for a project whose pages are served by
-Rails, Django, Laravel, PHP or a CDN — the backend stays as it is, and Markout
-is a build step rather than something in the request path.
+**Prerendered** — `markout prerender <docroot> <outdir>`, then plain static
+files on any host. The same render pass runs once at build time instead of per
+request, so the output still carries its markup, not an empty page waiting for
+JavaScript: everything derivable from the page's own values is already there,
+and the runtime picks it up exactly as it picks up a served page. What is
+missing is only what a request would have supplied. This is the mode for a
+project whose pages are served by Rails, Django, Laravel, PHP or a CDN — the
+backend stays as it is, and Markout is a build step rather than something in
+the request path.
 
-`markout build <docroot> <outdir>` is what produces this — see the CLI section
-of the repository README for what it writes, what it refuses, and why a built
-page looks for the runtime at a different path than a served one.
+**Built** — `markout build <docroot> <outdir>`, which compiles and stops. No
+render runs at all, so no value is evaluated and nothing is fetched: the page
+ships as markup, a props object and a runtime link, and the browser produces
+everything on arrival. This is what a client-side framework's build emits, and
+it is the mode to reach for when the page's data should be fetched fresh by
+whoever is looking at it, or when the thing that answers those fetches simply
+is not reachable from wherever the build runs.
 
-### What ahead-of-time compilation cannot carry
+The last two are a trade rather than a ranking. `prerender` puts content in the
+file, at the price of needing the page's sources reachable at build time and of
+freezing that moment's answers. `build` asks for nothing and gives you a page
+that fills itself in. See the CLI reference for what each writes, what each
+refuses, and why an ahead-of-time page looks for the runtime at a different
+path than a served one.
+
+### What ahead-of-time rendering cannot carry
+
+This section is about `prerender`. `build` evaluates nothing, so none of it
+applies — a `:server-` value simply arrives unresolved, like every other value,
+and the browser does what it can with it.
 
 The render still happens — that is what puts the markup in the file — but there
-is no request behind it, so no `$origin` (unless `markout build --origin` says
-what it is, below) and none of the host's globals. Where that shows is a
+is no request behind it, so no `$origin` (unless `markout prerender --origin`
+says what it is, below) and none of the host's globals. Where that shows is a
 `:server-` value, and the rule is short:
 
 > **A `:server-` value that fails fails the build.**
@@ -70,7 +87,7 @@ For a datasource that means:
 | relative, with `--origin` | resolved against it and fetched while building | fetched by the browser on arrival |
 | absolute (`https://…`) | fetched while building, answer baked into the page | fetched by the browser on arrival |
 
-`markout build --origin <url>` is the middle row: it supplies the `$origin`
+`markout prerender --origin <url>` is the middle row: it supplies the `$origin`
 there is no request to take one from. It is what a docroot carrying its own
 data wants — Orbit, the largest demo in the repository, reads a directory of
 JSON files that sit beside its pages, so anything serving that directory makes
@@ -78,7 +95,7 @@ the whole console buildable:
 
 ```sh
 markout ./site                                   # in one terminal
-markout build ./site ./dist -o http://127.0.0.1:3000
+markout prerender ./site ./dist -o http://127.0.0.1:3000
 ```
 
 What ships is the answer rather than the question, which is the point: the

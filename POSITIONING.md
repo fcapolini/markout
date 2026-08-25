@@ -90,7 +90,7 @@ The honest differences:
 | Behavior written in HTML attributes | yes | yes | yes |
 | What it needs to run | a `<script>` tag | a `<script>` tag | Node serving the page, or a build step |
 | Mistakes caught before the page loads | no, silent at runtime | n/a | yes, with a file and a line |
-| Content present in the served HTML | no, `x-cloak` hides the gap | yes, the server wrote it | yes, in both delivery modes |
+| Content present in the served HTML | no, `x-cloak` hides the gap | yes, the server wrote it | yes, served or prerendered |
 | Same source renders on the server | no, client only | server owns the HTML | yes |
 | Reusable components in markup | no — `x-data` reuses behavior; markup comes from the server | server-side partials | `<:define>` + `<:slot>` |
 | Parametric CSS | inline styles, or CSS variables set inline | whatever the server renders | `${…}` inside `<style>` |
@@ -168,14 +168,23 @@ to a page you already have" is not what serving Markout from Node asks; that is
 a stack change, which is the framework-sized commitment the extension framing
 exists to avoid.
 
-Two delivery modes are what keep the pitch true for both halves:
+Three delivery modes are what keep the pitch true for both halves:
 
 - **Node hosts get isomorphism.** The render runs per request, `:server-` values
   and served datasources work, SSR comes for free.
-- **Everyone else compiles ahead of time** and deploys static assets, keeping
-  their backend untouched. Logic still runs in the browser, and — unlike Alpine
-  — the markup is already in the file, so there is no `x-cloak` gap. What such a
-  page gives up is only what a request would have supplied.
+- **`markout prerender` deploys static assets** with the content already in
+  them, keeping their backend untouched. Logic still runs in the browser, and —
+  unlike Alpine — the markup is already in the file, so there is no `x-cloak`
+  gap. What such a page gives up is only what a request would have supplied.
+- **`markout build` compiles and stops**, resolving values in the browser like
+  any client-side framework. No content in the markup, and in exchange the
+  build needs nothing to be up: a page whose data comes from an API fetches it
+  on arrival rather than shipping an answer that was true at build time.
+
+The second and third are a trade, not a ranking, and the no-`x-cloak`-gap claim
+belongs to `prerender` specifically. Do not make it about "the static mode"
+without saying which command — a reader who runs `build` and sees content
+appear after load will conclude the claim was marketing.
 
 So the honest claim is not "no build step". It is *no build step if Node serves
 your pages, and no server if you would rather build them* — which covers both

@@ -6,10 +6,11 @@ logic in web pages, easy reuse through parametric markup blocks, minimal
 ceremony, and easy understanding. It is isomorphic: the same runtime model
 powers both server rendering and browser hydration, so SSR comes for free.
 
-That model is also what lets one page be delivered two ways — rendered per
-request by Node, or compiled ahead of time into static assets for a host that
-runs something else. [Isomorphism](concepts/isomorphism.md#two-ways-to-deliver-a-page)
-covers both, and what the second one cannot carry.
+That model is also what lets one page be delivered three ways — rendered per
+request by Node, prerendered once into static assets for a host that runs
+something else, or compiled and left to resolve in the browser.
+[Isomorphism](concepts/isomorphism.md#three-ways-to-deliver-a-page) covers all
+three, and what the ahead-of-time ones cannot carry.
 
 It is also deliberately not an application framework. Markout covers
 presentation logic — turning values into markup — and leaves the components
@@ -38,7 +39,7 @@ calls that out explicitly.
 - [Kits](concepts/kits.md) - `<:define>`, `<:slot>`, and why anything
   framework-shaped belongs in a kit rather than in the language.
 - [Isomorphism](concepts/isomorphism.md) - one model on the server and in the
-  browser, and the two ways a page can be delivered.
+  browser, and the three ways a page can be delivered.
 - [Data](concepts/data.md) - what belongs in values, how long each kind needs
   to last, and where data from outside the page comes in.
 - [Syntax reference](reference/syntax.md) - the whole language on one page.

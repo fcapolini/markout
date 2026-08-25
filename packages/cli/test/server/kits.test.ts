@@ -180,7 +180,10 @@ describe('building a mounted kit', () => {
 
   it('materializes the kit at its logical root', async () => {
     const outdir = path.join(root, 'out');
-    const result = await build({ docroot, outdir });
+    // prerender, because the assertion below is about the RENDERED component:
+    // `class="badge ok"` is a `:class-` toggle's doing, and `build` alone
+    // leaves it for the browser
+    const result = await build({ docroot, outdir, prerender: true });
 
     expect(result.kitErrors).toEqual([]);
     expect(result.errors).toEqual([]);

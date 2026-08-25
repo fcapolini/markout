@@ -259,11 +259,11 @@ describe('CLI build', () => {
   }
 
   /** execFile rejects on a non-zero exit, so both outcomes come back the same shape */
-  async function run(args: string[]) {
+  async function run(args: string[], command: 'build' | 'prerender' = 'build') {
     try {
       const { stdout, stderr } = await execFileAsync(
         process.execPath,
-        [tsx, entry, 'build', ...args],
+        [tsx, entry, command, ...args],
         { cwd: root }
       );
       return { code: 0, stdout, stderr };
@@ -273,7 +273,7 @@ describe('CLI build', () => {
     }
   }
 
-  it('writes a rendered page and the runtime it points at', async () => {
+  it('build leaves the value for the browser, and writes the runtime', async () => {
     const { docroot, outdir, cleanup } = await dirs();
     try {
       await writeFile(
@@ -285,8 +285,33 @@ describe('CLI build', () => {
       const html = await readFile(path.join(outdir, 'index.html'), 'utf8');
 
       expect(result.code).toBe(0);
-      // the value is RESOLVED in the file: a built page carries its markup
-      // rather than waiting for the runtime to produce it
+      // NOT resolved: `build` compiles, and the runtime produces the text in
+      // the browser. This is the half of the pair that asks nothing of the
+      // world around it -- no server, no fetch, no backend up
+      expect(html).not.toContain('42');
+      expect(html).toMatch(/^<!doctype html>/);
+      const buildSrc = html.match(/src="\/(markout-runtime\.[\w-]+\.js)"/)?.[1];
+      expect(buildSrc).toBeTruthy();
+      expect((await readFile(path.join(outdir, buildSrc!), 'utf8')).length).toBeGreaterThan(0);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('prerender writes a rendered page and the runtime it points at', async () => {
+    const { docroot, outdir, cleanup } = await dirs();
+    try {
+      await writeFile(
+        path.join(docroot, 'index.html'),
+        '<html :n=${21}><body><p>${n * 2}</p></body></html>'
+      );
+
+      const result = await run([docroot, outdir], 'prerender');
+      const html = await readFile(path.join(outdir, 'index.html'), 'utf8');
+
+      expect(result.code).toBe(0);
+      // the value is RESOLVED in the file: a prerendered page carries its
+      // markup rather than waiting for the runtime to produce it
       expect(html).toContain('42');
       expect(html).toMatch(/^<!doctype html>/);
       // a non-dot path, which is why DEFAULT_RUNTIME_SRC is not dot-prefixed
@@ -454,7 +479,7 @@ describe('CLI build', () => {
     }
   });
 
-  it('fails on a `:server-` value that failed, and does not write the page', async () => {
+  it('prerender fails on a `:server-` value that failed, and does not write the page', async () => {
     const { docroot, outdir, cleanup } = await dirs();
     try {
       // nothing re-runs a `:server-` value in the browser -- it crosses frozen,
@@ -467,7 +492,7 @@ describe('CLI build', () => {
       );
       await writeFile(path.join(docroot, 'fine.html'), '<html><body>fine</body></html>');
 
-      const result = await run([docroot, outdir]);
+      const result = await run([docroot, outdir], 'prerender');
 
       expect(result.code).toBe(1);
       expect(result.stderr).toContain('/needs-server.html');
@@ -480,7 +505,7 @@ describe('CLI build', () => {
     }
   });
 
-  it('resolves a page-relative fetch against --origin', async () => {
+  it('prerender resolves a page-relative fetch against --origin', async () => {
     // The case this exists for: a docroot whose data sits in it as files. A
     // build has no request to take an origin from, so `/data.json` is not an
     // address at all -- and the moment anything is serving that directory it
@@ -516,7 +541,7 @@ describe('CLI build', () => {
           '.then(r => r.json())}><body>${data?.who ?? "-"}</body></html>'
       );
 
-      const result = await run([docroot, outdir, '--origin', origin]);
+      const result = await run([docroot, outdir, '--origin', origin], 'prerender');
 
       expect(result.code).toBe(0);
       // in the FILE, which is the whole mode: the answer was fetched once
@@ -527,7 +552,7 @@ describe('CLI build', () => {
 
       // and without it the same page cannot be built at all, rather than
       // being written with a hole where its data was
-      const alone = await run([docroot, outdir]);
+      const alone = await run([docroot, outdir], 'prerender');
       expect(alone.code).toBe(1);
     } finally {
       await new Promise<void>(resolve => served.close(() => resolve()));
@@ -535,14 +560,14 @@ describe('CLI build', () => {
     }
   });
 
-  it('refuses an --origin that is not an absolute URL', async () => {
+  it('prerender refuses an --origin that is not an absolute URL', async () => {
     // said once, about the flag, rather than once per datasource as a fetch
     // failure naming something the author did not write
     const { docroot, outdir, cleanup } = await dirs();
     try {
       await writeFile(path.join(docroot, 'index.html'), '<html><body>x</body></html>');
 
-      const result = await run([docroot, outdir, '--origin', '127.0.0.1:3000']);
+      const result = await run([docroot, outdir, '--origin', '127.0.0.1:3000'], 'prerender');
 
       expect(result.code).toBe(1);
       expect(result.stderr).toContain('not an absolute URL');
@@ -552,7 +577,7 @@ describe('CLI build', () => {
     }
   });
 
-  it('only warns when an ordinary value throws, and writes the page', async () => {
+  it('prerender only warns when an ordinary value throws, and writes the page', async () => {
     const { docroot, outdir, cleanup } = await dirs();
     try {
       // the browser re-derives this one, where `later` may well have arrived:
@@ -563,7 +588,7 @@ describe('CLI build', () => {
         '<html :later=${null}><body>${later.name}</body></html>'
       );
 
-      const result = await run([docroot, outdir]);
+      const result = await run([docroot, outdir], 'prerender');
 
       expect(result.code).toBe(0);
       expect(result.stderr).toContain('/early.html');

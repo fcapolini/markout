@@ -480,7 +480,7 @@ the browser can make up for it. `markout build` therefore **fails** on one that
 throws, rather than shipping a page permanently missing what it was for. A value
 that reads nothing of the request is fine there, and its answer is baked into
 the markup. See
-[rendering](../concepts/isomorphism.md#what-ahead-of-time-compilation-cannot-carry).
+[rendering](../concepts/isomorphism.md#what-ahead-of-time-rendering-cannot-carry).
 
 `:server-` marks declared values only. It is an error on `:attr-`, `:class-`,
 `:style-`, `:prop-` (which re-derive for free once the value they read is

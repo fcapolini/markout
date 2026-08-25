@@ -6,7 +6,7 @@ itself is the [syntax reference](syntax.md); this is everything around it.
 
 Which mode you pick decides how much of the page arrives already rendered,
 not how it is written — see [two ways to deliver a
-page](../../README.md#two-ways-to-deliver-a-page).
+page](../../README.md#three-ways-to-deliver-a-page).
 
 ## Installing
 
@@ -60,14 +60,15 @@ markout/          your pages
 ```
 
 ```sh
-markout          # serves ./markout
-markout build    # compiles ./markout into ./dist
+markout            # serves ./markout
+markout build      # compiles ./markout into ./dist
+markout prerender  # compiles AND renders, into ./dist
 ```
 
 This is a convention, not a rule — any directory works when you name it. It
 earns its place by needing nothing around it: there is no `package.json` in
 the layout above, and nothing had to
-be configured for either command to know what to do.
+be configured for any of the three to know what to do.
 
 It is also what the editor support reads. [The VS Code
 extension](../design/editor-support.md) has to resolve `/lib.htm` the same
@@ -123,11 +124,28 @@ markout ./demo --compress
 
 ## Building static files
 
-`markout build` compiles a docroot ahead of time into a directory you can put on
-any host. The source is the first argument and the output the second:
+Two commands write a docroot to a directory you can put on any host, and only
+one of them renders.
+
+**`markout build` compiles.** `:` directives become a props object beside a
+runtime link, and every value is resolved in the browser — the same shape any
+client-side framework's build produces. It asks nothing of the world around it:
+no server, no reachable backend, no `$origin`.
+
+**`markout prerender` compiles and then runs each page**, writing resolved
+values into the markup, so a visitor gets finished HTML rather than a page that
+fills itself in. That is the mode with no content flash, and it is a separate
+command because of what it needs: a render performs a page's `:server-`
+fetches, so it wants whatever answers them reachable *from the build machine*,
+and it freezes that moment's answer into the artifact. Neither is something a
+compile step should do without being asked for it.
+
+Everything below applies to both unless it says otherwise. The source is the
+first argument and the output the second:
 
 ```sh
 markout build ./site ./dist
+markout prerender ./site ./dist
 ```
 
 Both are optional. The docroot defaults to `./markout` and the output to a
@@ -165,34 +183,45 @@ A compile error prints as `file:line:column: message` and **exits non-zero**, so
 CI can gate on it. The pages that did compile are still written; only the ones
 that failed are missing.
 
+### What `prerender` adds, and what it asks for
+
+Nothing in this subsection applies to `build`, which never evaluates an
+expression.
+
 An expression that throws while *rendering* is treated one of two ways,
 depending on whether anything can still repair it. An ordinary value is
 re-derived in the browser, where it may well succeed — `${user.name}` asked
-before its datasource has answered is the everyday case, and the served page is
-fine — so that is a warning and the page is written. A `:server-` value is not:
-it crosses frozen, with a result and no expression, so nothing re-runs it. That
-**fails the build**, and the page is not written, on the same grounds as one
+before its datasource has answered is the everyday case, and the page is fine —
+so that is a warning and the page is written. A `:server-` value is not: it
+crosses frozen, with a result and no expression, so nothing re-runs it. That
+**fails the prerender**, and the page is not written, on the same grounds as one
 that would not compile.
 
-That is the failure this mode invites, since a built page has no request behind
-it and so no `$origin`. A datasource with a relative `:url` therefore fails the
-build and says to mark it `:client` — after which the browser fetches it on
-arrival. An *absolute* `:url` still fetches while building and bakes the answer
-into the page, which is static site generation and worth having.
+That is the failure this mode invites, since a prerendered page has no request
+behind it and so no `$origin`. A datasource with a relative `:url` therefore
+fails and says to mark it `:client` — after which the browser fetches it on
+arrival. An *absolute* `:url` still fetches while rendering and bakes the answer
+into the page, which is static site generation and worth having when the data
+is what you meant to ship.
 
 `--origin` is the third way out, and the one for a docroot whose data sits in
 it as files:
 
 ```sh
-markout ./site                                   # in one terminal
-markout build ./site ./dist -o http://127.0.0.1:3000
+markout ./site                                       # in one terminal
+markout prerender ./site ./dist -o http://127.0.0.1:3000
 ```
 
-It says what `$origin` is while the pages are built, so a relative `:url`
+It says what `$origin` is while the pages are rendered, so a relative `:url`
 resolves exactly as it does when served. Any server for the same directory will
 do — the one above, or the host the pages are being deployed to. This is what
 lets a page fetch its own data and still be a static deployment: the fetching
 happens once, here, and what ships is the answer.
+
+The flag exists only on `prerender`, because it only means anything during a
+render. A page whose data comes from a backend is *buildable* with no backend
+anywhere — it simply fetches on arrival, like an SPA. It is only
+**prerenderable** when something can answer.
 
 `-p`/`--page` restricts the build to one page, and can be given more than once.
 A leading slash and the `.html` extension are both optional:
