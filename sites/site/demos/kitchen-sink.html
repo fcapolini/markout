@@ -43,6 +43,7 @@
 <body :currentPage=${2}
       :amount=${40}
       :sort=${'name'}
+      :align=${'Middle'}
       :agreed=${false}
 
       // a placeholder image, so the carousel needs nothing from the network
@@ -352,9 +353,10 @@
             </div>
 
             <bs-button-group ::label="Alignment">
-              <bs-button ::variant="secondary" ::outline>Left</bs-button>
-              <bs-button ::variant="secondary" ::outline ::active>Middle</bs-button>
-              <bs-button ::variant="secondary" ::outline>Right</bs-button>
+              <bs-button :for-each=${['Left', 'Middle', 'Right']}
+                         ::variant="secondary" ::outline
+                         ::active=${align === data}
+                         :on-click=${() => align = data}>${data}</bs-button>
             </bs-button-group>
           </div>
         </section>

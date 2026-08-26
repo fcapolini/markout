@@ -360,3 +360,11 @@
   - And a third pre-existing bug, found because `style+=` needs a base to argue with: `expandDefine` copied `className` onto the base element and not `style`, both being element properties rather than attribute nodes. So a static `style` on a `<:define>` reached nothing -- including `bs-toast-container`'s `style="z-index: 1090"`, which is what holds a toast above a modal's backdrop. Reading both through `getAttribute` also stopped every definition without a class from serializing an empty `class=""` into its stencil.
 
 - [ ] `class!=`, `style!=` to make express replacement and avoid compiler warning
+
+- [ ] published kit packages should have a `markout.json` file so they can be found by the vscode extension when we implement the "no-node" sidebar; it should include a type ('kit'), a short description, and an optional long one; the panel will mark those published in the `@markout-lang` namespace as "official"
+
+- [ ] we have to check the behavior of `style-=` as the listed styles won't need to be formatted as a style string, but similarly to a class list (since the style values won't be provided ofc)
+
+- [ ] web-component lib wrapper kits should allow adding autocompletion info for vscode extension (mmarkout.json?)
+
+- [ ] check if there's something to gain in applying DOM changes on next animation frame
