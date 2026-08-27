@@ -20,7 +20,10 @@
 export { Server, type ServerProps } from './server';
 
 // compiling one ahead of time
-export { build, pagePathname, type BuildProps, type BuildResult } from './server/build';
+// `build` moved to core -- a build is a compile and a render, and the editor
+// needed one too. Re-exported so that a program importing it from here, as
+// the documented surface says it may, keeps working.
+export { build, pagePathname, type BuildProps, type BuildResult } from '@markout-lang/core';
 
 // what the bin defaults to, so an embedding agrees with the command line
 export { DEFAULT_DOCROOT, DEFAULT_OUTDIR } from './defaults';

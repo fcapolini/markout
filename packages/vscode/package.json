@@ -59,6 +59,7 @@
   },
   "dependencies": {
     "@markout-lang/core": "^0.6.1",
+    "@markout-lang/cli": "^0.6.1",
     "@volar/language-core": "^2.4.28",
     "@volar/language-server": "^2.4.28",
     "volar-service-html": "0.0.71",
@@ -116,10 +117,151 @@
           "markdownDescription": "When to compile HTML files and report what the compiler says. `auto` looks for evidence: a page that uses markout's own syntax (a `<:\u2026>` directive, or an attribute like `:count=${\u2026}`), or a project that depends on markout. It stays silent otherwise, because a `.html` file holding `${\u2026}` is JSP EL or Thymeleaf at least as often as it is a markout page."
         }
       }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "markout",
+          "title": "Markout",
+          "icon": "media/markout.svg"
+        }
+      ]
+    },
+    "views": {
+      "markout": [
+        {
+          "id": "markout.kits",
+          "name": "Kits",
+          "icon": "media/markout.svg",
+          "contextualTitle": "Markout"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "markout.kits",
+        "contents": "No Markout project open.\n\nA Markout project is a folder of HTML pages -- name it `markout/` and there is nothing else to configure.\n\n[Who is this for?](command:markout.whoIsThisFor)",
+        "when": "!markout.hasProject"
+      }
+    ],
+    "commands": [
+      {
+        "command": "markout.whoIsThisFor",
+        "title": "Who is this for?",
+        "category": "Markout",
+        "icon": "$(question)"
+      },
+      {
+        "command": "markout.refreshKits",
+        "title": "Refresh",
+        "category": "Markout",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "markout.searchKits",
+        "title": "Search the npm registry for kits...",
+        "category": "Markout",
+        "icon": "$(search)"
+      },
+      {
+        "command": "markout.restoreKits",
+        "title": "Restore kits from .markout/kits.json",
+        "category": "Markout",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "markout.acceptBump",
+        "title": "Update to this version",
+        "category": "Markout",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "markout.declineBump",
+        "title": "Keep the pinned version",
+        "category": "Markout",
+        "icon": "$(close)"
+      },
+      {
+        "command": "markout.openKitHomepage",
+        "title": "View on npm",
+        "category": "Markout",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "markout.preview",
+        "title": "Preview",
+        "category": "Markout",
+        "icon": "$(play)"
+      },
+      {
+        "command": "markout.stopPreview",
+        "title": "Stop preview",
+        "category": "Markout",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "markout.build",
+        "title": "Build to dist/",
+        "category": "Markout",
+        "icon": "$(package)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "markout.preview",
+          "when": "view == markout.kits && !markout.previewRunning",
+          "group": "navigation@0"
+        },
+        {
+          "command": "markout.stopPreview",
+          "when": "view == markout.kits && markout.previewRunning",
+          "group": "navigation@0"
+        },
+        {
+          "command": "markout.build",
+          "when": "view == markout.kits",
+          "group": "navigation@1"
+        },
+        {
+          "command": "markout.searchKits",
+          "when": "view == markout.kits",
+          "group": "navigation@2"
+        },
+        {
+          "command": "markout.restoreKits",
+          "when": "view == markout.kits",
+          "group": "navigation@3"
+        },
+        {
+          "command": "markout.refreshKits",
+          "when": "view == markout.kits",
+          "group": "navigation@4"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "markout.acceptBump",
+          "when": "view == markout.kits && viewItem =~ /bump/",
+          "group": "inline@1"
+        },
+        {
+          "command": "markout.declineBump",
+          "when": "view == markout.kits && viewItem =~ /bump/",
+          "group": "inline@2"
+        },
+        {
+          "command": "markout.openKitHomepage",
+          "when": "view == markout.kits && viewItem =~ /kit/",
+          "group": "inline@3"
+        }
+      ]
     }
   },
   "activationEvents": [
     "onLanguage:html",
-    "workspaceContains:**/markout/**/*.html"
+    "workspaceContains:**/markout/**/*.html",
+    "workspaceContains:**/.markout/kits.json",
+    "onView:markout.kits"
   ]
 }

@@ -32,10 +32,11 @@ The command is `markout` either way. Installed locally it is on the path
 
 ### Where kits are found
 
-A kit is looked for in `node_modules`, starting beside the docroot and walking
-up — the project's own installs, in other words. Only if that finds no kits
-at all are the ones installed alongside the CLI itself used, which is what a
-global install produces:
+A kit is looked for in two directories, starting beside the docroot and
+walking up: `.markout/kits/` and `node_modules/` — the project's own kits, in
+other words, however they arrived. Only if that finds no kits at all are the
+ones installed alongside the CLI itself used, which is what a global install
+produces:
 
 ```sh
 npm i -g @markout-lang/cli @markout-lang/std-kit
@@ -47,6 +48,123 @@ what happens to be installed on the machine building it — and two copies of
 one kit can never both be found, which is an error rather than a choice. The
 practical consequence is worth stating plainly: **the moment a docroot has one
 kit of its own, globally installed kits stop being visible to it.**
+
+#### `.markout/kits/`, and installing without npm
+
+`.markout/kits/` is laid out exactly as a `node_modules` is — one directory
+per package, a scope as a directory of them — so a kit put there is found by
+the same walk as one npm installed, and is indistinguishable from it
+afterwards. It needs no `package.json`, no `node_modules` and no npm, which
+matters for a bare docroot — HTML in a directory — because such a docroot has
+nowhere for npm to install to and its author generally has no npm to run.
+
+`.markout/` is never published by `markout build`, being dot-prefixed.
+
+Two copies of one kit — one in `node_modules`, one in `.markout/kits/` — is an
+error naming both, not a precedence rule. Remove one.
+
+## Installing kits without npm
+
+> **If you have npm, use it.** `npm i @markout-lang/bootstrap-kit` puts the kit
+> somewhere the walk above already looks, with a dependency resolver, a
+> lockfile and an ecosystem of tooling behind it, and none of that is
+> reimplemented here. The two commands in this section exist for people who
+> have **no npm**, and for CI restoring a project built by someone who has
+> none. [Who is this for?](vscode-extension-sidebar.md) has the two
+> workflows side by side.
+
+### `markout add <kit...>`
+
+Fetches a kit from the npm registry over HTTPS, unpacks it into
+`.markout/kits/`, and pins the version it got in `.markout/kits.json`:
+
+```sh
+markout add @markout-lang/bootstrap-kit          # the latest version
+markout add @markout-lang/bootstrap-kit@0.4.0    # an exact one
+markout add @markout-lang/std-kit @acme/x-kit    # several at once
+```
+
+`--docroot <pathname>` says which docroot to install for; it defaults to
+`./markout`, as everywhere else. `.markout/` is created beside the nearest
+`package.json` at or above the docroot, or in the docroot itself when there is
+none — which is the bare-docroot case.
+
+There is no dependency resolution and no lockfile. One exact version of one
+package is fetched, its checksum is checked against what the registry
+published, and it is unpacked. A package that declares no `markout.root` is
+refused before anything is downloaded, because nothing would mount it.
+
+Downloads are cached under `~/.markout/cache`, so the same kit in a second
+project is a file copy — instant, and offline. Set `MARKOUT_CACHE` to move it,
+and `MARKOUT_REGISTRY` (or npm's own `npm_config_registry`) to use a mirror.
+
+### `markout restore`
+
+Fetches every kit `.markout/kits.json` pins, skipping the ones already at the
+right version:
+
+```sh
+markout restore
+```
+
+This is the command a fresh clone runs, and the one to put in CI:
+`.markout/kits/` is **not committed by default** — `.markout/kits.json` is,
+and it is enough to reproduce the tree exactly. Running it twice costs one
+file read, so a CI script can run it unconditionally.
+
+It never removes a kit; removing something is a decision, not a consequence of
+making a tree match.
+
+### `.markout/kits.json`
+
+```json
+{
+  "kits": {
+    "@markout-lang/bootstrap-kit": "0.4.0",
+    "@markout-lang/std-kit": "0.3.0"
+  }
+}
+```
+
+Versions are **exact**. A range like `^0.4.0` is refused rather than resolved,
+naming the rule: two clones of one repository that build different things is
+the failure this path is least equipped to diagnose. Versions move when
+somebody moves them — `markout add <kit>@<version>` from a terminal, or an
+offered bump in the editor's sidebar.
+
+A kit the manifest asks for and the project has not got is reported by the
+**compiler**, so the editor, `markout build` and CI all say it:
+
+```
+kit "@markout-lang/bootstrap-kit" is declared in ".markout/kits.json" and is
+not installed -- run "markout restore" to fetch what the manifest asks for
+```
+
+Without the manifest that page would compile, render the kit's tags as empty
+elements, and say nothing at all.
+
+A kit in `.markout/kits/` at a version other than its pin is reported the same
+way. A kit in `node_modules/` is left to npm, pin or no pin: `package.json`
+and a lockfile already have an opinion about that version.
+
+### `.markout/` in git
+
+```
+.markout/
+  kits.json      commit this — it is what restore reads
+  kits/          ignored by default; markout restore fetches it
+  cache/         ignored
+  .gitignore     written for you, ignoring the two generated halves
+```
+
+The nested `.gitignore` means a root `.gitignore` never has to be edited, and
+git honours one at any depth.
+
+Kits are `.htm` and CSS — text that diffs, no native binaries, no platform
+variance, no build step. If you would rather have a project that needs **no
+install step at all**, delete the `kits/` line and commit the directory:
+clone, build, offline. Nothing else changes, and `markout add` will not put
+the line back.
 
 ## The `markout/` convention
 

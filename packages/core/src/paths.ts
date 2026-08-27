@@ -80,12 +80,16 @@ export class Resolver {
   readonly roots: Root[];
   private byDir = new Map<string, Root>();
   /**
-   * The same roots by package name, for a kit the `node_modules` walk cannot
-   * reach: a GLOBALLY installed one. `discoverKits` is given the global tree
-   * as a last resort and mounts what it finds there, so such a kit is a real
-   * root with a real prefix -- but `findPackage` walks up from the docroot
-   * and arrives nowhere near it, which used to leave the kit addressable by
-   * its own root and not by the `/npm/<name>` spelling of the same file.
+   * The same roots by package name, for a kit the walk cannot reach: a
+   * GLOBALLY installed one. `discoverKits` is given the global tree as a last
+   * resort and mounts what it finds there, so such a kit is a real root with
+   * a real prefix -- but `findPackage` walks up from the docroot and arrives
+   * nowhere near it, which used to leave the kit addressable by its own root
+   * and not by the `/npm/<name>` spelling of the same file.
+   *
+   * A kit in `.markout/kits` needs no such rescue: that directory is on the
+   * walk `findPackage` does, so the two spellings agree there the way they do
+   * for `node_modules`.
    */
   private byName = new Map<string, Root>();
 

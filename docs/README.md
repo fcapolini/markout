@@ -38,6 +38,9 @@ calls that out explicitly.
   renders.
 - [Kits](concepts/kits.md) - `<:define>`, `<:slot>`, and why anything
   framework-shaped belongs in a kit rather than in the language.
+- [The Markout sidebar](reference/vscode-extension-sidebar.md) - what the VS
+  Code view does, and the two ways to install a kit: npm if you have Node, a
+  checkbox that needs no toolchain at all if you do not.
 - [Isomorphism](concepts/isomorphism.md) - one model on the server and in the
   browser, and the three ways a page can be delivered.
 - [Data](concepts/data.md) - what belongs in values, how long each kind needs
@@ -76,8 +79,11 @@ pages above — what was chosen, what was rejected, and why.
   a region, and a loop stops copying one stencil per row.
 - [Working without Node](design/without-node.md) - how someone
   with no Node installs a kit: `.markout/kits/` in the project, resolved by
-  the compiler so the editor and the CLI agree, and the panel that fills it.
-  Designed, not built.
+  the compiler so the editor and the CLI agree, and the sidebar that fills it.
+- [Where code runs](design/code-execution.md) - the three places markout
+  evaluates JavaScript, why a kit installed by a checkbox changed the
+  question, how compile-time evaluation is sandboxed, and why server-side
+  rendering deliberately is not.
 - [Silent failures](design/silent-failures.md) - every way found so far for a
   page to be wrong without saying so, what closed each one, and what is still
   open. The compile-time-safety claim, audited rather than asserted.

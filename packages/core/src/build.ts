@@ -1,21 +1,30 @@
 import fs from 'fs';
 import path from 'path';
+import { Compiler } from './compiler';
+import { discoverKits, type Kit } from './kits';
+import { contains, Resolver } from './paths';
+import { allowedPageKits, walkTree } from './publish';
+import { renderPage } from './render/render';
+import { DEFAULT_RUNTIME_SRC } from './compiler/stages/stage7-generate';
 import {
-  allowedPageKits,
-  Compiler,
-  contains,
-  DEFAULT_RUNTIME_SRC,
-  discoverKits,
   loadClientCode,
+  runtimeBundlePath,
   runtimeSrcFor,
-  renderPage,
-  Resolver,
-  RUNTIME_BUNDLE_PATH,
-  walkTree,
-  type Kit,
-  type PageError,
-  type RuntimeError,
-} from '@markout-lang/core';
+} from './render/runtime-bundle';
+import type { PageError } from './html/parser';
+import type { RuntimeError } from './runtime/core/core-context';
+
+/**
+ * Ahead-of-time delivery: one build, then plain files on any host.
+ *
+ * In core rather than beside the `markout build` command, which is the shape
+ * this ends up in for the same reason `render.ts` did: a build is a compile
+ * and a render and nothing else -- there is no HTTP in it, and its whole
+ * audience is people who cannot run Node in the request path. Keeping it in
+ * the CLI made it reachable only through a package whose main entry pulls a
+ * web server, which put it out of reach of the one other caller that wants
+ * it: the editor's Build button. See docs/design/without-node.md.
+ */
 
 export interface BuildProps {
   /** where the sources are */
@@ -235,7 +244,7 @@ export async function build(props: BuildProps): Promise<BuildResult> {
     // fatal here, unlike in the server: output is written once and then read
     // by somebody who was not watching this console
     throw new Error(
-      `markout: runtime bundle not found at "${RUNTIME_BUNDLE_PATH}" -- ` +
+      `markout: runtime bundle not found at "${runtimeBundlePath()}" -- ` +
         `run "npm run build:runtime"`
     );
   }

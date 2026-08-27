@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { build } from '../../src/server/build';
+import { build } from '@markout-lang/core';
 
 /**
  * The Tailwind demo's stylesheet is complete.

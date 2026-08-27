@@ -3,8 +3,14 @@
 import path from 'path';
 import { readFileSync, statSync } from 'fs';
 import { Server } from './server';
-import { build, CLASSES_MANIFEST_FILE, type BuildResult } from './server/build';
-import { formatRuntimeError } from '@markout-lang/core';
+
+import {
+  build,
+  CLASSES_MANIFEST_FILE,
+  formatRuntimeError,
+  type BuildResult,
+} from '@markout-lang/core';
+import { addKits, restoreKits, type InstallReport } from './kits';
 import { DEFAULT_DOCROOT, DEFAULT_OUTDIR } from './defaults';
 
 function hasDefaultDocroot(): boolean {
@@ -15,14 +21,40 @@ function hasDefaultDocroot(): boolean {
   }
 }
 
+/**
+ * What an install did, and whether the process should be unhappy about it.
+ *
+ * A partial failure still exits non-zero: `markout restore` in CI that
+ * fetched three kits of four and said so cheerfully would produce a build
+ * missing a kit, which is the silent failure the manifest exists to end.
+ */
+function reportInstall(report: InstallReport) {
+  report.installed.forEach(line => console.log(`markout: installed ${line}`));
+  report.unchanged.forEach(line => console.log(`markout: ${line} already installed`));
+  report.errors.forEach(line => console.error(`markout: ${line}`));
+  if (report.manifest && report.pinned) {
+    console.log(`markout: pinned in ${report.manifest}`);
+  }
+  if (report.errors.length) {
+    process.exitCode = 1;
+  }
+}
+
 async function main() {
   const { Command } = await import('commander');
   const program = new Command();
 
-  // Read version from package.json
-  const packageJson = JSON.parse(
-    readFileSync(path.join(__dirname, '../package.json'), 'utf8')
-  );
+  // Read version from package.json -- unless something bundled this file
+  // somewhere else, where `../package.json` is a stranger's. The VS Code
+  // extension bundles it as a sidecar, and `define` replaces the expression
+  // below with a literal at that point; everywhere else it is an unset
+  // environment variable and the file is read as before.
+  const packageJson = {
+    version:
+      process.env.MARKOUT_CLI_VERSION ||
+      (JSON.parse(readFileSync(path.join(__dirname, '../package.json'), 'utf8'))
+        .version as string),
+  };
 
   program
     .name('markout')
@@ -190,10 +222,54 @@ async function main() {
       });
   }
 
+  // Installing a kit WITHOUT npm, which is the only reason these exist.
+  //
+  // Somebody who has npm should use it: `npm i @markout-lang/bootstrap-kit`
+  // puts the kit somewhere discovery already looks, with a lockfile and a
+  // resolver behind it, and none of that is worth reimplementing. These two
+  // serve the audience the language is pitched at, who have no npm on their
+  // PATH and often none on the machine -- and CI, which needs to fill a
+  // `.markout/kits/` that a clone deliberately does not carry. See
+  // docs/design/without-node.md and docs/reference/vscode-extension-sidebar.md.
+  // The same code the extension's sidebar runs, through `./kits`.
+  program
+    .command('add')
+    .description(
+      'fetch a kit into .markout/kits/ and pin it in .markout/kits.json, ' +
+        'with no npm involved; if you have npm, prefer `npm i <kit>`'
+    )
+    .argument('<kit...>', 'package name, or name@version; defaults to the latest')
+    .option('--docroot <pathname>', `path to the docroot; defaults to ./${DEFAULT_DOCROOT}`)
+    .action(async (specs: string[], options: { docroot?: string }) => {
+      const docroot = path.resolve(process.cwd(), options.docroot ?? DEFAULT_DOCROOT);
+      reportInstall(await addKits(docroot, specs));
+    });
+
+  program
+    .command('restore')
+    .description(
+      'fetch every kit .markout/kits.json pins; the command a fresh clone ' +
+        'and a CI job run, since kits/ is not committed by default'
+    )
+    .option('--docroot <pathname>', `path to the docroot; defaults to ./${DEFAULT_DOCROOT}`)
+    .action(async (options: { docroot?: string }) => {
+      const docroot = path.resolve(process.cwd(), options.docroot ?? DEFAULT_DOCROOT);
+      reportInstall(await restoreKits(docroot));
+    });
+
   program
     .argument('[pathname]', `path to the docroot; defaults to ./${DEFAULT_DOCROOT}`)
     .option('-p, --port <number>', 'port number, default: 3000')
     .option('-d, --dev', 'dev mode: show runtime expression errors in the page')
+    // The third delivery mode, served rather than written out. A project
+    // that ships `markout build` output and previews a SERVED render is
+    // looking at a page it will not deploy -- and this is also what lets a
+    // preview run no page expression, and so no kit's, in this process.
+    .option(
+      '--client',
+      'serve pages as `markout build` writes them: no server-side render, ' +
+        'so every value resolves in the browser'
+    )
     .option(
       '-c, --compress',
       'compress responses (gzip/deflate) when the client accepts it; '
@@ -216,6 +292,7 @@ async function main() {
         docroot,
         port,
         dev: !!options.dev,
+        client: !!options.client,
         compress: !!options.compress,
         generator: options.generator,
       }).start();

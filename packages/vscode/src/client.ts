@@ -7,12 +7,15 @@ import {
   type ServerOptions,
 } from 'vscode-languageclient/node';
 
+import { registerPreview, usingDocroot } from './preview';
+import { registerSidebar } from './sidebar';
+
 /**
  * The VS Code end of it: start the server, point it at markout files, stop it.
  *
- * Everything specific to this editor is in this file, so that supporting a
- * second one is writing a second file this size rather than untangling the
- * first.
+ * Everything specific to this editor is in this file and in
+ * [sidebar.ts](./sidebar.ts), so that supporting a second one is writing two
+ * files this size rather than untangling them.
  */
 
 let client: LanguageClient | undefined;
@@ -57,6 +60,18 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   };
   client = new LanguageClient('markout', 'Markout', server, options);
+  // Registered BEFORE the server is started, and not awaited on it. The view
+  // installs kits by fetching files into a directory the compiler reads --
+  // it needs no language server to do that, and a user whose window is still
+  // starting up should not find an empty sidebar. See
+  // docs/design/without-node.md.
+  registerPreview(context);
+  // Preview and Build act on the project the VIEW decided this window is
+  // about, asked each time rather than captured: a window can gain a folder,
+  // and a Build aimed at the docroot that was current when the extension
+  // started is a Build of the wrong thing.
+  const kits = registerSidebar(context);
+  usingDocroot(() => kits.docroot);
   await client.start();
 }
 

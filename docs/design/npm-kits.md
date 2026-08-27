@@ -33,7 +33,7 @@ outside the docroot, which two things currently forbid on purpose:
 - the preprocessor confines every load to the docroot
   ([src/html/preprocessor.ts](../../packages/core/src/html/preprocessor.ts));
 - `build` skips `node_modules` when walking for assets
-  ([src/server/build.ts](../../packages/cli/src/server/build.ts)), so a docroot of `.` in a
+  ([build.ts](../../packages/core/src/build.ts)), so a docroot of `.` in a
   project root does not produce a deliverable measured in gigabytes.
 
 Both are right. The feature is a hole punched through them deliberately, in
@@ -286,7 +286,7 @@ The test this design is held to, and the one to re-run against any change:
 
 Not an analogy. That arrangement *existed in this repository* when this was
 written — the std kit was reached through exactly such a symlink, and
-[build.ts](../../packages/cli/src/server/build.ts) still carries the comment
+[build.ts](../../packages/core/src/build.ts) still carries the comment
 explaining that `walk` follows one deliberately. So the model was never a
 thought experiment about how a kit ought to behave; it was a kit that already
 behaved that way, and the feature is the same behaviour reached without the

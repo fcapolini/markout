@@ -18,6 +18,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./kits": {
+      "types": "./dist/kits/index.d.ts",
+      "default": "./dist/kits/index.js"
+    },
     "./package.json": "./package.json"
   },
   "bin": {

@@ -140,7 +140,7 @@ Each boundary exists because some consumer must not see what is above it:
 
 **`render.ts` and `serialize.ts` go in core, not in the Express package.**
 Server-side rendering is not an Express concern; it is the isomorphism the
-language is built on, and [build.ts](../../packages/cli/src/server/build.ts) needs it with
+language is built on, and [build.ts](../../packages/core/src/build.ts) needs it with
 no server present. Putting them in `@markout-lang/express` would make
 `markout build` — the ahead-of-time path, whose entire audience is people who
 cannot run Node in the request path — depend on an HTTP framework.

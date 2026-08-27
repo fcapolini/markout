@@ -5,6 +5,6 @@
     "outDir": "out",
     "types": ["node"]
   },
-  "references": [{ "path": "../core" }],
+  "references": [{ "path": "../core" }, { "path": "../cli" }],
   "include": ["src/**/*"]
 }

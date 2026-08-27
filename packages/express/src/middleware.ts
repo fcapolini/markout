@@ -62,6 +62,28 @@ export interface MarkoutProps {
    * to fix the file. See ./livereload; none of it can reach a `build`.
    */
   dev?: boolean;
+  /**
+   * Serve pages as `markout build` writes them: compiled, but never rendered.
+   *
+   * The third delivery mode, served rather than written to a directory -- see
+   * docs/concepts/isomorphism.md. No value is evaluated here, nothing is
+   * fetched, and the browser produces the whole page on arrival, which is
+   * exactly what a visitor to a built site gets.
+   *
+   * It exists so that a preview can match the delivery. A project that ships
+   * `markout build` output and previews a SERVED render is looking at a page
+   * that differs from the one it will deploy in every way this mode's
+   * absence implies: `:server-` values, `$origin`, and a datasource resolved
+   * before serialization rather than in the browser.
+   *
+   * That it also means no page expression -- and so no KIT's expression --
+   * ever runs in this process is not a side effect worth hiding. For the
+   * audience the editor's sidebar is built for, who have no Node in the
+   * request path and deploy static files, it is the difference between a
+   * kit's code running on their machine and running only in their browser.
+   * See docs/design/code-execution.md.
+   */
+  client?: boolean;
   logger?: MarkoutLogger;
   /**
    * Say what built the pages: `<meta name="generator" content="Markout 0.4.0">`,
@@ -278,6 +300,7 @@ function pageCache(
 export function markout(props: MarkoutProps) {
   const docroot = props.docroot || process.cwd();
   const dev = props.dev ?? false;
+  const client = props.client ?? false;
   const csp = props.csp;
   const logger = props.logger ?? defaultLogger;
   const globals = props.globals;
@@ -385,11 +408,11 @@ export function markout(props: MarkoutProps) {
           return undefined;
         }
         reportWarnings(page, pathname);
-        const runtimeErrors = await renderPage(page, {
-          origin: originOf(req),
-          globals,
-          nonce,
-        });
+        // client mode serializes what compiled, with no render: see
+        // MarkoutProps.client. An error page is a page like any other
+        const runtimeErrors = client
+          ? []
+          : await renderPage(page, { origin: originOf(req), globals, nonce });
         runtimeErrors.forEach(e =>
           logger('error', `[markout] ${pathname} ${formatRuntimeError(e)}`)
         );
@@ -459,6 +482,12 @@ export function markout(props: MarkoutProps) {
     );
   }
   reloader && logger('info', '[markout] dev mode: pages reload when the docroot changes');
+  client &&
+    logger(
+      'info',
+      '[markout] client mode: pages are served as `markout build` writes ' +
+        'them, with no server-side render'
+    );
   const startupNotFound = notFoundPage();
   startupNotFound && logger('info', `[markout] not-found page ${startupNotFound}`);
   errorFile && logger('info', `[markout] error page ${errorFile}`);
@@ -573,11 +602,9 @@ export function markout(props: MarkoutProps) {
       // for. Logged on every render, like the runtime errors below -- the
       // cache means that is once per compile, which is when it is news
       reportWarnings(page, pathname);
-      const runtimeErrors = await renderPage(page, {
-        origin: originOf(req),
-        globals,
-        nonce,
-      });
+      const runtimeErrors = client
+        ? []
+        : await renderPage(page, { origin: originOf(req), globals, nonce });
       // serialized HERE, inside this page's turn rather than after it: the
       // document holds this request's data only until the next render
       // starts writing over it

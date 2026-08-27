@@ -4,7 +4,7 @@ import os from 'os';
 import path from 'path';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { build } from '../../src/server/build';
+import { build } from '@markout-lang/core';
 import { Server } from '../../src/server';
 
 /**

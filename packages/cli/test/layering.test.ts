@@ -23,6 +23,16 @@ const SRC = path.join(ROOT, 'src');
 
 /** lowest first: a layer may import from itself and anything above it here */
 const LAYERS: { name: string; pkg: string; members: string[] }[] = [
+  // Installing a kit without npm: a registry client, a tar reader and the
+  // orchestration over them, behind the `@markout-lang/cli/kits` subpath.
+  // Below `cli` because nothing in it knows what a command is -- the
+  // extension's sidebar drives the same code with no commander, no server
+  // and no express anywhere near it
+  {
+    name: 'kits',
+    pkg: '@markout-lang/cli',
+    members: ['kits/'],
+  },
   {
     name: 'cli',
     pkg: '@markout-lang/cli',
@@ -30,7 +40,6 @@ const LAYERS: { name: string; pkg: string; members: string[] }[] = [
       'cli.ts',
       'defaults.ts',
       'index.ts',
-      'server/build.ts',
       'server/exit-hook.ts',
       'server/index.ts',
     ],

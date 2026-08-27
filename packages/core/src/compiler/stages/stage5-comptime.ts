@@ -5,6 +5,7 @@ import { NodeType } from '../../html/dom';
 import type { Page } from '../ir/Page';
 import type { Scope } from '../ir/Scope';
 import type { Value, ValueDepRef } from '../ir/Value';
+import { comptimeRealm, type ComptimeRealm } from '../comptime-realm';
 import { chainDep } from './stage4-resolve';
 
 /** the attribute marker that declares a value compile-time: `:const-name` */
@@ -53,10 +54,16 @@ export const COMPTIME_MARKER = ':const-';
  * separate copy per use site after inlining.
  */
 export function stage5comptime(page: Page) {
+  // One sandbox per page, created on its first constant. Every evaluation
+  // below goes through it -- see comptime-realm.ts, which is where the
+  // reasoning is: `new Function` here ran an author's JavaScript in the
+  // compiler's own realm, and a kit's fragment is an author whose code you
+  // did not write.
+  const realm = comptimeRealm();
   const constants = collect(page);
   if (constants.size) {
     rejectWrites(page, constants);
-    const values = evaluate(page, constants);
+    const values = evaluate(page, constants, realm);
     substitute(page, constants, values);
     // only once every reader has been rewritten: a constant removed earlier
     // would leave stage7 emitting a dependency on a value that is gone
@@ -68,7 +75,7 @@ export function stage5comptime(page: Page) {
   // after substitution, because that is what makes most of them constant --
   // but not conditional on it, since `<title>a${'b'}</title>` was constant
   // before this stage ever ran
-  foldConstantText(page);
+  foldConstantText(page, realm);
   return page;
 }
 
@@ -104,7 +111,7 @@ export function stage5comptime(page: Page) {
  * reading it. An attribute value is reachable by name and dropping one
  * would strand its readers.
  */
-function foldConstantText(page: Page) {
+function foldConstantText(page: Page, realm: ComptimeRealm) {
   const walk = (scope: Scope) => {
     for (const [name, value] of [...scope.textValues]) {
       const ast = value.value;
@@ -113,7 +120,7 @@ function foldConstantText(page: Page) {
       }
       let text: unknown;
       try {
-        text = new Function(`return (${generate(ast as unknown as Node)});`)();
+        text = realm.run(`(${generate(ast as unknown as Node)})`);
       } catch {
         // an expression that cannot be evaluated here is left exactly as it
         // was: this is an optimisation, and the runtime is still perfectly
@@ -229,7 +236,11 @@ function collect(page: Page): Map<Value, Value> {
  * is left is circular -- which is the only way this can fail to terminate,
  * and is reported as such.
  */
-function evaluate(page: Page, constants: Map<Value, Value>): Map<Value, unknown> {
+function evaluate(
+  page: Page,
+  constants: Map<Value, Value>,
+  realm: ComptimeRealm
+): Map<Value, unknown> {
   const done = new Map<Value, unknown>();
   let pending = [...constants.values()];
   while (pending.length) {
@@ -255,7 +266,7 @@ function evaluate(page: Page, constants: Map<Value, Value>): Map<Value, unknown>
         blocked.push(value);
         continue;
       }
-      done.set(value, run(page, value, done));
+      done.set(value, run(page, value, done, realm));
       progressed = true;
     }
     if (!progressed) {
@@ -322,11 +333,16 @@ function targetOf(
 }
 
 /** evaluates one constant, its own constant reads already substituted */
-function run(page: Page, value: Value, done: Map<Value, unknown>): unknown {
+function run(
+  page: Page,
+  value: Value,
+  done: Map<Value, unknown>,
+  realm: ComptimeRealm
+): unknown {
   const ast = inlined(page, value, done, value.value as unknown as Node);
   let result: unknown;
   try {
-    result = new Function(`return (${generate(ast)});`)();
+    result = realm.run(`(${generate(ast)})`);
   } catch (err) {
     addError(page, `"${value.name}" could not be computed: ${(err as Error).message}`, value);
     return undefined;

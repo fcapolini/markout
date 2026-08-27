@@ -2,10 +2,33 @@ import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
-// __dirname is src/server (dev, via tsx) or dist/server (built); either way
-// this is exactly two levels below the project root, where esbuild puts the
-// bundle (see scripts/build-runtime.mjs)
-export const RUNTIME_BUNDLE_PATH = path.join(__dirname, '../../dist/markout-runtime.js');
+/**
+ * The browser runtime on disk.
+ *
+ * `__dirname` is src/render (dev, via tsx) or dist/render (built); either way
+ * that is exactly two levels below the package root, where esbuild puts the
+ * bundle (see scripts/build-runtime.mjs).
+ *
+ * `MARKOUT_RUNTIME_BUNDLE` overrides it, for a distribution that REPACKAGES
+ * this code and so breaks the relative walk. The VS Code extension is one:
+ * it bundles core into `dist/client.js` and the CLI into a sidecar beside
+ * it, at which point `../../dist` is two levels above the extension and
+ * names nothing. Without an override the pages compile, the runtime is
+ * missing, and every one of them is inert -- which is the failure this
+ * whole design is least willing to ship, because it looks like the language
+ * not working.
+ *
+ * A function and not a const, which matters more than it looks: a const is
+ * evaluated when the module is loaded, and a host that bundles this code has
+ * loaded it before its own `activate` runs. It could then never set the
+ * variable in time.
+ */
+export function runtimeBundlePath(): string {
+  return (
+    process.env.MARKOUT_RUNTIME_BUNDLE ||
+    path.join(__dirname, '../../dist/markout-runtime.js')
+  );
+}
 
 /**
  * The browser runtime, as text.
@@ -18,10 +41,10 @@ export const RUNTIME_BUNDLE_PATH = path.join(__dirname, '../../dist/markout-runt
  */
 export function loadClientCode(): string {
   try {
-    return fs.readFileSync(RUNTIME_BUNDLE_PATH, 'utf8');
+    return fs.readFileSync(runtimeBundlePath(), 'utf8');
   } catch {
     console.warn(
-      `[markout] runtime bundle not found at "${RUNTIME_BUNDLE_PATH}" -- run "npm run build:runtime"`
+      `[markout] runtime bundle not found at "${runtimeBundlePath()}" -- run "npm run build:runtime"`
     );
     return '';
   }

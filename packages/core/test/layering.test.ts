@@ -24,7 +24,10 @@ const SRC = path.join(ROOT, 'src');
 
 /** lowest first: a layer may import from itself and anything above it here */
 const LAYERS: { name: string; members: string[] }[] = [
-  { name: 'base', members: ['kits.ts', 'paths.ts'] },
+  // `manifest.ts` is base and not a layer of its own: it is fs and path and
+  // nothing else, and discovery imports it in order to report a kit the
+  // project asked for and has not got
+  { name: 'base', members: ['kits.ts', 'manifest.ts', 'paths.ts'] },
   { name: 'html', members: ['html/'] },
   // what a docroot may serve, which is a question about paths answered by
   // reading files -- so it sits above html rather than beside paths
@@ -34,6 +37,9 @@ const LAYERS: { name: string; members: string[] }[] = [
   // server-side rendering, and the browser bundle a rendered page asks for.
   // Needed with no HTTP anywhere, which is why it is in core at all
   { name: 'render', members: ['render/'] },
+  // the ahead-of-time build: a compile and a render written to disk, which is
+  // why it sits above both and below the barrel
+  { name: 'build', members: ['build.ts'] },
   // the package boundary itself: the only file allowed to see everything
   { name: 'index', members: ['index.ts'] },
 ];

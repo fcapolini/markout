@@ -38,8 +38,26 @@ export type { ReadFile } from './html/preprocessor';
 
 // where files may be loaded from and served at
 export { discoverKits, type Kit } from './kits';
+export {
+  findManifest,
+  KITS_DIR,
+  MANIFEST_FILE,
+  MARKOUT_DIR,
+  readManifest,
+  type Manifest,
+  type ManifestFile,
+} from './manifest';
 export { contains, NPM_PREFIX, Resolver } from './paths';
 export { allowedPageKits, publishablePath, walkTree } from './publish';
+
+// ahead-of-time delivery: a compile and a render, with no HTTP in it
+export {
+  build,
+  CLASSES_MANIFEST_FILE,
+  pagePathname,
+  type BuildProps,
+  type BuildResult,
+} from './build';
 
 // running a compiled page
 export {
@@ -57,4 +75,9 @@ export { renderPage } from './render/render';
 // can be borrowed for: see docs/reference/testing.md
 export { hydrate, type Hydrated } from './render/hydrate';
 export { loadProps } from './render/props';
-export { loadClientCode, runtimeSrcFor, RUNTIME_CACHE_CONTROL, RUNTIME_BUNDLE_PATH } from './render/runtime-bundle';
+export {
+  loadClientCode,
+  runtimeBundlePath,
+  runtimeSrcFor,
+  RUNTIME_CACHE_CONTROL,
+} from './render/runtime-bundle';

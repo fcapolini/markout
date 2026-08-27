@@ -103,6 +103,8 @@ export interface ServerProps {
   mute?: boolean;
   /** surface runtime expression errors in the page; see MarkoutProps */
   dev?: boolean;
+  /** serve pages as `build` writes them, with no render; see MarkoutProps */
+  client?: boolean;
   /**
    * gzip/deflate responses for clients that accept them.
    *

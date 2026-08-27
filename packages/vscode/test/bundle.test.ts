@@ -33,7 +33,12 @@ beforeAll(() => {
   );
 }, 60000);
 
-describe.each(['client.js', 'server.js'])('%s', file => {
+// `markout-cli.js` is included, and is the one most likely to fail this:
+// it bundles express, which is a package full of `require` calls written
+// before bundlers existed. It is also the one whose failure is quietest --
+// it runs in a child process, so a missing module surfaces as a preview
+// that never comes up rather than as anything in the editor.
+describe.each(['client.js', 'server.js', 'markout-cli.js'])('%s', file => {
   it('asks for nothing by name but `vscode` and node itself', () => {
     const text = fs.readFileSync(path.join(outdir, file), 'utf8');
     const asked = new Set<string>();
