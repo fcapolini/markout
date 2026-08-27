@@ -3,30 +3,36 @@
      with the outline glyphs VS Code ships rather than reading as a filled
      blob among them.
 
-     One path per chevron and per arrowhead, with `stroke-linejoin="round"`,
-     so each corner is a rounded JOIN. Drawn as separate segments meeting at a
-     point the corners were two round caps overlapping, which is blunter than
-     a corner and reads as a lump at 24px.
+     The corners are rounded in the GEOMETRY, not by `stroke-linejoin`. A
+     round join rounds a corner by half the stroke and no more, which is
+     0.7px at 24px and reads as sharp beside the icons above and below it.
+     Each corner instead backs off along both arms and closes with a
+     quadratic whose control point is the vertex the corner used to be.
+
+     Two radii, because the corners are not the same corner. A chevron is a
+     right angle and takes a generous 95; an arrowhead is about 57 degrees and
+     takes 40, because the same radius on both blunts the heads long before
+     the chevrons look soft, and a blunt arrowhead stops reading as an arrow.
 
      The arrowhead barbs are 193 units rather than the 143 they were drawn
-     at. The chevrons are untouched: a barb points back INTO the mark, so
+     at, and the chevrons are untouched. A barb points back INTO the mark, so
      lengthening one changes nothing about the box until it reaches the
-     opposite apex, which is about +104. At +50 the heads read as heads with
-     room to spare, and the stroke is still 1.41px.
+     opposite apex, at about +104.
 
      Square viewBox with the artwork inset: the container fits an icon into a
      square slot, so a drawing that reaches every edge crowds its neighbours
      in a column where everything else has air around it.
 
      `currentColor`, so it takes the ink of whichever theme is running.
+     Stroke 40 renders at 1.41px at 24px.
 
      No double hyphen anywhere in this comment. XML forbids one inside a
      comment, and an SVG that does not parse is an icon that silently does
      not appear. -->
 <g transform="translate(42.9, 91.21)">
-  <path d="M253.6 18.07 L17.1 255.3 L235.3 474.5" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M343.6 482.5 L580.1 245.3 L361.9 26.11" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M198.8 202.7 L253.6 18.07 L68.51 72.13" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M529.6 427.9 L343.6 482.5 L399.4 297.6" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M253.6 18.07 L84.18 188 Q17.1 255.3 84.14 322.6 L235.3 474.5" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M343.6 482.5 L513 312.5 Q580.1 245.3 513.1 177.9 L361.9 26.11" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M198.8 202.7 L242.3 56.41 Q253.6 18.07 215.2 29.28 L68.51 72.13" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M529.6 427.9 L381.9 471.2 Q343.6 482.5 355.1 444.2 L399.4 297.6" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
 </svg>
