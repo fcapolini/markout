@@ -1,4 +1,4 @@
-<svg width="24" height="24" viewBox="0 0 683 683" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="24" height="24" viewBox="0 0 653 653" fill="none" xmlns="http://www.w3.org/2000/svg">
 <!-- The Markout mark for the activity bar: the logo as line art, so it sits
      with the outline glyphs VS Code ships rather than reading as a filled
      blob among them.
@@ -26,17 +26,19 @@
      the mark, so lengthening one changes nothing about the box until it
      reaches the opposite apex, at about +104.
 
-     Square viewBox with the artwork inset: the container fits an icon into a
-     square slot, so a drawing that reaches every edge crowds its neighbours
-     in a column where everything else has air around it.
+     Square viewBox, because the container fits an icon into a square slot.
+     25 units of padding leaves 0.92px of margin at 24px: enough that the
+     drawing does not touch the edge, little enough that it carries the same
+     weight as its neighbours in a column. The mark is wider than it is tall,
+     so the vertical margin is larger and there is nothing to do about that.
 
      `currentColor`, so it takes the ink of whichever theme is running.
-     Stroke 40 renders at 1.41px at 24px.
+     Stroke 40 renders at 1.47px at 24px.
 
      No double hyphen anywhere in this comment. XML forbids one inside a
      comment, and an SVG that does not parse is an icon that silently does
      not appear. -->
-<g transform="translate(42.9, 91.21)">
+<g transform="translate(27.9, 76.21)">
   <path d="M253.6 13.04 L52.41 214.9 Q17.1 250.3 52.38 285.7 L235.3 469.4" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M343.6 487.5 L544.8 285.7 Q580.1 250.3 544.8 214.9 L361.9 31.14" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M198.8 197.7 L246.8 36.05 Q253.6 13.04 230.6 19.77 L68.51 67.1" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
