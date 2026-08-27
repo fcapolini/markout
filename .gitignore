@@ -8,3 +8,5 @@ packages/cli/bench/markout-catalog/bench-*.html
 .tw-scan/
 packages/cli/.built-catalog/
 packages/cli/.built-timing/
+.next/
+packages/cli/bench/next-catalog/next-env.d.ts

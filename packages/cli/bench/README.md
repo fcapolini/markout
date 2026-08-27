@@ -1,10 +1,15 @@
 # Benchmarks
 
-One app, written five times — in Markout, Alpine 3, React, Svelte 5 and Vue
-3.6 Vapor — driven through the same four interactions in a real Chromium, and
-weighed as well as timed. Markout appears in two rows, because it has two
-deliveries an app like this would use: served by Node, and compiled by
-`markout build` to resolve in the browser like the other four.
+One app, written six times — in Markout, Alpine 3, React, Svelte 5, Vue 3.6
+Vapor and Next 15 — driven through the same four interactions in a real
+Chromium, and weighed as well as timed. Markout appears in two rows, because it
+has two deliveries an app like this would use: served by Node, and compiled by
+`markout build` to resolve in the browser like the four SPA ports.
+
+The Next port is the newest and is read differently from the rest: it is the
+only other entrant that renders on the server, so it exists to give Markout's
+served mode a peer in four columns rather than to be a sixth runtime. It is
+also optional and not installed by default. *The Next.js row* below says why.
 
 The point is not to win a chart. It is to know where Markout actually stands
 against the tools its users are choosing between, including the columns where
@@ -26,6 +31,7 @@ components, a lot of derived state, and one list that dominates everything.
 | React | `react-catalog/` | 10 `.tsx` components |
 | Svelte | `svelte-catalog/` | 10 `.svelte` components |
 | Vue | `vue-catalog/` | 10 `.vue` components, Vapor mode |
+| Next | `next-catalog/` | the 10 `.tsx` components, one server route, one client boundary |
 
 That Alpine row needs a word, because "no components" would be too blunt.
 Alpine reuses *behavior* perfectly well: `Alpine.data(name, fn)` registers a
@@ -41,7 +47,10 @@ imposed on it.
 
 ### Why these five
 
-One port per rendering technology, not one per popular framework. Markout hangs
+One port per rendering technology, not one per popular framework. Next is the
+exception and is deliberately outside this count — it reuses React's rendering
+entirely, and is here for its *delivery*, which is the axis *The Next.js row*
+covers. Markout hangs
 a scope graph on the real DOM; Alpine walks the real DOM from attributes, with
 no build step; React diffs a virtual DOM at runtime; Svelte compiles to direct
 DOM operations with no virtual DOM at all.
@@ -78,17 +87,17 @@ Its stylesheet is linked the same way — `href="app.css"`, not
 `/markout-catalog/app.css` — so the whole app is one directory that can be
 renamed or moved without editing anything inside it.
 
-All five share `shared/catalog.mjs`, the single source of truth for the seed
+All six share `shared/catalog.mjs`, the single source of truth for the seed
 data and the item-generation formula. It is plain zero-dependency JS so the
 same file is importable from a bare `node` script (the Markout side, which
-generates its scaled pages ahead of time) and from a Vite build (the other
-three). They also share `markout-catalog/app.css` byte for byte, and the same
+generates its scaled pages ahead of time), from a Vite build (the four SPA
+ports) and from a webpack one (Next). They also share `markout-catalog/app.css` byte for byte, and the same
 class names on the same elements — which is what lets one measurement script
-drive all six rows.
+drive all seven rows.
 
 ### The rating stars are deliberately naive
 
-All five ports build the five-star rating by iterating — `:for-each`, `.map`,
+Every port builds the five-star rating by iterating — `:for-each`, `.map`,
 `{#each}`, `x-for` — over `[1, 2, 3, 4, 5]` and emitting a `<span>` per star.
 An app that cared would not do this. It would render one element and clip it
 with a CSS width, or emit a single string of five glyphs and colour a prefix,
@@ -107,7 +116,7 @@ The same applies to the three-item spec list under each card.
 
 ```
 npm run bench:catalog    # Markout only, four catalog sizes
-npm run bench:compare    # all six rows, four catalog sizes
+npm run bench:compare    # all seven rows, four catalog sizes
 npm run bench:build      # build time per port, no browser
 ```
 
@@ -122,6 +131,14 @@ against a dev build.
 Each port takes `?rows=N`. The Markout side gets the same four sizes as files
 instead — `index.html` at 300 rows and three generated beside it — because its
 catalog is written in the page.
+
+`next-catalog` is the exception to all of that. It is optional and not
+installed by default — both harnesses print `Next: skipped` and carry on
+without it. `cd next-catalog && npm install` turns it on; after that
+`bench:compare` builds it with `next build` and serves it with `next start` on
+4415, and `bench:build` times its `next build`. See
+`next-catalog/PORT-NOTES.md` for why it is a separate, optional, partial row
+rather than a sixth port.
 
 `bench:build` needs no browser and no generated page — it times each port's
 own build command over the committed source. It runs Markout through the
@@ -163,7 +180,7 @@ table:
   to compress is a property of the server, not of the tool, and Markout is
   served by its own `Server` while the others go through `vite preview`;
   reading `transferSize` would compare configurations. Images are excluded —
-  all five load identical Unsplash URLs, which is the app's content, not the
+  every port loads identical Unsplash URLs, which is the app's content, not the
   tool's weight. Only the **total** is comparable across ports: Markout carries
   its app in the document where the other four carry theirs in a bundle, so the
   HTML/JS split says where the weight sits, not how much there is.
@@ -225,8 +242,8 @@ A comparison is only worth the care taken to keep it fair, so:
   where they appear. Writing it the naive way would have produced a number that
   says more about the port than about Alpine.
 - Nobody's catalog constant is handed to a deep reactive proxy. It is a
-  constant in all five.
-- All five render the same DOM, and that is checked rather than assumed. The
+  constant in every port.
+- Every port renders the same DOM, and that is checked rather than assumed. The
   Markout port once wrote `<mk-section class="catalog">`, which **replaces**
   the definition's own `class="panel"` rather than adding to it (`class+=`
   adds) — so its panel rendered with no background, no border and 51px more
@@ -235,23 +252,31 @@ A comparison is only worth the care taken to keep it fair, so:
   was passing `logger: () => {}` over the top of it. Both harnesses now print
   `warn` and above.
 - The ports are close in size — 327 lines for Markout, 328 for Alpine, 356 for
-  Svelte, 451 for React, comments included. That is a sanity check that no port
+  Svelte, 451 for React, comments included. Next runs about 70 lines above
+  React measured the same way, and nearly all of it is the two files React does
+  not need (a server route and a root layout) plus the comment block explaining
+  the RSC-boundary decision. That is a sanity check that no port
   was quietly given less work to do, not a metric.
 
 ## Results
 
-Markout 0.6.0 — `@markout-lang/core` and `@markout-lang/cli`, runtime at
-`70724ab`. The harness stamped `+dirty` on this run because the bench apps
+Markout 0.6.1 — `@markout-lang/core` and `@markout-lang/cli`, runtime at
+`68168a5`. The harness stamped `+dirty` on this run because the bench scripts
 were uncommitted, not the runtime. Alpine 3.16.3, React 18.3.1, Svelte 5.56.9
-and Vue 3.6.0-rc.5 in Vapor mode, all four via Vite 5.4.21. Apple M1 Pro, macOS
-26.5.2, Node 24.4.0, Chromium 151.0.7922.34 (Playwright). Measured 2026-08-25.
-Timings are the median of 5; weight is a single pass.
+and Vue 3.6.0-rc.5 in Vapor mode, all four via Vite 5.4.21; Next 15.5.24 on
+React 19.2.8. Apple M1 Pro, macOS 26.5.2, Node 24.4.0, Chromium 151.0.7922.34
+(Playwright). Measured 2026-08-27. Timings are the median of 5; weight is a
+single pass.
+
+Every number below comes from that one run. The previous set was Markout 0.6.0
+at `70724ab` and is not mixed in here — a Next row pasted into tables measured
+against a different runtime would be the exact failure this section's
+provenance line exists to prevent.
 
 The commit matters more than the version here: a whole release cycle of runtime
-work lands under one `0.6.0`, and mount moved 19% inside it. `bench:compare`
-prints both above its table, along with a `+dirty` marker if anything in
-`packages/cli` or `packages/core` was uncommitted — paste that line in with any
-numbers that replace these.
+work lands under one version. `bench:compare` prints both above its table,
+along with a `+dirty` marker if anything in `packages/cli` or `packages/core`
+was uncommitted — paste that line in with any numbers that replace these.
 
 ### Interactions
 
@@ -263,35 +288,38 @@ page of this shape usually is.
 
 | Target | Mount all | Filter | Sort | 20× add-to-cart |
 | --- | --- | --- | --- | --- |
-| Markout (server) | 2.0 | 1.4 | **4.2** | **13.5** |
-| Markout (build) | 1.7 | 1.6 | 4.3 | 14.0 |
-| Alpine | 2.9 | 3.1 | 10.8 | 16.7 |
-| React | 2.2 | **1.0** | 8.9 | 16.6 |
-| Svelte | **1.3** | 5.3 | 16.7 | 16.6 |
-| Vue | 2.0 | 8.1 | 16.7 | 16.6 |
+| Markout (server) | 2.0 | 1.4 | **3.9** | **14.3** |
+| Markout (build) | 1.7 | 1.3 | 4.0 | 16.4 |
+| Alpine | 3.0 | 5.8 | 12.2 | 16.8 |
+| React | 2.2 | **1.1** | 10.8 | 17.0 |
+| Svelte | **1.4** | 5.5 | 16.7 | 16.6 |
+| Vue | 2.0 | 8.5 | 16.8 | 16.5 |
+| Next | 1.9 | 1.7 | 10.2 | 16.7 |
 
 **300 rows** — ten models. It is the size `markout-catalog/index.html` is
 written at; the other three sizes are generated from it.
 
 | Target | Mount all | Filter | Sort | 20× add-to-cart |
 | --- | --- | --- | --- | --- |
-| Markout (server) | 43.7 | 5.2 | 26.4 | 17.0 |
-| Markout (build) | 44.5 | 5.4 | 27.6 | **16.0** |
-| Alpine | 95.0 | 14.7 | 28.3 | 26.6 |
-| React | 12.8 | **3.2** | 27.9 | 16.6 |
-| Svelte | **10.4** | 3.4 | 29.0 | 16.5 |
-| Vue | 13.1 | 3.4 | **23.6** | 16.6 |
+| Markout (server) | 45.0 | 5.6 | 27.9 | 17.9 |
+| Markout (build) | 45.2 | 5.4 | 28.0 | **14.2** |
+| Alpine | 97.0 | 14.5 | 29.9 | 31.4 |
+| React | 12.7 | **3.2** | 28.2 | 16.6 |
+| Svelte | **10.7** | 3.5 | **27.6** | 16.6 |
+| Vue | 12.9 | 3.4 | 28.3 | 16.6 |
+| Next | 11.9 | 3.4 | 30.6 | 16.2 |
 
 **1,020 rows** — thirty-four models.
 
 | Target | Mount all | Filter | Sort | 20× add-to-cart |
 | --- | --- | --- | --- | --- |
-| Markout (server) | 137.0 | 20.6 | 87.3 | 25.9 |
-| Markout (build) | 143.8 | 20.5 | **86.6** | 23.0 |
-| Alpine | 271.9 | 40.1 | 111.3 | 15.5 |
-| React | 38.2 | 7.2 | 104.4 | **14.7** |
-| Svelte | **28.7** | 6.6 | 111.4 | 16.7 |
-| Vue | 35.1 | **6.1** | 93.9 | 14.8 |
+| Markout (server) | 139.2 | 20.8 | **85.8** | 23.8 |
+| Markout (build) | 146.6 | 20.7 | 87.1 | 22.6 |
+| Alpine | 275.2 | 40.0 | 113.8 | 16.0 |
+| React | 38.6 | 7.1 | 107.3 | **12.6** |
+| Svelte | **29.1** | 6.4 | 112.4 | 16.9 |
+| Vue | 35.2 | **6.0** | 93.4 | 15.3 |
+| Next | 36.2 | 7.7 | 105.0 | 19.5 |
 
 **10,020 rows** — three hundred and thirty-four models: the stress end, past
 what any of these tools is really for. Costs invisible at 300 are legible
@@ -299,18 +327,28 @@ here.
 
 | Target | Mount all | Filter | Sort | 20× add-to-cart |
 | --- | --- | --- | --- | --- |
-| Markout (server) | 1260.9 | 163.8 | 1027.2 | 235.8 |
-| Markout (build) | 1295.0 | 158.2 | 1125.9 | 265.4 |
-| Alpine | 2525.8 | 358.7 | 1000.4 | **64.7** |
-| React | 509.4 | 70.9 | 939.7 | **64.7** |
-| Svelte | **265.0** | 40.0 | **794.5** | 70.4 |
-| Vue | 318.5 | **36.6** | 795.5 | 66.6 |
+| Markout (server) | 1269.9 | 165.8 | 1014.9 | 249.6 |
+| Markout (build) | 1312.8 | 158.2 | 1164.0 | 292.7 |
+| Alpine | 2559.2 | 357.8 | 1046.6 | 71.5 |
+| React | 502.3 | 79.5 | 955.3 | **62.7** |
+| Svelte | **268.5** | 40.6 | **796.4** | 71.0 |
+| Vue | 315.4 | **36.8** | 809.7 | 69.9 |
+| Next | 428.2 | 73.5 | 945.6 | 68.2 |
 
-Seventeen bolds across sixteen columns, because Alpine and React tie
-add-to-cart at 10,020: Svelte takes five, React four, Markout four (two in
-each delivery), Vue three, Alpine one. Three of Markout's four are at 30 and
-300 rows, the fourth is sort at 1,020, and it takes nothing at all at 10,020 —
-which is the shape *Reading them* below is about.
+Sixteen bolds across sixteen columns: Svelte six, React four, Markout four
+(three served, one built), Vue two — and **Alpine and Next take none**.
+
+Next taking none is the expected result and the reason this port is not read
+as a fifth runtime. Its interaction columns are React's columns: mount within
+6% of React at three sizes of four, filter and sort within a few percent
+everywhere. Where it does diverge — 428ms against React's 502ms mounting
+10,020 rows — the likeliest cause is not the App Router at all but React 19
+against `react-catalog`'s React 18, which is a version gap this table cannot
+separate out. Read the Next row in the three tables below instead; those are
+the ones it is here for.
+
+Markout's three served bolds are at 30 and 1,020 rows, and it takes nothing at
+all at 10,020 — which is the shape *Reading them* below is about.
 
 ### First content
 
@@ -319,60 +357,103 @@ Unsplash is stubbed with a 1×1 PNG so this measures the tool rather than a CDN;
 the CSS sizes every card image with `aspect-ratio: 1.4; width: 100%`, so layout
 is unchanged.
 
-| Target | First card (ms) | Cards without JS | FCP (ms) |
-| --- | --- | --- | --- |
-| Markout (server) @ 30 | **14.1** | **24** | 36.0 |
-| Markout (build) @ 30 | 19.6 | 0 | 40.0 |
-| Alpine @ 30 | 34.3 | 0 | 24.0 |
-| React @ 30 | 20.9 | 0 | 48.0 |
-| Svelte @ 30 | 15.7 | 0 | 36.0 |
-| Vue @ 30 | 19.2 | 0 | 40.0 |
-| Markout (server) @ 300 | **12.2** | **24** | 32.0 |
-| Markout (build) @ 300 | 19.3 | 0 | 40.0 |
-| Alpine @ 300 | 33.6 | 0 | 20.0 |
-| React @ 300 | 19.7 | 0 | 44.0 |
-| Svelte @ 300 | 16.4 | 0 | 36.0 |
-| Vue @ 300 | 19.0 | 0 | 40.0 |
-| Markout (server) @ 1,020 | **12.3** | **24** | 32.0 |
-| Markout (build) @ 1,020 | 19.6 | 0 | 40.0 |
-| Alpine @ 1,020 | 32.6 | 0 | 20.0 |
-| React @ 1,020 | 20.3 | 0 | 44.0 |
-| Svelte @ 1,020 | 20.1 | 0 | 40.0 |
-| Vue @ 1,020 | 20.6 | 0 | 40.0 |
-| Markout (server) @ 10,020 | **20.1** | **24** | 44.0 |
-| Markout (build) @ 10,020 | 25.6 | 0 | 44.0 |
-| Alpine @ 10,020 | 41.7 | 0 | 20.0 |
-| React @ 10,020 | 24.3 | 0 | 48.0 |
-| Svelte @ 10,020 | 20.8 | 0 | 40.0 |
-| Vue @ 10,020 | 23.2 | 0 | 44.0 |
+| Target | First card (ms) | Interactive (ms) | Cards without JS | FCP (ms) |
+| --- | --- | --- | --- | --- |
+| Markout (server) @ 30 | 13.4 | 38.1 | **24** | 36.0 |
+| Markout (build) @ 30 | 18.7 | 18.7 | 0 | 40.0 |
+| Alpine @ 30 | 32.2 | 32.2 | 0 | 20.0 |
+| React @ 30 | 20.1 | 20.1 | 0 | 40.0 |
+| Svelte @ 30 | 15.7 | **15.7** | 0 | 36.0 |
+| Vue @ 30 | 21.5 | 21.5 | 0 | 44.0 |
+| Next @ 30 | **10.6** | 57.8 | **24** | 32.0 |
+| Markout (server) @ 300 | 13.8 | 38.0 | **24** | 36.0 |
+| Markout (build) @ 300 | 19.2 | 19.2 | 0 | 40.0 |
+| Alpine @ 300 | 33.1 | 33.1 | 0 | 20.0 |
+| React @ 300 | 20.1 | 20.1 | 0 | 44.0 |
+| Svelte @ 300 | 16.5 | **16.5** | 0 | 36.0 |
+| Vue @ 300 | 19.0 | 19.0 | 0 | 40.0 |
+| Next @ 300 | **10.4** | 56.7 | **24** | 32.0 |
+| Markout (server) @ 1,020 | 12.4 | 37.2 | **24** | 36.0 |
+| Markout (build) @ 1,020 | 22.1 | 22.1 | 0 | 44.0 |
+| Alpine @ 1,020 | 33.7 | 33.7 | 0 | 20.0 |
+| React @ 1,020 | 19.8 | 19.8 | 0 | 40.0 |
+| Svelte @ 1,020 | 17.1 | **17.1** | 0 | 36.0 |
+| Vue @ 1,020 | 20.0 | 20.0 | 0 | 40.0 |
+| Next @ 1,020 | **9.8** | 56.5 | **24** | 32.0 |
+| Markout (server) @ 10,020 | 20.8 | 51.0 | **24** | 44.0 |
+| Markout (build) @ 10,020 | 25.8 | 25.8 | 0 | 44.0 |
+| Alpine @ 10,020 | 44.9 | 44.9 | 0 | 24.0 |
+| React @ 10,020 | 24.4 | 24.4 | 0 | 48.0 |
+| Svelte @ 10,020 | 20.3 | **20.3** | 0 | 40.0 |
+| Vue @ 10,020 | 22.7 | 22.7 | 0 | 44.0 |
+| Next @ 10,020 | **11.1** | 60.1 | **24** | 32.0 |
 
 **Read this as a delivery comparison, not a rendering one**, which is why
 Markout is here twice. Served, it arrives with its rows in the markup. Built,
 it ships a compiled artifact that fills itself in — the same shape as the four
 SPA ports, and the row to read against them. React and Vue *can* render on the
-server and these ports do not; that is each tool's default setup, not its
+server and those ports do not; that is each tool's default setup, not its
 ceiling. Alpine is the only one with no server story of its own to reach for.
+Next is the one port that does render on the server, which is why it is here.
+
+**Next takes first card at every size, and Markout served loses that column.**
+9.8–11.1ms against 12.4–20.8ms: content is on screen sooner from Next at all
+four catalog sizes. The cause is visible in the weight table — Markout's served
+document is 60KB where Next's is 27.6KB, because Markout carries the page's
+expressions and scope tree in the document itself. More markup to parse before
+the first card exists.
+
+**Markout served takes the column next to it, by a wider margin.** Interactive
+— when a click on those cards actually does something — is 37.2–51.0ms for
+Markout against 56.5–60.1ms for Next, at every size. Turn the two columns into
+the gap between them and the shapes separate cleanly:
+
+| | First card | Interactive | Gap |
+| --- | --- | --- | --- |
+| Markout (server) @ 1,020 | 12.4 | 37.2 | 24.8ms |
+| Next @ 1,020 | 9.8 | 56.5 | 46.7ms |
+
+Next arrives 2.6ms earlier and stays inert for nearly twice as long. Both ship
+the same 24 cards in the markup; what differs is what has to happen afterwards
+before those cards respond — and 350KB of JavaScript reconciling a server-
+rendered tree is more of it than 27KB walking a scope graph.
+
+**Interactive is a real thing a visitor can hit**, not a synthetic metric: a
+button on screen that does nothing yet. It is also why the harness needs a
+handshake at all. The measurement script clicks a chip as soon as it sees one,
+and on both server-rendered rows that chip exists long before it works, so
+every target declares an expression that is true only once its handlers are
+live and nothing is timed until it holds. The alternative — a fixed sleep —
+would fold hydration into the mount column silently.
+
+For a port that builds its own content in the browser the two columns are
+identical, and that is not a tie: the content existing and the handlers
+existing are the same instant, because the same code produced both. Those rows
+report one measurement twice.
 
 **On its own terms, Markout built is competitive and Alpine is not.** Ignore
-the served row and compare the five client-rendering artifacts: first card at
-19.6 / 19.3 / 19.6 / 25.6ms, ahead of React at three sizes of four, level with
-Vue, a shade behind Svelte, and 1.6–1.8× faster than Alpine at every size —
-which is the comparison this benchmark exists for.
+the two served rows and compare the five client-rendering artifacts: first card
+at 18.7 / 19.2 / 22.1 / 25.8ms, ahead of React at the two smaller sizes and
+behind it at the two larger, close to Vue throughout, a shade behind Svelte at
+all four, and 1.5–1.7× faster than Alpine at every size
+— which is the comparison this benchmark exists for.
 
 **`Cards without JS` is the same fact with no stopwatch**: load each page with
-JavaScript disabled and count what is on it. 24 for Markout served, 0 for
-everything else including Markout built. A `<template>` is inert, so Alpine's
-markup correctly counts zero — its rows do not exist until Alpine runs. This is
-the column that says what the served mode buys and the built mode gives up.
+JavaScript disabled and count what is on it. 24 for the two server-rendered
+rows, 0 for everything else including Markout built. A `<template>` is inert,
+so Alpine's markup correctly counts zero — its rows do not exist until Alpine
+runs. This is the column that says what a server delivery buys and a built one
+gives up, and it is the one place Markout served and Next are simply level.
 
 **FCP is in this table because it is misleading, and that is worth showing
-once.** It fires on the first contentful paint of *anything*, and all five
-pages have a static header. Alpine posts the best FCP here — 24ms at 300 rows
-— while rendering none of the catalog, and is the slowest of all six to a real
-card at every size. That is the `x-cloak` gap scoring well on the metric
+once.** It fires on the first contentful paint of *anything*, and every page
+here has a static header. Alpine posts the best FCP at every size — 20ms at
+three of them — while rendering none of the catalog, and is the slowest of all seven to
+a real card at every size. That is the `x-cloak` gap scoring well on the metric
 people quote. It is also why this benchmark reports no Lighthouse score: the
 composite would be built on that number, on a stress harness, over a CDN.
-**First card** is the column with the meaning.
+**First card** is the column with the meaning, and **Interactive** is the one
+that keeps it honest.
 
 ### Server, build, and the one that is not here
 
@@ -407,6 +488,67 @@ cost": about 5ms on this page, about 11ms at a catalog size nobody ships. What
 it buys is in the first-content table — content in the markup, and 24 cards
 for a visitor with JavaScript off.
 
+### The Next.js row
+
+Everything above this section compares Markout's SERVED mode to Markout. The
+four ports it is read against are Vite SPAs, so `markout build` has peers and
+the row that puts Node in the request path has none — which left the delivery
+this whole benchmark is arranged around measured only against itself.
+
+`next-catalog/` is that missing peer, and it is deliberately a *partial* one.
+Its interaction columns are React's columns and it takes no bolds in any of
+them. Four columns are the ones it is here for:
+
+| Column | Markout (server) | Next | Reading |
+| --- | --- | --- | --- |
+| First card @ 1,020 | 12.4ms | **9.8ms** | Next |
+| Interactive @ 1,020 | **37.2ms** | 56.5ms | Markout |
+| Total gzip | **17.6 KB** | 108.8 KB | Markout, 6.2× |
+| Build | **261ms** | 8,147ms | Markout, 31× |
+
+**Next wins first card, at every size.** That is a genuine loss for Markout
+served and the most useful thing this port produced. The cause is in the weight
+table: Markout's served document is 60 KB against Next's 27.6 KB, because
+Markout carries the page's expressions and scope tree in the document. There is
+more to parse before the first card exists.
+
+**Markout wins the three columns either side of it.** Interactive by ~19ms at
+every size, wire weight by 6.2×, and build time by 30×. The pattern is the same
+one three times: Next spends bytes and build seconds to arrive 2.6ms earlier
+and then stays inert for nearly twice as long.
+
+**Interactive is new to this document and Next is why it exists.** A page built
+by its own JavaScript has one instant — content and handlers appear together,
+because the same code made both. A page that arrives rendered has two, and the
+gap is a real thing a visitor can hit: a button on screen that does nothing
+yet. It is a correctness requirement before it is a metric. The measurement
+script clicks a chip as soon as it sees one, and on a server-rendered page that
+chip is in the wire markup long before it works, so every target now declares an
+expression that is true only once handlers are live, and nothing is timed until
+it holds. A fixed sleep would have folded hydration into the mount column
+silently. Both expressions are documented on the `Target` interface in
+`../scripts/bench-compare.ts`.
+
+**Two caveats, both in Next's favour.** The port passes the catalog *seed*
+across the RSC boundary and rebuilds in the browser rather than serializing
+10,020 objects into the flight payload; both are real App Router code and this
+is the lighter one, chosen for the same reason `markout prerender` is kept out
+of the comparison. And it runs React 19 where `react-catalog` runs React 18,
+which is forced by Next 15 and is a second reason not to read its interaction
+columns as React-plus-overhead. `next-catalog/PORT-NOTES.md` has both in full,
+along with the two parity lines the port is expected to add.
+
+**Adding the port also found a bug in the harness.** Next is the first entrant
+to preload a script with `<link rel=preload as=script>`, and `measureWeight`
+classified every `link` initiator as CSS — filing 3.3 KB of JavaScript in the
+stylesheet column. The classifier now decides on the extension. No other port
+was affected, and the totals never were, but the split was wrong for exactly as
+long as nothing preloaded anything.
+
+**Nuxt is not here.** It would tell the same story in Vue, at the cost of a
+second heavyweight install and a second thing to keep current. Add it if a
+number in this table raises a question that is specifically about Vue.
+
 ### Build time
 
 The cost nobody in the first-content table pays: turning source into the
@@ -425,20 +567,31 @@ two — so each runs its own build script unchanged.
 | Target | Build | What runs |
 | --- | --- | --- |
 | Markout (server) | **33ms** | compile, on the first request for a page |
-| Markout (build) | **162ms** | `markout build` |
-| Alpine | 609ms | `vite build` — bundles the library, compiles nothing |
-| React | 1,461ms | `tsc -b && vite build` |
-| Svelte | 885ms | `vite build` |
-| Vue | 986ms | `vite build` |
+| Markout (build) | **261ms** | `markout build` |
+| Alpine | 599ms | `vite build` — bundles the library, compiles nothing |
+| React | 1,472ms | `tsc -b && vite build` |
+| Svelte | 884ms | `vite build` |
+| Vue | 1,005ms | `vite build` |
+| Next | 8,147ms | `next build` |
 
 Same machine and toolchain as the tables above, measured 2026-08-27; median of
 5 after a discarded warm-up, and the run-to-run spread is a few percent except
 React's, which moves by about 100ms.
 
+**One caveat on the built row, found while adding Next.** Invoked from a
+shell, `node dist/cli.js build …` takes about 155ms, not 261ms; `node` alone
+starts in 30ms and loading the CLI's module graph brings it to about 120ms.
+The harness spawns each build from its own already-loaded parent process, and
+that costs roughly 110ms of extra wall clock per spawn. Every row pays it, so
+the table is internally consistent — but it is 40% of Markout's number and
+1.3% of Next's, so it distorts the *ratios* in Markout's disfavour. An earlier
+published run recorded 162ms here, close to the shell figure; 261–277ms
+reproduced across four runs today, with and without the Next port present. The harness's
+spawn cost is the difference, and removing it is a fix this table still wants.
+
 Markout appears twice for the usual reason, but here the two rows differ by
 more than the artifact. **`markout build`** is a command someone runs, so its
-162ms includes Node starting up and loading the CLI — 129ms of it, leaving
-**33ms of actual compiling** for one page of ten `<:define>`s. **Served**,
+number includes Node starting up and loading the CLI. **Served**,
 that startup is already paid: the process is up and the compiler is loaded, so
 the 33ms is the whole of it, and it is what the first request for a page
 costs. The server caches the compiler's output per page and renders that per
@@ -457,23 +610,34 @@ server applying an incremental update, which for three of them is HMR and for
 Alpine is a reload — that this table does not measure. Read it as
 what Markout's server does on a first request, not as a race it won.
 
-The margin is wide either way: on the built row, 5.5× against Svelte's 885ms
-and 9× against React's; on the served row, 27× against Svelte. The four run a
+The margin is wide either way: on the built row, 3.4× against Svelte's 884ms,
+5.6× against React's and 31× against Next's 8.1 seconds; on the served row,
+27× against Svelte and 247× against Next. The four run a
 bundler, which resolves a module graph, pre-bundles dependencies, tree-shakes
 and minifies; Markout reads one HTML file and writes one HTML file, because
 the app was already in a format a browser accepts and the runtime it links is
 a fixed file that was built when Markout was.
 
+**Next's 8.1 seconds is the widest gap in this document**, and unlike the
+interaction columns it is not React's number wearing a different label —
+React's own build is 1,472ms including its typecheck. The remaining ~6.7
+seconds is the App Router's: two compilation environments, route collection,
+static generation of the routes that can be static, and build traces. A
+developer pays it on every change, which makes it the cost met most often, and
+it is the one column where the difference between a tool designed around a
+server and a tool that grew one is measured in seconds rather than
+milliseconds.
+
 **Alpine's row is a packaging cost, not a compile, and it is the one row that
 could be deleted outright.** Alpine has no compiler and no component step: its
-609ms is Vite bundling and minifying the Alpine library together with the
+599ms is Vite bundling and minifying the Alpine library together with the
 shared catalog generator, and the markup in `index.html` ships exactly as
 written. That is what `npm install alpinejs` gives an app, and this port is
-set up that way so it is measured as production output like the other three —
+set up that way so it is measured as production output like the others —
 but Alpine's own answer is the one it is known for, a `<script src>` tag and
 **no build at all**. The cost of taking it is shipping the library as the CDN
 serves it rather than bundled and minified with the app, which would move
-Alpine's weight row rather than its timing rows. Read 609ms as what this
+Alpine's weight row rather than its timing rows. Read 599ms as what this
 port's packaging costs, not as something Alpine requires.
 
 That is worth holding next to Markout's own rows, because it is the same claim
@@ -485,7 +649,7 @@ the 33ms above.
 
 React's number is the one that needs a caveat, and it is not a Vite caveat:
 run separately, `tsc -b` and `vite build` split its time about 59/41, so the
-typecheck is roughly 860ms of the 1,461ms and the bundling is roughly 600ms —
+typecheck is roughly 870ms of the 1,472ms and the bundling is roughly 600ms —
 which puts React's bundler right alongside Alpine's. That typecheck is the
 build React ships with in this port, though, and dropping it to "make the
 comparison fair" would time a build nobody runs. What each row says is what
@@ -497,7 +661,7 @@ real project. Bundler time grows with the module graph, so a real app's four
 Vite numbers grow well past these; Markout's does not have a module graph to
 grow, but its per-page compile does multiply by the page count, and its
 startup cost is paid once no matter how many pages follow. A ten-page site is
-about 129ms + 10 × the per-page compile, not 10 × 162ms.
+about one startup + 10 × the per-page compile, not 10 × 261ms.
 
 ### Weight
 
@@ -507,31 +671,51 @@ about 129ms + 10 × the per-page compile, not 10 × 162ms.
 | Markout (build) @ 30 | 19.5 | 27.4 | 6.0 | **15.4** | 3.2 | 748 |
 | Alpine @ 30 | 9.1 | 56.8 | 6.0 | 24.4 | 4.6 | 748 |
 | React @ 30 | 0.4 | 147.8 | 6.0 | 49.6 | 2.6 | 748 |
-| Svelte @ 30 | 0.4 | 47.9 | 6.0 | 20.2 | 2.4 | 748 |
+| Svelte @ 30 | 0.4 | 47.9 | 6.0 | 20.2 | **2.4** | 748 |
 | Vue @ 30 | 0.4 | 116.6 | 6.0 | 45.4 | 2.6 | 748 |
+| Next @ 30 | 27.6 | 351.6 | 6.0 | 108.8 | 3.3 | 749 |
 | Markout (server) @ 300 | 60.1 | 27.4 | 6.0 | 17.5 | 11.3 | 6,688 |
 | Markout (build) @ 300 | 19.6 | 27.4 | 6.0 | **15.5** | 11.3 | 6,688 |
 | Alpine @ 300 | 9.1 | 56.8 | 6.0 | 24.4 | 22.7 | 6,688 |
-| React @ 300 | 0.4 | 147.8 | 6.0 | 49.6 | 4.4 | 6,688 |
+| React @ 300 | 0.4 | 147.8 | 6.0 | 49.6 | **4.4** | 6,688 |
 | Svelte @ 300 | 0.4 | 47.9 | 6.0 | 20.2 | 4.6 | 6,688 |
 | Vue @ 300 | 0.4 | 116.6 | 6.0 | 45.4 | 5.2 | 6,688 |
+| Next @ 300 | 27.6 | 351.6 | 6.0 | 108.8 | 5.0 | 6,689 |
 | Markout (server) @ 1,020 | 60.4 | 27.4 | 6.0 | 17.6 | 33.0 | 22,528 |
 | Markout (build) @ 1,020 | 19.9 | 27.4 | 6.0 | **15.5** | 33.0 | 22,528 |
-| Alpine @ 1,020 | 9.1 | 56.8 | 6.0 | 24.4 | 70.5 | 22,528 |
-| React @ 1,020 | 0.4 | 147.8 | 6.0 | 49.6 | 8.9 | 22,528 |
-| Svelte @ 1,020 | 0.4 | 47.9 | 6.0 | 20.2 | 10.2 | 22,528 |
-| Vue @ 1,020 | 0.4 | 116.6 | 6.0 | 45.4 | 11.5 | 22,528 |
+| Alpine @ 1,020 | 9.1 | 56.8 | 6.0 | 24.4 | 70.7 | 22,528 |
+| React @ 1,020 | 0.4 | 147.8 | 6.0 | 49.6 | **8.9** | 22,528 |
+| Svelte @ 1,020 | 0.4 | 47.9 | 6.0 | 20.2 | 9.9 | 22,528 |
+| Vue @ 1,020 | 0.4 | 116.6 | 6.0 | 45.4 | 11.4 | 22,528 |
+| Next @ 1,020 | 27.6 | 351.6 | 6.0 | 108.8 | 9.4 | 22,529 |
 | Markout (server) @ 10,020 | 63.9 | 27.4 | 6.0 | 18.4 | 297.7 | 220,528 |
-| Markout (build) @ 10,020 | 23.4 | 27.4 | 6.0 | **16.3** | 296.8 | 220,528 |
+| Markout (build) @ 10,020 | 23.4 | 27.4 | 6.0 | **16.3** | 296.6 | 220,528 |
 | Alpine @ 10,020 | 9.1 | 56.8 | 6.0 | 24.4 | 669.7 | 220,528 |
 | React @ 10,020 | 0.4 | 147.8 | 6.0 | 49.6 | 64.5 | 220,528 |
 | Svelte @ 10,020 | 0.4 | 47.9 | 6.0 | 20.2 | 79.6 | 220,528 |
 | Vue @ 10,020 | 0.4 | 116.6 | 6.0 | 45.4 | 89.7 | 220,528 |
+| Next @ 10,020 | 27.6 | 351.6 | 6.0 | 108.8 | **63.7** | 220,529 |
 
 **Markout is the lightest thing here over the wire, in both modes and at every
 size.** Built, 15.5 KB gzipped; served, 17.5 KB — against Svelte's 20.2,
-Alpine's 24.4, Vue's 45.4 and React's 49.6. Neither moves much with the
-catalog: 15.4 → 16.3 and 17.4 → 18.4 across a 334× row increase.
+Alpine's 24.4, Vue's 45.4, React's 49.6 and Next's 108.8. Neither moves much
+with the catalog: 15.4 → 16.3 and 17.4 → 18.4 across a 334× row increase.
+
+**Next is the heaviest by a distance: 108.8 KB gzipped, 6.2× Markout served.**
+351.6 KB of uncompressed JavaScript, against React's 147.8 for the same
+components — the difference is the App Router's client runtime, and it is fixed
+overhead that does not shrink for a smaller app. This is the column where the
+server delivery is paid for, and it is worth reading next to first card: Next
+wins that by ~2.6ms and spends 91 KB gzipped to do it.
+
+Its 27.6 KB document deserves one clarification, because it looks better than
+the 60 KB Markout serves. Both carry 24 rendered cards. Markout's extra 32 KB
+is the page's expressions and scope tree; Next's document is smaller because
+this port passes the catalog *seed* across the RSC boundary and rebuilds in the
+browser. Serializing the catalog instead — which a large number of real App
+Router codebases do — would put megabytes of flight payload in that document at
+10,020 rows. The favourable configuration was chosen deliberately; see
+`next-catalog/PORT-NOTES.md`.
 
 The HTML/JS split is where the shape shows. Served, Markout ships a 60.1 KB
 document and a 27.4 KB runtime; built, the document falls to 19.6 KB because
@@ -546,12 +730,17 @@ compiled output. It is a fair comparison of what the browser downloads, not of
 what the project costs to set up.
 
 **Heap is the column Markout loses worst, and by more than any timing.** At
-10,020 rows it holds 297.7 MB against React's 64.5 and Svelte's 79.6 — 4.6×
-and 3.7× — where the mount gap is 2.4–4.8×. This is the 16-scopes-per-card
-cost from the root `TODO.md` measured in bytes rather than milliseconds, and
-it is the clearest single argument for the per-unit-weight work that entry
-lists. It also scales worse than linearly against the others: 2.5× Svelte at
-300 rows, 3.2× at 1,020, 3.7× at 10,020.
+10,020 rows it holds 297.7 MB against Next's 63.7, React's 64.5 and Svelte's
+79.6 — 4.7×, 4.6× and 3.7× — where the mount gap is 2.5–4.8×. This is the
+16-scopes-per-card cost from the root `TODO.md` measured in bytes rather than
+milliseconds, and it is the clearest single argument for the per-unit-weight
+work that entry lists. It also scales worse than linearly against the others:
+2.5× Svelte at 300 rows, 3.3× at 1,020, 3.7× at 10,020.
+
+That Next holds the *lowest* heap of all seven at 10,020 rows is the sharpest
+form of the point. The heaviest thing on the wire is the lightest thing in
+memory, and the two costs are genuinely independent — bytes shipped once
+against bytes held for the life of the page.
 
 **Alpine is heavier still, which is the one place it loses outright.** 669.7 MB
 at 10,020 rows, 2.2× Markout and 8.4× Svelte, plus 20,048 `<template>` hosts
@@ -559,12 +748,17 @@ that exist only to anchor its `x-for` loops. It is the heaviest at 30 rows too
 — 4.6 MB against Markout's 3.2 and Svelte's 2.4 — so this one is not a scale
 artefact either.
 
-**DOM node counts agree exactly** — 748 / 6,688 / 22,528 / 220,528, every
-row.
-They count what the census counts: body elements, no `<template>`, no
-`<script>`. Counting scripts used to put the two Markout modes one apart, since
-a built page carries one more, which is not rendered content and not something
-a parity check should have an opinion about. That is the contract holding.
+**DOM node counts agree exactly, except Next's, which is one higher at every
+size** — 749 / 6,689 / 22,529 / 220,529 against everyone else's 748 / 6,688 /
+22,528 / 220,528. That one element is `<next-route-announcer>`, which Next
+injects after hydration to hold route-change text for screen readers. It is not
+in the wire markup at all; `curl` the page and it is absent. The census is
+taken after mount, so it appears there.
+
+Otherwise the counts hold: body elements, no `<template>`, no `<script>`.
+Counting scripts used to put the two Markout modes one apart, since a built
+page carries one more, which is not rendered content and not something a parity
+check should have an opinion about. That is the contract holding.
 
 ### Reading them
 
@@ -580,14 +774,14 @@ Weight cuts the same way on the wire and the other way in memory — see above.
 **Sort is a wash for everyone above 30 rows.** 24–29ms at 300 and 0.8–1.1s at
 10,020, regardless of tool: it is a keyed DOM reorder, and no reactivity system
 avoids paying for the moves. At 30 rows it is not a wash at all — Markout sorts
-in 4.2ms against React's 8.9 and Svelte's and Vue's 16.7, which is 2–4× and the
-largest margin Markout has anywhere in this file.
+in 3.9ms against Next's 10.2, React's 10.8 and Svelte's and Vue's 16.7, which
+is 2.6–4.3× and the largest margin Markout has anywhere in this file.
 
 **Markout is the outlier on repeated small mutations at scale.** 20×
-add-to-cart at 10,020 rows: Markout 235.8ms served against Alpine's and
-React's 64.7, Vue's 66.6 and Svelte's 70.4 — 3.3× the *slowest* of the other
-four. It is emphatically not a small-page problem: at 30 rows Markout is the
-fastest of all six at 13.5ms, and at 300 it still is. The cost appears
+add-to-cart at 10,020 rows: Markout 249.6ms served against React's 62.7,
+Next's 68.2, Vue's 69.9, Svelte's 71.0 and Alpine's 71.5 — 3.5× the *slowest*
+of the other five. It is emphatically not a small-page problem: at 30 rows
+Markout is the fastest of all seven at 14.3ms. The cost appears
 with scale, which points at per-row structure rather than per-event work. This
 is the structural cost noted in the root `TODO.md` — a card builds 16 scopes,
 so the page builds ~160,000 of them — showing up on mutation rather than on
@@ -595,13 +789,13 @@ mount. The heap column above is the same cost weighed instead of timed. It is
 the number to fix, and the number not to omit.
 
 **At 30 rows the mount gap is gone.** Markout builds the page in 1.7ms
-against Svelte's 1.3, React's 2.2 and Vue's 2.0 — level with the fastest, ahead
-of two of them. That matters more than it looks: 16 scopes per card is a
+against Svelte's 1.4, Next's 1.9, Vue's 2.0 and React's 2.2 — 0.3ms off the
+fastest, ahead of three of them. That matters more than it looks: 16 scopes per card is a
 *scale* cost, and at the size most pages of this shape actually are, it does
 not show. Everything below about mount is about what happens when a page is
 ten to three hundred times bigger than that.
 
-**Against the three framework ports, from 300 rows up, Markout loses mount by
+**Against the framework ports, from 300 rows up, Markout loses mount by
 2.5–4.8×.**
 Compiling `Card.svelte` and reading the output says where that goes. Svelte
 emits ten `cloneNode` calls per card — the article shell, three spec `<li>`s,
@@ -619,10 +813,11 @@ returned 46% of mount, and making each remaining scope allocate less returned
 **Vue Vapor lands where the technology says it should, which is worth
 recording because it was a prediction.** `Why these five` argues Vapor belongs
 on Svelte's axis rather than React's, and the numbers agree: at 10,020 rows
-Vue mounts in 318.5ms against Svelte's 265.0 and React's 509.4, and it is the
-*fastest* of all six on filter at 36.6ms. Its sort at 1,020 rows (93.9ms)
-beats both React and Svelte. Its one weak spot is the opposite end: at 30 rows
-it filters in 8.1ms, the slowest of the six, where Markout takes 1.4.
+Vue mounts in 315.4ms against Svelte's 268.5 and React's 502.3, and it is the
+*fastest* of all seven on filter at 36.8ms. Its sort at 1,020 rows (93.4ms)
+beats React, Svelte and Next alike. Its one weak spot is the opposite end: at
+30 rows it filters in 8.5ms, the slowest of the seven, where Markout takes
+1.4.
 Compiled-no-VDOM is a tier, and Vue is now in it — so a reader who knows Vue
 can locate the others against a number they recognise.
 
@@ -642,10 +837,16 @@ Markout page costs a visitor.
 
 Worth being explicit about, since a benchmark's silences get read as claims:
 
-- **Time-to-first-content.** Bytes and heap are measured now; *when* content
-  appears is not, and that is where Markout's two delivery modes differ most
-  from Alpine's.
-- **Compile and build time.** `LAST-MILE.md` has the Markout figures.
+- **Anything over a network.** Every number is localhost. First card and
+  Interactive both shift under real latency, and they shift by different
+  amounts — a bundle that has to arrive before the page works is hurt more by
+  a slow link than markup that is already useful. The two server-rendered rows
+  would separate further, not less, but by how much is not measured here.
+- **Any Next configuration but this one.** One route, dynamic, seed passed
+  across the RSC boundary. Partial prerendering, a cached route, or a port that
+  serializes the catalog would each move its rows, and the last of those would
+  move them a long way.
+- **Nuxt, or any second server-rendering port.** See *The Next.js row*.
 - **Anything under memory pressure.** Heap is read once, on an idle page, on a
   machine with plenty free.
 - **Anything about correctness, ergonomics or what a mistake costs**, which is
@@ -671,9 +872,14 @@ Worth being explicit about, since a benchmark's silences get read as claims:
    otherwise produce plausible, meaningless numbers.
 5. Add a directory, a port number and a target entry in
    `../scripts/bench-compare.ts`.
-6. Write down the judgment calls you had to make, next to the code that makes
+6. If the port renders on the SERVER, give its target a `ready` expression —
+   its controls are in the markup before they work, and without one the harness
+   clicks dead buttons. Give it an `interactiveAt` too, so the gap is reported
+   rather than merely waited out. A port that builds its own content in the
+   browser needs neither.
+7. Write down the judgment calls you had to make, next to the code that makes
    them. Every one of them is a place the comparison could have been rigged.
-7. Run it and read the DOM parity block. A new port should add no new lines
+8. Run it and read the DOM parity block. A new port should add no new lines
    there; if it does, its markup differs from everyone else's and its numbers
    are not comparable yet. `text:` lines matter as much as structural ones — a
    port that renders `$105` where the rest render `$106` has drifted.

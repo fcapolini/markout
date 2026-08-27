@@ -31,13 +31,20 @@ const PORTS = [
   { name: 'React', dir: 'react-catalog' },
   { name: 'Svelte', dir: 'svelte-catalog' },
   { name: 'Vue', dir: 'vue-catalog' },
+  // Optional, and skipped below when it has no node_modules: it is the only
+  // port here whose install runs to hundreds of megabytes, and a build-time
+  // run of the other four should not depend on having done it.
+  { name: 'Next', dir: 'next-catalog' },
 ];
 
 // Every caching layer a build has, cleared before each run. Vite's dep
 // pre-bundling cache and tsc's incremental state both survive `rm -rf dist`,
 // and a run that reuses them times the cache rather than the build.
 function clean(dir: string) {
-  for (const p of ['dist', 'node_modules/.vite', 'tsconfig.tsbuildinfo']) {
+  // `.next` holds the output AND the build cache, so removing it is both
+  // halves of what the other ports need two entries for. A run that keeps it
+  // times an incremental rebuild, which is not what this table says it is.
+  for (const p of ['dist', '.next', 'node_modules/.vite', 'tsconfig.tsbuildinfo']) {
     fs.rmSync(path.join(dir, p), { recursive: true, force: true });
   }
 }
@@ -119,6 +126,10 @@ async function main() {
 
   for (const { name, dir } of PORTS) {
     const cwd = path.join(BENCH, dir);
+    if (!fs.existsSync(path.join(cwd, 'node_modules'))) {
+      console.log(`  ${name}: skipped (no node_modules -- \`npm install\` in bench/${dir})`);
+      continue;
+    }
     const runs: number[] = [];
     for (let i = 0; i <= REPEATS; i++) {
       clean(cwd); // outside the clock: clearing is setup, not build

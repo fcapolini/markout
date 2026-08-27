@@ -7,7 +7,7 @@
 // names on purpose; bench-catalog.ts uses the same script for Markout alone.
 import { execSync, spawn, ChildProcessWithoutNullStreams } from 'node:child_process';
 import path from 'node:path';
-import { chromium, Browser } from 'playwright';
+import { chromium, Browser, Page } from 'playwright';
 import { gzipSync } from 'node:zlib';
 import { contains } from '@markout-lang/core';
 import { Server } from '../src/server';
@@ -22,11 +22,13 @@ const REACT_DIR = path.resolve(__dirname, '../bench/react-catalog');
 const SVELTE_DIR = path.resolve(__dirname, '../bench/svelte-catalog');
 const ALPINE_DIR = path.resolve(__dirname, '../bench/alpine-catalog');
 const VUE_DIR = path.resolve(__dirname, '../bench/vue-catalog');
+const NEXT_DIR = path.resolve(__dirname, '../bench/next-catalog');
 const REACT_PORT = 4410;
 const SVELTE_PORT = 4411;
 const ALPINE_PORT = 4412;
 const VUE_PORT = 4413;
 const MARKOUT_BUILD_PORT = 4414;
+const NEXT_PORT = 4415;
 
 // One place that says which generated page is which size, since three things
 // need to agree about it: the served target, the built target, and the list of
@@ -167,12 +169,78 @@ async function startPreview(dir: string, port: number): Promise<ChildProcessWith
   return proc;
 }
 
+// Next is not a `vite preview`, so it gets its own launcher rather than a
+// branch inside that one. `next build` then `next start`, never `next dev`:
+// dev mode compiles on request and would time the compiler.
+//
+// The port is OPTIONAL. It is the only one here whose dependency tree runs to
+// hundreds of megabytes, and a run of the other five should not be blocked on
+// having installed it, so an uninstalled next-catalog is skipped with a note
+// rather than failing the run.
+function nextInstalled(): boolean {
+  return fs.existsSync(path.join(NEXT_DIR, 'node_modules/next'));
+}
+
+async function startNext(dir: string, port: number): Promise<ChildProcessWithoutNullStreams> {
+  freePort(port);
+  execSync('npm run build', { cwd: dir, stdio: 'ignore' });
+  const proc = spawn('npx', ['next', 'start', '--port', String(port)], { cwd: dir });
+  try {
+    await waitForServer(`http://localhost:${port}/`);
+  } catch (err) {
+    proc.kill();
+    throw err;
+  }
+  return proc;
+}
+
 interface Timings { mount: number; filter: number; sort: number; cart: number; }
 
-async function measure(browser: Browser, url: string): Promise<Timings> {
+/**
+ * A row in every table, and the two expressions a server-rendered row needs.
+ *
+ * `ready` is a HANDSHAKE and it exists because of one asymmetry. On the four
+ * SPA ports nothing is in the document until their bundle has run, so
+ * `waitForSelector('.card')` proves two things at once: the content is there,
+ * and the framework that made it is running. A server-rendered page breaks
+ * that identity -- its buttons are in the markup that arrived over the wire,
+ * complete and inert, before React has attached a single listener. Clicking
+ * one then does nothing at all, and `waitUntil(cardCount === target)` spins
+ * until it throws. That failure is loud, which is lucky; the quiet version is
+ * a harness "fixed" with a fixed sleep, which silently folds however long
+ * hydration took into the mount column.
+ *
+ * So a server-rendered target declares a boolean expression that is true only
+ * once its handlers are live, and NOTHING is timed until it holds.
+ *
+ * `interactiveAt` is the same fact turned into a number, because it deserves
+ * to be reported rather than merely waited for: a page that arrives rendered
+ * wins the first-card column, and the gap between arriving and answering a
+ * click is what that win costs. A target that omits it is one whose content
+ * is built by its own JavaScript, where the two instants are the same by
+ * construction and first card already reports it.
+ */
+interface Target {
+  name: string;
+  urlFor: (rows: number) => string;
+  /** boolean expression; nothing is timed until it holds */
+  ready?: string;
+  /** expression returning ms since navigation start; defaults to first card */
+  interactiveAt?: string;
+}
+
+// 30s, matching the in-page waits. A port that has not hydrated by then has
+// not hydrated, and reporting that is more useful than blocking the run.
+async function awaitReady(page: Page, ready?: string) {
+  if (!ready) return;
+  await page.waitForFunction(ready, null, { timeout: 30000 });
+}
+
+async function measure(browser: Browser, url: string, ready?: string): Promise<Timings> {
   const page = await browser.newPage();
   await page.goto(url);
   await page.waitForSelector('.card');
+  await awaitReady(page, ready);
   const t = await page.evaluate(MEASURE_SCRIPT) as Timings;
   await page.close();
   return t;
@@ -211,12 +279,16 @@ interface Weight {
 //     definition's `class="panel"` changed no node count at all -- it was an
 //     attribute, and counting elements would have sailed straight past it.
 //     Comparing tag+class multisets catches that class of drift.
-async function measureWeight(browser: Browser, url: string): Promise<Weight> {
+async function measureWeight(browser: Browser, url: string, ready?: string): Promise<Weight> {
   const page = await browser.newPage();
   const client = await page.context().newCDPSession(page);
   try {
     await page.goto(url);
     await page.waitForSelector('.card');
+    // The heap reading below mounts the whole catalog by clicking, so this
+    // needs the same handshake the timed runs do -- on a server-rendered page
+    // the chip exists long before it does anything.
+    await awaitReady(page, ready);
 
     // Resource timing gives sizes and URLs; the fetch below gives us bytes we
     // can compress ourselves. Same-origin only, so a CDN image cannot leak in.
@@ -226,7 +298,16 @@ async function measureWeight(browser: Browser, url: string): Promise<Weight> {
       const out = [{ url: location.href, kind: 'html', size: nav ? nav.decodedBodySize : 0 }];
       for (const e of performance.getEntriesByType('resource')) {
         if (!e.name.startsWith(origin)) continue;
-        const kind = e.initiatorType === 'script' ? 'js'
+        // The EXTENSION decides, and initiatorType only breaks ties. A
+        // <link rel=preload as=script> reports initiatorType 'link', so
+        // classifying on that alone files a preloaded bundle under CSS --
+        // which is exactly what Next's webpack chunk did, 3.3KB of
+        // JavaScript sitting in the stylesheet column. The four Vite ports
+        // never caught it because none of them preloads anything.
+        const path = e.name.split('?')[0];
+        const kind = /\.css$/.test(path) ? 'css'
+          : /\.m?js$/.test(path) ? 'js'
+          : e.initiatorType === 'script' ? 'js'
           : (e.initiatorType === 'link' || e.initiatorType === 'css') ? 'css'
           : null;
         if (kind) out.push({ url: e.name, kind, size: e.decodedBodySize });
@@ -309,9 +390,10 @@ async function measureWeight(browser: Browser, url: string): Promise<Weight> {
 }
 
 interface FirstPaint {
-  fcp: number;       // first contentful paint, ms
-  firstCard: number; // first .card in the DOM, ms from navigation start
-  noJsCards: number; // .card elements present with JavaScript disabled
+  fcp: number;         // first contentful paint, ms
+  firstCard: number;   // first .card in the DOM, ms from navigation start
+  interactive: number; // ms from navigation start until a click would work
+  noJsCards: number;   // .card elements present with JavaScript disabled
 }
 
 // A 1x1 transparent PNG standing in for the six Unsplash photos. The CSS sizes
@@ -343,7 +425,12 @@ const STUB_PNG = Buffer.from(
 // this page while rendering none of the catalog, which is the x-cloak gap
 // flattering itself. `firstCard` is the metric with the meaning: when the first
 // row of actual content exists. Quote that one.
-async function measureFirstPaint(browser: Browser, url: string): Promise<FirstPaint> {
+async function measureFirstPaint(
+  browser: Browser,
+  url: string,
+  ready?: string,
+  interactiveAt?: string,
+): Promise<FirstPaint> {
   const ctx = await browser.newContext();
   await ctx.route('**://images.unsplash.com/**', (route) =>
     route.fulfill({ status: 200, contentType: 'image/png', body: STUB_PNG }),
@@ -370,9 +457,11 @@ async function measureFirstPaint(browser: Browser, url: string): Promise<FirstPa
   `);
   let fcp = 0;
   let firstCard = 0;
+  let interactive = 0;
   try {
     await page.goto(url);
     await page.waitForSelector('.card');
+    await awaitReady(page, ready);
     await page.evaluate('new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))');
     const paints = await page.evaluate(`(() => {
       const p = performance.getEntriesByType('paint').find(e => e.name === 'first-contentful-paint');
@@ -380,6 +469,13 @@ async function measureFirstPaint(browser: Browser, url: string): Promise<FirstPa
     })()`) as { fcp: number; firstCard: number };
     fcp = paints.fcp;
     firstCard = paints.firstCard;
+    // A target with no expression of its own builds its content with its own
+    // JavaScript, so the content existing IS the handlers existing and first
+    // card already reported this. Only a page that arrives rendered has two
+    // different instants to tell apart.
+    interactive = interactiveAt
+      ? await page.evaluate(interactiveAt) as number
+      : firstCard;
   } finally {
     await ctx.close();
   }
@@ -397,7 +493,7 @@ async function measureFirstPaint(browser: Browser, url: string): Promise<FirstPa
     await noJs.close();
   }
 
-  return { fcp, firstCard, noJsCards };
+  return { fcp, firstCard, interactive, noJsCards };
 }
 
 // Markout in its OTHER ahead-of-time mode. `markout build` compiles and stops:
@@ -472,34 +568,46 @@ async function main() {
   let svelteProc: ChildProcessWithoutNullStreams | undefined;
   let alpineProc: ChildProcessWithoutNullStreams | undefined;
   let vueProc: ChildProcessWithoutNullStreams | undefined;
+  let nextProc: ChildProcessWithoutNullStreams | undefined;
   let markoutBuild: { dir: string; stop: () => void; port: number } | undefined;
   try {
     reactProc = await startPreview(REACT_DIR, REACT_PORT);
     svelteProc = await startPreview(SVELTE_DIR, SVELTE_PORT);
     alpineProc = await startPreview(ALPINE_DIR, ALPINE_PORT);
     vueProc = await startPreview(VUE_DIR, VUE_PORT);
+    const withNext = nextInstalled();
+    if (withNext) nextProc = await startNext(NEXT_DIR, NEXT_PORT);
+    else console.log('  Next: skipped (no node_modules -- `npm install` in bench/next-catalog)');
     markoutBuild = await buildMarkoutClientMode();
-    await run(server);
+    await run(server, withNext);
   } finally {
     reactProc?.kill();
     svelteProc?.kill();
     alpineProc?.kill();
     vueProc?.kill();
+    nextProc?.kill();
     markoutBuild?.stop();
     await server.stop();
   }
 }
 
-async function run(server: Server) {
+async function run(server: Server, withNext: boolean) {
   const browser = await chromium.launch();
 
-  const targets: { name: string; urlFor: (rows: number) => string }[] = [
+  const targets: Target[] = [
     // The two deployments an app like this would actually have. `server` puts
     // Node in the request path and the page arrives rendered; `build` ships a
     // compiled artifact that resolves in the browser, like the four below it.
     {
       name: 'Markout (server)',
       urlFor: (rows) => `http://127.0.0.1:${server.port}/markout-catalog/${PAGE_FOR_ROWS[rows]}`,
+      // No `ready` gate: the runtime's autoInit runs inside the
+      // DOMContentLoaded handler and mounts synchronously, and Playwright's
+      // goto has already waited past load by the time anything is clicked.
+      // That same fact is what makes the stamp below the honest one --
+      // domContentLoadedEventEnd is timestamped after every DCL handler has
+      // returned, so on this page it is exactly when the page went live.
+      interactiveAt: `performance.getEntriesByType('navigation')[0].domContentLoadedEventEnd`,
     },
     {
       name: 'Markout (build)',
@@ -515,6 +623,21 @@ async function run(server: Server) {
     // mode, which compiles to direct DOM operations with no virtual DOM, so
     // it belongs next to the other compiled-no-VDOM entrant.
     { name: 'Vue', urlFor: (rows) => `http://localhost:${VUE_PORT}/?rows=${rows}` },
+    // Next last, and read against 'Markout (server)' rather than against the
+    // four above it: it is the only other row here that renders on the server
+    // and ships the result. Its INTERACTION columns are React's columns plus
+    // whatever the App Router adds -- the React row already answers "how fast
+    // is this runtime", and this row does not answer it a second time. What it
+    // answers is what a retrofitted server story costs: the interactive gap,
+    // the payload in the document, and the build.
+    ...(withNext
+      ? [{
+          name: 'Next',
+          urlFor: (rows: number) => `http://localhost:${NEXT_PORT}/?rows=${rows}`,
+          ready: 'window.__ready !== undefined',
+          interactiveAt: 'window.__ready',
+        }]
+      : []),
   ];
 
   const results: Record<string, Record<keyof Timings, number[]>> = {};
@@ -528,7 +651,7 @@ async function run(server: Server) {
       results[label] = { mount: [], filter: [], sort: [], cart: [] };
       for (let i = 0; i <= REPEATS && !crashed[label]; i++) {
         try {
-          const t = await measure(browser, target.urlFor(rows));
+          const t = await measure(browser, target.urlFor(rows), target.ready);
           if (i > 0) (Object.keys(t) as (keyof Timings)[]).forEach((k) => results[label][k].push(t[k]));
         } catch (err) {
           console.log(`  ${label}: failed (${(err as Error).message.split('\n')[0]})`);
@@ -539,12 +662,13 @@ async function run(server: Server) {
       // repeats, and doing it here would perturb the runs above.
       if (!crashed[label]) {
         try {
-          weights[label] = await measureWeight(browser, target.urlFor(rows));
+          weights[label] = await measureWeight(browser, target.urlFor(rows), target.ready);
         } catch (err) {
           console.log(`  ${label}: weight failed (${(err as Error).message.split('\n')[0]})`);
         }
         try {
-          paints[label] = await measureFirstPaint(browser, target.urlFor(rows));
+          paints[label] = await measureFirstPaint(
+            browser, target.urlFor(rows), target.ready, target.interactiveAt);
         } catch (err) {
           console.log(`  ${label}: first paint failed (${(err as Error).message.split('\n')[0]})`);
         }
@@ -576,12 +700,12 @@ async function run(server: Server) {
       : [label, '-', '-', '-', '-', '-', '-'];
   });
 
-  const paintHeaders = ['Target', 'First card (ms)', 'Cards without JS', 'FCP (ms)'];
+  const paintHeaders = ['Target', 'First card (ms)', 'Interactive (ms)', 'Cards without JS', 'FCP (ms)'];
   const paintRows = Object.keys(results).map((label) => {
     const fp = paints[label];
     return fp
-      ? [label, fp.firstCard.toFixed(1), String(fp.noJsCards), fp.fcp.toFixed(1)]
-      : [label, '-', '-', '-'];
+      ? [label, fp.firstCard.toFixed(1), fp.interactive.toFixed(1), String(fp.noJsCards), fp.fcp.toFixed(1)]
+      : [label, '-', '-', '-', '-'];
   });
   console.log('\nFirst content. Unsplash is stubbed with a 1x1 PNG so this measures the');
   console.log('tool and not a CDN; the CSS sizes every card image, so layout is unchanged.');
@@ -593,6 +717,11 @@ async function run(server: Server) {
   console.log('change without a redeploy. React and Vue CAN render on the server and');
   console.log('these ports do not -- their default setup, not their ceiling; Alpine is');
   console.log('the one with no server story of its own to reach for.\n');
+  console.log('Interactive is the column that keeps first card honest. A page that arrives');
+  console.log('rendered shows content before it can answer a click, and the gap between the');
+  console.log('two is what that delivery costs. For a port that BUILDS its content in the');
+  console.log('browser the two instants are the same by construction, so its two columns');
+  console.log('agree -- that is not a tie, it is the same measurement twice.\n');
   console.log('FCP is last and least: it fires on the first paint of ANYTHING, and every');
   console.log('port has a static header, so a page that paints chrome before it has any');
   console.log('content scores well on it. First card is the column with the meaning.\n');
