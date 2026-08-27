@@ -9,6 +9,7 @@ import { execSync, spawn, ChildProcessWithoutNullStreams } from 'node:child_proc
 import path from 'node:path';
 import { chromium, Browser } from 'playwright';
 import { gzipSync } from 'node:zlib';
+import { contains } from '@markout-lang/core';
 import { Server } from '../src/server';
 import { build } from '../src/server/build';
 import http from 'node:http';
@@ -428,7 +429,19 @@ async function buildMarkoutClientMode(): Promise<{ dir: string; stop: () => void
 
   const server = http.createServer((req, res) => {
     const rel = decodeURIComponent((req.url || '/').split('?')[0]);
-    const file = path.join(dir, rel);
+    // A request carries a PATHNAME, and `/../` in one is an escape attempt
+    // rather than a lookup -- `path.join` would resolve it and happily read
+    // whatever is above `dir`. The real server has this rule; so does the
+    // build; this one is three lines of `http` serving a directory for one
+    // benchmark, which is a reason for it to be small and not a reason for
+    // it to serve /etc. `contains` is core's own, the same check both of
+    // the others make.
+    const file = path.resolve(dir, '.' + (rel.startsWith('/') ? rel : `/${rel}`));
+    if (!contains(dir, file)) {
+      res.statusCode = 403;
+      res.end();
+      return;
+    }
     fs.readFile(file, (err, body) => {
       if (err) { res.statusCode = 404; res.end(); return; }
       const type = file.endsWith('.css') ? 'text/css'

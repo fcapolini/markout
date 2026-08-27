@@ -11,7 +11,7 @@
 // unchanged -- the build a port ships with is part of what the port costs.
 // React's includes `tsc -b`, which is most of its number; removing it to
 // "make the comparison fair" would time a build nobody runs.
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
 import { build } from '../src/server/build';
@@ -103,8 +103,12 @@ async function main() {
   const compile: number[] = [];
   for (let i = 0; i <= REPEATS; i++) {
     fs.rmSync(outdir, { recursive: true, force: true }); // outside the clock: clearing is setup, not build
+    // argv rather than a command line: every one of these paths is derived
+    // from `__dirname`, so a checkout under a directory with a quote or a
+    // `$(` in its name would otherwise be handed to a shell to reinterpret.
+    // Nothing here needs a shell, and not having one is the whole fix.
     const ms = time(() => {
-      execSync(`node ${JSON.stringify(CLI)} build ${JSON.stringify(BENCH)} ${JSON.stringify(outdir)} -p ${PAGE}`, { stdio: 'ignore' });
+      execFileSync('node', [CLI, 'build', BENCH, outdir, '-p', PAGE], { stdio: 'ignore' });
     });
     const only = await markoutCompileOnly();
     if (i) { markout.push(ms); compile.push(only); }
