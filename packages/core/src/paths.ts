@@ -79,13 +79,26 @@ export class Resolver {
   /** kit roots, longest prefix first, with the docroot last as the catch-all */
   readonly roots: Root[];
   private byDir = new Map<string, Root>();
+  /**
+   * The same roots by package name, for a kit the `node_modules` walk cannot
+   * reach: a GLOBALLY installed one. `discoverKits` is given the global tree
+   * as a last resort and mounts what it finds there, so such a kit is a real
+   * root with a real prefix -- but `findPackage` walks up from the docroot
+   * and arrives nowhere near it, which used to leave the kit addressable by
+   * its own root and not by the `/npm/<name>` spelling of the same file.
+   */
+  private byName = new Map<string, Root>();
 
   constructor(docroot: string, kits: Kit[] = []) {
     this.docroot = { prefix: '/', dir: path.resolve(docroot) };
     this.roots = kits
       .map(kit => ({ prefix: kit.root, dir: kit.dir, kit }))
       .sort((a, b) => b.prefix.length - a.prefix.length);
-    this.roots.forEach(r => this.byDir.set(r.dir, r));
+    // every root here is a kit's; the docroot is pushed on after
+    this.roots.forEach(r => {
+      this.byDir.set(r.dir, r);
+      r.kit && this.byName.set(r.kit.name, r);
+    });
     this.roots.push(this.docroot);
   }
 
@@ -159,25 +172,36 @@ export class Resolver {
     }
     const name = parts.slice(0, named).join('/');
     const within = parts.slice(named).join('/');
+    // The walk first, since it is the one that gets NESTED installs right:
+    // where two copies of a kit exist, the importing file's own is the
+    // answer, and a name lookup could not tell them apart.
     const dir = findPackage(name, this.dirOf(currDir));
-    if (!dir) {
-      return {
-        ok: false,
-        kind: 'unresolved',
-        message: `Cannot find package "${name}" -- is it installed?`,
-      };
+    if (dir) {
+      const root = this.byDir.get(dir);
+      if (!root) {
+        return {
+          ok: false,
+          kind: 'unresolved',
+          message:
+            `Package "${name}" is installed but is not a mounted kit -- it ` +
+            `either declares no ${KIT_KEY}.root, or its root was refused`,
+        };
+      }
+      return this.resolve(within ? `${root.prefix}/${within}` : root.prefix);
     }
-    const root = this.byDir.get(dir);
-    if (!root) {
-      return {
-        ok: false,
-        kind: 'unresolved',
-        message:
-          `Package "${name}" is installed but is not a mounted kit -- it ` +
-          `either declares no ${KIT_KEY}.root, or its root was refused`,
-      };
+    // Not in any `node_modules` above the importing file -- which is not the
+    // same as not installed. A globally installed kit is mounted (see
+    // `byName`) and reached by no walk from here, so ask by name before
+    // saying it is missing.
+    const mounted = this.byName.get(name);
+    if (mounted) {
+      return this.resolve(within ? `${mounted.prefix}/${within}` : mounted.prefix);
     }
-    return this.resolve(within ? `${root.prefix}/${within}` : root.prefix);
+    return {
+      ok: false,
+      kind: 'unresolved',
+      message: `Cannot find package "${name}" -- is it installed?`,
+    };
   }
 
   /** the filesystem directory a logical directory names */

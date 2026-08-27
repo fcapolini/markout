@@ -189,6 +189,45 @@ describe('mounted kits', () => {
     !r.ok && r.kind === 'unresolved' && expect(r.message).toContain('markout.root');
   });
 
+  it('resolves /npm/ for a kit no `node_modules` walk can reach', () => {
+    // A GLOBALLY installed kit: `discoverKits` is handed the global tree as
+    // a last resort and mounts what it finds, but `findPackage` walks up
+    // from the docroot and never arrives there. The kit was addressable by
+    // its own root and not by the `/npm/<name>` spelling of the same file --
+    // one kit, two spellings, and only one of them worked.
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'markout-global-'));
+    mounts.push(root);
+    const site = path.join(root, 'site');
+    fs.mkdirSync(site);
+    // the "global" tree, deliberately NOT above the docroot
+    const kitDir = path.join(root, 'elsewhere', 'node_modules', '@markout-lang', 'bootstrap-kit');
+    fs.mkdirSync(kitDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(kitDir, 'package.json'),
+      JSON.stringify({
+        name: '@markout-lang/bootstrap-kit',
+        markout: { root: '/bootstrap-kit' },
+      })
+    );
+    const kits = discoverKits(site, [path.join(root, 'elsewhere')]).kits;
+    expect(kits).toHaveLength(1);
+    const resolver = new Resolver(site, kits);
+
+    const byNpm = resolver.resolve('/npm/@markout-lang/bootstrap-kit/all.htm');
+    expect(byNpm.ok).toBe(true);
+    byNpm.ok && expect(byNpm.filePath).toBe(path.join(kitDir, 'all.htm'));
+    // and both spellings still land on one logical identity
+    const byRoot = resolver.resolve('/bootstrap-kit/all.htm');
+    byNpm.ok && byRoot.ok && expect(byNpm.pathname).toBe(byRoot.pathname);
+  });
+
+  it('still refuses /npm/ for a kit that is mounted nowhere', () => {
+    const { resolver } = kitted();
+    const r = resolver.resolve('/npm/@markout-lang/nope/all.htm');
+    expect(r.ok).toBe(false);
+    !r.ok && r.kind === 'unresolved' && expect(r.message).toContain('is it installed?');
+  });
+
   it('falls through to the docroot for an unclaimed path', () => {
     const { site, resolver } = kitted();
     const r = resolver.resolve('/index.html');
