@@ -74,7 +74,7 @@ pages above — what was chosen, what was rejected, and why.
   `:for-data`, `:for-each` alike — and the `<template>` it used to sit in
   moved to `<head>`, so CSS counts what the page wrote, inline SVG can hold
   a region, and a loop stops copying one stencil per row.
-- [The bootstrapper sidebar](design/bootstrapper-sidebar.md) - how someone
+- [Working without Node](design/without-node.md) - how someone
   with no Node installs a kit: `.markout/kits/` in the project, resolved by
   the compiler so the editor and the CLI agree, and the panel that fills it.
   Designed, not built.

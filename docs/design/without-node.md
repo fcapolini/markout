@@ -1,8 +1,8 @@
-# The bootstrapper sidebar
+# Working without Node
 
 Status: **designed, not built**. Nothing in this file exists yet. It records a
 decision reached in discussion — where a kit installed by the editor goes, and
-why not the two places tried first — together with the panel that would install
+why not the two places tried first — together with the sidebar that would install
 one. The open questions at the end are open, not rhetorical.
 
 The kit *contract* is unchanged and lives in
@@ -39,11 +39,11 @@ the kit defines as an unknown one.
 
 So the mechanism built for the non-npm audience requires npm, on a PATH they
 do not have, in a copy that may not be the one that answers. That is what has
-to change, and the panel below is what changes it.
+to change, and the sidebar below is what changes it.
 
-## The panel
+## The Markout sidebar
 
-Three things, in a sidebar:
+Three things, in a view of its own:
 
 - **A list of kits, with checkboxes.** Ticking one installs it into this
   project; unticking removes it.
@@ -67,8 +67,8 @@ one more rung on a walk that exists. That is the whole mechanism, and its two
 consequences are the reasons for it:
 
 **The CLI gets it for free**, which is the requirement. A build driven from
-the sidebar has to be reproducible by hand with `markout build`, or the panel
-becomes a way to produce projects only the panel can build. Because resolution
+the sidebar has to be reproducible by hand with `markout build`, or it becomes
+a way to produce projects only the sidebar can build. Because resolution
 stays in the compiler and the extension only fetches files into a directory,
 the editor, the preview, the build, a teammate's terminal and CI all read the
 same tree and agree by construction. There is nothing to keep in sync.
@@ -82,7 +82,7 @@ ordinary, and a global install makes it unrepresentable.
 **`npm i -g` behind the checkbox.** This is the one that looks obvious and
 inverts itself: it builds the no-npm experience on npm. Everything in *The
 audience* above applies, and it applies worst to the people the checkbox is
-for. It also puts a machine-wide toggle in a panel, so unticking a kit in one
+for. It also puts a machine-wide toggle in a sidebar, so unticking a kit in one
 project silently changes every other project on the machine.
 
 **A store the extension owns**, under `globalStorageUri`. Tempting, because
@@ -165,7 +165,7 @@ It can say so — *kit `@markout-lang/bootstrap-kit` is declared in
 as a button.
 
 That is the largest single improvement available to the onboarding path, and
-it is a consequence of the manifest rather than a feature of the panel. It
+it is a consequence of the manifest rather than a feature of the sidebar. It
 belongs in the compiler, so the CLI says it too.
 
 ## The kit listing
@@ -235,5 +235,5 @@ The `.markout/kits/` rung in `discoverKits` stands alone and can land first:
 it is a small addition to a walk that exists, it makes hand-installed kits
 work for a bare docroot with no editor involved, and everything else here
 depends on it. The manifest and its diagnostic come next, because they are
-compiler work and the CLI needs them too. The panel is last and is the only
+compiler work and the CLI needs them too. The sidebar is last and is the only
 part that is editor-specific.

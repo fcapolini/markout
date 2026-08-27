@@ -417,7 +417,7 @@ language server frequently does not have, in whichever of a machine's global
 roots happens to answer; every one of those failures is silent, and they land
 on precisely the people the fallback was built for.
 
-[The bootstrapper sidebar](bootstrapper-sidebar.md) answers that case instead,
+[Working without Node](without-node.md) answers that case instead,
 with a per-project `.markout/kits/` that `discoverKits` reaches as one more
 rung on the walk it already does — so the CLI, the editor and CI resolve it
 identically and no npm is involved.
