@@ -56,11 +56,17 @@ question. `body` is a named *scope* and goes to the `<body>` tag; `items` is
 a value *inside* it, reached by navigating there first; `item` is the loop
 alias and goes to the `:for-as` beside it. `page` and `head` are there too.
 
-**`markout/bootstrap-kit/`** — a kit *vendored into the docroot*, which is
-why `kitchen-sink.html` imports `/bootstrap-kit/all.htm` and not `/npm/…`.
-It also shadows the installed copy of the same kit on purpose: two kits
-claiming one root is refused rather than resolved, since preferring either
-would hide the other.
+**`markout/kitchen-sink.html`** — imports `/bootstrap-kit/all.htm`, which is
+a kit's *mounted root* rather than a path in this folder. Nothing named
+`bootstrap-kit` is here: the kit is installed, it declares that root, and
+everything it publishes is addressed under it as though it sat there. That
+one import is the whole of what a kit costs a page.
+
+This folder used to carry a symlink of the same name, from before kits were
+packages, and it shadowed the installed copy — deliberately, to show that two
+things claiming one root is refused rather than resolved. That refusal is
+asserted in `packages/core/test/kits.test.ts`, where it does not also have to
+be the first thing anyone opening this fixture sees.
 
 ## The Problems panel
 
