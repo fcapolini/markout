@@ -38,16 +38,42 @@ beforeAll(() => {
 // before bundlers existed. It is also the one whose failure is quietest --
 // it runs in a child process, so a missing module surfaces as a preview
 // that never comes up rather than as anything in the editor.
+/** what package.json points `viewsContainers` at */
+const ICON = 'activity-icon.svg';
+
 describe('what travels beside the bundles', () => {
   it('parses the activity bar icon as XML', () => {
     // an SVG that does not parse is an icon that silently does not appear,
     // and XML forbids `--` inside a comment -- which this project's comment
     // style produces without noticing
-    const svg = fs.readFileSync(path.join(PACKAGE, 'media', 'markout.svg'), 'utf8');
+    const svg = fs.readFileSync(path.join(PACKAGE, 'media', ICON), 'utf8');
     for (const comment of svg.match(/<!--[\s\S]*?-->/g) ?? []) {
       expect(comment.slice(4, -3)).not.toContain('--');
     }
     expect(svg).toMatch(/viewBox=/);
+  });
+
+  it('declares the icon package.json points at', () => {
+    // the path is a string in a manifest, so nothing else notices it going
+    // stale -- and a missing icon renders as a blank square rather than an
+    // error
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(PACKAGE, 'package.json'), 'utf8')
+    );
+    const declared = manifest.contributes.viewsContainers.activitybar[0].icon;
+    expect(declared).toBe(`media/${ICON}`);
+    expect(fs.existsSync(path.join(PACKAGE, declared))).toBe(true);
+  });
+
+  it('draws the icon as outline, to sit with the glyphs beside it', () => {
+    // every other icon in the activity bar is uniform-weight line art; a
+    // filled mark reads as a blob among them
+    const svg = fs.readFileSync(path.join(PACKAGE, 'media', ICON), 'utf8');
+    expect(svg).toContain('fill="none"');
+    expect(svg).not.toMatch(/fill="(?!none")[^"]+"/);
+    // recoloured by the theme rather than baked
+    expect(svg).toContain('currentColor');
+    expect(svg).not.toContain('stroke="black"');
   });
 
   it('carries the "Who is this for?" page', () => {

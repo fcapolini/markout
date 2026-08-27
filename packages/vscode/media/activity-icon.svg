@@ -1,0 +1,31 @@
+<svg width="24" height="24" viewBox="0 0 678 678" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!-- The Markout mark for the activity bar: the logo as line art, so it sits
+     with the outline glyphs VS Code ships rather than reading as a filled
+     blob among them.
+
+     Square viewBox and inset artwork: the container fits an icon into a
+     square slot, so a 598x501 box letterboxes and a drawing that reaches
+     every edge crowds its neighbours. The drawing itself is unchanged; only
+     the frame around it is.
+
+     `currentColor`, so it takes the ink of whichever theme is running.
+
+     Stroke 40 rather than the 34 it was drawn at: insetting the artwork
+     shrinks it, which thinned the line from 1.36px to 1.20px at 24px. 40
+     puts it back to 1.42px, which is the weight it was drawn to have and
+     sits in the range VS Code's own glyphs use.
+
+     No double hyphen anywhere in this comment. XML forbids one inside a
+     comment, and an SVG that does not parse is an icon that silently does
+     not appear. -->
+<g transform="translate(40, 88.5)">
+  <line x1="580.192" y1="244.442" x2="361.858" y2="26.1086" stroke="currentColor" stroke-width="40" stroke-linecap="round"/>
+  <path d="M579.985 246.067L343.557 482.495" stroke="currentColor" stroke-width="40" stroke-linecap="round"/>
+  <line x1="16.9999" y1="256.12" x2="235.333" y2="474.453" stroke="currentColor" stroke-width="40" stroke-linecap="round"/>
+  <path d="M17.2073 254.495L253.635 18.0664" stroke="currentColor" stroke-width="40" stroke-linecap="round"/>
+  <path d="M254.169 18.0669L213.063 154.791" stroke="currentColor" stroke-width="40" stroke-linecap="round"/>
+  <path d="M253.228 17.0044L116.504 58.111" stroke="currentColor" stroke-width="40" stroke-linecap="round"/>
+  <path d="M344.92 483.102L481.644 441.995" stroke="currentColor" stroke-width="40" stroke-linecap="round"/>
+  <path d="M343.857 482.161L384.964 345.436" stroke="currentColor" stroke-width="40" stroke-linecap="round"/>
+</g>
+</svg>

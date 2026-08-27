@@ -123,7 +123,7 @@
         {
           "id": "markout",
           "title": "Markout",
-          "icon": "media/markout.svg"
+          "icon": "media/activity-icon.svg"
         }
       ]
     },
@@ -132,7 +132,7 @@
         {
           "id": "markout.kits",
           "name": "Kits",
-          "icon": "media/markout.svg",
+          "icon": "media/activity-icon.svg",
           "contextualTitle": "Markout"
         }
       ]
