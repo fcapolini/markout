@@ -3,21 +3,28 @@
      with the outline glyphs VS Code ships rather than reading as a filled
      blob among them.
 
+     Both corners at the same height. The mark is symmetric under a half turn
+     in every respect but one: the apexes were drawn 10 units apart
+     vertically, so the two corners did not line up. Each half moves half of
+     that, which lands both on the midpoint the tips were already mirrored
+     about, and makes the symmetry exact.
+
      The corners are rounded in the GEOMETRY, not by `stroke-linejoin`. A
      round join rounds a corner by half the stroke and no more, which is
      0.7px at 24px and reads as sharp beside the icons above and below it.
      Each corner instead backs off along both arms and closes with a
      quadratic whose control point is the vertex the corner used to be.
 
-     Two radii, because the corners are not the same corner. A chevron is a
-     right angle and takes a generous 95; an arrowhead is about 57 degrees and
-     takes 40, because the same radius on both blunts the heads long before
-     the chevrons look soft, and a blunt arrowhead stops reading as an arrow.
+     Softened, not rounded off: 50 gives 1.8px of corner, which is enough
+     to stop it looking sharp and little enough that it still reads as an
+     angle bracket. The arrowheads take 24, because they are about 57 degrees
+     rather than 90, and the same radius on both blunts a head long before a
+     chevron looks soft.
 
      The arrowhead barbs are 193 units rather than the 143 they were drawn
-     at, and the chevrons are untouched. A barb points back INTO the mark, so
-     lengthening one changes nothing about the box until it reaches the
-     opposite apex, at about +104.
+     at, and the chevrons are otherwise untouched. A barb points back INTO
+     the mark, so lengthening one changes nothing about the box until it
+     reaches the opposite apex, at about +104.
 
      Square viewBox with the artwork inset: the container fits an icon into a
      square slot, so a drawing that reaches every edge crowds its neighbours
@@ -30,9 +37,9 @@
      comment, and an SVG that does not parse is an icon that silently does
      not appear. -->
 <g transform="translate(42.9, 91.21)">
-  <path d="M253.6 18.07 L84.18 188 Q17.1 255.3 84.14 322.6 L235.3 474.5" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M343.6 482.5 L513 312.5 Q580.1 245.3 513.1 177.9 L361.9 26.11" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M198.8 202.7 L242.3 56.41 Q253.6 18.07 215.2 29.28 L68.51 72.13" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M529.6 427.9 L381.9 471.2 Q343.6 482.5 355.1 444.2 L399.4 297.6" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M253.6 13.04 L52.41 214.9 Q17.1 250.3 52.38 285.7 L235.3 469.4" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M343.6 487.5 L544.8 285.7 Q580.1 250.3 544.8 214.9 L361.9 31.14" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M198.8 197.7 L246.8 36.05 Q253.6 13.04 230.6 19.77 L68.51 67.1" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M529.6 432.9 L366.6 480.8 Q343.6 487.5 350.5 464.5 L399.4 302.6" stroke="currentColor" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
 </svg>
