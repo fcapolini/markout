@@ -76,6 +76,20 @@ describe('what travels beside the bundles', () => {
     expect(svg).not.toContain('stroke="black"');
   });
 
+  it('rounds every corner, not just the ends', () => {
+    // a chevron drawn as two segments meeting at a point has two round CAPS
+    // overlapping, which reads as a lump at 24px. One path per chevron with
+    // a round JOIN is the corner the glyphs beside it have
+    const svg = fs.readFileSync(path.join(PACKAGE, 'media', ICON), 'utf8');
+    const paths = svg.match(/<path[^>]*>/g) ?? [];
+    expect(paths.length).toBeGreaterThan(0);
+    for (const p of paths) {
+      // every path bends, so every path needs the join
+      expect(p).toContain('stroke-linejoin="round"');
+      expect(p).toContain('stroke-linecap="round"');
+    }
+  });
+
   it('carries the "Who is this for?" page', () => {
     // opened from disk rather than fetched, so it describes the sidebar the
     // reader has and needs no network
