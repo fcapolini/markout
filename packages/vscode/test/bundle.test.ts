@@ -38,6 +38,45 @@ beforeAll(() => {
 // before bundlers existed. It is also the one whose failure is quietest --
 // it runs in a child process, so a missing module surfaces as a preview
 // that never comes up rather than as anything in the editor.
+describe('what travels beside the bundles', () => {
+  it('parses the activity bar icon as XML', () => {
+    // an SVG that does not parse is an icon that silently does not appear,
+    // and XML forbids `--` inside a comment -- which this project's comment
+    // style produces without noticing
+    const svg = fs.readFileSync(path.join(PACKAGE, 'media', 'markout.svg'), 'utf8');
+    for (const comment of svg.match(/<!--[\s\S]*?-->/g) ?? []) {
+      expect(comment.slice(4, -3)).not.toContain('--');
+    }
+    expect(svg).toMatch(/viewBox=/);
+  });
+
+  it('carries the "Who is this for?" page', () => {
+    // opened from disk rather than fetched, so it describes the sidebar the
+    // reader has and needs no network
+    const doc = fs.readFileSync(path.join(outdir, 'who-is-this-for.md'), 'utf8');
+    expect(doc).toContain('# The Markout sidebar');
+  });
+
+  it('leaves no relative link in it that would resolve to nothing', () => {
+    // the rest of `docs/` does not travel, so a `](../concepts/x.md)` in the
+    // shipped copy is a dead link in the preview
+    const doc = fs.readFileSync(path.join(outdir, 'who-is-this-for.md'), 'utf8');
+    const relative = [...doc.matchAll(/\]\((?!https?:|#)([^)]+)\)/g)].map(m => m[1]);
+    expect(relative).toStrictEqual([]);
+  });
+
+  it('opens that page from disk, and not from github.com', () => {
+    // a URL 404s for anything not yet merged, which is how the first version
+    // of this was found out
+    const src = fs.readFileSync(
+      path.join(PACKAGE, 'src', 'sidebar.ts'),
+      'utf8'
+    );
+    expect(src).toContain('markdown.showPreview');
+    expect(src).not.toMatch(/openExternal\([^)]*github\.com/);
+  });
+});
+
 describe.each(['client.js', 'server.js', 'markout-cli.js'])('%s', file => {
   it('asks for nothing by name but `vscode` and node itself', () => {
     const text = fs.readFileSync(path.join(outdir, file), 'utf8');

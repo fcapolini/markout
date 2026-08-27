@@ -44,6 +44,9 @@ import {
 /** declined bumps, per workspace: `{ "@scope/kit": "0.5.0" }` */
 const DECLINED = 'markout.declinedBumps';
 
+/** the "Who is this for?" page, copied into the archive by the bundler */
+const DOC = 'who-is-this-for.md';
+
 type Row =
   | { kind: 'doc' }
   | { kind: 'error'; message: string }
@@ -59,7 +62,7 @@ export function registerSidebar(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     view,
     view.onDidChangeCheckboxState(e => provider.toggled(e.items)),
-    vscode.commands.registerCommand('markout.whoIsThisFor', () => whoIsThisFor()),
+    vscode.commands.registerCommand('markout.whoIsThisFor', () => whoIsThisFor(context)),
     vscode.commands.registerCommand('markout.refreshKits', () => provider.refresh(true)),
     vscode.commands.registerCommand('markout.searchKits', () => provider.search()),
     vscode.commands.registerCommand('markout.restoreKits', () => provider.restore()),
@@ -84,13 +87,23 @@ export function registerSidebar(context: vscode.ExtensionContext) {
   return provider;
 }
 
-/** the doc the "Who is this for?" row points at, in the repository */
-function whoIsThisFor() {
-  return vscode.env.openExternal(
-    vscode.Uri.parse(
-      'https://github.com/fcapolini/markout/blob/main/docs/reference/vscode-extension-sidebar.md'
-    )
-  );
+/**
+ * The page the "Who is this for?" row opens.
+ *
+ * Shipped in the archive and previewed from disk, not fetched from github.com.
+ * It therefore describes the sidebar the reader HAS rather than the one on
+ * main, needs no network -- for an audience whose kit cache exists because
+ * they are offline often enough to matter -- and cannot 404 on a doc that has
+ * not been merged yet, which is how the github.com version was found out.
+ *
+ * Written by scripts/bundle.mjs, which also rewrites the page's own relative
+ * links to the repository, the rest of `docs/` not travelling with it.
+ */
+function whoIsThisFor(context: vscode.ExtensionContext) {
+  const file = vscode.Uri.file(context.asAbsolutePath(path.join('dist', DOC)));
+  // the built-in preview, not the source: this is a page to read, and the
+  // markdown is an implementation detail of shipping it
+  return vscode.commands.executeCommand('markdown.showPreview', file);
 }
 
 class KitItem extends vscode.TreeItem {

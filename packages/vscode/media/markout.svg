@@ -1,8 +1,12 @@
 <svg width="24" height="24" viewBox="0 0 824 824" xmlns="http://www.w3.org/2000/svg">
 <!-- The activity bar mark: the small logo without its plate, in
      `currentColor`, which is what VS Code themes an activity bar icon by.
-     A copy rather than a link to assets/logo-small-plain.svg because the
-     .vsix carries only this package -- see .vscodeignore. -->
+     A copy rather than a link to assets/logo-small-plain.svg, because the
+     .vsix carries only this package (see .vscodeignore).
+
+     No double hyphen anywhere in this comment: XML forbids one inside a
+     comment, and an SVG that does not parse is an icon that silently does
+     not appear. -->
 <g transform="translate(-9, -2)">
 <line x1="148.811" y1="418.416" x2="336.029" y2="605.634" stroke="currentColor" stroke-width="86" stroke-linecap="round"/>
 <line x1="145.583" y1="415.136" x2="331.805" y2="228.914" stroke="currentColor" stroke-width="86" stroke-linecap="round"/>

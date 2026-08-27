@@ -119,6 +119,46 @@ for (const entry of ENTRIES) {
 }
 
 /**
+ * "Who is this for?" -- the page the sidebar's first row opens.
+ *
+ * Copied INTO the archive and opened from disk, rather than linked to
+ * github.com. The reasons are the ones docs/design/without-node.md gives for
+ * pointing at a file in the repository at all: it versions with the extension,
+ * so a user reads the page describing the sidebar they have rather than the
+ * one on main; and it is readable with no network, which matters for a doc
+ * whose audience is offline often enough that the kit cache exists for them.
+ *
+ * A github.com URL also 404s for everything not yet merged, which is how this
+ * was found.
+ *
+ * Its own relative links are rewritten to point at the repository, since the
+ * rest of `docs/` does not travel. Those are further reading and may need the
+ * network; the page itself never does.
+ */
+const DOC = 'docs/reference/vscode-extension-sidebar.md';
+const REPO = 'https://github.com/fcapolini/markout/blob/main';
+
+const docSource = path.join(pkg, '../..', DOC);
+const rewritten = fs
+  .readFileSync(docSource, 'utf8')
+  // `](../concepts/kits.md)` and `](cli.md)`, but never `](#anchor)` -- an
+  // anchor resolves inside the previewed page and is the one kind of link
+  // that still works without a network
+  .replace(/\]\(((?!https?:|#)[^)]+\.md(?:#[^)]*)?)\)/g, (_, target) => {
+    const resolved = path.posix.normalize(
+      path.posix.join(path.posix.dirname(DOC), target)
+    );
+    return `](${REPO}/${resolved})`;
+  });
+fs.writeFileSync(path.join(outdir, 'who-is-this-for.md'), rewritten);
+if (!quiet) {
+  console.log(
+    `${path.relative(pkg, path.join(outdir, 'who-is-this-for.md'))}  ` +
+      `${(Buffer.byteLength(rewritten) / 1024).toFixed(0)} KB`
+  );
+}
+
+/**
  * The browser runtime, copied in beside the bundles.
  *
  * Core finds it by walking two levels up from its own directory, which is
