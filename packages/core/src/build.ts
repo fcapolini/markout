@@ -32,6 +32,22 @@ export interface BuildProps {
   /** where to write pages, the runtime, and everything else */
   outdir: string;
   /**
+   * Write a `.gitignore` into the output directory, ignoring all of it.
+   *
+   * For an outdir this tool CHOSE, and not one the caller named. `markout
+   * build ./site ./public` is somebody putting the output where they want it,
+   * possibly to commit it -- a static host serving a folder out of the
+   * repository is exactly the deployment this audience uses -- and quietly
+   * making that folder invisible to git would be a surprise found long after
+   * the build. The default `dist/` beside the docroot is markout's own
+   * suggestion, so markout can tidy up after it.
+   *
+   * Written once and never rewritten, like `.markout/.gitignore`: deleting it
+   * is how somebody says they meant to commit the build, and a tool that put
+   * it back would be arguing.
+   */
+  gitignore?: boolean;
+  /**
    * Restrict the build to these pages, docroot-relative. Empty or absent
    * builds every `.html` under the docroot.
    *
@@ -237,6 +253,8 @@ export async function build(props: BuildProps): Promise<BuildResult> {
       `markout: docroot "${docroot}" is inside the output directory "${outdir}"`
     );
   }
+
+  props.gitignore && ignoreOutput(outdir);
 
   // not needed by a manifest-only run, which writes no page to load it
   const clientCode = props.classesOnly ? '' : loadClientCode();
@@ -511,6 +529,36 @@ function pruneKits(
   }
   result.prunedKits = [...drop].sort();
   return assets.filter(a => !drop.some(root => a.startsWith(root + '/')));
+}
+
+/**
+ * `<outdir>/.gitignore`, ignoring everything including itself.
+ *
+ * Nested rather than a line added to the project's own `.gitignore`, for the
+ * reason `.markout/` is: git honours one at any depth, so the directory says
+ * which of its contents are disposable without a file the project owns being
+ * edited, and without anybody having to know the answer.
+ *
+ * `*` covers the file too, which is what is wanted: nothing here is worth
+ * committing, this file included, and a build makes all of it again.
+ */
+function ignoreOutput(outdir: string) {
+  const file = path.join(outdir, '.gitignore');
+  if (fs.existsSync(file)) {
+    return;
+  }
+  fs.mkdirSync(outdir, { recursive: true });
+  fs.writeFileSync(
+    file,
+    [
+      '# Written by markout build. Everything here is generated from the',
+      '# docroot and is made again by the next build, this file included.',
+      '#',
+      '# Delete it if you mean to commit the output.',
+      '*',
+      '',
+    ].join('\n')
+  );
 }
 
 async function write(outdir: string, pathname: string, text: string) {

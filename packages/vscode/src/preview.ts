@@ -156,7 +156,7 @@ async function runBuild() {
   try {
     result = await vscode.window.withProgress(
       { location: vscode.ProgressLocation.Notification, title: 'Markout: building…' },
-      () => build({ docroot, outdir })
+      () => build({ docroot, outdir, gitignore: true })
     );
   } catch (e) {
     log.appendLine(`[markout] ${(e as Error).message}`);

@@ -202,6 +202,8 @@ async function main() {
             await build({
               docroot,
               outdir: target,
+              // only when we chose it: see BuildProps.gitignore
+              gitignore: !outdir,
               pages: options.page,
               origin,
               prerender: mode.prerender,

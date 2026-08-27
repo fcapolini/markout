@@ -149,3 +149,16 @@ It exists so a preview can match the delivery -- a project that ships `build`
 output and previews a served render is looking at a page it will not deploy.
 The sidebar's Preview uses it, which means neither of the sidebar's buttons
 evaluates a page expression, and so neither evaluates a kit's.
+
+### A build writes `.gitignore` into the `dist/` it chose
+
+`markout build` with no outdir, and the sidebar's Build button, now leave a
+`.gitignore` in the output directory covering the whole of it. The output is
+generated and this audience should not have to know to say so to git -- the
+same reasoning as the one inside `.markout/`, and nested for the same reason:
+git honours one at any depth, so no file the project owns is edited.
+
+Written once, so deleting it sticks. **An outdir named on the command line
+gets none**: that is somebody putting the output where they want it, possibly
+to commit it, and a static host serving a committed folder is exactly how this
+audience deploys.

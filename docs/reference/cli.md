@@ -147,6 +147,20 @@ A kit in `.markout/kits/` at a version other than its pin is reported the same
 way. A kit in `node_modules/` is left to npm, pin or no pin: `package.json`
 and a lockfile already have an opinion about that version.
 
+### `dist/` in git
+
+A build into the default `dist/` leaves a `.gitignore` in it, ignoring the
+whole directory and itself. The output is generated: the docroot makes all of
+it again, and this audience should not have to know to tell git so.
+
+Written once, so deleting it is how you say you meant to commit the build.
+
+**A directory you name yourself gets none.** `markout build ./site ./public`
+is you putting the output where you want it — quite possibly to commit it,
+which is how a static host serving a folder from your repository works — and
+quietly making that folder invisible to git would be a surprise you would
+find much later.
+
 ### `.markout/` in git
 
 ```
