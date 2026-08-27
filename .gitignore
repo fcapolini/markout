@@ -7,3 +7,4 @@ packages/cli/bench/markout-catalog/bench-*.html
 *.tsbuildinfo
 .tw-scan/
 packages/cli/.built-catalog/
+packages/cli/.built-timing/

@@ -1,5 +1,5 @@
-// Perf harness for bench/markout-catalog: same app, three catalog sizes (300 / 1,020 /
-// 10,020 rows, see gen-bench-pages.mjs), measuring mount/filter/sort/cart-update
+// Perf harness for bench/markout-catalog: same app, four catalog sizes (30 / 300 /
+// 1,020 / 10,020 rows, see gen-bench-pages.mjs), measuring mount/filter/sort/cart-update
 // cost in a real browser. Run `node scripts/gen-bench-pages.mjs` first.
 import path from 'node:path';
 import { chromium } from 'playwright';

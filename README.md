@@ -385,7 +385,7 @@ catalog benchmark](packages/cli/bench/README.md) runs the same app in
 Markout, Alpine, React, Svelte and Vue, and measures how fast it updates,
 what it weighs over the wire and in memory, and when its content first
 appears — but it is an optimization tool for us, not an official ranking of
-anybody. It is one app, at three sizes, on one machine, written by the
+anybody. It is one app, at four sizes, on one machine, written by the
 people who wrote one of the five entrants. We keep it to find out which
 columns Markout needs work in, and those are the columns worth your
 attention there.

@@ -40,6 +40,7 @@
     "typecheck:test": "tsc -p tsconfig.test.json",
     "bench:catalog": "node scripts/gen-bench-pages.mjs && tsx --tsconfig tsconfig.dev.json scripts/bench-catalog.ts",
     "bench:compare": "node scripts/gen-bench-pages.mjs && tsx --tsconfig tsconfig.dev.json scripts/bench-compare.ts",
+    "bench:build": "tsx --tsconfig tsconfig.dev.json scripts/bench-build.ts",
     "prepack": "npm run build"
   },
   "keywords": [

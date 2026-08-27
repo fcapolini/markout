@@ -106,20 +106,28 @@ The same applies to the three-item spec list under each card.
 ## Running them
 
 ```
-npm run bench:catalog    # Markout only, three catalog sizes
-npm run bench:compare    # all six rows, three catalog sizes
+npm run bench:catalog    # Markout only, four catalog sizes
+npm run bench:compare    # all six rows, four catalog sizes
+npm run bench:build      # build time per port, no browser
 ```
 
-Both regenerate the scaled Markout pages first — `scripts/gen-bench-pages.mjs`
-writes `markout-catalog/bench-1000.html` and `bench-10000.html`, which are
-gitignored. `bench:compare` additionally runs `npm run build` in each of the
+The first two regenerate the scaled Markout pages first — `scripts/gen-bench-pages.mjs`
+writes `markout-catalog/bench-30.html`, `bench-1000.html` and
+`bench-10000.html`, which are gitignored. `bench:compare` additionally runs `npm run build` in each of the
 four Vite ports and serves the production output through `vite preview` —
 React on 4410, Svelte on 4411, Alpine on 4412, Vue on 4413 — while Markout is
 served by the CLI's own `Server` on an ephemeral port. Nothing is measured
 against a dev build.
 
-Each port takes `?rows=N`. The Markout side gets the same three sizes as
-generated files instead, because its catalog is written in the page.
+Each port takes `?rows=N`. The Markout side gets the same four sizes as files
+instead — `index.html` at 300 rows and three generated beside it — because its
+catalog is written in the page.
+
+`bench:build` needs no browser and no generated page — it times each port's
+own build command over the committed source. It runs Markout through the
+built CLI rather than through `tsx`, so `npm run build` in `packages/cli` has
+to have happened; loading the compiler through a TypeScript hook would time
+the hook.
 
 ## What is measured
 
@@ -245,32 +253,64 @@ prints both above its table, along with a `+dirty` marker if anything in
 `packages/cli` or `packages/core` was uncommitted — paste that line in with any
 numbers that replace these.
 
+### Interactions
+
+All four columns in milliseconds, median of 5, one table per catalog size.
+**Bold marks the best in each column.**
+
+**30 rows** — one model, six categories, five finishes, and the size a real
+page of this shape usually is.
+
 | Target | Mount all | Filter | Sort | 20× add-to-cart |
 | --- | --- | --- | --- | --- |
-| Markout (server) @ 30 | 2.0 | 1.4 | **4.2** | **13.5** |
-| Markout (build) @ 30 | 1.7 | 1.6 | 4.3 | 14.0 |
-| Alpine @ 30 | 2.9 | 3.1 | 10.8 | 16.7 |
-| React @ 30 | 2.2 | 1.0 | 8.9 | 16.6 |
-| Svelte @ 30 | 1.3 | 5.3 | 16.7 | 16.6 |
-| Vue @ 30 | 2.0 | 8.1 | 16.7 | 16.6 |
-| Markout (server) @ 300 | 43.7 | 5.2 | 26.4 | 17.0 |
-| Markout (build) @ 300 | 44.5 | 5.4 | 27.6 | 16.0 |
-| Alpine @ 300 | 95.0 | 14.7 | 28.3 | 26.6 |
-| React @ 300 | 12.8 | 3.2 | 27.9 | 16.6 |
-| Svelte @ 300 | 10.4 | 3.4 | 29.0 | 16.5 |
-| Vue @ 300 | 13.1 | 3.4 | 23.6 | 16.6 |
-| Markout (server) @ 1,020 | 137.0 | 20.6 | 87.3 | 25.9 |
-| Markout (build) @ 1,020 | 143.8 | 20.5 | 86.6 | 23.0 |
-| Alpine @ 1,020 | 271.9 | 40.1 | 111.3 | 15.5 |
-| React @ 1,020 | 38.2 | 7.2 | 104.4 | 14.7 |
-| Svelte @ 1,020 | 28.7 | 6.6 | 111.4 | 16.7 |
-| Vue @ 1,020 | 35.1 | 6.1 | 93.9 | 14.8 |
-| Markout (server) @ 10,020 | 1260.9 | 163.8 | 1027.2 | 235.8 |
-| Markout (build) @ 10,020 | 1295.0 | 158.2 | 1125.9 | 265.4 |
-| Alpine @ 10,020 | 2525.8 | 358.7 | 1000.4 | 64.7 |
-| React @ 10,020 | 509.4 | 70.9 | 939.7 | 64.7 |
-| Svelte @ 10,020 | 265.0 | 40.0 | 794.5 | 70.4 |
-| Vue @ 10,020 | 318.5 | 36.6 | 795.5 | 66.6 |
+| Markout (server) | 2.0 | 1.4 | **4.2** | **13.5** |
+| Markout (build) | 1.7 | 1.6 | 4.3 | 14.0 |
+| Alpine | 2.9 | 3.1 | 10.8 | 16.7 |
+| React | 2.2 | **1.0** | 8.9 | 16.6 |
+| Svelte | **1.3** | 5.3 | 16.7 | 16.6 |
+| Vue | 2.0 | 8.1 | 16.7 | 16.6 |
+
+**300 rows** — ten models. It is the size `markout-catalog/index.html` is
+written at; the other three sizes are generated from it.
+
+| Target | Mount all | Filter | Sort | 20× add-to-cart |
+| --- | --- | --- | --- | --- |
+| Markout (server) | 43.7 | 5.2 | 26.4 | 17.0 |
+| Markout (build) | 44.5 | 5.4 | 27.6 | **16.0** |
+| Alpine | 95.0 | 14.7 | 28.3 | 26.6 |
+| React | 12.8 | **3.2** | 27.9 | 16.6 |
+| Svelte | **10.4** | 3.4 | 29.0 | 16.5 |
+| Vue | 13.1 | 3.4 | **23.6** | 16.6 |
+
+**1,020 rows** — thirty-four models.
+
+| Target | Mount all | Filter | Sort | 20× add-to-cart |
+| --- | --- | --- | --- | --- |
+| Markout (server) | 137.0 | 20.6 | 87.3 | 25.9 |
+| Markout (build) | 143.8 | 20.5 | **86.6** | 23.0 |
+| Alpine | 271.9 | 40.1 | 111.3 | 15.5 |
+| React | 38.2 | 7.2 | 104.4 | **14.7** |
+| Svelte | **28.7** | 6.6 | 111.4 | 16.7 |
+| Vue | 35.1 | **6.1** | 93.9 | 14.8 |
+
+**10,020 rows** — three hundred and thirty-four models: the stress end, past
+what any of these tools is really for. Costs invisible at 300 are legible
+here.
+
+| Target | Mount all | Filter | Sort | 20× add-to-cart |
+| --- | --- | --- | --- | --- |
+| Markout (server) | 1260.9 | 163.8 | 1027.2 | 235.8 |
+| Markout (build) | 1295.0 | 158.2 | 1125.9 | 265.4 |
+| Alpine | 2525.8 | 358.7 | 1000.4 | **64.7** |
+| React | 509.4 | 70.9 | 939.7 | **64.7** |
+| Svelte | **265.0** | 40.0 | **794.5** | 70.4 |
+| Vue | 318.5 | **36.6** | 795.5 | 66.6 |
+
+Seventeen bolds across sixteen columns, because Alpine and React tie
+add-to-cart at 10,020: Svelte takes five, React four, Markout four (two in
+each delivery), Vue three, Alpine one. Three of Markout's four are at 30 and
+300 rows, the fourth is sort at 1,020, and it takes nothing at all at 10,020 —
+which is the shape *Reading them* below is about.
 
 ### First content
 
@@ -366,6 +406,98 @@ That is the honest answer to "what does putting Node in the request path
 cost": about 5ms on this page, about 11ms at a catalog size nobody ships. What
 it buys is in the first-content table — content in the markup, and 24 cards
 for a visitor with JavaScript off.
+
+### Build time
+
+The cost nobody in the first-content table pays: turning source into the
+artifact that gets shipped. A visitor never waits for it, but a developer
+waits for it on every change, which makes it the number felt most often.
+
+Every build command is timed at the same layer — the whole command, process
+startup included, because that is the wall clock somebody actually watches.
+The one row that is not a command is Markout's served mode, explained under
+the table. Caches are cleared before each run: `dist/`, Vite's dependency pre-bundle in
+`node_modules/.vite`, and tsc's `tsconfig.tsbuildinfo`. A run that keeps them
+times the cache rather than the build. `npm run` is not a tax on the four Vite
+ports — measured against a direct `npx vite build`, it is the faster of the
+two — so each runs its own build script unchanged.
+
+| Target | Build | What runs |
+| --- | --- | --- |
+| Markout (server) | **33ms** | compile, on the first request for a page |
+| Markout (build) | **162ms** | `markout build` |
+| Alpine | 609ms | `vite build` — bundles the library, compiles nothing |
+| React | 1,461ms | `tsc -b && vite build` |
+| Svelte | 885ms | `vite build` |
+| Vue | 986ms | `vite build` |
+
+Same machine and toolchain as the tables above, measured 2026-08-27; median of
+5 after a discarded warm-up, and the run-to-run spread is a few percent except
+React's, which moves by about 100ms.
+
+Markout appears twice for the usual reason, but here the two rows differ by
+more than the artifact. **`markout build`** is a command someone runs, so its
+162ms includes Node starting up and loading the CLI — 129ms of it, leaving
+**33ms of actual compiling** for one page of ten `<:define>`s. **Served**,
+that startup is already paid: the process is up and the compiler is loaded, so
+the 33ms is the whole of it, and it is what the first request for a page
+costs. The server caches the compiler's output per page and renders that per
+request, so the first visitor to a page waits for the compile and everyone
+after waits only for the render — which is why the `Server` column in the
+table above is warm on purpose and excludes it. That cache is emptied by any
+change anywhere under the docroot, which makes it a development cost rather
+than a production one: in production nothing under the docroot changes, so
+each page pays it once for the life of the process; while editing, it comes
+back on the next request after every save.
+
+**Only the built row compares like for like with the four.** It is a cold
+build measured against cold builds. The served row is a warm process
+compiling one page, and the four have a warm mode of their own — a Vite dev
+server applying an incremental update, which for three of them is HMR and for
+Alpine is a reload — that this table does not measure. Read it as
+what Markout's server does on a first request, not as a race it won.
+
+The margin is wide either way: on the built row, 5.5× against Svelte's 885ms
+and 9× against React's; on the served row, 27× against Svelte. The four run a
+bundler, which resolves a module graph, pre-bundles dependencies, tree-shakes
+and minifies; Markout reads one HTML file and writes one HTML file, because
+the app was already in a format a browser accepts and the runtime it links is
+a fixed file that was built when Markout was.
+
+**Alpine's row is a packaging cost, not a compile, and it is the one row that
+could be deleted outright.** Alpine has no compiler and no component step: its
+609ms is Vite bundling and minifying the Alpine library together with the
+shared catalog generator, and the markup in `index.html` ships exactly as
+written. That is what `npm install alpinejs` gives an app, and this port is
+set up that way so it is measured as production output like the other three —
+but Alpine's own answer is the one it is known for, a `<script src>` tag and
+**no build at all**. The cost of taking it is shipping the library as the CDN
+serves it rather than bundled and minified with the app, which would move
+Alpine's weight row rather than its timing rows. Read 609ms as what this
+port's packaging costs, not as something Alpine requires.
+
+That is worth holding next to Markout's own rows, because it is the same claim
+Markout makes. Alpine and Markout are the two here that can be delivered with
+no build step, and the difference is what each does with the markup: Alpine's
+`<script src>` ships the page and the library and interprets attributes in the
+browser, while Markout's served mode compiles the page once and caches it, at
+the 33ms above.
+
+React's number is the one that needs a caveat, and it is not a Vite caveat:
+run separately, `tsc -b` and `vite build` split its time about 59/41, so the
+typecheck is roughly 860ms of the 1,461ms and the bundling is roughly 600ms —
+which puts React's bundler right alongside Alpine's. That typecheck is the
+build React ships with in this port, though, and dropping it to "make the
+comparison fair" would time a build nobody runs. What each row says is what
+that port asks a developer to wait for, and a typecheck is part of React's
+answer.
+
+This table is one page's build, which is where it stops being a proxy for a
+real project. Bundler time grows with the module graph, so a real app's four
+Vite numbers grow well past these; Markout's does not have a module graph to
+grow, but its per-page compile does multiply by the page count, and its
+startup cost is paid once no matter how many pages follow. A ten-page site is
+about 129ms + 10 × the per-page compile, not 10 × 162ms.
 
 ### Weight
 
