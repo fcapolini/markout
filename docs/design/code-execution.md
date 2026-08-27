@@ -14,11 +14,15 @@ not.
 
 ## Three environments, and what holds in each
 
-| | evaluates | contained by | third-party code reaches |
-| --- | --- | --- | --- |
-| **Compile time** | `:const-` values | a `vm` realm of its own | nothing of the host's |
-| **Server render** | every page expression | nothing | the Node process |
-| **Browser** | nothing — the page's own `<script>` already did | the browser | what any script on the page reaches |
+| | evaluates | contained by | third-party code reaches | reached by |
+| --- | --- | --- | --- | --- |
+| **Compile time** | `:const-` values | a `vm` realm of its own | nothing of the host's | everything that compiles a page |
+| **Server render** | every page expression | nothing | the Node process | `prerender`, and the server without `--client` |
+| **Browser** | nothing — the page's own `<script>` already did | the browser | what any script on the page reaches | every visitor |
+
+The last column is the one that decides how much the middle row matters. A
+render takes Node and a deliberate choice of delivery mode, so nothing done
+through the editor's sidebar reaches it — see *Who this exposes*.
 
 The browser row is the one nobody has to think about, and it is worth saying
 why: the runtime never evaluates source. The props were evaluated by the
@@ -120,9 +124,9 @@ sandbox cannot be read by the next page's.
 
 ## Server-side rendering
 
-`prerender`, the dev server and served mode all run page expressions in Node,
-in the host realm. **This is not contained, and the containment above does not
-extend to it.**
+`prerender`, and the server unless it is given `--client`, run page
+expressions in Node, in the host realm. **This is not contained, and the
+containment above does not extend to it.**
 
 Everything in the compile-time list works, and shorter routes work too,
 because the allowlist itself hands over host objects:
@@ -188,14 +192,24 @@ all three blockers standing while looking like containment, which is the
 failure mode [silent-failures.md](silent-failures.md) is about and the
 direction [without-node.md](without-node.md) calls the expensive one.
 
-### Why this is a smaller problem than it sounds
+### Who this exposes
 
-SSR is the ordinary case and is the same everywhere — see *In context* below.
-The risk peculiar to markout is that a kit is installed by ticking a box, and
-its code then reaches two places where **nobody asked for a render**: a
-language server reacting to typing, and a CI build. That asymmetry is what
-makes compile-time containment worth having, and it is where the containment
-is.
+**Nothing that installs a kit by ticking a box ever renders.** The sidebar's
+Preview serves with `--client` and its Build calls `build`, so without-node
+mode has no render in it at all — a boundary that follows from the premise,
+since rendering is Node executing the page and that mode is for people who
+have not got Node. See
+[What this mode does not do](without-node.md#what-this-mode-does-not-do).
+
+Reaching an unsandboxed render therefore takes Node on the machine and a
+deliberate act: `markout prerender`, or the server without `--client`. That is
+somebody who installed Node, chose a delivery mode that renders, and is
+working the npm way.
+
+So the population exposed here is not the audience this file was written
+around. It is the same population every other Node tool exposes, reached by
+the same act and with the same consequence, which is what the next section is
+about.
 
 ## In context: what is normal, and what is not
 
