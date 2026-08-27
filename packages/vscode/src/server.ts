@@ -11,6 +11,7 @@ import {
 import { URI } from 'vscode-uri';
 import { createMarkoutLanguagePlugin } from './plugin';
 import { createDocumentContext, createMarkoutService } from './service';
+import { setKitReporter } from './pages';
 
 /**
  * The language server, which is deliberately the least interesting file here.
@@ -254,6 +255,16 @@ connection.onInitialize(params => {
 
 connection.onInitialized(() => {
   server.initialized();
+
+  // Which kits were found and which tree they were read from. `info` goes to
+  // the output channel and nowhere else -- it is background unless somebody
+  // is already asking why a kit is missing. A refusal is different: the kit
+  // is installed, was seen, and was rejected, and the page it should have
+  // served is now full of tags that do not resolve, so that one is said
+  // where it will be read.
+  setKitReporter((level, message) =>
+    level === 'warn' ? warn(`[markout] ${message}`) : connection.console.info(`[markout] ${message}`)
+  );
 
   /**
    * Ask the editor to re-pull diagnostics whenever anything changes.

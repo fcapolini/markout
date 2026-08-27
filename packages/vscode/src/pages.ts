@@ -1,5 +1,5 @@
 import { Compiler, discoverKits, type Kit, type Page, type ReadFile } from '@markout-lang/core';
-import { globalNodeModules } from './global-kits';
+import { globalNodeModules, globalNodeModulesVia } from './global-kits';
 import fs from 'fs';
 import path from 'path';
 
@@ -25,6 +25,17 @@ const KITS_TTL = 5000;
 
 const pages = new Map<string, { at: number; page: Promise<Page> }>();
 const kits = new Map<string, { at: number; found: Kit[] }>();
+/** every kit report already made, so the rescan timer cannot repeat one */
+const said = new Set<string>();
+
+/** where a kit report goes; the server points this at its output channel */
+export type KitReport = (level: 'info' | 'warn', message: string) => void;
+let report: KitReport = () => {};
+
+/** said by the server on startup; a no-op leaves the reports unspoken */
+export function setKitReporter(fn: KitReport): void {
+  report = fn;
+}
 
 export interface CompileProps {
   docroot: string;
@@ -105,9 +116,73 @@ export function kitsFor(docroot: string, now: () => number = Date.now): Kit[] {
     return cached.found;
   }
   const global = globalNodeModules();
-  const found = discoverKits(docroot, global ? [global] : []).kits;
+  const { kits: found, errors } = discoverKits(docroot, global ? [global] : []);
   kits.set(docroot, { at: now(), found });
+  explain(docroot, found, errors, global);
   return found;
+}
+
+/**
+ * Where this docroot's kits came from, or why there are none.
+ *
+ * An unresolved tag reads the same whichever way the kit went missing, and
+ * the ways are not obvious: a project that has ANY kit of its own never
+ * consults the global tree (see discoverKits -- deliberate, so a stray
+ * global copy cannot break a real project), and a machine with two npms has
+ * two global trees, only one of which holds what was installed. Both end in
+ * "no such tag" with nothing said about the tree that was actually read.
+ *
+ * So the tree that was read is said out loud, once per distinct answer. It
+ * goes to the output channel rather than the Problems panel: it is not a
+ * fault in the page being edited, and it is only wanted by someone already
+ * asking why their kit is missing. Refusals are the exception -- a kit that
+ * was found and rejected is a misconfiguration whose only other symptom is
+ * a page full of tags that do not resolve.
+ */
+function explain(docroot: string, found: Kit[], errors: string[], global: string | null) {
+  for (const error of errors) {
+    say('warn', error);
+  }
+  const fromGlobal = global ? found.filter(kit => kit.dir.startsWith(global)) : [];
+  const local = found.length - fromGlobal.length;
+  if (local > 0) {
+    say(
+      'info',
+      `${docroot}: ${plural(local, 'kit')} from the project` +
+        ` -- the global tree is read only when the project has none`
+    );
+  } else if (fromGlobal.length > 0) {
+    say('info', `${docroot}: ${plural(fromGlobal.length, 'kit')} from ${global}`);
+  } else if (global) {
+    say(
+      'info',
+      `${docroot}: no kits -- none in the project, and none in ${global}` +
+        `, which is where \`npm root -g\` points` +
+        (globalNodeModulesVia() === 'shell' ? ' in your login shell' : ' on the PATH this process was given') +
+        `. A second npm (Homebrew beside a version manager) has a second` +
+        ` global tree, and a kit installed with one is invisible to the other`
+    );
+  } else {
+    say(
+      'info',
+      `${docroot}: no kits -- none in the project, and npm could not be` +
+        ` reached to locate the global tree. The login shell is being asked;` +
+        ` globally installed kits will appear a few seconds from now if it answers`
+    );
+  }
+}
+
+function plural(n: number, noun: string) {
+  return `${n} ${noun}${n === 1 ? '' : 's'}`;
+}
+
+/** once per distinct message: this runs on a timer, and a repeat says nothing new */
+function say(level: 'info' | 'warn', message: string) {
+  if (said.has(message)) {
+    return;
+  }
+  said.add(message);
+  report(level, message);
 }
 
 /** everything expired, plus the oldest if the map has run away */
@@ -126,6 +201,7 @@ function evict(map: Map<string, { at: number }>, at: number) {
 export function forgetPages() {
   pages.clear();
   kits.clear();
+  said.clear();
 }
 
 /**

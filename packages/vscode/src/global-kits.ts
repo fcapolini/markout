@@ -41,6 +41,21 @@ import { execFile, execFileSync } from 'child_process';
 let cached: string | null | undefined;
 /** whether the slow way is already running, so that it runs once */
 let asking = false;
+/** which of the two ways answered, for the report in ./pages */
+let answeredBy: Via = null;
+
+/**
+ * How the global tree was located, or why it was not.
+ *
+ * Worth reporting rather than keeping, because the failure this whole file
+ * exists for is indistinguishable from success at the call site: both are a
+ * directory that had no kits in it. A machine with two npms -- Homebrew's
+ * beside a version manager's, which is the ordinary state of a Mac -- has
+ * two global roots, and the one on PATH is not necessarily the one the kit
+ * was installed into. `npm root -g` answers truthfully about the wrong tree,
+ * and the kit is missing for a reason no diagnostic mentions.
+ */
+export type Via = 'npm' | 'shell' | null;
 
 export interface Probes {
   /** ask the npm on this process's PATH; its output, or nothing */
@@ -61,13 +76,20 @@ export function globalNodeModules(probes: Partial<Probes> = {}): string | null {
   const direct = firstLine((probes.npm ?? askNpm)());
   if (direct) {
     cached = direct;
+    answeredBy = 'npm';
     return cached;
   }
   asking = true;
   (probes.shell ?? askTheLoginShell)(out => {
     cached = firstPath(out);
+    answeredBy = cached ? 'shell' : null;
   });
   return null;
+}
+
+/** which way answered, for whoever has to explain an empty kit list */
+export function globalNodeModulesVia(): Via {
+  return answeredBy;
 }
 
 /** npm as this process can reach it, which on a desktop launch is often not */
@@ -147,10 +169,12 @@ function firstPath(out: string | null): string | null {
 export function setGlobalNodeModules(value: string | null): void {
   cached = value;
   asking = true;
+  answeredBy = value ? 'npm' : null;
 }
 
 /** test seam: forget the answer, so the next call asks again */
 export function resetGlobalNodeModules(): void {
   cached = undefined;
   asking = false;
+  answeredBy = null;
 }

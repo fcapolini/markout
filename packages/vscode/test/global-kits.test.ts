@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { kitsFor } from '../src/pages';
+import { forgetPages, kitsFor, setKitReporter } from '../src/pages';
 import {
   globalNodeModules,
   resetGlobalNodeModules,
@@ -45,6 +45,21 @@ function globalRoot(kits: Record<string, string>): string {
     );
   }
   return nodeModules;
+}
+
+/** a docroot with a kit of its own, which is when the global tree is skipped */
+function docrootWithKits(): string {
+  const root = temp('markout-project-');
+  const dir = path.join(root, 'markout');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'p' }));
+  const kit = path.join(root, 'node_modules', '@markout-lang', 'std-kit');
+  fs.mkdirSync(kit, { recursive: true });
+  fs.writeFileSync(
+    path.join(kit, 'package.json'),
+    JSON.stringify({ name: '@markout-lang/std-kit', markout: { root: '/std-kit' } })
+  );
+  return dir;
 }
 
 /** a bare docroot: HTML in a directory, no project around it */
@@ -133,3 +148,47 @@ function fakeClock(): () => number {
   const at = tick;
   return () => at;
 }
+
+describe('the kit report', () => {
+  beforeEach(() => {
+    resetGlobalNodeModules();
+    forgetPages();
+  });
+
+  const reported = (docroot: string, global: string | null) => {
+    const lines: string[] = [];
+    setKitReporter((level, message) => lines.push(`${level}: ${message}`));
+    setGlobalNodeModules(global);
+    kitsFor(docroot, fakeClock());
+    setKitReporter(() => {});
+    return lines;
+  };
+
+  it('names the tree it read when there is nothing in it', () => {
+    // the two-npm case: `npm root -g` answers truthfully about a tree the
+    // kit was never installed into, and every other symptom is silence
+    const [line] = reported(bareDocroot(), '/nowhere/lib/node_modules');
+    expect(line).toContain('no kits');
+    expect(line).toContain('/nowhere/lib/node_modules');
+    expect(line).toContain('second npm');
+  });
+
+  it('says the project answered, since that is when the global tree is skipped', () => {
+    const [line] = reported(docrootWithKits(), '/opt/homebrew/lib/node_modules');
+    expect(line).toContain('from the project');
+    expect(line).toContain('only when the project has none');
+  });
+
+  it('says nothing twice, since the scan runs on a timer', () => {
+    const lines: string[] = [];
+    setKitReporter((_l, m) => lines.push(m));
+    setGlobalNodeModules('/nowhere/lib/node_modules');
+    // ONE docroot, rescanned: a fresh clock each time defeats the TTL cache,
+    // so `explain` runs twice and only the `said` set stops the repeat
+    const docroot = bareDocroot();
+    kitsFor(docroot, fakeClock());
+    kitsFor(docroot, fakeClock());
+    setKitReporter(() => {});
+    expect(lines).toHaveLength(1);
+  });
+});
