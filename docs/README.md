@@ -74,6 +74,10 @@ pages above — what was chosen, what was rejected, and why.
   `:for-data`, `:for-each` alike — and the `<template>` it used to sit in
   moved to `<head>`, so CSS counts what the page wrote, inline SVG can hold
   a region, and a loop stops copying one stencil per row.
+- [The bootstrapper sidebar](design/bootstrapper-sidebar.md) - how someone
+  with no Node installs a kit: `.markout/kits/` in the project, resolved by
+  the compiler so the editor and the CLI agree, and the panel that fills it.
+  Designed, not built.
 - [Silent failures](design/silent-failures.md) - every way found so far for a
   page to be wrong without saying so, what closed each one, and what is still
   open. The compile-time-safety claim, audited rather than asserted.

@@ -408,6 +408,26 @@ the two, would make what a docroot builds depend on the machine that built it
 — which is the property walking up from the docroot, and not from the working
 directory, exists to protect.
 
+### Superseded for the audience it was written for
+
+The paragraph this section opens with — a bare docroot has no `node_modules`
+to walk, and that is the audience the language is pitched at — is no longer
+answered here. Asking npm where its global root is requires npm, on a PATH the
+language server frequently does not have, in whichever of a machine's global
+roots happens to answer; every one of those failures is silent, and they land
+on precisely the people the fallback was built for.
+
+[The bootstrapper sidebar](bootstrapper-sidebar.md) answers that case instead,
+with a per-project `.markout/kits/` that `discoverKits` reaches as one more
+rung on the walk it already does — so the CLI, the editor and CI resolve it
+identically and no npm is involved.
+
+What remains here is the compatibility path, and it is a smaller job than the
+one described above: someone who installed the CLI with npm has a global
+`node_modules`, walking up from the CLI's own location still arrives there,
+and nothing about that should break. Read this section as serving people who
+*have* npm, not people who do not.
+
 ## Refusals
 
 A kit picks a path in somebody else's URL space. That is the price of the
