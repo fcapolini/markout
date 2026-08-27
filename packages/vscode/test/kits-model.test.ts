@@ -10,6 +10,8 @@ import {
   pagesUsing,
   pendingBumps,
   projectKits,
+  refusedKits,
+  shortenPaths,
   type KitRow,
 } from '../src/kits-model';
 
@@ -297,5 +299,85 @@ describe('findDocroot', () => {
   it('ignores a configured docroot that is not there', () => {
     const { root, docroot } = project();
     expect(findDocroot([root], 'nowhere')).toBe(docroot);
+  });
+});
+
+describe('refusedKits', () => {
+  it('names the kit in each shape of refusal', () => {
+    expect(
+      refusedKits([
+        'kit "@a/one" is installed twice -- at A and at B -- remove one',
+        'package "@a/two" has a "markout" section but no markout.root -- add one',
+        'kit "@a/three" claims root "/x", but the docroot already has "/p/x"',
+      ])
+    ).toEqual(['@a/one', '@a/two', '@a/three']);
+  });
+
+  it('names the kit REFUSED, and not the one it lost to', () => {
+    // `kit "X" claims root R, already claimed by "Y"` refuses X and mounts
+    // Y. Y is installed and has a row saying so; taking it for refused as
+    // well would be reading the message backwards
+    expect(
+      refusedKits([
+        'kit "@a/loser" claims root "/x", already claimed by "@a/winner" -- one of them',
+      ])
+    ).toEqual(['@a/loser']);
+  });
+
+  it('is empty for a message naming none', () => {
+    expect(refusedKits(['something else went wrong'])).toEqual([]);
+  });
+});
+
+describe('a refused kit is not also offered', () => {
+  it('leaves it to its refusal, having one', () => {
+    // it IS installed -- that is why there is something to refuse -- so an
+    // unticked row inviting an install would fetch a second copy and fix
+    // nothing
+    const { root, docroot } = project();
+    // a directory in the docroot claiming the root the kit wants
+    fs.mkdirSync(path.join(docroot, 'std-kit'));
+    install(root, 'node_modules', '@markout-lang/std-kit', '1.0.0', '/std-kit');
+    const found = projectKits(docroot, root, [
+      { name: '@markout-lang/std-kit', description: 'offered' },
+    ]);
+    expect(found.errors[0]).toContain('the docroot already has');
+    expect(found.rows.map(r => r.name)).not.toContain('@markout-lang/std-kit');
+  });
+
+  it('still offers the kits nothing was said about', () => {
+    const { root, docroot } = project();
+    fs.mkdirSync(path.join(docroot, 'std-kit'));
+    install(root, 'node_modules', '@markout-lang/std-kit', '1.0.0', '/std-kit');
+    const found = projectKits(docroot, root, [
+      { name: '@markout-lang/std-kit' },
+      { name: '@markout-lang/bootstrap-kit' },
+    ]);
+    expect(found.rows.map(r => r.name)).toEqual(['@markout-lang/bootstrap-kit']);
+  });
+});
+
+describe('shortenPaths', () => {
+  it('makes the project\'s own paths relative', () => {
+    const msg = 'the docroot already has "/home/me/site/bootstrap-kit" -- preferring';
+    expect(shortenPaths(msg, '/home/me/site')).toBe(
+      'the docroot already has "bootstrap-kit" -- preferring'
+    );
+  });
+
+  it('leaves a path that is not under a root alone', () => {
+    const msg = 'at "/elsewhere/kit"';
+    expect(shortenPaths(msg, '/home/me/site')).toBe(msg);
+  });
+
+  it('takes the longest root first, so a nested one is not half-replaced', () => {
+    // `.markout/kits` lives under the project, and replacing the shorter
+    // root first would leave "kits/a-kit" rather than "a-kit"
+    const msg = 'at "/p/.markout/kits/a-kit"';
+    expect(shortenPaths(msg, '/p', '/p/.markout/kits')).toBe('at "a-kit"');
+  });
+
+  it('shortens the root itself to a dot rather than to nothing', () => {
+    expect(shortenPaths('at "/p"', '/p')).toBe('at "."');
   });
 });

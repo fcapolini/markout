@@ -23,6 +23,8 @@ import {
   pagesUsing,
   pendingBumps,
   projectKits,
+  refusedKits,
+  shortenPaths,
   type KitRow,
 } from './kits-model';
 
@@ -205,9 +207,18 @@ class KitsProvider implements vscode.TreeDataProvider<Row> {
       return item;
     }
     if (row.kind === 'error') {
-      const item = new vscode.TreeItem(row.message);
+      // The message is written for a terminal, where an absolute path is
+      // what you want printed. Here it is most of the width of the view, so
+      // the row shows it with the project's own paths made relative and the
+      // full text goes to the tooltip.
+      const short = shortenPaths(row.message, this.docroot ?? '', this.dir ?? '');
+      const item = new vscode.TreeItem(short);
       item.iconPath = new vscode.ThemeIcon('error');
-      item.tooltip = row.message;
+      const md = new vscode.MarkdownString(row.message);
+      item.tooltip = md;
+      // named so the row says which kit, even truncated
+      const named = refusedKits([row.message])[0];
+      named && (item.description = shortName(named));
       return item;
     }
     return new KitItem(row.row, isBumpPending(row.row, this.declined()));

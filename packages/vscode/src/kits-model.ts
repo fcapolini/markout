@@ -61,6 +61,12 @@ export interface ProjectKits {
  *    something to tick rather than a search box and no idea what to type.
  *    Passed in rather than read here: it comes from the registry, and this
  *    function answers about a directory and does no I/O beyond it.
+ *
+ * A kit discovery REFUSED is offered by none of them. It is installed --
+ * that is why there is something to refuse -- so presenting it as absent
+ * invites a tick that would fetch a second copy and fix nothing. The
+ * refusal is already a row of its own, and is the only thing worth saying
+ * about that kit.
  */
 export function projectKits(
   docroot: string,
@@ -85,8 +91,9 @@ export function projectKits(
       rows.set(name, { name, pinned: version, managed: true, missing: true });
     }
   }
+  const refused = new Set(refusedKits(found.errors));
   for (const kit of offered) {
-    if (!rows.has(kit.name)) {
+    if (!rows.has(kit.name) && !refused.has(kit.name)) {
       rows.set(kit.name, { name: kit.name, managed: true, description: kit.description });
     }
   }
@@ -99,6 +106,47 @@ export function projectKits(
     ),
     errors: found.errors,
   };
+}
+
+/**
+ * The packages discovery named in a refusal.
+ *
+ * Read out of the message, which is the only place discovery says it: a
+ * `Discovery` carries errors as sentences, deliberately, so that a log and a
+ * build report can print them unchanged. Both spellings are covered -- a
+ * refusal is about a "kit" when it declared a root and a "package" when that
+ * is what it failed to do.
+ *
+ * Degrades honestly if a message is ever reworded: the name stops being
+ * extracted, the kit is offered again, and the worst outcome is the row that
+ * was there before this existed.
+ */
+export function refusedKits(errors: string[]): string[] {
+  return [
+    ...new Set(
+      errors.flatMap(e => [...e.matchAll(/(?:kit|package) "([^"]+)"/g)].map(m => m[1]))
+    ),
+  ];
+}
+
+/**
+ * A discovery message with the absolute paths in it made relative.
+ *
+ * The messages are written for a terminal, where an absolute path is the
+ * useful thing to print. A sidebar is perhaps forty characters wide, and the
+ * paths are most of the length -- one refusal read
+ * `...but the docroot already has "/Users/…/fixture/markout/bootstrap-kit"`,
+ * of which the reader could see about half.
+ *
+ * The full text still goes in the tooltip. Nothing is lost, and the row says
+ * which kit and why.
+ */
+export function shortenPaths(message: string, ...roots: string[]): string {
+  let out = message;
+  for (const root of roots.filter(Boolean).sort((a, b) => b.length - a.length)) {
+    out = out.split(root + path.sep).join('').split(root).join('.');
+  }
+  return out;
 }
 
 function rank(row: KitRow): number {
