@@ -3,6 +3,7 @@ import os from 'os';
 import path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  findDocroot,
   isBumpPending,
   isNewer,
   managedKitDir,
@@ -247,5 +248,54 @@ describe('managedKitDir', () => {
     expect(managedKitDir('/p', '@scope/a-kit')).toBe(
       path.join('/p', '.markout', 'kits', '@scope', 'a-kit')
     );
+  });
+});
+
+describe('findDocroot', () => {
+  it('finds the conventional directory inside the folder', () => {
+    // the bug this exists for: `docrootFor` answers "which docroot does this
+    // FILE belong to" by walking up, so handed an invented path at the folder
+    // root it can only ever answer with the folder -- and the sidebar then
+    // reported no markout project for a project the rest of the extension
+    // was handling correctly
+    const { root, docroot } = project();
+    fs.writeFileSync(path.join(docroot, 'index.html'), '<html></html>');
+    expect(findDocroot([root], undefined)).toBe(docroot);
+  });
+
+  it('prefers what markout.docroot names, having been said explicitly', () => {
+    const { root } = project();
+    const pages = path.join(root, 'site');
+    fs.mkdirSync(pages);
+    manifest(root, {});
+    expect(findDocroot([root], 'site')).toBe(pages);
+    expect(findDocroot([root], ['site'])).toBe(pages);
+  });
+
+  it('takes the folder itself when the pages are simply in it', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'markout-sidebar-'));
+    temps.push(root);
+    manifest(root, { 'a-kit': '1.0.0' });
+    expect(findDocroot([root], undefined)).toBe(root);
+  });
+
+  it('is nothing for a folder that is not a markout project', () => {
+    // the gate that keeps this extension from being a nuisance
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'markout-sidebar-'));
+    temps.push(root);
+    fs.writeFileSync(path.join(root, 'index.html'), '<html>plain</html>');
+    expect(findDocroot([root], undefined)).toBeUndefined();
+  });
+
+  it('takes the first folder that answers, out of several', () => {
+    const plain = fs.mkdtempSync(path.join(os.tmpdir(), 'markout-sidebar-'));
+    temps.push(plain);
+    const { root, docroot } = project();
+    expect(findDocroot([plain, root], undefined)).toBe(docroot);
+  });
+
+  it('ignores a configured docroot that is not there', () => {
+    const { root, docroot } = project();
+    expect(findDocroot([root], 'nowhere')).toBe(docroot);
   });
 });

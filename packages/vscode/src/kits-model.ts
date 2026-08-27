@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { discoverKits, findManifest, KITS_DIR, type Kit } from '@markout-lang/core';
+import { DOCROOT_DIR_NAME, isMarkoutProject } from './diagnostics';
 import { pagesUnder } from './pages';
 
 /**
@@ -196,6 +197,53 @@ export function pagesUsing(docroot: string, kit: { name: string; root?: string }
     }
   }
   return using;
+}
+
+/**
+ * The docroot this window is about, or nothing.
+ *
+ * Searched DOWNWARD, which is the whole of what makes this different from
+ * `docrootFor`. That answers "which docroot does this file belong to" by
+ * walking up from the file, and every caller of it has a file: a diagnostic,
+ * a completion, a hover. This has a FOLDER and no file, and the docroot it
+ * is looking for is usually inside it -- `<folder>/markout`, the convention
+ * that exists so a project needs no configuration. Walking up from an
+ * invented path at the folder root can only ever answer with the folder.
+ *
+ * Candidates in order, first one that looks like a markout project winning:
+ * whatever `markout.docroot` names, because it was said explicitly; then the
+ * conventional directory; then the folder itself, for a project whose pages
+ * are simply in it.
+ *
+ * One project, not several. A multi-root workspace has as many docroots as
+ * folders, and a single list of checkboxes cannot honestly represent two
+ * projects that disagree, so the first folder that answers wins -- right for
+ * the case this is for, somebody with one folder of HTML open, and wrong
+ * quietly rather than loudly for the rest.
+ */
+export function findDocroot(
+  folders: string[],
+  configured: string | string[] | undefined
+): string | undefined {
+  const named = Array.isArray(configured) ? configured : configured ? [configured] : [];
+  for (const folder of folders) {
+    const candidates = [
+      ...named.map(d => path.resolve(folder, d)),
+      path.join(folder, DOCROOT_DIR_NAME),
+      folder,
+    ];
+    for (const candidate of candidates) {
+      if (!fs.existsSync(candidate)) {
+        continue;
+      }
+      // the same two questions the compiler asks: does this look like a
+      // markout project, or has it a manifest saying which kits it wants
+      if (isMarkoutProject(candidate) || findManifest(candidate)) {
+        return candidate;
+      }
+    }
+  }
+  return;
 }
 
 /** where a managed kit's files are, for a removal that has to delete them */

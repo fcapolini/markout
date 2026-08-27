@@ -16,8 +16,8 @@ import {
   writeManifest,
   type KitListing,
 } from '@markout-lang/cli/kits';
-import { docrootFor, isMarkoutProject } from './diagnostics';
 import {
+  findDocroot,
   isBumpPending,
   managedKitDir,
   pagesUsing,
@@ -233,7 +233,10 @@ class KitsProvider implements vscode.TreeDataProvider<Row> {
    * turn off.
    */
   async refresh(lookUp = false) {
-    const docroot = findDocroot();
+    const docroot = findDocroot(
+      (vscode.workspace.workspaceFolders ?? []).map(f => f.uri.fsPath),
+      vscode.workspace.getConfiguration('markout').get<string | string[]>('docroot')
+    );
     this.docroot = docroot;
     this.dir = docroot ? manifestDirFor(docroot) : undefined;
     await vscode.commands.executeCommand('setContext', 'markout.hasProject', !!docroot);
@@ -481,28 +484,4 @@ function rootOf(dir: string, name: string): string | undefined {
   } catch {
     return;
   }
-}
-
-/**
- * The docroot this window is about, or nothing.
- *
- * One project, not several: a multi-root workspace has as many docroots as
- * folders, and a single list of checkboxes cannot honestly represent two
- * projects that disagree. The first folder that looks like a markout project
- * wins, which is right for the case this is for -- somebody with one folder
- * of HTML open -- and wrong quietly rather than loudly for the rest.
- */
-function findDocroot(): string | undefined {
-  const folders = vscode.workspace.workspaceFolders ?? [];
-  const setting = vscode.workspace.getConfiguration('markout').get<string | string[]>('docroot');
-  for (const folder of folders) {
-    const docroot = docrootFor(path.join(folder.uri.fsPath, 'index.html'), {
-      docroot: setting,
-      workspaceFolders: folders.map(f => f.uri.fsPath),
-    });
-    if (isMarkoutProject(docroot) || findManifest(docroot)) {
-      return docroot;
-    }
-  }
-  return;
 }
