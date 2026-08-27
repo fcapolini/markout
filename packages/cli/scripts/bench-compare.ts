@@ -363,10 +363,21 @@ async function measureWeight(browser: Browser, url: string, ready?: string): Pro
     w.nodes = Object.values(w.census).reduce((n, c) => n + c, 0);
 
     // Structure parity is not output parity. Markout's average-price stat once
-    // read $105 where the other ports read $106 -- it truncates with `| 0`
-    // because `${...}` cannot reach Math.round -- and every tag and class
-    // matched perfectly while the page said something different. So compare
-    // what a few known elements actually SAY, not just that they exist.
+    // read $105 where the other ports read $106 -- it truncated with `| 0`
+    // where the others rounded -- and every tag and class matched perfectly
+    // while the page said something different. So compare what a few known
+    // elements actually SAY, not just that they exist.
+    //
+    // The reason recorded here for that `| 0` was wrong and is worth
+    // correcting rather than deleting: `${...}` reaches `Math` perfectly well,
+    // and always could. `Math` is on GLOBAL_NAMES in core's core-global.ts,
+    // which exists precisely so the JS standard library is available to an
+    // expression, and the port has used `Math.round` since the drift was
+    // fixed. A name that is genuinely not in scope is a compile ERROR --
+    // `Unknown reference: "..."`, with the line and column -- so the silent
+    // failure this comment warned about was never the one it named. The check
+    // below still earns its place: two ports can agree on every tag and class
+    // and disagree on what they render, whatever the cause.
     w.texts = await page.evaluate(`(() => {
       const t = (sel) => (document.querySelector(sel) || {}).textContent || '(absent)';
       const out = {};

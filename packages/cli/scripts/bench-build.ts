@@ -11,7 +11,19 @@
 // unchanged -- the build a port ships with is part of what the port costs.
 // React's includes `tsc -b`, which is most of its number; removing it to
 // "make the comparison fair" would time a build nobody runs.
-import { execFileSync, execSync } from 'node:child_process';
+//
+// The stopwatch is NOT here. It is in ./bench-build-runner.cjs, which
+// `bench:build` runs as its own step before this file, and the long version is
+// in that file's header. Short version: `execFileSync('node', ...)` searches
+// PATH for `node` rather than exec'ing it, npm and npx each prepend entries to
+// PATH, and each entry costs a few milliseconds to rule out -- so the harness
+// was paying 25-70ms per spawn to find a binary it had the absolute path of.
+// `process.execPath` fixed it and this row moved from 261ms to 157ms, which is
+// what the same command takes from a shell.
+//
+// This file reads what the runner left behind, adds the one row that needs the
+// compiler in-process, and prints.
+import { execSync } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
 import { build } from '../src/server/build';
@@ -19,7 +31,6 @@ import { build } from '../src/server/build';
 const REPEATS = 5; // + 1 discarded warm-up
 
 const BENCH = path.resolve(__dirname, '../bench');
-const CLI = path.resolve(__dirname, '../dist/cli.js');
 // The app is one page. The scaled bench-*.html variants are excluded on
 // purpose: they are the same source with a longer seed array, and building
 // four copies of one app would compare Markout against four ports building
@@ -37,16 +48,28 @@ const PORTS = [
   { name: 'Next', dir: 'next-catalog' },
 ];
 
-// Every caching layer a build has, cleared before each run. Vite's dep
-// pre-bundling cache and tsc's incremental state both survive `rm -rf dist`,
-// and a run that reuses them times the cache rather than the build.
-function clean(dir: string) {
-  // `.next` holds the output AND the build cache, so removing it is both
-  // halves of what the other ports need two entries for. A run that keeps it
-  // times an incremental rebuild, which is not what this table says it is.
-  for (const p of ['dist', '.next', 'node_modules/.vite', 'tsconfig.tsbuildinfo']) {
-    fs.rmSync(path.join(dir, p), { recursive: true, force: true });
+const RESULTS = path.resolve(__dirname, '../.bench-build-results.json');
+
+interface RunnerResult {
+  /** what a spawn costs there when the thing spawned does nothing */
+  baselineMs: number;
+  rows: Record<string, number>;
+  skipped: string[];
+}
+
+function readResults(): RunnerResult {
+  if (!fs.existsSync(RESULTS)) {
+    throw new Error(
+      `no ${path.relative(process.cwd(), RESULTS)} -- run \`npm run bench:build\`, which runs ` +
+        'scripts/bench-build-runner.cjs first; this file alone does no timing'
+    );
   }
+  const parsed = JSON.parse(fs.readFileSync(RESULTS, 'utf8')) as RunnerResult;
+  // Consumed, not kept. Leaving it would let `tsx scripts/bench-build.ts` on
+  // its own print a previous run's timings under this run's provenance line,
+  // which is the one failure a benchmark must not have.
+  fs.rmSync(RESULTS, { force: true });
+  return parsed;
 }
 
 function median(nums: number[]) {
@@ -66,14 +89,9 @@ function provenance(): string {
   return `Markout ${version} (${commit}), Node ${process.version}, ${process.platform}-${process.arch}`;
 }
 
-function time(fn: () => void): number {
-  const t = performance.now();
-  fn();
-  return performance.now() - t;
-}
-
-// The same compile the CLI run below performs, minus Node's startup and the
-// CLI's own module graph -- which is exactly the served mode's situation: the
+// The same compile the runner's `markout build` row performs, minus Node's
+// startup and the CLI's own module graph -- which is exactly the served
+// mode's situation: the
 // process is already up and the compiler already loaded, so this is what the
 // FIRST request for a page costs there. The express middleware caches the
 // compiler's output per page and renders that per request, so every request
@@ -97,52 +115,43 @@ async function markoutCompileOnly(): Promise<number> {
 }
 
 async function main() {
-  if (!fs.existsSync(CLI)) {
-    throw new Error(`no ${path.relative(process.cwd(), CLI)} -- run \`npm run build\` first, since Markout is timed through its CLI like every other port through theirs`);
-  }
+  const timed = readResults();
   console.log(provenance());
   console.log(`Build time, median of ${REPEATS} (+1 discarded warm-up), caches cleared before every run\n`);
 
   const rows: string[][] = [];
 
-  const outdir = path.resolve(__dirname, '../.built-timing');
-  const markout: number[] = [];
+  timed.skipped.forEach((s) => console.log(`  ${s}`));
+
+  // The one row with no spawn in it: in-process, so there is nothing for a
+  // stopwatch in another process to be further from, and it stays here where
+  // the compiler is already loaded.
   const compile: number[] = [];
   for (let i = 0; i <= REPEATS; i++) {
-    fs.rmSync(outdir, { recursive: true, force: true }); // outside the clock: clearing is setup, not build
-    // argv rather than a command line: every one of these paths is derived
-    // from `__dirname`, so a checkout under a directory with a quote or a
-    // `$(` in its name would otherwise be handed to a shell to reinterpret.
-    // Nothing here needs a shell, and not having one is the whole fix.
-    const ms = time(() => {
-      execFileSync('node', [CLI, 'build', BENCH, outdir, '-p', PAGE], { stdio: 'ignore' });
-    });
     const only = await markoutCompileOnly();
-    if (i) { markout.push(ms); compile.push(only); }
+    if (i) compile.push(only);
   }
-  fs.rmSync(outdir, { recursive: true, force: true });
-  rows.push(['Markout (server)', median(compile).toFixed(0), 'compile, on the first request for a page']);
-  rows.push(['Markout (build)', median(markout).toFixed(0), '`markout build`']);
 
+  rows.push(['Markout (server)', median(compile).toFixed(0), 'compile, on the first request for a page']);
+  rows.push(['Markout (build)', timed.rows['Markout (build)'].toFixed(0), '`markout build`']);
   for (const { name, dir } of PORTS) {
-    const cwd = path.join(BENCH, dir);
-    if (!fs.existsSync(path.join(cwd, 'node_modules'))) {
-      console.log(`  ${name}: skipped (no node_modules -- \`npm install\` in bench/${dir})`);
-      continue;
-    }
-    const runs: number[] = [];
-    for (let i = 0; i <= REPEATS; i++) {
-      clean(cwd); // outside the clock: clearing is setup, not build
-      const ms = time(() => execSync('npm run build', { cwd, stdio: 'ignore' }));
-      if (i) runs.push(ms);
-    }
-    const cmd = JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf8')).scripts.build;
-    rows.push([name, median(runs).toFixed(0), `\`${cmd}\``]);
+    if (!(name in timed.rows)) continue;
+    const cmd = JSON.parse(
+      fs.readFileSync(path.join(BENCH, dir, 'package.json'), 'utf8')
+    ).scripts.build;
+    rows.push([name, timed.rows[name].toFixed(0), `\`${cmd}\``]);
   }
 
   const headers = ['Target', 'Build (ms)', 'What runs'];
   const line = (cells: string[]) => `| ${cells.join(' | ')} |`;
   console.log([line(headers), line(headers.map(() => '---')), ...rows.map(line)].join('\n'));
+  // Disclosed rather than subtracted. Every spawned row carries it; the
+  // in-process compile row does not, which is why it is named rather than
+  // folded into any number.
+  console.log(
+    `\nSpawn baseline ${timed.baselineMs.toFixed(0)}ms -- what \`node -e ''\` costs from the runner, ` +
+      'and a floor under every row above except Markout (server).'
+  );
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

@@ -504,7 +504,7 @@ them. Four columns are the ones it is here for:
 | First card @ 1,020 | 12.4ms | **9.8ms** | Next |
 | Interactive @ 1,020 | **37.2ms** | 56.5ms | Markout |
 | Total gzip | **17.6 KB** | 108.8 KB | Markout, 6.2× |
-| Build | **261ms** | 8,147ms | Markout, 31× |
+| Build | **161ms** | 8,125ms | Markout, 50× |
 
 **Next wins first card, at every size.** That is a genuine loss for Markout
 served and the most useful thing this port produced. The cause is in the weight
@@ -566,34 +566,55 @@ two — so each runs its own build script unchanged.
 
 | Target | Build | What runs |
 | --- | --- | --- |
-| Markout (server) | **33ms** | compile, on the first request for a page |
-| Markout (build) | **261ms** | `markout build` |
-| Alpine | 599ms | `vite build` — bundles the library, compiles nothing |
-| React | 1,472ms | `tsc -b && vite build` |
-| Svelte | 884ms | `vite build` |
+| Markout (server) | **31ms** | compile, on the first request for a page |
+| Markout (build) | **161ms** | `markout build` |
+| Alpine | 606ms | `vite build` — bundles the library, compiles nothing |
+| React | 1,459ms | `tsc -b && vite build` |
+| Svelte | 898ms | `vite build` |
 | Vue | 1,005ms | `vite build` |
-| Next | 8,147ms | `next build` |
+| Next | 8,125ms | `next build` |
 
 Same machine and toolchain as the tables above, measured 2026-08-27; median of
 5 after a discarded warm-up, and the run-to-run spread is a few percent except
 React's, which moves by about 100ms.
 
-**One caveat on the built row, found while adding Next.** Invoked from a
-shell, `node dist/cli.js build …` takes about 155ms, not 261ms; `node` alone
-starts in 30ms and loading the CLI's module graph brings it to about 120ms.
-The harness spawns each build from its own already-loaded parent process, and
-that costs roughly 110ms of extra wall clock per spawn. Every row pays it, so
-the table is internally consistent — but it is 40% of Markout's number and
-1.3% of Next's, so it distorts the *ratios* in Markout's disfavour. An earlier
-published run recorded 162ms here, close to the shell figure; 261–277ms
-reproduced across four runs today, with and without the Next port present. The harness's
-spawn cost is the difference, and removing it is a fix this table still wants.
+**The built row was wrong for a while, and the bug is worth recording.**
+Adding Next put this row at 261ms where the same command from a shell took
+155, and the first diagnosis — a heavy parent process making `fork` expensive
+— was wrong. `fork` costs 1ms from every parent, and loading the whole
+compiler into the parent moves it by nothing. The cost was that
+`execFileSync('node', …)` does not *exec* `node`: it searches `PATH` for it,
+each candidate directory costs a few milliseconds to rule out on macOS, and
+npm and npx each prepend `node_modules/.bin` entries. Medians of 8:
+
+| caller | `'node'` via `PATH` | `process.execPath` |
+| --- | --- | --- |
+| a shell, 22 `PATH` entries | 56ms | 31ms |
+| `npm run`, 31 entries | 102ms | 31ms |
+
+So the harness was paying 25–70ms per spawn to look up a binary it already had
+the absolute path of. A near-constant, which is why it went unnoticed: noise
+against `next build` at eight seconds, and half of `markout build` at 150. It
+did not shift the table so much as *tilt* it, and only against the fastest row
+— which is the row Markout is in. `process.execPath` is the fix, and it is the
+more correct thing to say anyway, since it guarantees the node running the CLI
+is the node running the benchmark. The row now reads 161ms, which is what the
+shell says and what the run before Next was added recorded.
+
+The stopwatch also moved out of `bench-build.ts` into
+[`bench-build-runner.cjs`](../scripts/bench-build-runner.cjs), which
+`bench:build` runs as its own step: `bench-build.ts` runs under tsx, where
+`PATH` is longer again, and keeping the measurement out of it keeps a variable
+that has nothing to do with any build away from the numbers. What remains is
+reported rather than subtracted — the run prints a **spawn baseline** (30ms,
+what `node -e ''` costs) which is a floor under every row except Markout
+(server), the one row with no spawn in it.
 
 Markout appears twice for the usual reason, but here the two rows differ by
 more than the artifact. **`markout build`** is a command someone runs, so its
 number includes Node starting up and loading the CLI. **Served**,
 that startup is already paid: the process is up and the compiler is loaded, so
-the 33ms is the whole of it, and it is what the first request for a page
+the 31ms is the whole of it, and it is what the first request for a page
 costs. The server caches the compiler's output per page and renders that per
 request, so the first visitor to a page waits for the compile and everyone
 after waits only for the render — which is why the `Server` column in the
@@ -610,9 +631,9 @@ server applying an incremental update, which for three of them is HMR and for
 Alpine is a reload — that this table does not measure. Read it as
 what Markout's server does on a first request, not as a race it won.
 
-The margin is wide either way: on the built row, 3.4× against Svelte's 884ms,
-5.6× against React's and 31× against Next's 8.1 seconds; on the served row,
-27× against Svelte and 247× against Next. The four run a
+The margin is wide either way: on the built row, 5.6× against Svelte's 898ms,
+9.1× against React's and 50× against Next's 8.1 seconds; on the served row,
+29× against Svelte and 262× against Next. The four run a
 bundler, which resolves a module graph, pre-bundles dependencies, tree-shakes
 and minifies; Markout reads one HTML file and writes one HTML file, because
 the app was already in a format a browser accepts and the runtime it links is
@@ -620,7 +641,7 @@ a fixed file that was built when Markout was.
 
 **Next's 8.1 seconds is the widest gap in this document**, and unlike the
 interaction columns it is not React's number wearing a different label —
-React's own build is 1,472ms including its typecheck. The remaining ~6.7
+React's own build is 1,459ms including its typecheck. The remaining ~6.7
 seconds is the App Router's: two compilation environments, route collection,
 static generation of the routes that can be static, and build traces. A
 developer pays it on every change, which makes it the cost met most often, and
@@ -630,14 +651,14 @@ milliseconds.
 
 **Alpine's row is a packaging cost, not a compile, and it is the one row that
 could be deleted outright.** Alpine has no compiler and no component step: its
-599ms is Vite bundling and minifying the Alpine library together with the
+606ms is Vite bundling and minifying the Alpine library together with the
 shared catalog generator, and the markup in `index.html` ships exactly as
 written. That is what `npm install alpinejs` gives an app, and this port is
 set up that way so it is measured as production output like the others —
 but Alpine's own answer is the one it is known for, a `<script src>` tag and
 **no build at all**. The cost of taking it is shipping the library as the CDN
 serves it rather than bundled and minified with the app, which would move
-Alpine's weight row rather than its timing rows. Read 599ms as what this
+Alpine's weight row rather than its timing rows. Read 606ms as what this
 port's packaging costs, not as something Alpine requires.
 
 That is worth holding next to Markout's own rows, because it is the same claim
@@ -645,11 +666,11 @@ Markout makes. Alpine and Markout are the two here that can be delivered with
 no build step, and the difference is what each does with the markup: Alpine's
 `<script src>` ships the page and the library and interprets attributes in the
 browser, while Markout's served mode compiles the page once and caches it, at
-the 33ms above.
+the 31ms above.
 
 React's number is the one that needs a caveat, and it is not a Vite caveat:
 run separately, `tsc -b` and `vite build` split its time about 59/41, so the
-typecheck is roughly 870ms of the 1,472ms and the bundling is roughly 600ms —
+typecheck is roughly 860ms of the 1,459ms and the bundling is roughly 600ms —
 which puts React's bundler right alongside Alpine's. That typecheck is the
 build React ships with in this port, though, and dropping it to "make the
 comparison fair" would time a build nobody runs. What each row says is what
@@ -661,7 +682,7 @@ real project. Bundler time grows with the module graph, so a real app's four
 Vite numbers grow well past these; Markout's does not have a module graph to
 grow, but its per-page compile does multiply by the page count, and its
 startup cost is paid once no matter how many pages follow. A ten-page site is
-about one startup + 10 × the per-page compile, not 10 × 261ms.
+about one startup + 10 × the per-page compile, not 10 × 161ms.
 
 ### Weight
 
