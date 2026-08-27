@@ -94,6 +94,11 @@ async function preview(context: vscode.ExtensionContext) {
       cwd: docroot,
       env: {
         ...process.env,
+        // `process.execPath` is the editor's binary, which is Electron. This
+        // is what tells it to be node instead of trying to start an app --
+        // the documented way to run a script with the editor's own runtime,
+        // and the reason no node has to be found on a PATH.
+        ELECTRON_RUN_AS_NODE: '1',
         MARKOUT_RUNTIME_BUNDLE: context.asAbsolutePath(path.join('dist', RUNTIME)),
       },
     }

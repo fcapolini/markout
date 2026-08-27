@@ -138,3 +138,45 @@ describe.each(['client.js', 'server.js', 'markout-cli.js'])('%s', file => {
     expect(fs.statSync(path.join(outdir, file)).size).toBeGreaterThan(100_000);
   });
 });
+
+/**
+ * The sidecar, launched the way the sidebar launches it.
+ *
+ * `preview.ts` spawns it with `process.execPath`, which in an extension host
+ * is the Electron binary -- that is the whole trick, since it means no node
+ * has to be found on a PATH. Commander auto-detects `process.versions.electron`
+ * and, finding it, keeps argv[1] as a positional: right for a packaged
+ * Electron app, wrong for a node bin. The docroot arrived as a SECOND
+ * argument and the preview died with "too many arguments".
+ *
+ * Run against the BUNDLE rather than the sources, because that is what the
+ * sidebar runs and because the difference is in how the process is launched.
+ * An earlier version of this test went through tsx, which re-executes in a
+ * child of its own -- so the preload never reached the process doing the
+ * parsing, and the test passed with the bug in place.
+ */
+describe('the sidecar under an Electron-flavoured interpreter', () => {
+  it('reads the docroot as the only argument', () => {
+    const preload = path.join(outdir, 'as-electron.cjs');
+    fs.writeFileSync(preload, "process.versions.electron = '34.0.0';\n");
+    const docroot = path.join(outdir, 'markout');
+    fs.mkdirSync(docroot, { recursive: true });
+    fs.writeFileSync(path.join(docroot, 'index.html'), '<html><body>hi</body></html>');
+    const written = path.join(outdir, 'built');
+
+    const stdout = execFileSync(
+      process.execPath,
+      ['--require', preload, path.join(outdir, 'markout-cli.js'), 'build', docroot, written],
+      { encoding: 'utf8', env: { ...process.env, MARKOUT_RUNTIME_BUNDLE: path.join(outdir, 'markout-runtime.js') } }
+    );
+    expect(stdout).toContain('1 page(s)');
+    expect(fs.existsSync(path.join(written, 'index.html'))).toBe(true);
+  }, 60000);
+
+  it('is spawned as node rather than as an app', () => {
+    // Electron only behaves as node when told to; without this it tries to
+    // start an application around the script
+    const src = fs.readFileSync(path.join(PACKAGE, 'src', 'preview.ts'), 'utf8');
+    expect(src).toContain('ELECTRON_RUN_AS_NODE');
+  });
+});

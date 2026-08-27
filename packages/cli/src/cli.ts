@@ -305,7 +305,16 @@ async function main() {
     program.help();
   }
 
-  program.parse();
+  // `from: 'node'` said rather than left to be guessed. Commander's
+  // auto-detection reads `process.versions.electron` and, finding it, keeps
+  // argv[1] as a positional -- which is right for a packaged Electron app
+  // and wrong for this, whose argv is always `[node, script, ...args]`.
+  //
+  // It matters because of who spawns this. The editor's sidebar runs the
+  // bundled copy with `process.execPath`, and in an extension host that is
+  // the Electron binary, so the child reports itself as Electron and the
+  // docroot became "too many arguments". See packages/vscode/src/preview.ts.
+  program.parse(process.argv, { from: 'node' });
 }
 
 /**
