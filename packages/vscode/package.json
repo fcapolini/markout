@@ -236,7 +236,6 @@
   "activationEvents": [
     "onLanguage:html",
     "workspaceContains:**/markout/**/*.html",
-    "workspaceContains:**/.markout/kits.json",
-    "onView:markout.kits"
+    "workspaceContains:**/.markout/kits.json"
   ]
 }

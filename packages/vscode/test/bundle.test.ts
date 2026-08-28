@@ -78,6 +78,22 @@ describe('what travels beside the bundles', () => {
     expect(view.contextualTitle).toBe(container.title);
   });
 
+  it('lists no activation event the contributions already generate', () => {
+    // VS Code generates `onView:` and `onCommand:` from `contributes` and
+    // says so in the editor when one is written out as well. `onLanguage:html`
+    // is NOT generated -- that comes from `contributes.languages`, and html
+    // is the editor's rather than this extension's -- so it stays, and it is
+    // what starts the language client when a page is opened.
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(PACKAGE, 'package.json'), 'utf8')
+    );
+    const generated = manifest.activationEvents.filter(
+      (e: string) => e.startsWith('onView:') || e.startsWith('onCommand:')
+    );
+    expect(generated).toStrictEqual([]);
+    expect(manifest.activationEvents).toContain('onLanguage:html');
+  });
+
   it('keeps the title bar to actions about the view', () => {
     // `view/title` is the title LINE, so several icons crowd the name and
     // start collapsing into an overflow menu on a narrow sidebar. What the
