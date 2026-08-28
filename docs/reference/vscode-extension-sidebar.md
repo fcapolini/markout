@@ -60,11 +60,14 @@ There is no terminal in that, and no npm.
   still waiting shows as a badge on the Markout icon. Two clones of your
   project therefore build the same thing, which is the property a moving
   version quietly costs you.
-- **Restore** — fetch every kit `.markout/kits.json` pins, for a clone that
-  arrived without them.
-- **Search the npm registry** — Markout's own kits are offered first;
-  searching the whole registry is a separate step, because a kit's code
-  becomes part of the pages you ship.
+The view opens with what it does, a row each: **Preview**, **Build**,
+**Restore kits** and **Search for kits**, with the kits themselves below them.
+
+- **Restore kits** — fetch every kit `.markout/kits.json` pins, for a clone
+  that arrived without them.
+- **Search for kits** — Markout's own kits are offered first; searching the
+  whole registry is a separate step, because a kit's code becomes part of the
+  pages you ship.
 
 - **Preview** — serves your pages and opens them in a browser, reloading as
   you save.

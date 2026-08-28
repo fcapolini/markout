@@ -48,6 +48,19 @@ let server: ChildProcess | undefined;
 let address: string | undefined;
 let output: vscode.OutputChannel | undefined;
 
+/**
+ * Whether a preview is up, and a way to hear when that changes.
+ *
+ * The view shows one row for it -- Preview, or Stop preview -- so it has to
+ * be told, and a server can stop without being asked: a port taken, a crash.
+ */
+const changed = new vscode.EventEmitter<void>();
+export const onPreviewChanged = changed.event;
+
+export function previewRunning(): boolean {
+  return !!server;
+}
+
 export function registerPreview(context: vscode.ExtensionContext) {
   // Set for THIS process, and read at call time rather than at load time --
   // core walks two levels up from its own directory to find the runtime, and
@@ -137,6 +150,7 @@ function stop() {
 }
 
 function setRunning(running: boolean) {
+  changed.fire();
   return vscode.commands.executeCommand('setContext', 'markout.previewRunning', running);
 }
 

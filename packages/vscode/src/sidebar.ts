@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { findManifest, readManifest } from '@markout-lang/core';
+import { onPreviewChanged, previewRunning } from './preview';
 // The INSTALLER, through a subpath that carries it and nothing else. Not
 // `@markout-lang/cli`, whose main entry is the `markout` command's -- that
 // would put a web server and an argument parser in the editor's process for
@@ -51,8 +52,64 @@ const DOC = 'who-is-this-for.md';
 
 type Row =
   | { kind: 'doc' }
+  | { kind: 'action'; action: Action }
   | { kind: 'error'; message: string }
   | { kind: 'kit'; row: KitRow };
+
+/**
+ * What the view does, as rows rather than as icons in the title bar.
+ *
+ * `view/title` is the only place VS Code puts icon actions and it is the
+ * title LINE, so five of them crowd the name and start collapsing into an
+ * overflow menu on a narrow sidebar. Rows sit below the title, stay visible,
+ * and carry a word each -- which matters more here than anywhere: this view
+ * is for people who do not have Node, and a bare play glyph is a guess.
+ *
+ * Refresh stays in the title bar. It is the one action about the VIEW rather
+ * than about the project, and it is where every other view in the editor
+ * keeps it.
+ */
+interface Action {
+  command: string;
+  title: string;
+  icon: string;
+  detail: string;
+}
+
+const ACTIONS: Action[] = [
+  {
+    command: 'markout.preview',
+    title: 'Preview',
+    icon: 'play',
+    detail: 'serve the pages and open them in a browser',
+  },
+  {
+    command: 'markout.build',
+    title: 'Build',
+    icon: 'package',
+    detail: 'write the finished site to dist/',
+  },
+  {
+    command: 'markout.restoreKits',
+    title: 'Restore kits',
+    icon: 'cloud-download',
+    detail: 'fetch what .markout/kits.json asks for',
+  },
+  {
+    command: 'markout.searchKits',
+    title: 'Search for kits\u2026',
+    icon: 'search',
+    detail: 'the npm registry, beyond the ones offered below',
+  },
+];
+
+/** Preview becomes Stop while a preview is up */
+const STOP: Action = {
+  command: 'markout.stopPreview',
+  title: 'Stop preview',
+  icon: 'debug-stop',
+  detail: 'shut the preview server down',
+};
 
 export function registerSidebar(context: vscode.ExtensionContext) {
   const provider = new KitsProvider(context);
@@ -83,7 +140,11 @@ export function registerSidebar(context: vscode.ExtensionContext) {
     // as one ticked here, and the view has no business being the last to know
     vscode.workspace
       .createFileSystemWatcher('**/.markout/kits.json')
-      .onDidChange(() => provider.refresh())
+      .onDidChange(() => provider.refresh()),
+    // Preview and Stop are one row, and a server can stop without being
+    // asked -- a port taken, a crash -- so the row follows the process
+    // rather than the button that started it
+    onPreviewChanged(() => provider.redraw())
   );
   provider.refresh(true);
   return provider;
@@ -206,6 +267,15 @@ class KitsProvider implements vscode.TreeDataProvider<Row> {
       );
       return item;
     }
+    if (row.kind === 'action') {
+      const item = new vscode.TreeItem(row.action.title);
+      item.iconPath = new vscode.ThemeIcon(row.action.icon);
+      item.description = row.action.detail;
+      item.tooltip = row.action.detail;
+      item.command = { command: row.action.command, title: row.action.title };
+      item.contextValue = 'action';
+      return item;
+    }
     if (row.kind === 'error') {
       // The message is written for a terminal, where an absolute path is
       // what you want printed. Here it is most of the width of the view, so
@@ -228,8 +298,12 @@ class KitsProvider implements vscode.TreeDataProvider<Row> {
     if (!this.dir) {
       return [];
     }
+    const actions = ACTIONS.map(a =>
+      a.command === 'markout.preview' && previewRunning() ? STOP : a
+    );
     return [
       { kind: 'doc' } as Row,
+      ...actions.map(action => ({ kind: 'action', action }) as Row),
       ...this.errors.map(message => ({ kind: 'error', message }) as Row),
       ...this.rows.map(row => ({ kind: 'kit', row }) as Row),
     ];
@@ -321,6 +395,11 @@ class KitsProvider implements vscode.TreeDataProvider<Row> {
         ? { value: count, tooltip: `${count} kit update${count > 1 ? 's' : ''} available` }
         : undefined;
     }
+  }
+
+  /** re-render the rows without re-reading anything */
+  redraw() {
+    this.changed.fire(undefined);
   }
 
   private declined(): Record<string, string> {

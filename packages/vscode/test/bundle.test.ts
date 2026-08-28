@@ -78,6 +78,34 @@ describe('what travels beside the bundles', () => {
     expect(view.contextualTitle).toBe(container.title);
   });
 
+  it('keeps the title bar to actions about the view', () => {
+    // `view/title` is the title LINE, so several icons crowd the name and
+    // start collapsing into an overflow menu on a narrow sidebar. What the
+    // view DOES is rows below the title, each with a word on it; refresh is
+    // about the view rather than the project and stays where every other
+    // view in the editor keeps it
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(PACKAGE, 'package.json'), 'utf8')
+    );
+    expect(manifest.contributes.menus['view/title'].map((m: {command: string}) => m.command))
+      .toStrictEqual(['markout.refreshKits']);
+  });
+
+  it('offers every row action as a declared command', () => {
+    // a row whose command is not contributed does nothing when clicked, and
+    // says nothing about why
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(PACKAGE, 'package.json'), 'utf8')
+    );
+    const declared = new Set(
+      manifest.contributes.commands.map((c: { command: string }) => c.command)
+    );
+    const src = fs.readFileSync(path.join(PACKAGE, 'src', 'sidebar.ts'), 'utf8');
+    const used = [...src.matchAll(/command: '(markout\.[\w]+)'/g)].map(m => m[1]);
+    expect(used.length).toBeGreaterThan(4);
+    expect(used.filter(c => !declared.has(c))).toStrictEqual([]);
+  });
+
   it('draws the icon as outline, to sit with the glyphs beside it', () => {
     // every other icon in the activity bar is uniform-weight line art; a
     // filled mark reads as a blob among them
