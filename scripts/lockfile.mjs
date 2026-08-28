@@ -93,7 +93,17 @@ function donor() {
       fs.copyFileSync(path.join(root, rel), path.join(work, rel));
     }
     console.log(`resolving ${files.length} manifest(s) with no tree to describe...`);
-    execFileSync('npm', ['install', '--package-lock-only'], {
+    // A cache of its own, thrown away with the workspace.
+    //
+    // This resolution is a throwaway: eight manifests, no tree, metadata
+    // only. It has no business reading or writing the shared cache, and
+    // DEPENDING on that cache is how this step fails for reasons that have
+    // nothing to do with the repository -- a `sudo npm` at some point leaves
+    // directories under `~/.npm/_cacache` owned by root, and the install then
+    // dies with EACCES on a path npm itself created. Hermetic costs about
+    // twenty seconds of packument fetches and cannot be poisoned.
+    const cache = path.join(work, '.npm-cache');
+    execFileSync('npm', ['install', '--package-lock-only', '--cache', cache], {
       cwd: work,
       stdio: ['ignore', 'ignore', 'inherit'],
     });

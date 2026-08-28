@@ -170,7 +170,7 @@ carries. So before publishing, install the archive and use that:
 
 ```sh
 npm run package -w markout-vscode
-code --install-extension packages/vscode/markout-vscode-0.2.0.vsix --force
+code --install-extension packages/vscode/markout-vscode-*.vsix --force
 ```
 
 It prints what went into the archive as it builds it — three bundles, the
