@@ -191,11 +191,11 @@ not the only answer.
 
 None, and that is the point rather than a boast.
 
-The compiler is bundled, so diagnostics work on a project that has installed
-nothing. Installing a kit needs no npm: the extension fetches and unpacks it
-itself. Preview needs a server, and runs one on the copy of Node your editor
-is already running — so nothing looks for `node` on your PATH, and nothing has
-to be found there.
+The compiler and the server are both bundled, so nothing here asks you to
+install anything. Diagnostics come from that compiler. Installing a kit needs
+no npm: the extension fetches and unpacks it itself. Preview runs that server
+on the copy of Node your editor is already running — so nothing looks for
+`node` on your PATH, and nothing has to be found there.
 
 Which means the whole of the above works on a machine with no Node, no npm and
 no toolchain: write the pages, tick a kit, press Preview.

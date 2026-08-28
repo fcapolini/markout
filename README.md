@@ -483,12 +483,10 @@ hover, rename and find-references across the pages and fragments a name
 actually reaches; and formatting that knows a `>` inside `${...}` does not
 end a tag.
 
-The compiler is bundled, so it works on a project that has installed
-nothing.
-
-It also puts a **Markout view** in the activity bar: the kits this project
-uses, each a checkbox, with Preview and Build beside them. That is the next
-section.
+The compiler and the server are both bundled, so all of that works on a
+project that has installed nothing — and so does the **Markout view** the
+extension puts in the activity bar: the kits this project uses, each a
+checkbox, with Preview and Build beside them. That is the next section.
 
 ## Without Node at all
 
