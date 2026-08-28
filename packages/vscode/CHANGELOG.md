@@ -1,5 +1,21 @@
 # markout-vscode
 
+## 0.6.1
+
+### Patch Changes
+
+- Describe the Markout view in the Marketplace listing.
+  
+  0.6.0 shipped the view and the listing did not mention it: the README, the
+  description and the tags all still described an extension that only answers
+  questions about the buffer you are typing in. That page is the only thing
+  somebody reads before installing, so it was advertising the wrong extension.
+  
+  No code changes. The README, `description`, `keywords` and `categories` live
+  inside the `.vsix`, so a listing that is wrong stays wrong until a version
+  carries the corrected one -- there is nowhere to edit it in the Marketplace.
+  Hence a patch whose whole content is text.
+
 ## 0.6.0
 
 ### Minor Changes
