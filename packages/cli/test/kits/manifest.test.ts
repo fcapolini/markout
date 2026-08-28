@@ -98,6 +98,39 @@ describe('manifestDirFor', () => {
     expect(manifestDirFor(docroot)).toBe(root);
   });
 
+  it('does not go looking outside a boundary it was given', () => {
+    // the editor passes the workspace folder. Without it, a docroot in a
+    // folder that happens to sit inside a larger repository installs kits
+    // into that repository -- which this repo's own fixture demonstrated by
+    // wanting to write into the extension's package
+    const root = temp();
+    fs.writeFileSync(path.join(root, 'package.json'), '{}');
+    const opened = path.join(root, 'opened');
+    const docroot = path.join(opened, 'markout');
+    fs.mkdirSync(docroot, { recursive: true });
+    expect(manifestDirFor(docroot)).toBe(root);
+    expect(manifestDirFor(docroot, opened)).toBe(docroot);
+  });
+
+  it('still takes a package.json inside the boundary', () => {
+    const root = temp();
+    const docroot = path.join(root, 'markout');
+    fs.mkdirSync(docroot);
+    fs.writeFileSync(path.join(root, 'package.json'), '{}');
+    expect(manifestDirFor(docroot, root)).toBe(root);
+  });
+
+  it('ignores a .markout found outside the boundary', () => {
+    const root = temp();
+    fs.mkdirSync(path.join(root, '.markout'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.markout', 'kits.json'), '{"kits":{}}');
+    const opened = path.join(root, 'opened');
+    const docroot = path.join(opened, 'markout');
+    fs.mkdirSync(docroot, { recursive: true });
+    expect(manifestDirFor(docroot)).toBe(root);
+    expect(manifestDirFor(docroot, opened)).toBe(docroot);
+  });
+
   it('falls back to the docroot itself', () => {
     // the bare-docroot case this whole feature exists for: HTML in a
     // directory, and that directory is the project

@@ -6,7 +6,8 @@ of pages, each there to show one thing.
 Note what is *not* here: a `package.json`, a config file, an install of any
 kind. The extension finds the docroot because the folder is called `markout`,
 which is the same convention the CLI uses — `markout` serves this directory
-and `markout build` compiles it into a sibling `dist/`.
+and `markout build` compiles it into a sibling `dist/`. The sidebar's Preview
+and Build do the same two things without a terminal.
 
 ## What to try
 
@@ -67,6 +68,48 @@ packages, and it shadowed the installed copy — deliberately, to show that two
 things claiming one root is refused rather than resolved. That refusal is
 asserted in `packages/core/test/kits.test.ts`, where it does not also have to
 be the first thing anyone opening this fixture sees.
+
+## The Markout sidebar
+
+The mark in the activity bar opens it. Everything below is what this fixture
+shows, and it is worth pressing F5 with the sidebar open rather than reading
+about it.
+
+**"Who is this for?"**, the first row, opens a page shipped inside the
+extension — not a link to github.com, so it describes the sidebar you are
+running and works with no network.
+
+**The kits are both listed as `— npm`, with their checkboxes locked on.** The
+development host runs from this repository, so `@markout-lang/std-kit` and
+`@markout-lang/bootstrap-kit` are found in its `node_modules`. That is the
+distinction the view is drawing: a kit npm installed shows because it *is*
+installed and you should be able to find it, and its checkbox cannot remove it
+because `package.json` and a lockfile own that one. A kit the sidebar
+installed would be removable, and would say a version rather than `— npm`.
+
+Which means this fixture does not demonstrate the interesting half of the
+checkbox. To see that, open a folder with a `markout/` directory in it and
+nothing else — the sidebar will offer this project's kits, tick one, and it
+lands in `.markout/kits/` with a pin in `.markout/kits.json`.
+
+**Preview** serves the pages and opens a browser. Note what did not happen:
+nothing looked for node on your PATH. It runs a bundled copy of the `markout`
+command on the copy of node the editor is already running, which is the whole
+reason this works for somebody who has neither node nor npm.
+
+It serves in `--client` mode, which is the delivery this mode is for: pages
+that render in the browser. So a `:server-` value or a datasource resolves on
+arrival rather than before the page is sent, exactly as it will once the
+output is deployed to a static host.
+
+**Build** writes `dist/` beside the docroot, with a `.gitignore` in it. That
+is a build markout chose the location of, so it tidies up after itself.
+
+**Where a tick would write.** This fixture has no `package.json`, so
+`.markout/` would go in `markout/` itself — the bare-docroot case, where the
+folder of pages is the project. The walk is bounded by the folder you opened;
+without that it would find this repository's `packages/vscode/package.json`
+and install kits into the extension's own package.
 
 ## The Problems panel
 
@@ -130,8 +173,12 @@ npm run package -w markout-vscode
 code --install-extension packages/vscode/markout-vscode-0.2.0.vsix --force
 ```
 
-It prints what went into the archive as it builds it — two bundles, the
-grammars, the icon, the README, the licence, and nothing else. Reload the
+It prints what went into the archive as it builds it — three bundles, the
+browser runtime, the grammars, the icons, the "Who is this for?" page, the
+README, the licence, and nothing else. The third bundle is the `markout`
+command itself, which the sidebar's Preview spawns as a child process; it
+carries a web server, and that is exactly why it is a separate file run in a
+separate process rather than something the editor loads. Reload the
 window afterwards. To go back to the development host alone:
 
 ```sh

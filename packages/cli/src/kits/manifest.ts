@@ -37,13 +37,22 @@ import { findManifest, MANIFEST_FILE, MARKOUT_DIR, type Manifest } from '@markou
  * is where a project's own files go, and that file is what marks one. Failing
  * BOTH, the docroot itself, which is the bare-docroot case this whole feature
  * exists for: HTML in a directory, and that directory is the project.
+ *
+ * `stopAt` bounds the walk, and the editor passes the workspace folder: a
+ * project is not something to go looking for OUTSIDE the folder somebody
+ * opened. Without it, a docroot in a folder that happens to sit inside a
+ * larger repository installs kits into that repository -- which the fixture
+ * in this repo demonstrated by wanting to write into the extension's own
+ * package. The CLI passes nothing, having no such boundary: you run it from
+ * the project.
  */
-export function manifestDirFor(docroot: string): string {
+export function manifestDirFor(docroot: string, stopAt?: string): string {
+  const root = path.resolve(docroot);
+  const stop = stopAt ? path.resolve(stopAt) : undefined;
   const found = findManifest(docroot);
-  if (found) {
+  if (found && (!stop || within(stop, found.dir))) {
     return found.dir;
   }
-  const root = path.resolve(docroot);
   let current = root;
   for (;;) {
     if (fs.existsSync(path.join(current, MARKOUT_DIR))) {
@@ -53,11 +62,17 @@ export function manifestDirFor(docroot: string): string {
       return current;
     }
     const parent = path.dirname(current);
-    if (parent === current) {
+    if (parent === current || current === stop) {
       return root;
     }
     current = parent;
   }
+}
+
+/** whether `dir` is `boundary` or inside it */
+function within(boundary: string, dir: string): boolean {
+  const rel = path.relative(boundary, dir);
+  return !rel.startsWith('..') && !path.isAbsolute(rel);
 }
 
 /**

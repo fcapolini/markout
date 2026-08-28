@@ -318,12 +318,16 @@ class KitsProvider implements vscode.TreeDataProvider<Row> {
    * turn off.
    */
   async refresh(lookUp = false) {
+    const folders = (vscode.workspace.workspaceFolders ?? []).map(f => f.uri.fsPath);
     const docroot = findDocroot(
-      (vscode.workspace.workspaceFolders ?? []).map(f => f.uri.fsPath),
+      folders,
       vscode.workspace.getConfiguration('markout').get<string | string[]>('docroot')
     );
     this.docroot = docroot;
-    this.dir = docroot ? manifestDirFor(docroot) : undefined;
+    // bounded by the folder that was opened: a checkbox here must not write
+    // into a repository somebody merely happens to be inside
+    const boundary = folders.find(f => docroot?.startsWith(f));
+    this.dir = docroot ? manifestDirFor(docroot, boundary) : undefined;
     await vscode.commands.executeCommand('setContext', 'markout.hasProject', !!docroot);
     if (!docroot || !this.dir) {
       this.rows = [];
