@@ -15,10 +15,12 @@ than built into it, and `@markout-lang/bootstrap-kit` puts Bootstrap's component
 behind tags of their own. A kit is ordinary markout, so there is no component
 API to learn beyond the language itself.
 
-This VS Code extension is its editor support: the compiler's answers, where
-you are typing. What is wrong with this page, where this name is declared,
-what is in scope here — from the same compiler that will serve the page, and
-over the buffer rather than the file on disk.
+This VS Code extension is two things. It is the compiler's answers where you
+are typing — what is wrong with this page, where this name is declared, what
+is in scope here, from the same compiler that will serve the page and over the
+buffer rather than the file on disk. And it is a **Markout view** that
+installs kits, previews the site and builds it, with no terminal and no npm
+anywhere in it.
 
 Markout claims no file suffix of its own. A page is a `.html` file like any
 other, and this extension **adds to** VS Code's HTML support rather than
@@ -50,6 +52,47 @@ HTML extension keep working exactly as they did.
   the `//` and `/* … */` comments a tag may carry between its attributes.
 - **Formatting** that re-indents a wrapped attribute list — and, on these
   files, only markout can. See below.
+- **A view of its own** — kits with checkboxes, Preview, and Build. See the
+  next section.
+
+## The Markout view
+
+The mark in the activity bar opens it, and everything in it works on a project
+that has installed nothing.
+
+**Kits, with checkboxes.** Tick one and it is fetched into `.markout/kits/`
+and pinned in `.markout/kits.json`; untick it and it goes. No npm is involved
+and none is needed — a kit is `.htm` and CSS, fetched over HTTPS and checked
+against the checksum the registry published. Markout's own kits are offered
+first; searching the whole registry is a separate step.
+
+A kit npm installed shows too, with its checkbox locked on: it *is* installed
+and you should be able to find it, but `package.json` and your lockfile own
+that one. And unticking a kit your pages still import is refused, with the
+pages named — a kit taken out from under a page that uses it renders nothing,
+with no error to say why.
+
+**Updates are offered, never applied.** A newer version shows as
+`1.0.0 → 1.1.0` with accept and decline beside it, and declining is remembered
+for that version, so the next release asks again. The number waiting is a
+badge on the icon. Two clones of your project therefore build the same thing.
+
+**Preview** serves your pages and opens them in a browser, reloading as you
+save. **Build** writes the finished site to `dist/`.
+
+Both work the way `markout build` does: the page is compiled and every value
+resolves in your browser, which is how a built site behaves once deployed. So
+the preview shows the page you are going to ship — and no kit's code runs on
+your machine, because nothing here renders one.
+
+Markout can also render a page [at build time or per
+request](https://github.com/fcapolini/markout/blob/main/docs/concepts/isomorphism.md).
+Both of those are Node executing your page, so they are a terminal's job and
+want Node installed. This view is for the delivery that does not.
+
+**Who is this for?**, the first row, opens a page shipped inside the
+extension explaining the two ways to install a kit and which is yours: npm if
+you have Node, these checkboxes if you do not.
 
 ## Formatting
 
@@ -146,9 +189,16 @@ not the only answer.
 
 ## Requirements
 
-None. The compiler is bundled, so the extension works on a project that has
-installed nothing — which is markout's delivery story: write the pages, run
-`markout ./markout`, done.
+None, and that is the point rather than a boast.
+
+The compiler is bundled, so diagnostics work on a project that has installed
+nothing. Installing a kit needs no npm: the extension fetches and unpacks it
+itself. Preview needs a server, and runs one on the copy of Node your editor
+is already running — so nothing looks for `node` on your PATH, and nothing has
+to be found there.
+
+Which means the whole of the above works on a machine with no Node, no npm and
+no toolchain: write the pages, tick a kit, press Preview.
 
 ---
 

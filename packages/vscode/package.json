@@ -2,7 +2,7 @@
   "name": "markout-vscode",
   "version": "0.6.0",
   "private": true,
-  "description": "Markout language support for VS Code: the compiler's diagnostics, in the editor",
+  "description": "Markout language support for VS Code: the compiler's diagnostics in the editor, and a view that installs kits, previews and builds without a terminal",
   "keywords": [
     "markout",
     "html",
@@ -10,7 +10,10 @@
     "ssr",
     "isomorphic",
     "language server",
-    "web components"
+    "web components",
+    "kits",
+    "no-build",
+    "static site"
   ],
   "displayName": "Markout",
   "publisher": "markout",
@@ -18,7 +21,8 @@
     "vscode": "^1.91.0"
   },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Formatters"
   ],
   "icon": "icon.png",
   "repository": {
