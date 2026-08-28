@@ -1478,6 +1478,23 @@
             </p>
           </div>
 
+          <!---
+            The fourth card, and the one that is not about typing. Everything
+            above answers "what does the editor know"; this answers "what can I
+            do without leaving it", which for somebody with no Node is the
+            difference between using Markout and reading about it.
+          -->
+          <div class="col-md-6 col-lg-4">
+            <h3 class="h5">And it installs your&nbsp;kits</h3>
+            <p class="text-body-secondary mb-0">
+              A view of its own: the kits this project uses, each a checkbox.
+              Tick one and it is fetched and pinned — no npm, no terminal, no
+              toolchain. Preview and Build are beside them, and the preview
+              runs on the copy of Node your editor is already running, so
+              nothing looks for one on your&nbsp;PATH.
+            </p>
+          </div>
+
         </div>
 
         <!---
@@ -1490,10 +1507,11 @@
           <div class="col-lg-8 text-center">
             <p class="text-body-secondary">
               The compiler is bundled, so it works on a project that has
-              installed nothing. And it adds to VS Code's HTML support rather
-              than replacing it: a page is still an
-              <code class="rule-code">html</code> document, so Emmet, tag
-              completion and every other HTML extension keep working as
+              installed nothing — and with the view above, a project that
+              installs nothing can still use kits, preview and build. It adds
+              to VS Code's HTML support rather than replacing it: a page is
+              still an <code class="rule-code">html</code> document, so Emmet,
+              tag completion and every other HTML extension keep working as
               they&nbsp;did.
             </p>
 
@@ -1572,8 +1590,25 @@
               <div class="col-12">
                 <code-card ::title="Install"
                            ::mono=${false}
-                           ::label="shell">
+                           ::label="shell"
+                           ::note>
 <pre class="mb-0"><code data-lang="sh">npm install -g @markout-lang/cli @markout-lang/bootstrap-kit</code></pre>
+                  <!---
+                    The alternative goes here rather than in a section of its
+                    own. Somebody reading an `npm install -g` line has just
+                    learned whether this is for them, and for a designer or a
+                    backend developer with no Node the honest answer is "not
+                    that line" -- which is worth saying while they are looking
+                    at it, not three screens later.
+                  -->
+                  <p :slot="note"
+                     class="mb-0">
+                    No Node? You don't need any. Install the
+                    <bs-link ::href="https://marketplace.visualstudio.com/items?itemName=markout.markout-vscode">VS
+                    Code extension</bs-link> instead, open a folder of HTML,
+                    and tick the kit you want in the Markout view — it fetches
+                    and pins it, and Preview and Build are beside it.
+                  </p>
                 </code-card>
               </div>
 

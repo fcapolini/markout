@@ -465,6 +465,9 @@ markout ./site
 
 Name the directory `markout/` and there is nothing to type at all: `markout`
 serves it, and `markout build` compiles it into `dist/` beside it.
+
+`markout add <kit>` fetches a kit and pins it, and `markout restore` fetches
+what a clone is missing — both without npm, for the case below and for CI.
 Everything else — building for a host that isn't Node, mounting the
 middleware in an application that has its own routes, and the error pages
 both modes serve — is in **[running a page](docs/reference/cli.md)**.
@@ -483,6 +486,43 @@ end a tag.
 The compiler is bundled, so it works on a project that has installed
 nothing.
 
+It also puts a **Markout view** in the activity bar: the kits this project
+uses, each a checkbox, with Preview and Build beside them. That is the next
+section.
+
+## Without Node at all
+
+The language is pitched at people who write HTML — designers who code,
+backend developers with a templating layer they would rather not have, anyone
+maintaining a server-rendered application. Most of them have no Node, and
+none of them want any.
+
+So the editor extension does not ask for one. Install it, open a folder of
+HTML, and:
+
+- **Tick a kit** and it is fetched and pinned. No npm: a kit is `.htm` and
+  CSS, fetched over HTTPS and checked against the checksum the registry
+  published. It lands in `.markout/kits/`, which the compiler resolves as
+  one more rung on the walk it already does — so `markout build` in a
+  terminal, a teammate's checkout and CI all read the same tree.
+- **Press Preview** and the pages are served, live, reloading as you save.
+  It runs on the copy of Node your editor is already running, so nothing
+  looks for `node` on a PATH and nothing has to be there.
+- **Press Build** and the finished site is written to `dist/`.
+
+`.markout/kits.json` pins exact versions, so two clones build the same thing,
+and an update is offered rather than applied. `markout restore` is what a
+clone or a CI job runs to fill in the files, which is the one command the
+whole arrangement needs from a terminal — and it needs Node only on the
+machine that runs it, which does not have to be yours.
+
+What this mode delivers is the third of the three above: pages that render in
+the browser. Prerendered and served delivery are Node executing your page, so
+they stay a terminal's job. [Working without
+Node](docs/design/without-node.md) is why it is shaped this way, and
+[the sidebar](docs/reference/vscode-extension-sidebar.md) is the page for
+somebody using it.
+
 ## How it's built
 
 A TypeScript monorepo on npm workspaces, MIT licensed.
@@ -492,11 +532,11 @@ A TypeScript monorepo on npm workspaces, MIT licensed.
 | [`packages/core`](packages/core/) | the compiler and the client runtime — HTML in, a scope tree with every name resolved out, plus the payload of expressions and their dependency lists that a page comes alive from |
 | [`packages/cli`](packages/cli/) | `markout <dir>` to serve, `markout build <dir> <out>` to compile ahead of time |
 | [`packages/express`](packages/express/) | the same render as middleware, for an application that has its own routes |
-| [`packages/vscode`](packages/vscode/) | the editor integration |
+| [`packages/vscode`](packages/vscode/) | the editor integration, and the view that installs kits, previews and builds |
 | [`kits/`](kits/) | `bootstrap-kit` (every component on Bootstrap's 5.3 cheatsheet, one file each) and `std-kit`, both written in Markout rather than in TypeScript |
 | [`sites/site`](sites/site/) | markout.dev and its demos, written in Markout and served by the Express package |
 
-2,248 tests across 103 files, with coverage and CodeQL on every push.
+2,696 tests across 134 files, with coverage and CodeQL on every push.
 
 Three decisions, rather than the rest of the inventory:
 
