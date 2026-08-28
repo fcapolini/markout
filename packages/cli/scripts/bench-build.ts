@@ -25,8 +25,8 @@
 // compiler in-process, and prints.
 import { execSync } from 'node:child_process';
 import path from 'node:path';
+import { build } from '@markout-lang/core';
 import fs from 'node:fs';
-import { build } from '../src/server/build';
 
 const REPEATS = 5; // + 1 discarded warm-up
 
@@ -108,7 +108,7 @@ async function markoutCompileOnly(): Promise<number> {
   const result = await build({ docroot: BENCH, outdir, pages: [PAGE], prerender: false });
   const ms = performance.now() - t;
   if (result.errors.length) {
-    throw new Error(`markout build failed: ${result.errors.map((e) => e.msg ?? e).join('; ')}`);
+    throw new Error(`markout build failed: ${result.errors.map((e) => `${e.pathname}: ${e.error.msg}`).join('; ')}`);
   }
   fs.rmSync(outdir, { recursive: true, force: true });
   return ms;

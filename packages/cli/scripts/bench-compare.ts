@@ -9,9 +9,8 @@ import { execSync, spawn, ChildProcessWithoutNullStreams } from 'node:child_proc
 import path from 'node:path';
 import { chromium, Browser, Page } from 'playwright';
 import { gzipSync } from 'node:zlib';
-import { contains } from '@markout-lang/core';
+import { build } from '@markout-lang/core';
 import { Server } from '../src/server';
-import { build } from '../src/server/build';
 import http from 'node:http';
 import fs from 'node:fs';
 
@@ -516,6 +515,17 @@ async function measureFirstPaint(
 // documentation site, whose content is genuinely fixed at build time; a
 // catalog's rows are the kind of thing that changes without a redeploy, and
 // freezing them into the artifact is not what anyone would ship.
+/**
+ * The stylesheet the restricted build does not copy.
+ *
+ * `pages` restricts the build, which skips the asset copy -- so this is
+ * carried across by hand, and it is named rather than written twice because
+ * the server below has to know it is one of the files it serves. Leading
+ * slash, like everything else the build reports and everything a request
+ * asks for -- a key that did not match would be a 404 nobody looked for.
+ */
+const CATALOG_CSS = '/markout-catalog/app.css';
+
 async function buildMarkoutClientMode(): Promise<{ dir: string; stop: () => void; port: number }> {
   const docroot = path.resolve(__dirname, '../bench');
   // beside bench/, not inside it: build refuses an outdir under the docroot,
@@ -525,27 +535,39 @@ async function buildMarkoutClientMode(): Promise<{ dir: string; stop: () => void
   const pages = Object.values(PAGE_FOR_ROWS).map((f) => `/markout-catalog/${f}`);
   const result = await build({ docroot, outdir: dir, pages, prerender: false });
   if (result.errors.length) {
-    throw new Error(`markout build failed: ${result.errors.map(e => e.msg ?? e).join('; ')}`);
+    throw new Error(`markout build failed: ${result.errors.map(e => `${e.pathname}: ${e.error.msg}`).join('; ')}`);
   }
   // `pages` restricts the build, which also skips the asset copy -- and the
   // measure script refuses a page whose stylesheet did not apply, correctly.
   fs.copyFileSync(
-    path.join(docroot, 'markout-catalog/app.css'),
-    path.join(dir, 'markout-catalog/app.css'),
+    path.join(docroot, ...CATALOG_CSS.split('/')),
+    path.join(dir, ...CATALOG_CSS.split('/')),
   );
+
+  /**
+   * What this server will serve, by the pathname it answers at.
+   *
+   * The build has just told us every file it wrote, so a request is a LOOKUP
+   * and never a path: `/../../../../etc/passwd` is a key nothing has, which
+   * is a 404 and not a rule that had to be got right.
+   *
+   * That is the difference from guarding the traversal, which is what this
+   * did before. A guard is a claim about every input; a map is a claim about
+   * the output, and this server exists to serve exactly one build's output.
+   * It also means CodeQL has nothing to flag rather than a sanitiser it
+   * cannot see through -- but the reason to do it is that it is the smaller
+   * thing to be right about.
+   */
+  const served = new Map<string, string>();
+  for (const pathname of [...result.pages, result.runtime, CATALOG_CSS]) {
+    served.set(pathname, path.join(dir, ...pathname.split('/')));
+  }
 
   const server = http.createServer((req, res) => {
     const rel = decodeURIComponent((req.url || '/').split('?')[0]);
-    // A request carries a PATHNAME, and `/../` in one is an escape attempt
-    // rather than a lookup -- `path.join` would resolve it and happily read
-    // whatever is above `dir`. The real server has this rule; so does the
-    // build; this one is three lines of `http` serving a directory for one
-    // benchmark, which is a reason for it to be small and not a reason for
-    // it to serve /etc. `contains` is core's own, the same check both of
-    // the others make.
-    const file = path.resolve(dir, '.' + (rel.startsWith('/') ? rel : `/${rel}`));
-    if (!contains(dir, file)) {
-      res.statusCode = 403;
+    const file = served.get(rel);
+    if (!file) {
+      res.statusCode = 404;
       res.end();
       return;
     }
