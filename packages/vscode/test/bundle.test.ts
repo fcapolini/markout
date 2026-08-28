@@ -65,6 +65,19 @@ describe('what travels beside the bundles', () => {
     expect(fs.existsSync(path.join(PACKAGE, declared))).toBe(true);
   });
 
+  it('titles the view as the container, so the header is not doubled', () => {
+    // a container and a view with different names renders as
+    // "Markout: Kits". The same name renders once, which is what a view
+    // holding everything the extension does should say
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(PACKAGE, 'package.json'), 'utf8')
+    );
+    const container = manifest.contributes.viewsContainers.activitybar[0];
+    const view = manifest.contributes.views[container.id][0];
+    expect(view.name).toBe(container.title);
+    expect(view.contextualTitle).toBe(container.title);
+  });
+
   it('draws the icon as outline, to sit with the glyphs beside it', () => {
     // every other icon in the activity bar is uniform-weight line art; a
     // filled mark reads as a blob among them

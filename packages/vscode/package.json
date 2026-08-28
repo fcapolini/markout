@@ -131,7 +131,7 @@
       "markout": [
         {
           "id": "markout.kits",
-          "name": "Kits",
+          "name": "Markout",
           "icon": "media/activity-icon.svg",
           "contextualTitle": "Markout"
         }
