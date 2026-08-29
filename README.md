@@ -397,23 +397,33 @@ Which leaves Markout doing what it does everywhere else. The demo is a pricing
 page, and everything that moves on it is one of three things:
 
 ```html
-<html :hue=${259}>
+<html :hue=${259}
+      :yearly=${false}
+      :plans=${[
+        { id: 'solo', name: 'Solo' },
+        { id: 'team', name: 'Team' },
+      ]}>
 
-<style>
-  :root {
-    --color-brand-500: oklch(0.623 0.214 ${hue});
-    --color-brand-600: oklch(0.546 0.245 ${hue});
-  }
-</style>
+<head>
+  <style>
+    :root {
+      --color-brand-500: oklch(0.623 0.214 ${hue});
+      --color-brand-600: oklch(0.546 0.245 ${hue});
+    }
+  </style>
+</head>
 
-<button class="px-5 py-2 rounded-full
-        ${yearly ? 'bg-brand-600' : 'text-slate-600'}">
-  Yearly
-</button>
+<body>
+  <button class="px-5 py-2 rounded-full
+                 ${yearly ? 'bg-brand-600' : 'text-slate-600'}"
+          :on-click=${() => yearly = !yearly}>Yearly</button>
 
-<article :for-each=${plans} :for-key=${data.id}>
-  <h2 class="text-lg font-semibold">${data.name}</h2>
-</article>
+  <article :for-each=${plans} :for-key=${data.id}>
+    <h2 class="text-lg font-semibold">${data.name}</h2>
+  </article>
+</body>
+
+</html>
 ```
 
 Tailwind compiles `bg-brand-600` to `var(--color-brand-600)`, so moving the
