@@ -1708,24 +1708,25 @@
               </table>
             </div>
 
-            <bs-alert ::variant="secondary"
-                      class+="mt-4 mb-0 pb-1">
-              <p><strong class="d-block mb-1">And the honest costs.</strong></p>
+            <bs-card class+="bg-body-secondary mt-4"
+                     ::bodyExtra="p-4">
+              <p class="fw-semibold mb-3">And the honest costs.</p>
+
               <p>
                 Alpine is mature, and its ecosystem, community and documentation
                 are far larger than Markout's. It also asks for strictly less to
                 get started — one <code class="rule-code">&lt;script&gt;</code>
-                tag, on any host, behind any backend — where Markout wants Node in
-                the request path or
+                tag, on any host, behind any backend — where Markout wants Node
+                in the request path or
                 <code class="rule-code">markout build ./my-site ./dist</code>.
               </p>
-              <p>
+
+              <p class="mb-0">
                 htmx is solving a different problem — server-driven UI — and
-                composes fine with either.
-                Markout's claim is narrower: one source that is modular, reactive,
-                and renders in both places.
+                composes fine with either. Markout's claim is narrower: one
+                source that is modular, reactive, and renders in both places.
               </p>
-            </bs-alert>
+            </bs-card>
 
           </div>
         </div>
