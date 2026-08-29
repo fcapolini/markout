@@ -274,7 +274,8 @@ that one is zero or many.
 
 The test is `!= null`, the same rule `:for-each` states for an empty list —
 `0` and `''` are data and render. A page that means "if this is true" rather
-than "if this is here" wants a directive that says so; there isn't one yet.
+than "if this is here" wants `:if` above, which tests truthiness and binds
+nothing.
 
 Three things follow from it being one rather than many:
 
@@ -288,9 +289,9 @@ Three things follow from it being one rather than many:
   it survives a round trip, without needing a key to say so.
 - **`:for-key` is refused.** A key tells replicas apart, and there are none.
 
-`:for-as` works as it does on `:for-each`, and the two may not appear on the
-same element: they are one question — how many times does this render — and
-an element answers it once.
+`:for-as` works as it does on `:for-each`. `:for-each`, `:for-data` and `:if`
+may not appear together on the same element: they are one question — how many
+times does this render — and an element answers it once.
 
 ## Nested replication
 
