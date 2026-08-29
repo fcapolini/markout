@@ -23,9 +23,9 @@
   -->
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 
-  <title>Markout — application logic, directly in your Bootstrap page</title>
+  <title>Markout — application logic, directly in your HTML page</title>
   <meta name="description"
-        content="Markout makes HTML modular, reactive and isomorphic. Start with an ordinary Bootstrap page and add application logic where it belongs: in the markup.">
+        content="Markout makes HTML modular, reactive and isomorphic. Add application logic where it belongs — in the markup — on a page written with Bootstrap, Tailwind, or CSS of your own.">
 
   <!---
     Where this page says it lives, and what a link to it unfurls into.
@@ -42,14 +42,14 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Markout">
   <meta property="og:url" content="https://markout.dev/">
-  <meta property="og:title" content="Markout — application logic, directly in your Bootstrap page">
+  <meta property="og:title" content="Markout — application logic, directly in your HTML page">
   <meta property="og:description"
-        content="Markout makes HTML modular, reactive and isomorphic. Start with an ordinary Bootstrap page and add application logic where it belongs: in the markup.">
+        content="Markout makes HTML modular, reactive and isomorphic. Add application logic where it belongs — in the markup — on a page written with Bootstrap, Tailwind, or CSS of your own.">
   <meta property="og:image" content="https://markout.dev/social-card.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt"
-        content="Markout — add application logic directly to your Bootstrap page">
+        content="Markout — add application logic directly to your HTML page">
   <meta name="twitter:card" content="summary_large_image">
 
   <style>
@@ -263,6 +263,7 @@
       already resolve avoids having to out-`!important` them.
     */
     .card.bg-body-tertiary,
+    .card.bg-body-secondary,
     .table-responsive.border {
       --bs-border-color: rgba(var(--bs-emphasis-color-rgb), .1);
       --bs-card-border-color: rgba(var(--bs-emphasis-color-rgb), .1);
@@ -371,16 +372,16 @@
         <div class="row align-items-center gy-5 gx-0 gx-sm-5">
 
           <div class="col-lg-7">
-            <page-eyebrow class+="mb-3">Bootstrap + Markout</page-eyebrow>
+            <page-eyebrow class+="mb-3">Reactive HTML</page-eyebrow>
 
             <h1 class="display-4 fw-bold lh-1 mb-4">
-              Add application logic directly to your Bootstrap&nbsp;page.
+              Add application logic directly to your HTML&nbsp;page.
             </h1>
 
             <p class="lead text-body-secondary mb-4">
-              Markout makes HTML modular, reactive and isomorphic. Your Bootstrap
-              markup can stay exactly what it is — it just gains the ability to hold
-              behavior.
+              Markout makes HTML modular, reactive and isomorphic. Bootstrap,
+              Tailwind, or CSS of your own — whatever your markup already is, it
+              stays exactly that, and gains the ability to hold behavior.
             </p>
 
             <p class="fs-5 mb-4">
@@ -423,10 +424,64 @@
       </div>
     </header>
 
+    <!---
+      The claim, before the page spends eleven sections proving it. Every
+      one of them is an instance of this: the Bootstrap kit is what the
+      argument looks like when it is carried out, and it reads as a feature
+      list rather than as evidence unless the thing it is evidence FOR has
+      already been said.
+    -->
+
+    <section id="two-choices"
+             class="py-5 bg-body-tertiary">
+      <div class="container py-lg-4">
+
+        <div class="row justify-content-center text-center">
+          <div class="col-lg-9">
+
+            <h2 class="display-6 fw-bold mb-3">
+              Your CSS framework and your app framework are separate choices
+            </h2>
+
+            <p class="lead text-body-secondary mb-4">
+              Ant Design means React. Vuetify means Vue. PrimeNG means Angular.
+              Pick a component library and you have picked a framework too — and
+              from then on neither decision can be revisited without the other.
+            </p>
+
+            <p class="fs-5">
+              Those are separable concerns. A CSS framework is a markup
+              convention; a web component library is a set of custom elements.
+              Neither needs a framework at all — they need a way to pass values
+              in, set non-string properties, and listen&nbsp;for&nbsp;events.
+            </p>
+
+          </div>
+        </div>
+
+        <div class="row justify-content-center mt-4">
+          <div class="col-lg-9">
+            <bs-card class+="bg-body-secondary"
+                     ::align="center"
+                     ::bodyExtra="p-4">
+              <p class="mb-0">
+                Markout around Bootstrap, Tailwind or Shoelace keeps both
+                choices open: change how the page is put together without
+                touching the components, or change the components without
+                touching&nbsp;the&nbsp;logic. The rest of this page is that
+                claim, carried&nbsp;out.
+              </p>
+            </bs-card>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
     <!--- Before / after: the boilerplate case -->
 
     <section id="boilerplate"
-             class="py-5 bg-body-tertiary">
+             class="py-5">
       <div class="container py-lg-4">
 
         <div class="row justify-content-center text-center mb-5">
@@ -548,7 +603,7 @@
     <!--- Bootstrap Kit -->
 
     <section id="kit"
-             class="py-5">
+             class="py-5 bg-body-tertiary">
       <div class="container py-lg-4">
 
         <div class="row align-items-center gy-5 gx-0 gx-sm-5">
@@ -578,7 +633,7 @@
               beyond the markup itself.
             </p>
 
-            <bs-card class+="bg-body-tertiary mt-4"
+            <bs-card class+="bg-body-secondary mt-4"
                      ::bodyExtra="p-4">
               <p class="mb-0">
                 Every component is a <code class="rule-code">bs-</code> tag
@@ -643,7 +698,7 @@
               work in the before/after above.
             </p>
 
-            <bs-card class+="h-100 bg-body-tertiary"
+            <bs-card class+="h-100 bg-body-secondary"
                      ::border="primary-subtle">
               <span class="fw-semibold">…and the next one you write</span>
               <p class="text-body-secondary small mb-0 mt-2">
@@ -698,7 +753,7 @@
     <!--- Bootstrap, but reactive -->
 
     <section id="reactive"
-             class="py-5 bg-body-tertiary">
+             class="py-5">
       <div class="container py-lg-4">
 
         <div class="row justify-content-center text-center mb-5">
@@ -833,7 +888,7 @@
     <!--- Conditionals -->
 
     <section id="conditionals"
-             class="py-5">
+             class="py-5 bg-body-tertiary">
       <div class="container py-lg-4">
 
         <div class="row justify-content-center text-center mb-5">
@@ -912,7 +967,7 @@
     <!--- App-specific kits -->
 
     <section id="design-system"
-             class="py-5 bg-body-tertiary">
+             class="py-5">
       <div class="container py-lg-4">
 
         <div class="row justify-content-center text-center mb-5">
@@ -1024,7 +1079,7 @@
     <!--- The language -->
 
     <section id="language"
-             class="py-5">
+             class="py-5 bg-body-tertiary">
       <div class="container py-lg-4">
 
         <div class="row justify-content-center text-center mb-5">
@@ -1116,7 +1171,7 @@
 
         <div class="row justify-content-center mt-5">
           <div class="col-lg-9">
-            <bs-card class+="bg-body-tertiary"
+            <bs-card class+="bg-body-secondary"
                      ::align="center"
                      ::bodyExtra="p-4">
               <p class="mb-3">
@@ -1139,7 +1194,7 @@
     <!--- Isomorphic -->
 
     <section id="isomorphic"
-             class="py-5 bg-body-tertiary">
+             class="py-5">
       <div class="container py-lg-4">
 
         <div class="row align-items-center gy-5 gx-0 gx-sm-5">
@@ -1210,47 +1265,116 @@
       </div>
     </section>
 
-    <!--- Two decisions -->
+    <!--- Web components -->
 
-    <section class="py-5">
+    <!---
+      The other half of "separate choices", and the half nothing else covers.
+      A custom element library needs less from a framework than a CSS one
+      does -- the browser already renders it -- and gets it from nowhere: the
+      three things it wants are the three attributes below, and a page that
+      has them needs no framework at all.
+    -->
+
+    <section id="web-components"
+             class="py-5 bg-body-tertiary">
       <div class="container py-lg-4">
 
-        <div class="row justify-content-center text-center">
-          <div class="col-lg-9">
+        <div class="row align-items-center gy-5 gx-0 gx-sm-5">
+
+          <div class="col-lg-6">
+            <page-eyebrow ::variant="primary"
+                          class+="mb-3">Web components</page-eyebrow>
 
             <h2 class="display-6 fw-bold mb-3">
-              Your CSS framework and your app framework are separate choices
+              Custom elements, with nothing above&nbsp;them
             </h2>
 
-            <p class="lead text-body-secondary mb-4">
-              Ant Design means React. Vuetify means Vue. PrimeNG means Angular.
-              Pick a component library and you have picked a framework too — and
-              from then on neither decision can be revisited without the other.
+            <p class="lead text-body-secondary">
+              A custom element is already a component — the browser renders it
+              with no help. What plain HTML can't do is hand it an array, flip a
+              boolean attribute, or hear it&nbsp;say&nbsp;something&nbsp;back.
             </p>
 
-            <p class="fs-5">
-              Those are separable concerns. A CSS framework is a markup
-              convention; a web component library is a set of custom elements.
-              Neither needs a framework at all — they need a way to pass values
-              in, set non-string properties, and listen&nbsp;for&nbsp;events.
+            <p>
+              That is the whole reason a Shoelace or Web Awesome page ends up
+              with a framework on top of it, and it is a lot of machinery to
+              take on for three missing verbs. Markout has the three, spelled
+              so that which one you meant is never inferred.
             </p>
 
+            <div class="row g-4 mt-1">
+              <div class="col-sm-4">
+                <h3 class="h5"><code class="rule-code">:prop-</code></h3>
+                <p class="text-body-secondary small mb-0">
+                  Assigns the JS property, so an element can take an array or an
+                  object instead of the string an attribute would have
+                  flattened it into.
+                </p>
+              </div>
+
+              <div class="col-sm-4">
+                <h3 class="h5"><code class="rule-code">:attr-</code></h3>
+                <p class="text-body-secondary small mb-0">
+                  Controls whether the attribute is <em>there</em>, which is the
+                  only question <code class="rule-code">disabled</code>,
+                  <code class="rule-code">open</code> and the rest of the boolean
+                  family are asking.
+                </p>
+              </div>
+
+              <div class="col-sm-4">
+                <h3 class="h5"><code class="rule-code">:on-</code></h3>
+                <p class="text-body-secondary small mb-0">
+                  Listens for the event type verbatim, custom names included:
+                  <code class="rule-code">sl-change</code> is an event like
+                  <code class="rule-code">click</code> is, and needs no
+                  registration.
+                </p>
+              </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mt-4">
+              <bs-link ::href="/demos/shoelace/"
+                       ::button
+                       ::variant="primary">The Shoelace demo</bs-link>
+
+              <bs-link ::href="/demos/webawesome/"
+                       ::button
+                       ::variant="secondary"
+                       ::outline>The Web Awesome demo</bs-link>
+            </div>
           </div>
-        </div>
 
-        <div class="row justify-content-center mt-4">
-          <div class="col-lg-9">
-            <bs-card class+="bg-body-tertiary"
-                     ::align="center"
-                     ::bodyExtra="p-4">
-              <p class="mb-0">
-                Markout around Bootstrap, Tailwind or Shoelace keeps both
-                choices open: change how the page is put together without
-                touching the components, or change the components without
-                touching&nbsp;the&nbsp;logic.
+          <div class="col-lg-6">
+            <code-card ::title="demos/shoelace/index.html"
+                       ::label="HTML"
+                       ::note>
+<pre class="mb-0"><code data-lang="html">&lt;sl-select multiple
+           :prop-value=${seasons}
+           :on-sl-change=${e =&gt; seasons = e.target.value}&gt;
+  &lt;sl-option :for-each=${allSeasons}
+             value=${data}&gt;${data}&lt;/sl-option&gt;
+&lt;/sl-select&gt;
+
+&lt;sl-card :for-each=${inSeason} :for-key=${data.id}&gt;
+  &lt;h3&gt;${data.name}&lt;/h3&gt;
+
+  &lt;sl-button :attr-disabled=${inBasket(data)}
+             :on-click=${() =&gt; basket = [...basket, data]}&gt;
+    Add to basket
+  &lt;/sl-button&gt;
+&lt;/sl-card&gt;</code></pre>
+              <p :slot="note"
+                 class="mb-0">
+                <code class="rule-code">sl-select</code> with
+                <code class="rule-code">multiple</code> holds an array, which an
+                attribute cannot carry — so it is set as a property. No wrapper
+                component, no registration, no adapter package: these are the
+                elements Shoelace ships, on the page as they come.
               </p>
-            </bs-card>
+            </code-card>
           </div>
+
         </div>
 
       </div>
@@ -1259,7 +1383,7 @@
     <!--- Compared to what you'd otherwise reach for -->
 
     <section id="compared"
-             class="py-5 bg-body-tertiary">
+             class="py-5">
       <div class="container py-lg-4">
 
         <div class="row justify-content-center text-center mb-5">
@@ -1269,7 +1393,7 @@
             </h2>
 
             <p class="lead text-body-secondary">
-              These are the tools a Bootstrap page usually picks up when it needs
+              These are the tools an HTML page usually picks up when it needs
               behavior, so here is the honest comparison.
             </p>
           </div>
@@ -1370,6 +1494,22 @@
                   <tr>
                     <th scope="row"
                         class="fw-normal text-body-secondary">
+                      Non-string values into a custom element
+                    </th>
+                    <td class="text-body-secondary">
+                      <code class="rule-code">x-bind</code> writes attributes;
+                      a property means reaching for
+                      <code class="rule-code">$el</code>
+                    </td>
+                    <td class="text-body-secondary">&mdash;</td>
+                    <td class="fw-semibold">
+                      <code class="rule-code">:prop-name=${…}</code>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <th scope="row"
+                        class="fw-normal text-body-secondary">
                       Parametric CSS
                     </th>
                     <td class="text-body-secondary">
@@ -1423,7 +1563,7 @@
     <!--- Editor support -->
 
     <section id="editor"
-             class="py-5">
+             class="py-5 bg-body-tertiary">
       <div class="container py-lg-4">
 
         <div class="row justify-content-center text-center mb-5">
