@@ -18,7 +18,10 @@ Markout is an HTML extension that adds **modularity**, **reactivity** and
 Framework-shaped features live in *kits*, written in Markout itself rather
 than built into the language. You can use the ones that ship, the
 [standard kit](kits/std-kit/) and [`bootstrap-kit`](kits/bootstrap-kit/)
-(Bootstrap 5.3 as components), or write your own.
+(Bootstrap 5.3 as components), or write your own. A kit is worth writing
+where there is mechanical markup to lift out;
+[Tailwind](sites/site/demos/tailwind/index.html) has none to lift, being
+classes, and works as it comes.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/orbit-dark.png">
@@ -181,6 +184,34 @@ NOTE: `<html>`, `<head>`, and `<body>` always have their own scopes and by defau
 NOTE: `:class-` prefixes "class attributes", which dynamically add/remove a CSS class name depending on their value (if a value is unspecified as in this example, it's taken as `true`)
 
 NOTE: `<:import>` is only allowed in page `<head>` (or recursively in imported fragments), so imported fragments can rely on their root attributes being available as `head` scope values
+
+## Two decisions, not one
+
+This is the argument for why you are on a CSS framework in the first place,
+rather than an argument about what to use for logic. Choosing a framework
+today usually settles a second question at the same time: which UI components
+you get to use. Ant Design and MUI mean React,
+Vuetify means Vue, PrimeNG means Angular. Teams routinely adopt a framework
+they have no particular opinion about because the component library they
+need exists only there — and from then on neither decision can be revisited
+without the other.
+
+Those are separable concerns. A CSS framework is a markup convention; a web
+component library is a set of custom elements. Neither needs a framework at
+all. What they need is a way to pass values in, set properties that aren't
+strings, and listen to events — which is what `:attr-x`, `:prop-x` and
+`:on-x` are. (It's also why React needed wrapper packages to consume custom
+elements for most of its life.)
+
+So Markout wrapped around Bootstrap, Tailwind or Shoelace keeps both choices
+open: change how the page is put together without touching the components,
+or change the components without touching the logic. Componentization,
+next, is that claim carried out on a CSS framework; web components, further
+down, is the same claim on a component library.
+
+NOTE: the honest cost — the framework-neutral component ecosystem is
+smaller and shallower than React's. Decoupling buys freedom at the price of
+reach, and that trade is only worth it if the components you need exist
 
 ## Componentization
 
@@ -350,6 +381,58 @@ NOTE: the other two moments are `:did-attach` and `:will-detach`, which fire
 as markup enters and leaves the page rather than as the scope is built and
 destroyed — the pair a region that comes and goes needs
 
+## Web components, with nothing above them
+
+A custom element is already a component: the browser renders it with no help
+from anybody. What plain HTML cannot do is hand it an array, flip a boolean
+attribute, or hear it say something back — which is the whole reason a
+Shoelace or Web Awesome page ends up with a framework on top of it, and a lot
+of machinery to take on for three missing verbs.
+
+Markout has the three, spelled apart so that which one you meant is never
+inferred from the shape of a value:
+
+- `:prop-name=${...}` assigns the JS property, so an element can take an
+  array or an object rather than the string an attribute would have
+  flattened it into.
+- `:attr-name=${...}` controls whether the attribute is *there*, which is the
+  only question `disabled`, `open` and the rest of the boolean family are
+  asking.
+- `:on-name=${...}` listens for the event type verbatim, custom names
+  included: `sl-change` is an event the way `click` is, and needs nothing
+  registered for it.
+
+```html
+<sl-select multiple
+           :prop-value=${seasons}
+           :on-sl-change=${e => seasons = e.target.value}>
+  <sl-option :for-each=${allSeasons}
+             value=${data}>${data}</sl-option>
+</sl-select>
+
+<sl-card :for-each=${inSeason} :for-key=${data.id}>
+  <h3>${data.name}</h3>
+
+  <sl-button :attr-disabled=${inBasket(data)}
+             :on-click=${() => basket = [...basket, data]}>
+    Add to basket
+  </sl-button>
+</sl-card>
+```
+
+`<sl-select multiple>` holds an array, which an attribute cannot carry, so it
+is set as a property instead. There is no wrapper component, no registration
+step and no adapter package: those are the elements Shoelace ships, on the
+page as they come.
+[The Shoelace demo](https://markout.dev/demos/shoelace/) ·
+[the Web Awesome one](https://markout.dev/demos/webawesome/) ·
+[their sources](sites/site/demos/)
+
+NOTE: `:prop-` is browser-only and is skipped when the page renders on the
+server, a property assignment being something only a live DOM has. The
+markup around it renders as it always does, so a page built out of custom
+elements is served as HTML like any other
+
 ## If you're already reaching for Alpine or htmx
 
 These are the tools a page usually picks up when it needs behavior, so here
@@ -363,6 +446,7 @@ is the honest comparison rather than one that flatters us.
 | Content present in the served HTML | no, `x-cloak` hides the gap | yes, the server wrote it | yes, served or prerendered |
 | Same source renders on the server | no, client only | server owns the HTML | yes |
 | Reusable components in markup | no — `x-data` reuses behavior; markup comes from the server | server-side partials | `<:define>` + `<:slot>` |
+| Non-string values into a custom element | `x-bind` writes attributes; a property means reaching for `$el` | n/a | `:prop-name=${...}` |
 | Parametric CSS | inline styles, or CSS variables set inline | whatever the server renders | `${...}` inside `<style>` |
 | Interaction without a server round-trip | yes | no, by design | yes |
 
@@ -389,32 +473,6 @@ anybody. It is one app, at four sizes, on one machine, written by the
 people who wrote one of the five entrants. We keep it to find out which
 columns Markout needs work in, and those are the columns worth your
 attention there.
-
-## Two decisions, not one
-
-This is the argument for why you are on a CSS framework in the first place,
-rather than an argument about what to use for logic. Choosing a framework
-today usually settles a second question at the same time: which UI components
-you get to use. Ant Design and MUI mean React,
-Vuetify means Vue, PrimeNG means Angular. Teams routinely adopt a framework
-they have no particular opinion about because the component library they
-need exists only there — and from then on neither decision can be revisited
-without the other.
-
-Those are separable concerns. A CSS framework is a markup convention; a web
-component library is a set of custom elements. Neither needs a framework at
-all. What they need is a way to pass values in, set properties that aren't
-strings, and listen to events — which is what `:attr-x`, `:prop-x` and
-`:on-x` are. (It's also why React needed wrapper packages to consume custom
-elements for most of its life.)
-
-So Markout wrapped around Bootstrap, Tailwind or Shoelace keeps both choices
-open: change how the page is put together without touching the components,
-or change the components without touching the logic.
-
-NOTE: the honest cost — the framework-neutral component ecosystem is
-smaller and shallower than React's. Decoupling buys freedom at the price of
-reach, and that trade is only worth it if the components you need exist
 
 ## Three ways to deliver a page
 
