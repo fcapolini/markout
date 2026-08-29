@@ -1388,46 +1388,52 @@
 
         </div>
 
-        <bs-alert ::variant="secondary"
-                  class+="mt-5 mb-0 pb-1">
-          <p>
-            <strong class="d-block mb-1">
-              And the one thing a scanner cannot see.
-            </strong>
-          </p>
-          <p>
-            Tailwind finds utilities by reading files for candidate strings —
-            raw text, not parsed HTML — so a literal inside
-            <code class="rule-code">${…}</code> is found as readily as one in a
-            <code class="rule-code">class</code> attribute, both branches of a
-            ternary included. What it cannot see is Markout's own toggle:
-            <code class="rule-code">:class-ring-2=${…}</code> spells the utility
-            in the attribute <em>name</em>, and
-            <code class="rule-code">class-ring-2</code> is not a utility.
-          </p>
-          <p>
-            So the compiler is asked rather than guessed at.
-            <code class="rule-code">markout build --class-manifest</code> writes
-            every class a page's toggles can apply into the page itself, as
-            literal class names a scanner already knows how to read;
-            <code class="rule-code">--classes-only</code> writes one file for
-            the whole site instead and skips rendering, which makes it quick.
-            Point your scanner at the result and the toggles are generated like
-            everything else — resolved through
-            <code class="rule-code">&lt;:import&gt;</code> and treeshaken, so a
-            kit's toggles are included without your naming the kit, which a
-            regex over your sources could do neither of.
-          </p>
-          <p>
-            The demo above is built that way:
-            <code class="rule-code">npm run build:tailwind</code> runs the
-            manifest build and then <code class="rule-code">tailwindcss</code>.
-            And it is named for the page rather than for the vendor — a page
-            declaring the class names it can wear is a fact about the page, so
-            UnoCSS or Panda read the same file with no per-tool knowledge in the
-            compiler.
-          </p>
-        </bs-alert>
+        <div class="row justify-content-center mt-5">
+          <div class="col-lg-10">
+            <bs-card class+="bg-body-secondary"
+                     ::bodyExtra="p-4">
+              <p class="fw-semibold mb-3">
+                And the one thing a scanner cannot see.
+              </p>
+
+              <p>
+                Tailwind finds utilities by reading files for candidate
+                strings — raw text, not parsed HTML — so a literal inside
+                <code class="rule-code">${…}</code> is found as readily as one
+                in a <code class="rule-code">class</code> attribute, both
+                branches of a ternary included. What it cannot see is Markout's
+                own toggle:
+                <code class="rule-code">:class-ring-2=${…}</code> spells the
+                utility in the attribute <em>name</em>, and
+                <code class="rule-code">class-ring-2</code> is not a utility.
+              </p>
+
+              <p>
+                So the compiler is asked rather than guessed at.
+                <code class="rule-code">markout build --class-manifest</code>
+                writes every class a page's toggles can apply into the page
+                itself, as literal class names a scanner already knows how to
+                read; <code class="rule-code">--classes-only</code> writes one
+                file for the whole site instead and skips rendering, which
+                makes it quick. Point your scanner at the result and the
+                toggles are generated like everything else — resolved through
+                <code class="rule-code">&lt;:import&gt;</code> and treeshaken,
+                so a kit's toggles are included without your naming the kit,
+                which a regex over your sources could do neither of.
+              </p>
+
+              <p class="mb-0">
+                The demo above is built that way:
+                <code class="rule-code">npm run build:tailwind</code> runs the
+                manifest build and then
+                <code class="rule-code">tailwindcss</code>. And it is named for
+                the page rather than for the vendor — a page declaring the class
+                names it can wear is a fact about the page, so UnoCSS or Panda
+                read the same file with no per-tool knowledge in the compiler.
+              </p>
+            </bs-card>
+          </div>
+        </div>
 
       </div>
     </section>
