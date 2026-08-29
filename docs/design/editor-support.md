@@ -584,13 +584,30 @@ about itself — a kit says where its files are *addressed* from, an
 application says where its pages *are*. Nothing reads both keys off one
 manifest, so they cannot be taken for each other.
 
-**The sweep's bound.** It compiles at most 200 pages, which is a bound worth
-having and a bound that must be *admitted*: an empty Problems panel after an
-early stop reads as a clean project. It said so with `console.warn`, into an
-output channel nobody has opened. It now asks the editor to show it, once per
-distinct message, with both numbers in it — how many were checked and how
-many were not — because "some pages were skipped" is not something anybody
-can act on.
+**The sweep's bound.** It compiles at most so many pages, which is a bound
+worth having and a bound that must be *admitted*: an empty Problems panel
+after an early stop reads as a clean project. It said so with `console.warn`,
+into an output channel nobody has opened. It now asks the editor to show it,
+once per distinct message, with both numbers in it — how many were checked
+and how many were not — because "some pages were skipped" is not something
+anybody can act on.
+
+Where the bound *sits* was guessed, and the guess was wrong by an order of
+magnitude. 200 pages is half a second: measured over this repository, an
+ordinary page compiles in about 2ms and one that imports a kit in about 20ms.
+So the sweep stopped in the project the extension is developed in — 213
+pages, and not a large project — and said so every time the panel was pulled.
+A kit ecosystem makes several hundred pages of components an ordinary thing
+to have, which moves the number that matters further still. The default is
+now 2000, a few seconds of the slowest kind of page and more pages than any
+project seen so far has.
+
+And it is `markout.maxPages`, because a bound nobody can move is a bound that
+decides for every project there is. It arrives through the same live pull as
+`markout.docroot` and `markout.enable`, so it takes effect in the window it
+was changed in; `0` spells "no bound", which a number setting has no other
+room for. The notification names it, since a warning that a limit was reached
+without saying which limit leaves nothing to do about it.
 
 ## What a `.vsix` is, and what it is not
 

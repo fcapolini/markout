@@ -171,6 +171,32 @@ describe('a project too big to sweep', () => {
     expect(skipped).toBe(3);
   });
 
+  it('takes 0 as "all of them", which is what removing the bound has to spell', async () => {
+    // `markout.maxPages` is a number, and a number setting has no room for
+    // "no bound" except a value -- so 0 has to mean it, or a project bigger
+    // than any default has no way to ask for the whole answer
+    write('package.json', JSON.stringify({ name: 's', dependencies: { markout: '^0.2.0' } }));
+    for (let i = 0; i < 5; i++) {
+      write(`p${i}.html`, '<html><body>${nope}</body></html>');
+    }
+    const { checked, skipped } = await diagnoseWorkspace({ workspaceFolders: [root], limit: 0 });
+    expect(checked).toBe(5);
+    expect(skipped).toBe(0);
+  });
+
+  it('gets to the end of a project of a couple of hundred pages by default', async () => {
+    // the bound that was here before was 200, and this repository has more
+    // pages than that: the default stopped a sweep of the project the
+    // extension is developed in, which is not a large one
+    write('package.json', JSON.stringify({ name: 's', dependencies: { markout: '^0.2.0' } }));
+    for (let i = 0; i < 250; i++) {
+      write(`p${i}.html`, '<html><body>${nope}</body></html>');
+    }
+    const { checked, skipped } = await diagnoseWorkspace({ workspaceFolders: [root] });
+    expect(checked).toBe(250);
+    expect(skipped).toBe(0);
+  });
+
   it('counts only the limit, never the pages it had no opinion about', async () => {
     write('package.json', JSON.stringify({ name: 's', dependencies: { markout: '^0.2.0' } }));
     write('plain.html', '<!doctype html><html><body><p>ordinary</p></body></html>');

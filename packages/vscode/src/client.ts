@@ -39,6 +39,9 @@ export async function activate(context: vscode.ExtensionContext) {
       enable: settings.get<'auto' | 'always' | 'never'>('enable', 'auto'),
       // string or array: the server reduces an empty one to "not set"
       docroot: settings.get<string | string[]>('docroot'),
+      // the workspace sweep's bound, which the first sweep happens under --
+      // it runs before any pull for configuration could have answered
+      maxPages: settings.get<number>('maxPages'),
     },
     // `html`, not a language of our own: see PAGE_LANGUAGE_ID. Whether a
     // given HTML file is a markout page is a question about the PROJECT, and

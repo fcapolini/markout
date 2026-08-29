@@ -28,7 +28,7 @@ let coldSweep: any;
 /** the server asking the editor to pull again, which is not a thing it can do alone */
 let refreshes = 0;
 /** `markout.*` as this editor currently holds it, which the server asks for */
-let configuration: { enable?: string; docroot?: string } = {};
+let configuration: { enable?: string; docroot?: string; maxPages?: number } = {};
 /** resolved when the server has asked and been answered */
 let configurationPulled: (() => void) | undefined;
 /** what the server asked the editor to SHOW, which is the only place a person looks */
@@ -507,6 +507,31 @@ describe('the server, over stdio', () => {
     await new Promise(resolve => setTimeout(resolve, 100));
     expect((await request('textDocument/diagnostic', { textDocument: { uri } })).items)
       .toHaveLength(1);
+  });
+
+  it('takes the sweep\'s bound from `markout.maxPages`, and says so when it stops', async () => {
+    // The bound exists to keep a walk of a whole project from being felt,
+    // and a bound nobody can move is a bound that decides for every project
+    // there is. It arrives through the same live pull every other setting
+    // does, so a window with several hundred pages is one setting away from
+    // an answer about all of them.
+    configuration = { maxPages: 1 };
+    const pulled = new Promise<void>(resolve => (configurationPulled = () => resolve()));
+    notify('workspace/didChangeConfiguration', { settings: { markout: configuration } });
+    await pulled;
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    const report = await request('workspace/diagnostic', { previousResultIds: [] });
+    expect(report?.items?.length ?? 0).toBeLessThanOrEqual(1);
+    // and the notification names the setting: "some pages were skipped" is
+    // not something anybody can act on
+    expect(shown).toContainEqual(expect.stringMatching(/markout\.maxPages/));
+
+    configuration = {};
+    const back = new Promise<void>(resolve => (configurationPulled = () => resolve()));
+    notify('workspace/didChangeConfiguration', { settings: { markout: configuration } });
+    await back;
+    await new Promise(resolve => setTimeout(resolve, 100));
   });
 
   it('reports a broken page nobody has opened', async () => {

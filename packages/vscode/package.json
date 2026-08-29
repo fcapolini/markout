@@ -119,6 +119,12 @@
           ],
           "default": "auto",
           "markdownDescription": "When to compile HTML files and report what the compiler says. `auto` looks for evidence: a page that uses markout's own syntax (a `<:\u2026>` directive, or an attribute like `:count=${\u2026}`), or a project that depends on markout. It stays silent otherwise, because a `.html` file holding `${\u2026}` is JSP EL or Thymeleaf at least as often as it is a markout page."
+        },
+        "markout.maxPages": {
+          "type": "number",
+          "minimum": 0,
+          "default": 2000,
+          "markdownDescription": "How many pages the Problems panel's whole-project sweep compiles before it stops. A bound on a walk of the entire project, and one the sweep admits to reaching rather than leaving an empty panel that reads as a clean project. `0` removes it. Compiling a page costs a few milliseconds, or a few tens of them for a page that imports a kit, so the default is several seconds of the slowest kind of project."
         }
       }
     },

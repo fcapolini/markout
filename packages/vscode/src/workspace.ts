@@ -25,6 +25,22 @@ import { pagesUnder } from './pages';
  * says about it.
  */
 
+/**
+ * The sweep's default bound, in pages compiled.
+ *
+ * Measured rather than guessed: a page of this repository compiles in about
+ * 2ms and one that imports a kit in about 20ms, so this is a few seconds of
+ * the ordinary kind and about a minute of the expensive kind -- and it is
+ * more pages than any project seen so far has. The bound that was here
+ * before, 200, stopped the sweep in this repository, which has 213 pages and
+ * is not a large project; a kit ecosystem makes several hundred pages of
+ * components an ordinary thing to have.
+ *
+ * `markout.maxPages` is how a project that disagrees says so, in either
+ * direction.
+ */
+export const DEFAULT_LIMIT = 2000;
+
 export interface WorkspaceProblem {
   /** the file, absolutely, since a workspace spans docroots */
   filePath: string;
@@ -51,11 +67,13 @@ export interface WorkspaceProps {
   enable?: 'auto' | 'always' | 'never';
   open?: (filePath: string) => string | undefined;
   /**
-   * How many pages to compile before giving up.
+   * How many pages to compile before giving up; 0 for no bound at all.
    *
    * A bound rather than a promise: this walks a whole project, and a project
    * large enough to matter is one where an unbounded sweep would be felt.
    * What is skipped is reported rather than silently dropped.
+   *
+   * Where the default sits, and why, is DEFAULT_LIMIT above.
    */
   limit?: number;
 }
@@ -67,7 +85,9 @@ export async function diagnoseWorkspace(props: WorkspaceProps): Promise<{
   /** pages not compiled because the limit was reached */
   skipped: number;
 }> {
-  const limit = props.limit ?? 200;
+  // 0 is how `markout.maxPages` spells "all of them"
+  const limit = props.limit ?? DEFAULT_LIMIT;
+  const bounded = limit > 0;
   const enable = props.enable ?? 'auto';
   if (enable === 'never') {
     return { problems: [], checked: 0, skipped: 0 };
@@ -81,7 +101,7 @@ export async function diagnoseWorkspace(props: WorkspaceProps): Promise<{
   let skipped = 0;
 
   for (const file of files) {
-    if (compiled >= limit) {
+    if (bounded && compiled >= limit) {
       // only what the LIMIT cost: a page the gate turned down is not
       // unchecked, it is a page this extension has no opinion about, and
       // counting it here would report a project as half-examined

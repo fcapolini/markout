@@ -56,7 +56,11 @@ export interface MarkoutServiceProps {
   open: (filePath: string) => string | undefined;
   /** something the author needs to hear about, said where they will see it */
   warn?: (message: string) => void;
-  /** how many pages a workspace sweep may compile; the default is in workspace.ts */
+  /**
+   * `markout.maxPages`: how many pages a workspace sweep may compile, 0 for
+   * no bound. Undefined is not zero -- it is "unset", and the default in
+   * workspace.ts applies.
+   */
   limit?: number;
 }
 
@@ -441,7 +445,10 @@ export function createMarkoutService(props: MarkoutServiceProps): LanguageServic
             // The editor's own warning is where they are.
             props.warn?.(
               `markout checked ${checked} pages of this workspace and stopped: ` +
-                `${skipped} more are not reported on.`
+                `${skipped} more are not reported on. ` +
+                // named, because a notification that a bound was hit and
+                // does not say which bound leaves nothing to do about it
+                `Raise the markout.maxPages setting to check them all.`
             );
           }
           return problems.map(problem => ({

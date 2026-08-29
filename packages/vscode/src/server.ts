@@ -146,6 +146,8 @@ interface Settings {
   enable?: 'auto' | 'always' | 'never';
   /** one docroot or several; see docrootFor in ./diagnostics */
   docroot?: string | string[];
+  /** `markout.maxPages`: the workspace sweep's bound; 0 for none */
+  maxPages?: number;
 }
 
 /**
@@ -160,6 +162,21 @@ function configured(value: string | string[] | undefined): string | string[] | u
   const given = typeof value === 'string' ? [value] : (value ?? []);
   const kept = given.filter(entry => typeof entry === 'string' && entry.trim());
   return kept.length ? (typeof value === 'string' ? value : kept) : undefined;
+}
+
+/**
+ * `markout.maxPages` as SET, or nothing.
+ *
+ * A setting the schema gives a default to still arrives as whatever is in a
+ * `settings.json` somebody hand-edited, so a bound that is not a
+ * non-negative number is no answer at all -- and no answer has to mean
+ * undefined, or the default in workspace.ts is a value this file quietly
+ * overrides.
+ */
+function bounded(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? Math.floor(value)
+    : undefined;
 }
 
 /**
@@ -187,7 +204,11 @@ let settings: Settings = {};
 async function settingsChanged() {
   const pulled = await configurations.get<Settings>('markout');
   if (pulled) {
-    settings = { enable: pulled.enable, docroot: configured(pulled.docroot) };
+    settings = {
+      enable: pulled.enable,
+      docroot: configured(pulled.docroot),
+      maxPages: bounded(pulled.maxPages),
+    };
   }
   invalidate();
 }
@@ -201,7 +222,11 @@ function workspaceFolders() {
 
 connection.onInitialize(params => {
   const initial = params.initializationOptions as Settings | undefined;
-  settings = { enable: initial?.enable, docroot: configured(initial?.docroot) };
+  settings = {
+    enable: initial?.enable,
+    docroot: configured(initial?.docroot),
+    maxPages: bounded(initial?.maxPages),
+  };
 
   return server.initialize(
     params,
@@ -243,6 +268,10 @@ connection.onInitialize(params => {
         // it -- a vendored copy, a page opened on its own -- says so
         get enable() {
           return settings.enable;
+        },
+        // how far the whole-project sweep goes; the default is in workspace.ts
+        get limit() {
+          return settings.maxPages;
         },
         // the buffers the editor is holding, which is what the compiler is
         // given instead of the disk -- the reason `readFile` is a parameter

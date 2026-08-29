@@ -160,8 +160,9 @@ under some other name, or a page opened on its own.
 | --- | --- | --- |
 | `markout.docroot` | *empty* | The directory absolute paths are resolved against, so that `/lib.htm` means in the editor what it will mean when served. A string, or an array of them for a project that serves more than one. Empty falls back to the project's own answer, below. |
 | `markout.enable` | `auto` | `auto` looks for the evidence above. `always` diagnoses every HTML file. `never` says nothing. |
+| `markout.maxPages` | `2000` | How many pages the whole-project sweep compiles before it stops — see below. `0` removes the bound. |
 
-Both take effect where you change them — no window reload.
+They take effect where you change them — no window reload.
 
 ### More than one docroot
 
@@ -186,6 +187,19 @@ guess — the nearest ancestor named `markout`, then the nearest with a
 The `markout.docroot` setting overrides this when it names a docroot the file
 is in, which makes it what it should always have been: the local override,
 not the only answer.
+
+### How far the sweep goes
+
+Answering the Problems panel for the whole project means compiling the whole
+project, so there is a bound on it: `markout.maxPages`, 2000 by default. A
+page costs a few milliseconds to compile, or a few tens of them if it imports
+a kit, so that is several seconds of a project larger than any seen so far —
+and a project of a few hundred component pages, which a kit makes an ordinary
+thing to have, never comes near it.
+
+When the bound is reached the extension says so, with both numbers in it,
+because an empty Problems panel after an early stop reads as a clean project.
+Raise it, or set it to `0` for no bound at all.
 
 ## Requirements
 
