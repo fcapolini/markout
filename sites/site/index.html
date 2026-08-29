@@ -1265,6 +1265,173 @@
       </div>
     </section>
 
+    <!--- Tailwind -->
+
+    <!---
+      The other half of "a CSS framework is a markup convention": one that
+      has no components to wrap at all. Bootstrap earns a kit because it has
+      mechanical markup to lift out; Tailwind has none, and saying so is
+      worth more here than a kit nobody needed would have been.
+    -->
+
+    <section id="tailwind"
+             class="py-5 bg-body-tertiary">
+      <div class="container py-lg-4">
+
+        <div class="row align-items-center gy-5 gx-0 gx-sm-5">
+
+          <div class="col-lg-6">
+            <page-eyebrow ::variant="primary"
+                          class+="mb-3">Tailwind</page-eyebrow>
+
+            <h2 class="display-6 fw-bold mb-3">
+              Tailwind needs no kit at&nbsp;all
+            </h2>
+
+            <p class="lead text-body-secondary">
+              A utility class is already the smallest thing Tailwind has, so
+              there is no mechanical markup to lift out and nothing to wrap. The
+              classes stay classes, and the stylesheet is built ahead of time
+              and never regenerated.
+            </p>
+
+            <p>
+              What a kit can honestly carry here is the setup, and the setup is
+              two meta tags and a <code class="rule-code">&lt;link&gt;</code>
+              — with the stylesheet's URL a
+              <code class="rule-code">:const-</code> token, so a page names its
+              own Tailwind build at the import site rather than forking
+              the&nbsp;file.
+            </p>
+
+            <p>
+              Which leaves Markout doing what it does everywhere else. The demo
+              is a pricing page, and everything moving on it is one of three
+              things: a palette that is a value, a class string chosen by a
+              ternary, and one card written&nbsp;once.
+            </p>
+
+            <div class="row g-4 mt-1">
+              <div class="col-sm-4">
+                <h3 class="h5">The palette is a value</h3>
+                <p class="text-body-secondary small mb-0">
+                  Tailwind compiles <code class="rule-code">bg-brand-600</code>
+                  to <code class="rule-code">var(--color-brand-600)</code>, so
+                  moving the variable retunes every utility reading it — no
+                  stylesheet regenerated, no class name touched.
+                </p>
+              </div>
+
+              <div class="col-sm-4">
+                <h3 class="h5">A class is a string</h3>
+                <p class="text-body-secondary small mb-0">
+                  Which is what a utility framework and a reactive language
+                  have in common: a <code class="rule-code">class</code>
+                  attribute is a string, and <code class="rule-code">${…}</code>
+                  is how Markout computes one — here a ternary picking between
+                  two sets of utilities.
+                </p>
+              </div>
+
+              <div class="col-sm-4">
+                <h3 class="h5">One card, three on the page</h3>
+                <p class="text-body-secondary small mb-0">
+                  <code class="rule-code">:for-each</code> is the whole of the
+                  repetition, and it is the same attribute it is on a page with
+                  no CSS framework at all.
+                </p>
+              </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mt-4">
+              <bs-link ::href="/demos/tailwind/index.html"
+                       ::button
+                       ::variant="primary">The Tailwind demo</bs-link>
+
+              <bs-link ::href="https://github.com/fcapolini/markout/blob/main/docs/design/tailwind-support.md"
+                       ::button
+                       ::variant="secondary"
+                       ::outline>How it was measured</bs-link>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <code-card ::title="demos/tailwind/index.html"
+                       ::label="HTML"
+                       ::note>
+<pre class="mb-0"><code data-lang="html">&lt;html :hue=${259}&gt;
+
+&lt;style&gt;
+  :root {
+    --color-brand-500: oklch(0.623 0.214 ${hue});
+    --color-brand-600: oklch(0.546 0.245 ${hue});
+  }
+&lt;/style&gt;
+
+&lt;button class="px-5 py-2 rounded-full
+        ${yearly ? 'bg-brand-600' : 'text-slate-600'}"&gt;
+  Yearly
+&lt;/button&gt;
+
+&lt;article :for-each=${plans} :for-key=${data.id}&gt;
+  &lt;h2 class="text-lg font-semibold"&gt;${data.name}&lt;/h2&gt;
+&lt;/article&gt;</code></pre>
+              <p :slot="note"
+                 class="mb-0">
+                Nine custom properties in one rule are the reactive half of that
+                page's CSS, and all of it. Everything else is
+                <code class="rule-code">build.css</code>, compiled once by
+                Tailwind and served static.
+              </p>
+            </code-card>
+          </div>
+
+        </div>
+
+        <bs-alert ::variant="secondary"
+                  class+="mt-5 mb-0 pb-1">
+          <p>
+            <strong class="d-block mb-1">
+              And the one thing a scanner cannot see.
+            </strong>
+          </p>
+          <p>
+            Tailwind finds utilities by reading files for candidate strings —
+            raw text, not parsed HTML — so a literal inside
+            <code class="rule-code">${…}</code> is found as readily as one in a
+            <code class="rule-code">class</code> attribute, both branches of a
+            ternary included. What it cannot see is Markout's own toggle:
+            <code class="rule-code">:class-ring-2=${…}</code> spells the utility
+            in the attribute <em>name</em>, and
+            <code class="rule-code">class-ring-2</code> is not a utility.
+          </p>
+          <p>
+            So the compiler is asked rather than guessed at.
+            <code class="rule-code">markout build --class-manifest</code> writes
+            every class a page's toggles can apply into the page itself, as
+            literal class names a scanner already knows how to read;
+            <code class="rule-code">--classes-only</code> writes one file for
+            the whole site instead and skips rendering, which makes it quick.
+            Point your scanner at the result and the toggles are generated like
+            everything else — resolved through
+            <code class="rule-code">&lt;:import&gt;</code> and treeshaken, so a
+            kit's toggles are included without your naming the kit, which a
+            regex over your sources could do neither of.
+          </p>
+          <p>
+            The demo above is built that way:
+            <code class="rule-code">npm run build:tailwind</code> runs the
+            manifest build and then <code class="rule-code">tailwindcss</code>.
+            And it is named for the page rather than for the vendor — a page
+            declaring the class names it can wear is a fact about the page, so
+            UnoCSS or Panda read the same file with no per-tool knowledge in the
+            compiler.
+          </p>
+        </bs-alert>
+
+      </div>
+    </section>
+
     <!--- Web components -->
 
     <!---
@@ -1276,7 +1443,7 @@
     -->
 
     <section id="web-components"
-             class="py-5 bg-body-tertiary">
+             class="py-5">
       <div class="container py-lg-4">
 
         <div class="row align-items-center gy-5 gx-0 gx-sm-5">
@@ -1383,7 +1550,7 @@
     <!--- Compared to what you'd otherwise reach for -->
 
     <section id="compared"
-             class="py-5">
+             class="py-5 bg-body-tertiary">
       <div class="container py-lg-4">
 
         <div class="row justify-content-center text-center mb-5">
@@ -1563,7 +1730,7 @@
     <!--- Editor support -->
 
     <section id="editor"
-             class="py-5 bg-body-tertiary">
+             class="py-5">
       <div class="container py-lg-4">
 
         <div class="row justify-content-center text-center mb-5">

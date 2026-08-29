@@ -19,9 +19,8 @@ Framework-shaped features live in *kits*, written in Markout itself rather
 than built into the language. You can use the ones that ship, the
 [standard kit](kits/std-kit/) and [`bootstrap-kit`](kits/bootstrap-kit/)
 (Bootstrap 5.3 as components), or write your own. A kit is worth writing
-where there is mechanical markup to lift out;
-[Tailwind](sites/site/demos/tailwind/index.html) has none to lift, being
-classes, and works as it comes.
+where there is mechanical markup to lift out; Tailwind has none to lift,
+being classes, and works as it comes.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/orbit-dark.png">
@@ -206,8 +205,9 @@ elements for most of its life.)
 So Markout wrapped around Bootstrap, Tailwind or Shoelace keeps both choices
 open: change how the page is put together without touching the components,
 or change the components without touching the logic. Componentization,
-next, is that claim carried out on a CSS framework; web components, further
-down, is the same claim on a component library.
+next, is that claim carried out on Bootstrap; the Tailwind and web components
+sections further down are the same claim against a utility framework and
+against a custom-element library.
 
 NOTE: the honest cost — the framework-neutral component ecosystem is
 smaller and shallower than React's. Decoupling buys freedom at the price of
@@ -380,6 +380,95 @@ is how the kits mark a value that is the component's own business
 NOTE: the other two moments are `:did-attach` and `:will-detach`, which fire
 as markup enters and leaves the page rather than as the scope is built and
 destroyed — the pair a region that comes and goes needs
+
+## Tailwind needs no kit at all
+
+A utility class is already the smallest thing Tailwind has, so there is no
+mechanical markup to lift out and nothing to wrap — and what a `tw-button`
+would mean is the one decision Tailwind exists in order not to make. What a
+kit can honestly carry is the setup, so
+[`demos/tailwind-kit/`](sites/site/demos/tailwind-kit/) is two meta tags and a
+`<link>`, with the stylesheet's URL a `:const-` token so a page names its own
+Tailwind build at the import site rather than forking the file. The sheet
+itself is one Tailwind built ahead of time, exactly as in any other project,
+and it is never regenerated.
+
+Which leaves Markout doing what it does everywhere else. The demo is a pricing
+page, and everything that moves on it is one of three things:
+
+```html
+<html :hue=${259}>
+
+<style>
+  :root {
+    --color-brand-500: oklch(0.623 0.214 ${hue});
+    --color-brand-600: oklch(0.546 0.245 ${hue});
+  }
+</style>
+
+<button class="px-5 py-2 rounded-full
+        ${yearly ? 'bg-brand-600' : 'text-slate-600'}">
+  Yearly
+</button>
+
+<article :for-each=${plans} :for-key=${data.id}>
+  <h2 class="text-lg font-semibold">${data.name}</h2>
+</article>
+```
+
+Tailwind compiles `bg-brand-600` to `var(--color-brand-600)`, so moving the
+variable retunes every utility that reads it — no stylesheet regenerated, no
+class name touched, and nothing on the page told about it. The ternary is a
+plain string, which is what a scanner reads anyway: it is looking at raw text
+rather than parsing HTML, so a literal inside `${...}` is found as readily as
+one in an attribute, both branches of it. And `:for-each` is the same
+attribute it is on a page with no CSS framework at all.
+[The Tailwind demo](https://markout.dev/demos/tailwind/index.html) ·
+[its source](sites/site/demos/tailwind/) ·
+[how it was measured](docs/design/tailwind-support.md)
+
+**The one thing a scanner cannot see** is Markout's own toggle.
+`:class-ring-2=${...}` spells the utility in the attribute *name*, so what
+Tailwind reads is `class-ring-2`, which is not a utility — measured rather than
+guessed: the first build of that demo lost all five of the classes its cards
+toggle.
+
+So the compiler is asked rather than guessed at. It knows every toggle on a
+page once `<:import>` is resolved and treeshaking has dropped what the page
+does not use, and it writes them out as literal class names in a form any
+scanner already reads:
+
+```sh
+markout build ./site ./dist --class-manifest  # a <template> in each page
+markout build ./site ./.scan --classes-only   # one file for the whole site
+```
+
+Which one you want follows from what you deploy. Scanning the built output
+needs no configuration beyond `dist/**/*.html`; serving the sources from Node
+means nothing lands on disk to scan, so `--classes-only` produces the scan
+target in one pass — no pages, no assets, no render, since what classes a page
+can wear does not depend on one — and the stylesheet gets one extra `@source`.
+Either way the toggles are generated like everything else, kits included,
+without your naming the kit.
+
+The demo above takes the second: `npm run build:tailwind` runs the manifest
+build and then `tailwindcss`, and
+[`app.css`](sites/site/demos/tailwind/app.css) carries the `@source` line. The
+same manifest is what
+[demo-tailwind.test.ts](packages/cli/test/server/demo-tailwind.test.ts) asserts
+the committed stylesheet against, so a toggle added without regenerating the
+CSS fails a test rather than shipping.
+
+NOTE: the flag is named for the page rather than for the vendor. A page
+declaring the class names it can wear is a fact about the page — self
+description that happens to be what scanners need — so UnoCSS or Panda read
+the same file, and the compiler holds no per-tool knowledge. A `--tailwind`
+flag would have been a precedent worth regretting
+
+NOTE: a class assembled from pieces — `` `bg-brand-${n}` `` — is still not
+found, and cannot be, in any framework: a name that does not exist until the
+page runs cannot have had CSS generated for it. That is Tailwind's own rule
+and it applies here unchanged
 
 ## Web components, with nothing above them
 
