@@ -23,13 +23,15 @@ async function render(html: string) {
   stage7generate(page);
   const runtimeErrors = page.errors.length ? [] : await renderPage(page);
   const markup = page.source.doc.toString();
+  const strip = (s: string) =>
+    s.replace(/<!--.*?-->/g, '').replace(/ data-markout="[^"]*"/g, '');
   return {
     errors: page.errors,
     runtimeErrors,
-    body: markup
-      .slice(markup.indexOf('<body'), markup.indexOf('<script'))
-      .replace(/<!--.*?-->/g, '')
-      .replace(/ data-markout="[^"]*"/g, ''),
+    body: strip(markup.slice(markup.indexOf('<body'), markup.indexOf('<script'))),
+    // the head as well, for an example whose point is that one value
+    // reaches both halves of a page
+    head: strip(markup.slice(markup.indexOf('<head'), markup.indexOf('</head>'))),
   };
 }
 
@@ -246,6 +248,44 @@ describe('docs/concepts/scope.md', () => {
       expect(result.body).toContain(`data-bs-target="#${id}"`);
       expect(result.body).toContain(`aria-controls="${id}"`);
     }
+  });
+});
+
+describe('docs/concepts/navigation.md', () => {
+  // the fragment-routed page, exactly as the doc prints it. `render()` has
+  // no address to give it, which is the case that matters here and the
+  // reason the example says `?.`: `$url` is undefined in a build with no
+  // origin, and without the guard this renders nothing and reports
+  // "Cannot read properties of undefined (reading 'hash')"
+  const PAGE =
+    "<html :route=${$url?.hash.slice(1) || 'home'}>" +
+    '<head><title>${route} — site</title></head>' +
+    '<body>' +
+    '<nav>' +
+    '<a href="#home" :class-active=${route === \'home\'}>Home</a>' +
+    '<a href="#about" :class-active=${route === \'about\'}>About</a>' +
+    '</nav>' +
+    "<:group :if=${route === 'home'}><h1>Home</h1><p>Welcome.</p></:group>" +
+    "<:group :if=${route === 'about'}><h1>About</h1><p>Us.</p></:group>" +
+    '</body></html>';
+
+  it('renders the fragment-routed page', async () => {
+    const result = await render(PAGE);
+
+    expectClean(result);
+    // the default route, which is what a response always carries: no
+    // fragment ever reaches a server
+    expect(result.body).toContain('<h1>Home</h1>');
+    expect(result.body).not.toContain('<h1>About</h1>');
+    // the value declared on the root tag reaches the nav in <body>...
+    expect(result.body).toMatch(/<a class="active" href="#home"/);
+    expect(result.body).not.toMatch(/class="active" href="#about"/);
+  });
+
+  it('reads the same route value from the head', async () => {
+    const result = await render(PAGE);
+    // ...and <head>, which is the reason the doc puts it on <html>
+    expect(result.head).toContain('<title>home — site</title>');
   });
 });
 

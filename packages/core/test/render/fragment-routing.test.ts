@@ -30,7 +30,7 @@ afterAll(() => {
   fs.rmSync(docroot, { recursive: true, force: true });
 });
 
-const PAGE = `<html><body :route=\${$url.hash.slice(1) || "home"}>
+const PAGE = `<html :route=\${$url?.hash.slice(1) || "home"}><body>
   <nav><a href="#home">home</a> <a href="#about">about</a> <a href="#list">list</a></nav>
   <:group :if=\${route === "home"}><h1>Home</h1><p>welcome</p></:group>
   <:group :if=\${route === "about"}><h1>About</h1><p>us</p></:group>
@@ -111,8 +111,10 @@ describe('routing on the fragment alone', () => {
 
 /**
  * The head is a page's markup like any other, which is the whole of what
- * per-page metadata needs -- `<title>` here is a value over `$url`, and
- * nothing about it is a metadata API.
+ * per-page metadata needs -- `<title>` here reads the same `:route` the
+ * branches do, declared once on the root tag because that is the one scope
+ * both `<head>` and `<body>` are inside. Nothing about it is a metadata
+ * API.
  *
  * The half it does NOT fix is worth pinning too. A browser corrects the
  * title on arrival; a link unfurler, an RSS reader or a `curl` reads the
@@ -124,8 +126,9 @@ describe('what the head does on a deep link', () => {
   it('corrects itself on arrival and on every navigation after', async () => {
     fs.writeFileSync(
       path.join(docroot, 't.html'),
-      '<html><head><title>${$url.hash.slice(1) || "home"} — site</title></head>' +
-        '<body :route=${$url.hash.slice(1) || "home"}><a href="#list">list</a>' +
+      '<html :route=${$url?.hash.slice(1) || "home"}>' +
+        '<head><title>${route} — site</title></head>' +
+        '<body><a href="#list">list</a>' +
         '<:group :if=${route === "about"}><h1>About</h1></:group>' +
         '</body></html>'
     );

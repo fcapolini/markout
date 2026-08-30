@@ -31,12 +31,12 @@ which is live: a fragment link changes it, and every expression that read it
 re-runs. So a `<:group>` carrying an `:if` is a route:
 
 ```html
-<html>
-  <head><title>${$url.hash.slice(1) || 'home'} — site</title></head>
-  <body :route=${$url.hash.slice(1) || 'home'}>
+<html :route=${$url?.hash.slice(1) || 'home'}>
+  <head><title>${route} — site</title></head>
+  <body>
     <nav>
-      <a href="#home">Home</a>
-      <a href="#about">About</a>
+      <a href="#home" :class-active=${route === 'home'}>Home</a>
+      <a href="#about" :class-active=${route === 'about'}>About</a>
     </nav>
 
     <:group :if=${route === 'home'}>
@@ -51,6 +51,16 @@ re-runs. So a `<:group>` carrying an `:if` is a route:
   </body>
 </html>
 ```
+
+The route is named once, on the root tag, because that is the one scope
+both `<head>` and `<body>` are inside — so the title, the nav's active
+link and the branches all read the same value rather than repeating the
+expression that computes it.
+
+Note the `?.`. `$url` is `undefined` wherever there is no address to read:
+a page compiled ahead of time with nothing to be relative to, which is
+`markout build` without `--origin`. A page whose whole shape is decided by
+its address should say what it is when it has none — here, `home`.
 
 Nothing in that page is a routing feature. `$url` is a global, `<:group>` is
 a region over several nodes, and `<a href="#about">` is a link the browser
