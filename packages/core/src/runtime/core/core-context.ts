@@ -509,17 +509,6 @@ export class CoreContext {
    * message would have been.
    */
   /**
-   * Where a page goes when it writes `$url`.
-   *
-   * A write is a request, not a fact: the browser decides what it costs,
-   * and `$url` changes when it says the address changed (see
-   * WebContext.navigate and browser.ts). Nothing to navigate here -- a
-   * render has one address for its whole life -- so the base is a no-op,
-   * which is also the right answer while serving.
-   */
-  navigate(_href: string | URL): void {}
-
-  /**
    * Takes the address the browser now has.
    *
    * The only way `$url` changes. Called by whatever heard the navigation,
@@ -545,8 +534,8 @@ export class CoreContext {
    * `$url.pathname = '/x'` changes the object and tells nobody: markout
    * notices a value being SET, not a member of one being written, so the
    * page would go on showing the old address while holding the new one.
-   * Assignment is the write that means something (`$url = '/x'`), and this
-   * is what says so instead of failing quietly.
+   * Neither is a way to navigate -- see UrlValue -- and this is what says
+   * so instead of failing quietly.
    *
    * Reads are forwarded with the real URL as the receiver, which host
    * objects require -- a `URL` keeps its parts in internal slots, and
@@ -562,9 +551,10 @@ export class CoreContext {
         this.onError(
           'update',
           new Error(
-            `$url.${String(prop)} cannot be written: assign to $url itself ` +
-              `($url = '/somewhere') to navigate, which is what tells the ` +
-              `page it moved`
+            `$url.${String(prop)} is where the page is, not where to send ` +
+              `it, so writing it does nothing. Navigate -- ` +
+              `globalThis.location.assign(...), or whatever a router kit ` +
+              `offers -- and $url follows the address bar`
           )
         );
         return true;

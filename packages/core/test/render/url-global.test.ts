@@ -112,10 +112,10 @@ describe('the browser half', () => {
  * fixed: a client-side navigation keeps the document and moves it, so
  * `$url` is a dependency like any value, and reading it re-runs.
  *
- * The write means something else again. A page assigning `$url` is asking
- * the browser to go there, not declaring that it has arrived: the value
- * follows the address bar, so a refused or redirected navigation leaves the
- * page telling the truth.
+ * It cannot be written, in whole or in part. `$url` is where the page IS,
+ * and navigating is a side effect with a lifetime that belongs to a kit --
+ * TODO.md's second layer. A page that assigned it would be saying it had
+ * arrived somewhere it has not.
  */
 async function mounted(markup: string, url = 'http://x.test/start') {
   const name = `u${seq++}.html`;
@@ -166,20 +166,19 @@ describe('an address that changes', () => {
     expect(p.body()).toBe('<i>x</i>');
   });
 
-  it('asks the browser to go there when a page assigns it', async () => {
+  it('refuses an assignment, which would claim the page had moved', async () => {
     const p = await mounted(
       '<i>${$url.pathname}</i><button :on-click=${() => { $url = "/about"; }}>go</button>'
     );
     (p.window.document.querySelector('button') as unknown as { click(): void }).click();
     await new Promise(r => setTimeout(r, 10));
-    // the address moved; the value has not, because nothing has told this
-    // page it arrived -- that is what `adoptUrl` is for, and it is what
-    // keeps the two from ever disagreeing
-    expect(`${p.window.location.href}`).toBe('http://x.test/about');
+    expect(`${p.window.location.href}`).toBe('http://x.test/start');
     expect(p.body()).toMatch(/<i>\/start<\/i>/);
+    expect(p.errors.join()).toMatch(/\$url is where the page is/);
+    expect(p.errors.join()).toMatch(/follows the address bar/);
   });
 
-  it('says so when a page writes to a part of it instead', async () => {
+  it('refuses a write to a part of it too', async () => {
     const p = await mounted(
       '<i>${$url.pathname}</i>' +
         '<button :on-click=${() => { $url.pathname = "/x"; }}>go</button>'
@@ -187,7 +186,6 @@ describe('an address that changes', () => {
     (p.window.document.querySelector('button') as unknown as { click(): void }).click();
     await new Promise(r => setTimeout(r, 10));
     expect(p.body()).toMatch(/<i>\/start<\/i>/);
-    expect(p.errors.join()).toMatch(/\$url\.pathname cannot be written/);
-    expect(p.errors.join()).toMatch(/assign to \$url itself/);
+    expect(p.errors.join()).toMatch(/\$url\.pathname is where the page is/);
   });
 });

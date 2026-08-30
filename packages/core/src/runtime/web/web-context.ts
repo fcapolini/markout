@@ -78,47 +78,6 @@ export interface WebContextProps extends CoreContextProps {
 }
 
 export class WebContext extends CoreContext {
-  /**
-   * A page assigning `$url` is asking the browser to go there.
-   *
-   * Not a state change: `$url` follows the address bar, and the address bar
-   * follows the browser. So this hands the request over and stops -- the
-   * Navigation API where there is one, `location.assign` where there is
-   * not -- and whatever happens next arrives through `adoptUrl`. A router
-   * that intercepted the navigation keeps the document and the value moves;
-   * with no router the page is replaced and the question is moot.
-   *
-   * Nothing to do while serving. A render has one address for its whole
-   * life, and a handler cannot run there anyway.
-   */
-  override navigate(href: string | URL): void {
-    if ((this.props as WebContextProps).server) return;
-    // the window that owns the document this context was given, rather than
-    // whatever `globalThis` is: in a browser they are the same object, and
-    // where they are not (a test document, an iframe) the document's own is
-    // the one whose address means anything here
-    type Nav = {
-      location?: { href: string; assign(url: string): void };
-      navigation?: { navigate(url: string): unknown };
-    };
-    const doc = (this.props as WebContextProps).doc as unknown as {
-      defaultView?: Nav;
-    };
-    const g = doc?.defaultView ?? (globalThis as unknown as Nav);
-    if (!g.location) return;
-    let target: string;
-    try {
-      // resolved against where the page is, so `$url = '/about'` means what
-      // the same string means in an href
-      target = new URL(`${href}`, g.location.href).href;
-    } catch {
-      this.onError('update', new Error(`$url cannot be set to ${JSON.stringify(`${href}`)}`));
-      return;
-    }
-    g.navigation ? g.navigation.navigate(target) : g.location.assign(target);
-  }
-
-
   constructor(props: WebContextProps) {
     super(props);
   }

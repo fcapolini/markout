@@ -86,12 +86,15 @@ browser, with `$origin` taken from it. Every route is a match against it.
 **And live**, which was the half that mattered here. A navigation keeping
 the document moves it and everything reading it re-runs — `$url` is the
 one global the compiler emits a dependency for, since the rest cannot
-change — so a route's condition is an ordinary value over `$url` and a
-region shows or hides on it. A page assigning `$url` asks the browser to
-go there, so a link is an assignment and the same expression works with a
-router intercepting or without one. Core learns only
-that a URL can change without a new document, which is a fact about
-browsers rather than about routers.
+change — so a route's condition is an ordinary value over `$url`, and a
+region shows or hides on nothing but the address changing.
+
+It is read-only: `$url` is where the page is, and navigating is a side
+effect with a lifetime that belongs to the kit (settled 5, and
+[TODO.md](../../TODO.md)'s second layer). Core learns only that a URL can
+change without a new document, which is a fact about browsers rather than
+about routers — and the listener that needs is the same one an intercepted
+navigation fires, so the kit's half needs nothing more from here.
 
 One thing still has to come with it.
 

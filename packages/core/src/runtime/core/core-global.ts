@@ -146,16 +146,28 @@ const BOUND_GLOBAL_NAMES = new Set([
 
 //FIXME: server-side timer stuff should be no-ops
 /**
- * `$url`, whose write is a navigation rather than a new value.
+ * `$url`, which changes but is never written.
  *
  * Every other global is inert -- `val`, never set -- and this one is the
- * exception that proves the comment below: it changes, but never because a
- * page said so directly. A page assigning it asks the browser to go there;
- * what comes back, if anything does, arrives through `adoptUrl`.
+ * exception that proves the comment below: it moves, and only ever because
+ * the document's address moved. A page cannot set it, because setting it
+ * would say the page is somewhere it is not.
+ *
+ * Navigating is a side effect with a lifetime -- a listener to attach, a
+ * history entry to decide, scroll to restore -- and belongs to a kit; see
+ * TODO.md's three layers. What belongs here is the fact, and `adoptUrl` is
+ * how it arrives.
  */
 export class UrlValue extends CoreValue<any> {
-  override set(value: any): boolean {
-    this.scope.ctx.navigate(value as string | URL);
+  override set(_value: any): boolean {
+    this.scope.ctx.onError(
+      'update',
+      new Error(
+        `$url is where the page is, not where to send it, so assigning it ` +
+          `does nothing. Navigate -- globalThis.location.assign(...), or ` +
+          `whatever a router kit offers -- and $url follows the address bar`
+      )
+    );
     return true;
   }
 

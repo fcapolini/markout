@@ -1118,26 +1118,21 @@ why reading one is not a dependency — there would be nothing to wake. An
 address is not fixed: a navigation that keeps the document moves it, and
 every expression that read it re-runs.
 
-Which makes it the one you can write to, and the write means *go there*:
+It is read-only, in whole and in part. `$url` is where the page **is**, so
+a page assigning it would be claiming to have arrived somewhere it has not,
+and both `$url = '/about'` and `$url.pathname = '/about'` are refused with
+a message rather than quietly doing nothing.
+
+Navigating is a side effect with a lifetime — a history entry to decide,
+scroll to restore — so it belongs to a component rather than to the
+language. It is written where it happens, through the name this list offers
+for exactly that:
 
 ```html
-<button :on-click=${() => $url = '/about'}>About</button>
+<button :on-click=${() => globalThis.location.assign('/about')}>About</button>
 ```
 
-That is a link click said as an expression. With nothing intercepting the
-navigation the browser loads the page, which is what a link does; with a
-router intercepting it, the document stays and whatever reads `$url`
-re-renders. The same expression, both ways.
-
-Two things follow from the write being a request rather than a fact:
-
-- **`$url` changes when the browser says the address changed**, not when
-  the assignment happens. So it and the address bar cannot disagree, and a
-  navigation that is refused or redirected leaves the page telling the
-  truth. Reading `$url` on the line after writing it gives the old address.
-- **Writing a part of it is not a write.** `$url.pathname = '/x'` would
-  change the object and tell nobody, so it is reported instead: assign to
-  `$url` itself.
+`$url` follows on its own once the address changes.
 
 Nothing else about the request is offered, and that is deliberate. Headers,
 cookies and the method have no browser counterpart, so a page reading one
@@ -1147,8 +1142,8 @@ while doing it.
 Because it is the last link, a declared value of the same name shadows it —
 `:Math=${...}` means yours from there down.
 
-A global is not a dependency: it can't change, so nothing re-evaluates
-because of one.
+Apart from `$url`, a global is not a dependency: it can't change, so
+nothing re-evaluates because of one.
 
 ### What is deliberately not on the list
 
