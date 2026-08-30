@@ -263,6 +263,53 @@ test, and for a different purpose: it is `!= null`, so `0` and `''` remain
 data, and it binds the item so the body can read it. Use it when there is
 something to show; use `:if` when there is something to decide.
 
+## When the unit is not an element
+
+Every directive so far goes on an element, so the element is the unit: one
+condition, one thing shown; one item, one element repeated. That is the
+right unit most of the time, and it is wrong whenever the markup a decision
+covers is not one element.
+
+The clearest case is a table. A cart line is two rows — the line, and a note
+under it — and there is no element you are allowed to put between `<tbody>`
+and `<tr>`. A `<div>` around the pair is not a workaround; it is markup the
+browser moves somewhere else. The same shape turns up in a `<dl>`, where a
+term and its description are two siblings, and in a branch that is a heading
+and a paragraph rather than a box around both.
+
+`<:group>` is the answer. It is a tag that never renders, and the directives
+on it apply to its contents:
+
+```html
+<tbody>
+  <:group :for-each=${lines} :for-as="line" :for-key=${line.id}>
+    <tr><td>${line.name}</td><td class="num">${line.total}</td></tr>
+    <tr class="note"><td colspan="2">${line.blurb}</td></tr>
+  </:group>
+</tbody>
+```
+
+What makes this more than a convenience is that a region stops needing an
+element at all. A group that has to hold a run becomes a **region delimited
+by a marker comment at each end** — showing and hiding move the run between
+the page and a holder, and each replica gets a marker pair carrying its own
+identity, where the element form stamps that identity on the element. A
+group with a single element inside needs none of that, so it does not get
+it: the directive simply moves onto that element, and the compiled page is
+the one you would have written by hand. A group with no directives is
+dropped and its contents stay.
+
+The cost is therefore proportional to the shape, and refactoring is free:
+adding or removing a sibling inside a group changes what is generated and
+never changes what it means.
+
+A group carries directives only. There is no element for `class` or a
+handler to land on and no scope for a value to live in, and both are compile
+errors rather than silent drops —
+[`<:logic>`](../reference/syntax.md#logic--a-scope-with-no-element) is the
+tag for a scope with no element of its own. See
+[`<:group>` in the syntax reference](../reference/syntax.md#group--a-branch-or-a-replica-with-no-element).
+
 ## Optional rendering
 
 `:for-data` is the single-item counterpart to `:for-each`: zero or one where

@@ -635,6 +635,51 @@ the element was written — so a replicated list's children are its replicas
 and nothing else, and `:first-child` and `:nth-child` mean what they say. See
 [replication](../concepts/directives.md#the-stencil-is-not-where-you-wrote-it).
 
+### `<:group>` — a branch or a replica with no element
+
+Every directive above goes on an element, which makes the element the unit:
+one condition, one thing shown. `<:group>` lifts that. It is a tag that
+never renders, and the directives it carries apply to **its contents** —
+however many nodes those are.
+
+```html
+<tbody>
+  <:group :for-each=${lines} :for-as="line" :for-key=${line.id}>
+    <tr><td>${line.name}</td><td class="num">${line.total}</td></tr>
+    <tr class="note"><td colspan="2">${line.blurb}</td></tr>
+  </:group>
+</tbody>
+```
+
+Two rows per item, and no wrapper — which matters here because there is no
+element you are allowed to put between `<tbody>` and `<tr>`. The same holds
+for `<dt>`/`<dd>` pairs, for `<option>`s, and for a branch that is a
+heading and a paragraph rather than a `<div>` around both.
+
+It takes the branch and replication attributes — `:if`, `:else-if`,
+`:else`, `:server-if`, `:for-each`, `:for-as`, `:for-key`, `:for-data` —
+and behaves exactly as they do on an element, nesting included.
+
+**What it costs depends on what is inside**, and the three cases are worth
+knowing because they are what the compiled page contains:
+
+| the group | what it becomes |
+| --- | --- |
+| no directives on it | nothing: the tag is dropped and its contents stay where they are |
+| a directive, and a single element inside | the directive moves onto that element — `<:group :if=${x}><p>…</p></:group>` compiles byte-for-byte as `<p :if=${x}>…</p>` |
+| a directive, and anything else inside | a **region**: a marker comment at each end, and the run between them is what shows, hides or repeats |
+
+So the range machinery exists only where there is a range, and adding or
+removing a sibling inside a group changes the output without ever changing
+the meaning.
+
+**A group carries directives and nothing else.** It has no element, so
+there is nothing for `class`, `style`, an event handler or a plain HTML
+attribute to land on; and it has no scope, so a value like `:n=${1}` has
+nowhere to live. Both are compile errors that name the attribute and say
+where to put it instead — on an element inside the group, or on one around
+it. A `<:logic>` is the tag for holding values with no element of its own.
+
 ### A name inside a region is read with `?.`
 
 A region is not built while it isn't showing — that is what "evaluates
@@ -691,6 +736,7 @@ where everything is built together and stops existing together.
 | `<:include src="page.html" as="pre" escaping />` | The same, escaped: the file is *shown* as source rather than landing as markup. |
 | `<:import src="file.htm" />` | Splices a fragment into the page; each file is only imported once per page. |
 | `<:define tag="x-y:button">...</:define>` | Declares a reusable custom tag. |
+| `<:group :if=${expr}>...</:group>` | Applies a branch or replication directive to its contents rather than to an element. See [`<:group>`](#group--a-branch-or-a-replica-with-no-element). |
 | `<:logic :aka="x" :n=${1} />` | Declares a scope with no element of its own. |
 | `<:define tag="x-y:logic">` | A custom tag whose instances are scopes with no element. |
 | `:when-used="tag-a tag-b"` | Keep this element only while one of those tags survives treeshaking. Build-time; nothing of it reaches the runtime. |

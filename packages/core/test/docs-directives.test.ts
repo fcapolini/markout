@@ -534,6 +534,33 @@ const CASES: Record<string, Case> = {
       expect(p.body()).not.toContain('<my-b');
     },
   },
+  '<:group :if=${expr}>...</:group>': {
+    works: async () => {
+      // the case an element cannot do: two rows per item, where no element
+      // is allowed between <tbody> and <tr>
+      const p = await run(
+        '<html :server-lines=${[{ n: "a" }, { n: "b" }]}><body><table><tbody>' +
+          '<:group :for-each=${lines} :for-as="l" :for-key=${l.n}>' +
+          '<tr><td>${l.n}</td></tr><tr class="note"><td>note-${l.n}</td></tr>' +
+          '</:group></tbody></table></body></html>'
+      );
+      expect([...p.body().matchAll(/<td>([^<]*)<\/td>/g)].map(m => m[1])).toStrictEqual([
+        'a',
+        'note-a',
+        'b',
+        'note-b',
+      ]);
+      // the tag itself never renders, whichever form it took
+      expect(p.doc.toString()).not.toContain('<:group');
+
+      // and a lone element child needs no region at all: the directive moves
+      // onto it, so what compiles is what you would have written by hand
+      const lone = await run(
+        '<html :server-on=${false}><body><:group :if=${on}><p>x</p></:group></body></html>'
+      );
+      expect(lone.body()).not.toContain('<p>');
+    },
+  },
   '<:logic :aka="x" :n=${1} />': {
     works: async () => {
       const p = await run(

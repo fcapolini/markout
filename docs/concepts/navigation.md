@@ -78,8 +78,9 @@ Which for a fragment-routed page means every built address is the default
 route — true of any fragment SPA, and worth being told at build time rather
 than found in a browser.
 
-Nothing in that page is a routing feature. `$url` is a global, `<:group>` is
-a region over several nodes, and `<a href="#about">` is a link the browser
+Nothing in that page is a routing feature. `$url` is a global,
+[`<:group>`](directives.md#when-the-unit-is-not-an-element) is a region over
+several nodes, and `<a href="#about">` is a link the browser
 follows on its own — no interception, no library, no router. Back and
 forward work because they are the browser's. The `<title>` follows because
 it is a value like any other, which is why per-page metadata needs no API of
