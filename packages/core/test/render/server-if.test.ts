@@ -86,6 +86,22 @@ describe('markup a visitor was not meant to have', () => {
   });
 });
 
+describe('what it does not remove', () => {
+  it('takes the markup, and leaves the expressions', async () => {
+    const out = await served(
+      '<html><body :server-admin=${false} :budget=${999}>' +
+        '<div :server-if=${admin}><a href="/secret">x</a>' +
+        '<span>${budget * 2}</span></div></body></html>'
+    );
+
+    // the part that is markup -- elements, attributes, text -- is gone
+    expect(out.html).not.toContain('/secret');
+    // the part that is props is a function of the source rather than of the
+    // request, and travels whatever the branch decided
+    expect(out.html).toContain('$.budget*2');
+  });
+});
+
 describe('what the browser makes of one', () => {
   async function mounted(markup: string) {
     const out = await served(markup);

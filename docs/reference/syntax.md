@@ -445,6 +445,14 @@ A `:server-if` that did not show can never show, so there is nothing to
 build and its markup is not sent at all. One that did show is in the page as
 usual and hydrates normally; only the *decision* is frozen.
 
+Markup, precisely: the elements, their attributes and their text. The
+*expressions* of values written inside the branch are compiled into the
+page's props, which are a function of the source rather than of the request,
+so they travel whatever the branch decided. `<a href="/admin">` is gone;
+`${budget * 2}` is still there as `$.budget*2`. Where the logic itself is the
+secret, keep it in a `:server-` value, whose expression the browser never
+receives.
+
 Two things follow, and both are the point rather than limitations:
 
 - **It cannot change afterwards.** Not on a click, not on new data. If the
