@@ -423,6 +423,42 @@ keep updating as usual — which gives the one rule worth remembering:
 so it still tracks `user`. Marking `greeting` instead would pin it, and a
 later change to `user` would silently never reach it.
 
+#### `:server-if` — a branch decided once
+
+The one directive `:server-` may mark, and it means what it says everywhere
+else: the condition runs on the server and the answer crosses frozen, so the
+browser never decides this branch again.
+
+```html
+<div :server-if=${user.isAdmin}>
+  <a href="/admin">Danger zone</a>
+</div>
+```
+
+That matters because of what an ordinary `:if` has to do. Its condition is
+live — the browser may turn it — so the markup of the branch that did *not*
+show still travels, in the stencil it would be built from. Behind
+`${user.isAdmin}` that is the admin panel, its links and its labels, in the
+page source of every visitor who is not an admin.
+
+A `:server-if` that did not show can never show, so there is nothing to
+build and its markup is not sent at all. One that did show is in the page as
+usual and hydrates normally; only the *decision* is frozen.
+
+Two things follow, and both are the point rather than limitations:
+
+- **It cannot change afterwards.** Not on a click, not on new data. If the
+  branch has to be able to turn, it is an ordinary `:if` and the markup
+  travels; that is what the markup is for.
+- **A page with no render has no decision.** Served in client mode, or built
+  with nothing to evaluate it, the condition is simply absent and the branch
+  does not appear.
+
+`:else` and `:else-if` after one are ordinary branches and behave as they
+always do — the server decides the first, and the rest answer to it.
+`:server-` on any other directive is still refused: `:for-each` and the rest
+declare no value for it to mark.
+
 ### Async on the server
 
 A `:server-` expression may produce a promise. The server waits for it and

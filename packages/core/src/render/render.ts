@@ -6,6 +6,7 @@ import { STATE_GLOBAL } from "../runtime/core/core-context";
 import type { Page } from "../compiler/ir/Page";
 import { ServerText, type ServerElement, type ServerNode } from "../html/server-dom";
 import { loadProps } from "./props";
+import { RT_IF_VALUE } from "../runtime/core/core-scope";
 import { escapeScriptText, quote, serialize, UnserializableError } from "./serialize";
 
 /**
@@ -169,19 +170,35 @@ function restoreStencils(page: Page) {
  * Asked of the scopes rather than of the markup, because the scope is what
  * knows: `dom` is the element and `isConnected` is the question, and both
  * are already the same two facts the runtime shows and hides by.
+ *
+ * And the mirror image, for `:server-if`: a branch whose condition ran on
+ * the server crosses frozen, so a browser cannot re-decide it. One that did
+ * NOT show can therefore never show, and its stencil is markup nobody will
+ * ever build -- shipped to every visitor, in the page source, whether or
+ * not they were the visitor it was meant for. That is the case an ordinary
+ * `:if` cannot be spared: its condition is live, so the markup has to
+ * travel in case it turns.
  */
 function dropSpentStencils(ctx: WebContext) {
   const walk = (scope: CoreScope) => {
     const { dom, stencil } = scope as WebScope;
-    stencil &&
-      dom?.isConnected &&
-      (stencil as unknown as ServerElement)
-        .getAttributeNames()
-        .includes(DOM_STENCIL_ONCE_ATTR) &&
-      (stencil as unknown as ServerElement).unlink();
+    const el = stencil as unknown as ServerElement | undefined;
+    const once = el?.getAttributeNames().includes(DOM_STENCIL_ONCE_ATTR);
+    if (el && once && dom?.isConnected) {
+      // spent: what it stamps out is standing in the page
+      el.unlink();
+    } else if (el && serverDecided(scope) && !dom?.isConnected) {
+      // settled the other way, and settled for good
+      el.unlink();
+    }
     scope.children.forEach(walk);
   };
   walk(ctx.root);
+}
+
+/** whether this scope is a region whose branch the server decided */
+function serverDecided(scope: CoreScope): boolean {
+  return !!scope.props.values?.[RT_IF_VALUE]?.serverOnly;
 }
 
 /**

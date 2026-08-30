@@ -539,8 +539,16 @@ const LIFECYCLE_SUFFIXES = new Set([
 
 // fixed attribute names that name something other than a declared value, so
 // there is nothing for `:server-` to mark on one
+/**
+ * The fixed attribute names that declare no value, so `:const-` and
+ * `:server-` have nothing to mean on one.
+ *
+ * `:if` is on this list for `:const-` and NOT for `:server-`, which is the
+ * one exception either marker has. A branch is a value -- the condition --
+ * and "decided on the server, and not again" is a thing an author can
+ * usefully say about that one: see SERVER_DECIDED_ATTRS.
+ */
 const SERVER_REJECTED_ATTRS = new Set([
-  IF_ATTR,
   ELSE_IF_ATTR,
   ELSE_ATTR,
   WHEN_USED_ATTR,
@@ -551,6 +559,20 @@ const SERVER_REJECTED_ATTRS = new Set([
   FOR_AS_ATTR,
   FOR_KEY_ATTR,
 ]);
+
+/** what `:const-` refuses: everything above, and the branch too */
+const COMPTIME_REJECTED_ATTRS = new Set([...SERVER_REJECTED_ATTRS, IF_ATTR]);
+
+/**
+ * The branch spellings a server may decide.
+ *
+ * `:server-if` alone, and deliberately not the chain: an `:else` reads
+ * nothing and takes its answer from the branches before it, so "decided on
+ * the server" is a property of the condition rather than of the chain, and
+ * two of them in one chain would be two different questions about when the
+ * page stops being able to change its mind. One branch, one decision.
+ */
+const SERVER_DECIDED_ATTRS = new Set([IF_ATTR]);
 
 function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope {
   const tagName = e.tagName.toUpperCase();
@@ -791,7 +813,12 @@ function needsStencil(e: ServerElement): boolean {
  * two.
  */
 function branchAttr(e: ServerElement): string | undefined {
-  return [IF_ATTR, ELSE_IF_ATTR, ELSE_ATTR].find(name => hasAttr(e, name));
+  return [IF_ATTR, ELSE_IF_ATTR, ELSE_ATTR].find(
+    name =>
+      hasAttr(e, name) ||
+      (SERVER_DECIDED_ATTRS.has(name) &&
+        hasAttr(e, `${SERVER_VALUE_ATTR_PREFIX}${name}`))
+  );
 }
 
 /**
@@ -869,7 +896,8 @@ function setBranchValue(
   page: Page,
   scope: Scope,
   attr: ServerAttribute,
-  name: string
+  name: string,
+  serverOnly = false
 ): void {
   const written = `"${SPECIAL_ATTR_PREFIX}${name}"`;
   const already = scope.values.get(IF_VALUE);
@@ -901,7 +929,13 @@ function setBranchValue(
     );
     return;
   }
-  scope.values.set(IF_VALUE, new Value(IF_VALUE, attr, scope, page.createValueId()));
+  const value = new Value(IF_VALUE, attr, scope, page.createValueId());
+  // the condition runs on the server and the answer crosses, like any
+  // `:server-` value. What it buys a region is in render.ts: a branch the
+  // browser cannot re-decide has no reason to carry the markup it did not
+  // show
+  value.serverOnly = serverOnly;
+  scope.values.set(IF_VALUE, value);
 }
 
 function hasAttr(e: ServerElement, name: string): boolean {
@@ -2133,7 +2167,7 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     }
     // the fixed attribute names below don't declare values at all, so there
     // is nothing for "computed while the page is built" to mean on one
-    if (comptime && SERVER_REJECTED_ATTRS.has(name)) {
+    if (comptime && COMPTIME_REJECTED_ATTRS.has(name)) {
       addError(
         page,
         `"${SPECIAL_ATTR_PREFIX}${COMPTIME_VALUE_ATTR_PREFIX}${name}" is not a value: ` +
@@ -2144,7 +2178,7 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
     }
     // the fixed attribute names below don't declare values at all, so there
     // is nothing for "runs on the server only" to mean on one
-    if (serverOnly && SERVER_REJECTED_ATTRS.has(name)) {
+    if (serverOnly && SERVER_REJECTED_ATTRS.has(name) && !SERVER_DECIDED_ATTRS.has(name)) {
       addError(
         page,
         `"${SPECIAL_ATTR_PREFIX}${SERVER_VALUE_ATTR_PREFIX}${name}" is not a value: ` +
@@ -2191,7 +2225,7 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
       // through validateName and refuse them for being reserved words, and
       // `else-if` for its dash -- which is exactly why all three were free
       // to take
-      setBranchValue(page, scope, attr, name);
+      setBranchValue(page, scope, attr, name, serverOnly);
       continue;
     }
     if (name === FOR_DATA_ATTR) {
