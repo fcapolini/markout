@@ -17,9 +17,12 @@ import { parse } from '../../src/html/parser';
  *   content fragment;
  * - `:for-each` crashed elsewhere on the same shape (`removeChild` of
  *   null);
- * - everything else -- `:aka`, `:class-`, `:on-`, plain values, and the
- *   whole of `<:group>` -- compiled clean and did nothing, which is the
- *   worst of the three: the attribute reads as applying to the content.
+ * - everything else -- `:aka`, `:class-`, `:on-`, plain values -- compiled
+ *   clean and did nothing, which is the worst of the three: the attribute
+ *   reads as applying to the content.
+ *
+ * `<:group>` had the same silence and now has rules of its own; those are
+ * in group-attributes.test.ts.
  *
  * All of them are now the same message, and the compile survives to report
  * whatever else is wrong. Supporting rather than refusing them means a

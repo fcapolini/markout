@@ -123,27 +123,11 @@ export class Preprocessor {
       for (let i = 0; i < p.childNodes.length;) {
         if (p.childNodes[i].nodeType === NodeType.ELEMENT) {
           const e = p.childNodes[i] as dom.ServerElement;
-          if (e.tagName === GROUP_DIRECTIVE_TAG) {
-            // The tag is about to stop existing, and everything written on
-            // it goes too -- silently, which made `<:group :if=${x}>` render
-            // its content unconditionally and say nothing. A group is a way
-            // to hand several nodes to one splice, not an element, so there
-            // is nothing for an attribute to be on. See
-            // docs/design/group-regions.md for what would make an active
-            // group mean something.
-            // getAttributeNames() rather than `attributes`, which is
-            // missing `class` and `style` -- element properties here, and
-            // dropped with the tag like everything else
-            for (const name of e.getAttributeNames()) {
-              main.addError(
-                'error',
-                `<:group> takes no attributes, so "${name}" here does ` +
-                  `nothing: the tag is spliced away before the page compiles ` +
-                  `and this goes with it. Put it on an element around the ` +
-                  `group, or on the content inside it`,
-                e.loc
-              );
-            }
+          // An ACTIVE group -- one carrying attributes -- is left where it
+          // is: it means a region rather than a splice, which only the
+          // compiler can build, and stage1's resolveActiveGroups takes it
+          // from here. A passive one is this pass's own business.
+          if (e.tagName === GROUP_DIRECTIVE_TAG && !e.getAttributeNames().length) {
             // copied first: retargeting below must not read a list that the
             // splice is about to consume
             const kids = [...e.childNodes];

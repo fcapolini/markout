@@ -69,6 +69,7 @@ import {
 } from '../ir/Page';
 import { COMPTIME_MARKER } from './stage5-comptime';
 import { NodeType } from '../../html/dom';
+import { GROUP_DIRECTIVE_TAG } from '../../html/preprocessor';
 import { ATOMIC_TEXT_TAGS } from '../../html/parser';
 import { DOM_ID_ATTR, DOM_TEXT_MARKER1, DOM_TEXT_MARKER2, DOM_USE_MARKER } from '../../runtime/web/web-context';
 
@@ -99,6 +100,7 @@ export function stage1load(page: Page) {
   // before load(), which is what turns a `:if` into a value and moves the
   // element it was written on into a stencil: an attribute refused here has
   // to be gone before any of that happens to a tag that cannot carry it
+  resolveActiveGroups(page, root);
   checkSlotAttributes(page, root);
   page.main = load(page, page.global, root, 'page');
   // expanding anything at all once a definition is based on another one
@@ -115,6 +117,160 @@ export function stage1load(page: Page) {
   // exactly the fallback a usage supplying nothing should get
   unwrapSlots(page.source.doc.documentElement!);
   return page;
+}
+
+/**
+ * `<:group>` carrying attributes: transfer them, or say why not.
+ *
+ * A passive group is spliced into its parent by the preprocessor and is not
+ * this pass's business. An active one arrives here still standing, because
+ * what its attributes ask for is a region -- and a group has no element and
+ * no scope, so there are three answers rather than one:
+ *
+ * - **an element-only attribute** (`class`, `:on-`, `:attr-`) has nothing
+ *   to apply to and never will. That is the `<:logic>` rule, one tag over.
+ * - **a value or a name** would need the group to be a scope, which is the
+ *   region form in docs/design/group-regions.md.
+ * - **a control attribute** (`:if`, `:for-each` and the rest of both
+ *   families) transfers onto the group's content where the content is a
+ *   single element -- which is the same page, compiled the same way, since
+ *   `<:group :if=${x}><p/></:group>` and `<p :if=${x}/>` differ only in
+ *   where the author wrote the attribute. Where the content is several
+ *   nodes the transfer has nowhere to land and the region is what is
+ *   needed, so it is refused rather than guessed at.
+ *
+ * Whitespace between the group's tags does not count as content: it is
+ * what pretty-printing leaves behind, not a second node the author meant.
+ *
+ * The tag always goes, whichever answer applied. A directive tag left in
+ * the tree serializes to nothing AND takes its children with it, so a
+ * refusal that stopped here would delete the markup it was complaining
+ * about.
+ *
+ * Runs before load(), like checkSlotAttributes and for the same reason: a
+ * transferred `:if` has to be on the element before anything turns it into
+ * a value and moves that element into a stencil.
+ */
+function resolveActiveGroups(page: Page, root: ServerElement): void {
+  const self = GROUP_DIRECTIVE_TAG.toLowerCase();
+  const marked = (a: string) => SPECIAL_ATTR_PREFIX + a;
+  const BRANCH = [IF_ATTR, ELSE_IF_ATTR, ELSE_ATTR];
+  const LOOP = [FOR_EACH_ATTR, FOR_DATA_ATTR];
+  const TRANSFER = [...BRANCH, ...LOOP, FOR_AS_ATTR, FOR_KEY_ATTR];
+  const ELEMENT_ONLY = [
+    CLASS_VALUE_ATTR_PREFIX,
+    STYLE_VALUE_ATTR_PREFIX,
+    EVENT_VALUE_ATTR_PREFIX,
+    PRESENCE_VALUE_ATTR_PREFIX,
+    PROP_VALUE_ATTR_PREFIX,
+  ];
+  const advice = `Put it on an element inside the group, or on one around it`;
+
+  const resolve = (el: ServerElement): void => {
+    const transfer: string[] = [];
+    for (const name of el.getAttributeNames()) {
+      const bare = name.startsWith(SPECIAL_ATTR_PREFIX)
+        ? name.slice(SPECIAL_ATTR_PREFIX.length)
+        : null;
+      if (bare && TRANSFER.includes(bare)) {
+        transfer.push(name);
+      } else if (!bare || ELEMENT_ONLY.some(prefix => bare.startsWith(prefix))) {
+        addError(
+          page,
+          `<${self}> has no element of its own, so "${name}" has nothing to ` +
+            `apply to. ${advice}`,
+          el.loc
+        );
+      } else {
+        addError(
+          page,
+          `<${self}> has no scope of its own, so "${name}" has nowhere to ` +
+            `live: a group carrying values would have to be a region, and it ` +
+            `cannot be one yet. ${advice}`,
+          el.loc
+        );
+      }
+    }
+    if (!transfer.length) return;
+
+    const content = [...el.childNodes].filter(
+      n =>
+        n.nodeType !== NodeType.TEXT ||
+        `${(n as ServerText).textContent}`.trim().length > 0
+    );
+    const only =
+      content.length === 1 && content[0].nodeType === NodeType.ELEMENT
+        ? (content[0] as ServerElement)
+        : undefined;
+    if (!only) {
+      const held = content.length ? 'more than one node' : 'nothing';
+      transfer.forEach(name =>
+        addError(
+          page,
+          `"${name}" on a <${self}> holding ${held} needs the group to be a ` +
+            `region, and it cannot be one yet. A group holding a single ` +
+            `element gives this to that element instead`,
+          el.loc
+        )
+      );
+      return;
+    }
+
+    for (const name of transfer) {
+      const bare = name.slice(SPECIAL_ATTR_PREFIX.length);
+      const family = BRANCH.includes(bare)
+        ? BRANCH
+        : LOOP.includes(bare)
+          ? LOOP
+          : [bare];
+      const clash = family.find(a => only.getAttributeNames().includes(marked(a)));
+      if (clash) {
+        addError(
+          page,
+          `"${name}" on a <${self}> and "${marked(clash)}" on the element ` +
+            `inside it are two regions, one within the other, and a group ` +
+            `cannot be a region yet. Write the outer one on an element ` +
+            `around the group`,
+          el.loc
+        );
+        continue;
+      }
+      const attr = el.getAttributeNode(name) as ServerAttribute | null;
+      if (!attr) continue;
+      el.delAttributeNode(attr);
+      // the node rather than its text: a value is an expression by the time
+      // it gets here, and `loc` is what every message about it will name
+      new ServerAttribute(only.ownerDocument, only, attr.name, attr.value, attr.loc);
+    }
+  };
+
+  const splice = (el: ServerElement): void => {
+    const host = el.parentElement;
+    if (!host) return;
+    for (const inner of [...el.childNodes]) {
+      el.removeChild(inner);
+      host.insertBefore(inner, el);
+    }
+    host.removeChild(el);
+  };
+
+  const walk = (e: ServerElement): void => {
+    const children =
+      e.tagName === 'TEMPLATE'
+        ? [...(e as ServerTemplateElement).content.childNodes]
+        : [...e.childNodes];
+    for (const child of children) {
+      if (child.nodeType !== NodeType.ELEMENT) continue;
+      const el = child as ServerElement;
+      // innermost first, so a group holding one group holds one element by
+      // the time the outer one is asked what it holds
+      walk(el);
+      if (el.tagName !== GROUP_DIRECTIVE_TAG) continue;
+      el.getAttributeNames().length && resolve(el);
+      splice(el);
+    }
+  };
+  walk(root);
 }
 
 /**

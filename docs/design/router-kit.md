@@ -680,14 +680,16 @@ flattening:
   `<template>`'s content fragment), `:for-each` crashed elsewhere on the
   same shape, and `:aka`, `:class-`, `:on-` and plain values compiled
   clean and did nothing.
-- **`<:group>` takes no attributes.** The tag is spliced away at
-  preprocess time, so everything on it went too, silently.
+- **`<:group>` carried anything at all in silence.** An active group now
+  survives the preprocessor and stage1 answers it: a control attribute
+  transfers onto the group's content where that content is a single
+  element, and everything else says which of the two things a group has
+  not got — an element to apply to, or a scope to live in.
 
-Refusing is the honest answer while it lasts, and the message says to put
-the attribute on an element around the marker. Supporting either means a
-region of several nodes with no element of its own, which is
-[group-regions.md](group-regions.md) — and that is also what would retire
-the wrapper element per route level.
+What is still refused is the case a router wants: several nodes under one
+condition, with no element of their own. That is rule 2 of
+[group-regions.md](group-regions.md), and building it would retire the
+wrapper element per route level.
 
 ---
 

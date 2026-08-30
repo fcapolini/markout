@@ -1,8 +1,9 @@
 # Wrapper-less regions — `<:group>` with attributes
 
-Status: **proposed.** Nothing is built. This records the three rules the
-design turns on, what they cost in the compiler and the runtime, and what
-is still open.
+Status: **partly built.** Rules 1 and 3 are in stage1's
+`resolveActiveGroups`, with the refusals that go with them; rule 2 — the
+region itself — is not, and what it needs from the runtime is the last
+section of this note.
 
 ## The gap
 
@@ -49,23 +50,29 @@ and the rules below are what would let it be.
 
 ## Three rules
 
-**1. A passive group is flattened.** No `:` attribute, no change: the
-preprocessor splices it as it does now. Nothing that works today stops
-working.
+**1. A passive group is flattened.** *(built)* No attribute, no change:
+the preprocessor splices it as it always did. An active one is left
+standing for the compiler.
 
-**2. An active group with more than one child is a region.** It survives
-preprocessing, gets a scope and a stencil like any `:if` or `:for-each`
-does, and is delimited by a marker at each end rather than by the element
-that used to carry the attribute.
+**2. An active group with more than one child is a region.** *(not
+built)* It gets a scope and a stencil like any `:if` or `:for-each` does,
+and is delimited by a marker at each end rather than by the element that
+used to carry the attribute. Refused with a message meanwhile.
 
 **3. An active group with a single element child transfers its attributes
-onto that child** — `<:group :if=${x}><p>…</p></:group>` compiles exactly
-as `<p :if=${x}>…</p>`. One marker, no range, no new machinery.
+onto that child.** *(built)* `<:group :if=${x}><p>…</p></:group>` compiles
+byte-for-byte as `<p :if=${x}>…</p>` — the test asserts exactly that. One
+marker, no range, no new machinery.
 
 Together, 2 and 3 mean the cost is proportional: range machinery exists
 only where there is a range. Rule 3 also keeps refactoring free — adding
 or removing a sibling inside a group changes the output but never the
 meaning.
+
+Whichever rule applies, **the tag goes and the content stays**, refusal
+included. A directive tag left standing serializes to nothing and takes
+its children with it, so a refusal that stopped early would delete the
+markup it was complaining about.
 
 ### Rule 3 collapses only when it is provably identical
 
@@ -76,16 +83,19 @@ the author wrote something meaningful either way.
 
 It must fall back when:
 
-- **the child carries the same control attribute.** `<:group :if=${a}>`
-  around `<div :if=${b}>` is two nested regions, `a && b`. One element
-  cannot hold two `:if`s, and rewriting it to `a && b` is a different
-  dependency graph.
-- **merging would move a name.** A value declared on the group and read by
-  a value on the child is a parent read; after a merge the two sit in one
-  scope, where a self-referential name (`:n=${n + 1}`) means something
-  else. Transfer only where no declared name changes how it resolves.
+- **the child carries the same control attribute** — or another of the
+  same family. `<:group :if=${a}>` around `<div :else>` is two nested
+  regions; one element cannot hold both, and rewriting it is a different
+  dependency graph. Two *different* families do merge, and legitimately:
+  `:if` and `:for-each` on one element is something the language already
+  accepts, and the test pins the nested-group form to it.
 - **the siblings are not only whitespace.** A comment or text beside the
   element is content, and content belongs inside the region.
+
+A third condition the note used to carry — *merging would move a name* —
+cannot arise as built: a value or an `:aka` on a group is refused outright
+for wanting a scope the group has not got, so nothing that declares a name
+ever reaches the transfer.
 
 And whitespace-only siblings are worth one deliberate decision rather than
 an accident: after a transfer they sit *outside* the region and survive
@@ -113,8 +123,9 @@ way), a region today is **a marker comment plus exactly one element**:
 
 Only the first three assume one element. So:
 
-1. **Preprocessor**: flatten a group only when it carries no `:`
-   attribute. One condition in `flattenGroups`.
+1. **Preprocessor**: flatten a group only when it carries no attribute.
+   *Built* — one condition in `flattenGroups`, and stage1 takes an active
+   group from there.
 2. **An end marker.** The identity check has nothing to attach to — a text
    node cannot carry `data-markout` — so a group region is `[start … end]`
    and the three operations become range operations. This is what Vue and
@@ -125,7 +136,8 @@ Only the first three assume one element. So:
    replica, and `acquireCloneDom`'s hydrated-prefix logic and
    `reorderClones`' forward walk are both per element. This is the largest
    piece and the least explored.
-5. **stage2**: an allowlist, below.
+5. **The allowlist**, below. *Built*, in the refusing direction: every
+   attribute a group cannot carry now says which of the two reasons it is.
 
 ## What a group must refuse
 
@@ -138,9 +150,12 @@ reason rather than an attribute quietly doing nothing:
 | `:for-each`, `:for-data`, `:for-as`, `:for-key` | `:on-` handlers |
 | `:aka`, declared values, `:server-` | attribute values (`:href=`, `:src=`) |
 
-The refusal already exists — every attribute on a group is an error
-today. What changes is that the allowed column stops being refused and
-starts meaning something; the right-hand column keeps the message it has.
+The left column is refused today only where it has nowhere to land — more
+than one node inside the group, or a clash with the content's own control
+attribute. The right column is refused always, in two messages that say
+which is missing: *no element of its own* for what needs one to apply to,
+*no scope of its own* for what needs somewhere to live. Building rule 2
+turns the first refusal into behaviour and leaves the second where it is.
 
 ## Open
 
