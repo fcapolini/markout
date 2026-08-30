@@ -39,6 +39,20 @@ const CALLBACK_VALUE_PREFIXES = [EVENT_VALUE_PREFIX, DID_VALUE_PREFIX, WILL_VALU
 // expression. Duplicated from runtime/core/core-global.ts rather than
 // imported -- as with the RT_ keys above, the compiler doesn't depend on
 // runtime code -- and a test asserts the two lists stay identical.
+/**
+ * The globals that can change while a page is up, and so are dependencies.
+ *
+ * `$url` alone: a page's address changes under a client-side navigation
+ * that keeps the document, and everything reading it has to re-run. Every
+ * other name here is the JS standard library or a fact fixed for the life
+ * of the render.
+ *
+ * Kept beside the list below rather than derived from it, because "does
+ * reading this re-run my expression" is a decision per name and not a
+ * property anything else can answer.
+ */
+export const LIVE_GLOBAL_NAMES = new Set(['$url']);
+
 export const GLOBAL_NAMES = new Set([
   '$origin',
   '$url',
@@ -1008,10 +1022,13 @@ function validated(
       }
       // a JS global, resolved at runtime from the global scope -- the last
       // link of the chain, which is why it is only consulted once nothing
-      // declared has claimed the name. It never changes, so it is not a
-      // dependency either: returning no ref keeps it out of `deps`
+      // declared has claimed the name. Most never change, so they are not
+      // dependencies either: returning no ref keeps them out of `deps`
       if (!via.length && GLOBAL_NAMES.has(key)) {
-        return undefined;
+        // except the one that does. A dep of one segment resolves through
+        // `$value`, which walks the scope chain to the global scope from
+        // wherever it was written, so nothing has to know how deep it is
+        return LIVE_GLOBAL_NAMES.has(key) ? { key } : undefined;
       }
       addError(page, unknownRef(page, via, key, target), value.node.loc);
       return undefined;

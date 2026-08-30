@@ -6,6 +6,8 @@ import { Window } from 'happy-dom';
 import { Compiler } from '../../src/compiler';
 import { renderPage } from '../../src/render/render';
 import { hydrate } from '../../src/render/hydrate';
+import { loadProps } from '../../src/render/props';
+import { WebContext } from '../../src/runtime/web/web-context';
 
 /**
  * `$url`: the address this page is being rendered for.
@@ -98,5 +100,94 @@ describe('the browser half', () => {
       (window.document.querySelector('i') as unknown as { textContent: string }).textContent
     ).toBe('/other/path');
     expect(mounted.errors).toStrictEqual([]);
+  });
+});
+
+/**
+ * `$url` is the one global that changes while a page is up.
+ *
+ * Every other name in the global scope is the JS standard library or a fact
+ * fixed for the life of the render, which is why the compiler emits no
+ * dependency on one -- there would be nothing to wake. An address is not
+ * fixed: a client-side navigation keeps the document and moves it, so
+ * `$url` is a dependency like any value, and reading it re-runs.
+ *
+ * The write means something else again. A page assigning `$url` is asking
+ * the browser to go there, not declaring that it has arrived: the value
+ * follows the address bar, so a refused or redirected navigation leaves the
+ * page telling the truth.
+ */
+async function mounted(markup: string, url = 'http://x.test/start') {
+  const name = `u${seq++}.html`;
+  fs.writeFileSync(path.join(docroot, name), `<html><body>${markup}</body></html>`);
+  const page = await new Compiler({ docroot }).compile(`/${name}`);
+  expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+  expect(await renderPage(page, { url })).toStrictEqual([]);
+  const window = new Window({ url });
+  window.document.write(page.source.doc.toString());
+  const errors: string[] = [];
+  const ctx = new WebContext({
+    ...loadProps(page.clientProps ?? page.props!),
+    doc: window.document as any,
+    url,
+    onError: e => errors.push(e.message),
+  }).refresh();
+  return {
+    ctx,
+    errors,
+    window,
+    deps: (page.clientProps ?? page.props!) as unknown,
+    body: () =>
+      (window.document.querySelector('body') as unknown as { innerHTML: string }).innerHTML
+        .replace(/<script[\s\S]*?<\/script>/g, '')
+        .replace(/<!---[^>]*-->/g, '')
+        .replace(/\s+/g, ' ')
+        .trim(),
+  };
+}
+
+describe('an address that changes', () => {
+  it('re-renders what read it', async () => {
+    const p = await mounted('<i>${$url.pathname}</i>');
+    expect(p.body()).toBe('<i>/start</i>');
+    p.ctx.adoptUrl('http://x.test/moved?q=2');
+    expect(p.body()).toBe('<i>/moved</i>');
+    expect(p.errors).toStrictEqual([]);
+  });
+
+  it('shows and hides a region, which is the whole of what routing needs', async () => {
+    const p = await mounted(
+      '<i>x</i><:group :if=${$url.pathname === "/a"}><p>A</p><b>a</b></:group>'
+    );
+    expect(p.body()).toBe('<i>x</i>');
+    p.ctx.adoptUrl('http://x.test/a');
+    expect(p.body()).toBe('<i>x</i><p>A</p><b>a</b>');
+    p.ctx.adoptUrl('http://x.test/b');
+    expect(p.body()).toBe('<i>x</i>');
+  });
+
+  it('asks the browser to go there when a page assigns it', async () => {
+    const p = await mounted(
+      '<i>${$url.pathname}</i><button :on-click=${() => { $url = "/about"; }}>go</button>'
+    );
+    (p.window.document.querySelector('button') as unknown as { click(): void }).click();
+    await new Promise(r => setTimeout(r, 10));
+    // the address moved; the value has not, because nothing has told this
+    // page it arrived -- that is what `adoptUrl` is for, and it is what
+    // keeps the two from ever disagreeing
+    expect(`${p.window.location.href}`).toBe('http://x.test/about');
+    expect(p.body()).toMatch(/<i>\/start<\/i>/);
+  });
+
+  it('says so when a page writes to a part of it instead', async () => {
+    const p = await mounted(
+      '<i>${$url.pathname}</i>' +
+        '<button :on-click=${() => { $url.pathname = "/x"; }}>go</button>'
+    );
+    (p.window.document.querySelector('button') as unknown as { click(): void }).click();
+    await new Promise(r => setTimeout(r, 10));
+    expect(p.body()).toMatch(/<i>\/start<\/i>/);
+    expect(p.errors.join()).toMatch(/\$url\.pathname cannot be written/);
+    expect(p.errors.join()).toMatch(/assign to \$url itself/);
   });
 });

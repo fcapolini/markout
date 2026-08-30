@@ -1,4 +1,4 @@
-import { CoreGlobal, ORIGIN_GLOBAL, URL_GLOBAL } from './core-global';
+import { CoreGlobal, ORIGIN_GLOBAL, URL_GLOBAL, UrlValue } from './core-global';
 import { CoreScope, CoreScopeProps } from './core-scope';
 import { CoreValue, CoreValueProps, ValueExp } from './core-value';
 
@@ -208,10 +208,12 @@ export class CoreContext {
   constructor(props: CoreContextProps) {
     this.props = props;
     const url = parseUrl(props.url);
+    // `$origin` is the document's, and a same-document navigation cannot
+    // change it -- so it is taken once, here, and never follows `$url`
     const origin = props.origin ?? url?.origin;
     this.global = new CoreGlobal(this, {
       ...(origin === undefined ? {} : { [ORIGIN_GLOBAL]: { val: origin } }),
-      ...(url === undefined ? {} : { [URL_GLOBAL]: { val: url } }),
+      ...(url === undefined ? {} : { [URL_GLOBAL]: { val: this.guarded(url) } }),
       ...props.addedGlobals,
     });
     this.init();
@@ -506,6 +508,70 @@ export class CoreContext {
    * renders once and is wrong forever, which is far harder to diagnose than a
    * message would have been.
    */
+  /**
+   * Where a page goes when it writes `$url`.
+   *
+   * A write is a request, not a fact: the browser decides what it costs,
+   * and `$url` changes when it says the address changed (see
+   * WebContext.navigate and browser.ts). Nothing to navigate here -- a
+   * render has one address for its whole life -- so the base is a no-op,
+   * which is also the right answer while serving.
+   */
+  navigate(_href: string | URL): void {}
+
+  /**
+   * Takes the address the browser now has.
+   *
+   * The only way `$url` changes. Called by whatever heard the navigation,
+   * so the value and the address bar cannot disagree -- a redirected or
+   * refused navigation simply never arrives here.
+   */
+  adoptUrl(href: string): void {
+    const url = parseUrl(href);
+    const value = this.global.values[URL_GLOBAL];
+    if (!url || !(value instanceof UrlValue)) return;
+    // by href, since a fresh URL is never `===` the last one and every
+    // navigation would otherwise wake every reader
+    if (`${(value.get() as URL | undefined)?.href}` === url.href) return;
+    // adopt(), not set(): a set IS the page asking to navigate, and this is
+    // the answer coming back
+    value.adopt(this.guarded(url));
+    this.refresh();
+  }
+
+  /**
+   * A `URL` that says so when a page writes to its parts.
+   *
+   * `$url.pathname = '/x'` changes the object and tells nobody: markout
+   * notices a value being SET, not a member of one being written, so the
+   * page would go on showing the old address while holding the new one.
+   * Assignment is the write that means something (`$url = '/x'`), and this
+   * is what says so instead of failing quietly.
+   *
+   * Reads are forwarded with the real URL as the receiver, which host
+   * objects require -- a `URL` keeps its parts in internal slots, and
+   * calling `toString()` with a proxy as `this` throws.
+   */
+  private guarded(url: URL): URL {
+    return new Proxy(url, {
+      get: (target, prop) => {
+        const v = Reflect.get(target, prop);
+        return typeof v === 'function' ? v.bind(target) : v;
+      },
+      set: (_target, prop) => {
+        this.onError(
+          'update',
+          new Error(
+            `$url.${String(prop)} cannot be written: assign to $url itself ` +
+              `($url = '/somewhere') to navigate, which is what tells the ` +
+              `page it moved`
+          )
+        );
+        return true;
+      },
+    });
+  }
+
   onError(phase: RuntimeErrorPhase, err: unknown, value?: CoreValue): void {
     const scope = value?.scope.props.id;
     const key = value?.key;

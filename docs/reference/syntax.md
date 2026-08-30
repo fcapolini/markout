@@ -1112,9 +1112,32 @@ JavaScript's, and that also means a page cannot declare a value over them —
 `markout build --origin <url>` is exactly the answer to "where is this page
 going to be", and there `$url` is that origin with the page's own path.
 
-One caveat worth stating: `$url` is read where the page was *rendered*. A
-client-side navigation that replaces part of a document without a new
-request does not change it, because nothing has told the page it moved.
+`$url` is also the one name here that **changes while the page is up**.
+Everything else in this list is fixed for the life of a render, which is
+why reading one is not a dependency — there would be nothing to wake. An
+address is not fixed: a navigation that keeps the document moves it, and
+every expression that read it re-runs.
+
+Which makes it the one you can write to, and the write means *go there*:
+
+```html
+<button :on-click=${() => $url = '/about'}>About</button>
+```
+
+That is a link click said as an expression. With nothing intercepting the
+navigation the browser loads the page, which is what a link does; with a
+router intercepting it, the document stays and whatever reads `$url`
+re-renders. The same expression, both ways.
+
+Two things follow from the write being a request rather than a fact:
+
+- **`$url` changes when the browser says the address changed**, not when
+  the assignment happens. So it and the address bar cannot disagree, and a
+  navigation that is refused or redirected leaves the page telling the
+  truth. Reading `$url` on the line after writing it gives the old address.
+- **Writing a part of it is not a write.** `$url.pathname = '/x'` would
+  change the object and tell nobody, so it is reported instead: assign to
+  `$url` itself.
 
 Nothing else about the request is offered, and that is deliberate. Headers,
 cookies and the method have no browser counterpart, so a page reading one

@@ -7,7 +7,10 @@ import { WebContext } from './web-context';
 // bundled standalone for the browser (see scripts/build-runtime.mjs), so
 // this deliberately avoids depending on the project's Node-oriented lib.dom-less
 // tsconfig: declare just the globals actually used, instead of pulling in "DOM"
-declare const window: Record<string, unknown>;
+declare const window: Record<string, unknown> & {
+  addEventListener(type: string, listener: () => void): void;
+  navigation?: { addEventListener(type: string, listener: () => void): void };
+};
 declare const location: { origin: string; href: string };
 declare const document: {
   readyState: string;
@@ -52,7 +55,36 @@ export function init(): WebContext | undefined {
     url: typeof location === 'undefined' ? undefined : location.href,
   });
   context.refresh();
+  watchAddress(context);
   return context;
+}
+
+/**
+ * Keeps `$url` on whatever address the document actually has.
+ *
+ * `navigatesuccess` is the whole story where the Navigation API is
+ * there -- it fires for a traversal, a form submission and an intercepted
+ * navigation alike, which is exactly the set of ways a document's address
+ * changes without a new document. `popstate` is the same story told worse,
+ * and is here for browsers without the API; where both exist the second
+ * call finds the value already right and does nothing.
+ *
+ * Reading `location.href` rather than the event: the address bar is the
+ * fact, and anything else is a description of how it got there.
+ */
+function watchAddress(context: WebContext): void {
+  if (typeof location === 'undefined') return;
+  const update = () => context.adoptUrl(location.href);
+  const nav = window.navigation;
+  if (typeof nav?.addEventListener === 'function') {
+    nav.addEventListener('navigatesuccess', update);
+    return;
+  }
+  // guarded like the document is above: somewhere without a real window
+  // (a test harness, an accidental non-browser bundle) has no address to
+  // follow, and nothing here should be what says so
+  typeof window.addEventListener === 'function' &&
+    window.addEventListener('popstate', update);
 }
 
 function autoInit() {

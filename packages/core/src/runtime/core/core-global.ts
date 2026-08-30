@@ -1,6 +1,6 @@
 import { CoreContext } from './core-context';
 import { CoreScope } from './core-scope';
-import { CoreValueProps } from './core-value';
+import { CoreValue, CoreValueProps } from './core-value';
 
 /**
  * The names an expression may use without declaring them.
@@ -145,6 +145,26 @@ const BOUND_GLOBAL_NAMES = new Set([
 ]);
 
 //FIXME: server-side timer stuff should be no-ops
+/**
+ * `$url`, whose write is a navigation rather than a new value.
+ *
+ * Every other global is inert -- `val`, never set -- and this one is the
+ * exception that proves the comment below: it changes, but never because a
+ * page said so directly. A page assigning it asks the browser to go there;
+ * what comes back, if anything does, arrives through `adoptUrl`.
+ */
+export class UrlValue extends CoreValue<any> {
+  override set(value: any): boolean {
+    this.scope.ctx.navigate(value as string | URL);
+    return true;
+  }
+
+  /** the write `adoptUrl` makes, which is the one that means "we moved" */
+  adopt(value: any): void {
+    super.set(value);
+  }
+}
+
 export class CoreGlobal extends CoreScope {
   constructor(
     context: CoreContext,
@@ -170,5 +190,15 @@ export class CoreGlobal extends CoreScope {
       },
       context
     );
+  }
+
+  override newValue(
+    key: string,
+    props: CoreValueProps<any>,
+    allValues?: { [key: string]: CoreValueProps<any> }
+  ) {
+    return key === URL_GLOBAL
+      ? new UrlValue(props, this, key)
+      : super.newValue(key, props, allValues);
   }
 }

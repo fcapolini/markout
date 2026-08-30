@@ -80,11 +80,20 @@ nesting rather than as bookkeeping.
 ### 1. `$url`, and a build that can bind it per output
 
 **Built**, as [TODO.md](../../TODO.md)'s `$url` entry: the whole address as
-a `URL`, supplied from the request on the server and from `location.href`
-in the browser, with `$origin` taken from it. Every route is a match
-against it.
+a `URL`, from the request on the server and from `location.href` in the
+browser, with `$origin` taken from it. Every route is a match against it.
 
-Two things still have to come with it.
+**And live**, which was the half that mattered here. A navigation keeping
+the document moves it and everything reading it re-runs — `$url` is the
+one global the compiler emits a dependency for, since the rest cannot
+change — so a route's condition is an ordinary value over `$url` and a
+region shows or hides on it. A page assigning `$url` asks the browser to
+go there, so a link is an assignment and the same expression works with a
+router intercepting or without one. Core learns only
+that a URL can change without a new document, which is a fact about
+browsers rather than about routers.
+
+One thing still has to come with it.
 
 **The build must render one source page at many URLs.** Today it walks the
 docroot and renders each `.html` once
@@ -93,15 +102,6 @@ compiles strictly by pathname
 ([middleware.ts](../../packages/express/src/middleware.ts)). Neither is
 language; both have to learn that a page can answer an address that is not
 its filename.
-
-**`$url` has to be live rather than supplied.** A global is handed to the
-context once and linked as a fixed source — that is what `$origin` is, and
-[render.ts](../../packages/core/src/render/render.ts) says so: *a supplied
-object is fixed for the life of the render*. An intercepted navigation
-(settled 5) changes the URL without a new document, so the runtime has to
-write `$url` then and let its readers recompute. Core learns only that a
-URL can change without a new document — a fact about browsers, not about
-routers. The server side is untouched: one render sees one address.
 
 ### 2. A render handing a value back to the build
 
