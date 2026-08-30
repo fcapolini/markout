@@ -97,7 +97,32 @@ export function createShop(props: ShopProps): Express {
 
 if (process.argv[1]?.endsWith('server.ts')) {
   const port = Number(process.env.PORT) || 3001;
-  createShop({ docroot: import.meta.dirname, dev: true }).listen(port, () => {
-    console.log(`shop on http://localhost:${port}`);
-  });
+  const server = createShop({ docroot: import.meta.dirname, dev: true }).listen(
+    port,
+    () => {
+      console.log(`the bench     http://127.0.0.1:${port}/`);
+      console.log(`a product     http://127.0.0.1:${port}/product.html?id=saw`);
+      console.log(`the cart      http://127.0.0.1:${port}/cart.html`);
+    }
+  );
+
+  // Ctrl-C is a SIGINT, and node's own answer to it is to die at once with
+  // 130 -- mid-response for whoever was mid-request, and a failed script as
+  // far as npm is concerned, which prints a page of error for an ordinary
+  // stop. Closing the server refuses new connections and lets the answers
+  // in flight finish, then exits 0.
+  //
+  // The idle keep-alive connections have to be closed by hand: they hold
+  // nothing, but `close` waits for them, so without this the process sits
+  // there until the last browser loses interest. The timer is the backstop
+  // for a request that never ends, unref'd so it is not itself a reason to
+  // stay up. The same block sites/site/server.ts carries, for the same
+  // reasons.
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+    process.once(signal, () => {
+      server.close(() => process.exit(0));
+      server.closeIdleConnections();
+      setTimeout(() => process.exit(0), 10_000).unref();
+    });
+  }
 }
