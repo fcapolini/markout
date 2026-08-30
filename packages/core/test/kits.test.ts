@@ -59,7 +59,11 @@ function install(at: string, packages: Record<string, unknown>, into: string) {
   }
 }
 
-const KIT = (name: string, root: string) => ({ name, [`markout`]: { root } });
+const KIT = (name: string, root: string, version?: string) => ({
+  name,
+  ...(version ? { version } : {}),
+  [`markout`]: { root },
+});
 
 describe('discoverKits', () => {
   /**
@@ -121,7 +125,13 @@ describe('discoverKits', () => {
 
     it('stops the global fallback, having found kits of its own', () => {
       // the whole point of the rung: this docroot is bare of node_modules
-      // and no longer needs a global root to have been askable for
+      // and no longer needs a global root to have been askable for.
+      //
+      // Nearest wins did NOT open this gate, though it removed the reason
+      // first given for it. What the gate still holds back is the compiler's
+      // OWN tree, which is not the project and need not resemble it -- see
+      // discoverKits. A kit above the project on the docroot's own walk
+      // falls back per kit; this one is all or nothing.
       const docroot = project({}, {}, 'node_modules');
       install(docroot, { 'a-kit': KIT('a-kit', '/a-kit') }, '.markout/kits');
       const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'markout-global-'));
@@ -133,21 +143,81 @@ describe('discoverKits', () => {
       expect(kits.map(k => k.name)).toEqual(['a-kit']);
     });
 
-    it('refuses two copies of one kit, and says to remove one', () => {
-      // reachable now by an ordinary route -- npm install, then a tick in
-      // the sidebar -- so the message names both copies rather than advising
-      // a root change nobody can make twice
+    it('falls back per kit for a tree above the project, which is on the walk', () => {
+      // the case that sent us here: `markout add` run in a home directory
+      // leaves a `.markout/kits` that every project underneath walks
+      // through. It is a rung like any other, so a kit the project has wins
+      // and a kit it has not got is simply found
+      // built by hand, because the project needs a directory ABOVE it that
+      // is still inside this test's own temporary tree
+      const home = fs.mkdtempSync(path.join(os.tmpdir(), 'markout-home-'));
+      temps.push(home);
+      const app = path.join(home, 'app');
+      const docroot = path.join(app, 'site');
+      fs.mkdirSync(docroot, { recursive: true });
+      install(app, { 'a-kit': KIT('a-kit', '/a-kit', '2.0.0') }, 'node_modules');
+      install(home, { 'a-kit': KIT('a-kit', '/a-kit', '1.0.0') }, '.markout/kits');
+      install(home, { 'b-kit': KIT('b-kit', '/b-kit') }, '.markout/kits');
+      const { kits, errors, shadowed } = discoverKits(docroot);
+      expect(errors).toEqual([]);
+      expect(kits.map(k => k.name).sort()).toEqual(['a-kit', 'b-kit']);
+      expect(kits.find(k => k.name === 'a-kit')?.version).toBe('2.0.0');
+      expect(shadowed).toHaveLength(1);
+      expect(shadowed[0]).toContain('1.0.0');
+    });
+
+    it('keeps the nearer of two copies of one kit, and says nothing', () => {
+      // reachable by an ordinary route -- npm install, then a tick in the
+      // sidebar -- and there is only one thing to link, so the question is
+      // which copy of it rather than whether a name is taken
       const docroot = project({ 'a-kit': KIT('a-kit', '/a-kit') });
       install(path.dirname(docroot), { 'a-kit': KIT('a-kit', '/a-kit') }, '.markout/kits');
-      const { kits, errors } = discoverKits(docroot);
+      const { kits, errors, shadowed } = discoverKits(docroot);
+      expect(errors).toEqual([]);
+      // two copies at one version is what an npm tree looks like any day
+      expect(shadowed).toEqual([]);
       expect(kits).toHaveLength(1);
-      // the copy the project carries is the one kept
+      // `.markout/kits` is the nearer rung, and the copy the project carries
       expect(kits[0].dir).toBe(
         path.join(path.dirname(docroot), '.markout', 'kits', 'a-kit')
       );
-      expect(errors).toHaveLength(1);
-      expect(errors[0]).toContain('installed twice');
-      expect(errors[0]).toContain('remove one');
+    });
+
+    it('says which copy it dropped when the two are different versions', () => {
+      const docroot = project({ 'a-kit': KIT('a-kit', '/a-kit', '2.0.0') });
+      install(
+        path.dirname(docroot),
+        { 'a-kit': KIT('a-kit', '/a-kit', '1.0.0') },
+        '.markout/kits'
+      );
+      const { kits, errors, shadowed } = discoverKits(docroot);
+      expect(errors).toEqual([]);
+      expect(kits[0].version).toBe('1.0.0');
+      expect(shadowed).toHaveLength(1);
+      expect(shadowed[0]).toContain('"a-kit" 2.0.0');
+      expect(shadowed[0]).toContain('1.0.0');
+      expect(shadowed[0]).toContain('nearer the docroot');
+    });
+
+    it('prefers a hoisted copy to one nested inside another kit', () => {
+      // the ordering the queue exists for. A kit's own tree is scanned only
+      // after every rung of the docroot's walk, so which copy wins cannot
+      // depend on how the directories happened to sort -- descending into
+      // `bs-kit` as it was accepted would have let its private copy win
+      const docroot = project({
+        'bs-kit': KIT('bs-kit', '/bs-kit'),
+        'std-kit': KIT('std-kit', '/std-kit', '3.0.0'),
+      });
+      install(
+        path.join(path.dirname(docroot), 'node_modules', 'bs-kit'),
+        { 'std-kit': KIT('std-kit', '/std-kit', '1.0.0') },
+        'node_modules'
+      );
+      const { kits, errors, shadowed } = discoverKits(docroot);
+      expect(errors).toEqual([]);
+      expect(kits.find(k => k.name === 'std-kit')?.version).toBe('3.0.0');
+      expect(shadowed).toHaveLength(1);
+      expect(shadowed[0]).toContain('1.0.0');
     });
 
     it('finds a kit vendored inside another kit', () => {
@@ -207,11 +277,10 @@ describe('discoverKits', () => {
         '@markout-lang/bootstrap-kit': KIT('@markout-lang/bootstrap-kit', '/bootstrap-kit'),
       });
       const { kits, errors } = discoverKits(docroot, [cli]);
-      // no clash reported, and the global bootstrap kit is not picked up:
-      // a project's own install decides, whole
+      // the project's own install decides, whole: not even the bootstrap kit,
+      // which the project has not got, is taken from the compiler's tree
       expect(errors).toEqual([]);
-      expect(kits.map((k) => k.name)).toEqual(['@markout-lang/std-kit']);
-      // it is the project's copy, not the global one
+      expect(kits.map(k => k.name)).toEqual(['@markout-lang/std-kit']);
       expect(kits[0].dir.startsWith(path.dirname(docroot))).toBe(true);
     });
 

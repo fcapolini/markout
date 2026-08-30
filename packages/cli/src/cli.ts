@@ -350,6 +350,12 @@ function report(result: BuildResult, restricted = false, classesOnly = false) {
     return;
   }
 
+  // Not a refusal: two copies of one kit are resolved by taking the nearer,
+  // which is the rule rather than a failure of it. Worth a line all the same
+  // when the two are different versions, since that is a build quietly
+  // deciding which of them a page was compiled against
+  result.kitShadowed.forEach(msg => console.warn(`markout: ${msg}`));
+
   result.runtimeErrors.forEach(({ pathname, error }) =>
     console.warn(`${pathname} ${formatRuntimeError(error)}`)
   );

@@ -345,12 +345,15 @@ export function markout(props: MarkoutProps) {
     return built;
   };
   const discovered = props.kits
-    ? { kits: props.kits, errors: [] }
+    ? { kits: props.kits, errors: [], shadowed: [] }
     : discoverKits(docroot, [__dirname]);
   // Logged rather than thrown: a refused kit is a pair of things claiming one
   // URL, which leaves every page that did not want that kit perfectly
   // serviceable. Said once, at startup, where somebody is watching.
   discovered.errors.forEach(msg => logger('error', `[markout] ${msg}`));
+  // and the copies a nearer one stands in front of, which refuse nothing and
+  // are reported for the same reason at the same moment
+  discovered.shadowed.forEach(msg => logger('warn', `[markout] ${msg}`));
   discovered.kits.forEach(kit =>
     logger('info', `[markout] kit ${kit.name} at ${kit.root}`)
   );

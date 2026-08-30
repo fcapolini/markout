@@ -23,6 +23,11 @@ import { findManifest, KITS_DIR } from './manifest';
  * logical name. That is why the refusals below are refusals rather than a
  * precedence rule -- `ln -s` fails when the name is taken, and every case
  * here is that failure reached by a different route.
+ *
+ * With one exception, and it is the case where the symlink test says nothing:
+ * two copies of the SAME kit. There is only one thing to link, and the
+ * question is which copy of it -- so the nearer one wins, the way every other
+ * lookup on this walk resolves. See `consider`.
  */
 
 /** the `package.json` key a kit declares itself with */
@@ -60,6 +65,17 @@ export interface Discovery {
   kits: Kit[];
   /** refusals, each already a complete sentence for a log or a build report */
   errors: string[];
+  /**
+   * Copies a nearer one stands in front of, same form, refusing nothing.
+   *
+   * Only where the two declare DIFFERENT versions: identical copies of one
+   * kit are the ordinary shape of an npm tree and there is nothing about
+   * them worth a line. A version that differs is the one a build silently
+   * changes behaviour over, so it is said -- and said here rather than in
+   * `errors`, because a build that stops for it would stop for every
+   * hoisting decision npm ever made.
+   */
+  shadowed: string[];
 }
 
 /**
@@ -77,6 +93,12 @@ export interface Discovery {
  * Installed means `node_modules` or `.markout/kits`, at the docroot and at
  * every directory above it. The second rung is what makes a kit reachable
  * without npm, and it is on the same walk on purpose -- see `KITS_DIR`.
+ *
+ * **Nearest wins.** The order the places are visited in IS the precedence
+ * rule, so everything below only has to keep the queue in the right order:
+ * the docroot's own rungs, nearest first; then the trees of the kits those
+ * rungs yielded, appended as each is accepted; then `alsoFrom`, which is as
+ * far from the docroot as a kit gets.
  */
 export function discoverKits(
   docroot: string,
@@ -85,10 +107,13 @@ export function discoverKits(
   const root = path.resolve(docroot);
   const kits: Kit[] = [];
   const errors: string[] = [];
+  const shadowed: string[] = [];
   const byRoot = new Map<string, Kit>();
   const seenDir = new Set<string>();
 
-  const consider = (name: string, dir: string, managed = false) => {
+  type Place = { dir: string; managed: boolean };
+
+  const consider = (name: string, dir: string, managed: boolean, queue: Place[]) => {
     if (seenDir.has(dir)) {
       return;
     }
@@ -98,29 +123,39 @@ export function discoverKits(
       return;
     }
     const clash = byRoot.get(declared.root);
-    if (clash) {
-      // covers two DIFFERENT kits claiming one root and two copies of one
-      // kit claiming theirs, which npm's nested installs make a legal tree
-      // and `.markout/kits` beside a `node_modules` makes an easy mistake;
-      // a site cannot serve two versions of a kit's assets at one URL either
-      // way, so there is nothing to pick between. The advice differs, which
-      // is why the message does: a root is the kit author's to change, and
-      // nobody can change one twice.
+    if (clash && clash.name !== name) {
+      // Two DIFFERENT kits, one root. Still a refusal, and for the reason
+      // every refusal here is one: both orders of precedence are wrong, and
+      // a root is the kit author's to change. See docs/design/npm-kits.md.
       errors.push(
-        clash.name === name
-          ? `kit "${name}" is installed twice -- at "${clash.dir}" and at ` +
-              `"${dir}", both claiming root "${declared.root}" -- remove one`
-          : `kit "${name}" claims root "${declared.root}", already claimed by ` +
-              `"${clash.name}" -- one of them must declare a different ` +
-              `${KIT_KEY}.root`
+        `kit "${name}" claims root "${declared.root}", already claimed by ` +
+          `"${clash.name}" -- one of them must declare a different ` +
+          `${KIT_KEY}.root`
       );
       return;
     }
-    const shadowed = path.join(root, declared.root);
-    if (fs.existsSync(shadowed)) {
+    if (clash) {
+      // The same kit, farther away -- the copy already held was found nearer
+      // the docroot, and it stands. This is the one place a precedence rule
+      // beats a refusal: `ln -s` has nothing to say here, since there is one
+      // thing to link and only the question of which copy of it, and the
+      // answer is the one every other lookup on this walk gives.
+      //
+      // Two copies at one version is what an npm tree looks like on any
+      // ordinary day, so that passes without a word; two versions is a
+      // choice somebody may want to know was made for them.
+      declared.version === clash.version ||
+        shadowed.push(
+          `kit "${name}" ${label(declared.version)} at "${dir}" is not used: ` +
+            `${label(clash.version)} at "${clash.dir}" is nearer the docroot`
+        );
+      return;
+    }
+    const existing = path.join(root, declared.root);
+    if (fs.existsSync(existing)) {
       errors.push(
         `kit "${name}" claims root "${declared.root}", but the docroot already ` +
-          `has "${shadowed}" -- preferring either one would silently hide ` +
+          `has "${existing}" -- preferring either one would silently hide ` +
           `the other`
       );
       return;
@@ -132,36 +167,62 @@ export function discoverKits(
     // a kit's own dependencies may be kits: the Bootstrap kit importing the
     // std kit is the case, and under a nested install its copy lives here
     // rather than beside the application's -- or, for a kit that arrived
-    // without npm, vendored into the kit's own `.markout/kits`
-    for (const from of kitDirs(dir)) {
-      scan(from.dir, (n, d) => consider(n, d, from.managed));
+    // without npm, vendored into the kit's own `.markout/kits`.
+    //
+    // Appended rather than descended into, which is what makes the nesting
+    // count as distance: every rung of the docroot's own walk is considered
+    // before any kit's private tree, so a hoisted copy beats a nested one
+    // however the directories happen to sort.
+    queue.push(...kitDirs(dir));
+  };
+
+  const drain = (queue: Place[]) => {
+    // index rather than shift(): `consider` appends to the same array while
+    // it runs, and the loop has to see what it added
+    for (let i = 0; i < queue.length; i++) {
+      const from = queue[i];
+      scan(from.dir, (n, d) => consider(n, d, from.managed, queue));
     }
   };
 
-  for (const from of kitDirs(root, true)) {
-    scan(from.dir, (n, d) => consider(n, d, from.managed));
-  }
-  // A bare docroot -- HTML in a directory, no package.json anywhere above it
-  // -- has no project to install kits into, so the only kits its author can
-  // have are the ones they installed globally. `alsoFrom` lets a caller offer
-  // its OWN install tree as a last resort: walked up from a globally
-  // installed CLI that reaches the global `node_modules`, and from a locally
-  // installed one it reaches the project's, which the walk above already
-  // covered.
+  drain(kitDirs(root, true));
+  // A docroot with no project above it -- HTML in a directory, no
+  // package.json anywhere -- has nowhere to install a kit, so the only ones
+  // its author can have are the ones they installed globally. `alsoFrom`
+  // lets a caller offer its OWN install tree as a last resort: walked up
+  // from a globally installed CLI it reaches the global `node_modules`, and
+  // from a locally installed one it reaches the project's, which the drain
+  // above covered.
   //
-  // Only when the project tree yielded nothing, though. Appending it always
-  // would let a real project pick up a stray global copy of a kit it already
-  // has and fail the clash check above -- a build broken by an install that
-  // has nothing to do with it.
+  // Still only when the project tree yielded NOTHING, and the reason has
+  // changed under it. It used to be that a project with its own copy of a
+  // kit would find the global one too and fail the clash check -- which
+  // nearest wins answers directly, the project's copy being nearer. What
+  // survives is the other half: taken always, this mounts kits from
+  // WHOEVER'S TREE THE COMPILER LIVES IN, which is not the project and need
+  // not resemble it. A docroot with one spare kit of its own, built by a CLI
+  // inside a monorepo, silently gained that monorepo's kits -- an output
+  // that depends on where the compiler was installed, which is exactly the
+  // property walking up from the docroot rather than the working directory
+  // exists to protect.
+  //
+  // So the rule stays: `.markout/kits` above the project falls back per KIT,
+  // being on the docroot's own walk, while the compiler's tree is all or
+  // nothing. See docs/design/npm-kits.md.
   if (kits.length === 0) {
-    for (const from of alsoFrom) {
-      for (const dir of nodeModulesDirs(path.resolve(from))) {
-        scan(dir, consider);
-      }
-    }
+    drain(
+      alsoFrom.flatMap(from =>
+        nodeModulesDirs(path.resolve(from)).map(dir => ({ dir, managed: false }))
+      )
+    );
   }
   errors.push(...manifestErrors(root, kits));
-  return { kits, errors };
+  return { kits, errors, shadowed };
+}
+
+/** a version for a message, when a package.json may not have declared one */
+function label(version?: string): string {
+  return version ? version : '(no version)';
 }
 
 /**

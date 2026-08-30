@@ -437,6 +437,10 @@ and silently so — the same argument `build` already makes about a docroot
 file colliding with the runtime's filename, which refuses rather than
 resolving.
 
+With one exception, and it is the case where the equivalence below says
+nothing: **two copies of the same kit**, which is refusal 3 and is now a
+precedence rule instead. See [Nearest wins](#nearest-wins-for-two-copies-of-one-kit).
+
 The shorter justification is the equivalence above: **`ln -s` fails when the
 name is taken.** Every refusal here is that failure, reached by a different
 route.
@@ -445,9 +449,8 @@ route.
    shadows the kit; preferring the kit shadows the author's own files. Refuse
    at startup and at build, naming both paths.
 2. **Two kits claiming one root.** Refuse.
-3. **Two versions of one kit.** npm's nested installs make this a legal tree,
-   and both copies declare the same root. A site cannot serve two versions of
-   a kit's assets at one URL, so refuse rather than pick.
+3. ~~**Two versions of one kit.**~~ Now a precedence rule — the nearer copy
+   wins. See below.
 4. **A root that is not a single absolute path**, `/` most of all.
 5. **`/npm/…` requested over HTTP.** It is a compile-time spelling that
    reaches the filesystem and dies there. Serving it would give the same
@@ -463,6 +466,62 @@ route.
    always has been, because there is no package to name. The two
    cannot be confused for one another: refusal 1 means any given path is a
    mount or a real directory, never both.
+
+## Nearest wins, for two copies of one kit
+
+Every refusal above is `ln -s` failing because the name is taken. Two copies
+of *one* kit is the case that argument does not reach: there is one thing to
+link and only the question of which copy of it, so the link succeeds whichever
+you pick. The refusal was answering a question nobody had asked.
+
+**The nearer copy wins**, "nearer" meaning the walk that already exists —
+`.markout/kits` then `node_modules`, at the docroot and at every directory
+above it, and after all of those the private tree of each kit those rungs
+yielded. That last clause is the part with teeth: a kit's own dependencies are
+*appended to the queue* rather than descended into as it is accepted, so a
+hoisted copy beats a nested one however the directories happen to sort. Before,
+which of the two won was whichever `readdir` reached first.
+
+Two kits claiming one root is still refusal 2, unchanged and for its original
+reason: nothing distinguishes them, and a root is the kit author's to change.
+
+**The version, when the two differ, is said.** Not as an error — a build that
+stopped for it would stop for every hoisting decision npm ever made — but on
+a channel of its own, `Discovery.shadowed`, printed by the CLI and logged by
+the middleware at startup:
+
+```
+markout: kit "@markout-lang/std-kit" 0.4.0 at "/Users/x/.markout/kits/@markout-lang/std-kit"
+  is not used: 0.3.0 at "/app/node_modules/@markout-lang/std-kit" is nearer the docroot
+```
+
+Two copies at one version pass without a word, that being what an npm tree
+looks like on any ordinary day.
+
+### What sent us here
+
+`markout add` run in a home directory leaves a `~/.markout/kits`, and the walk
+runs from the docroot to `/` — so that directory is a rung for *every project
+on the machine*, and under the old rule it refused every one of them that had
+installed the same kit with npm. The rung was designed per-project
+([without-node.md](without-node.md#where-an-installed-kit-goes)); nothing
+stops it being created above every project at once.
+
+### What did not change with it
+
+The `alsoFrom` gate above — the compiler's own install tree, taken only when
+the docroot walk found no kits at all. The reason first given for it is void
+under this rule (a project's own copy is nearer, so it simply wins), but a
+second one survives and is the stronger: that tree belongs to **whoever
+installed the compiler**, not to the project, and need not resemble it. Taken
+always, a docroot with one spare kit of its own, built by a CLI living in a
+monorepo, silently gains that monorepo's kits — an output that depends on
+where the compiler was installed, which is the property walking up from the
+docroot rather than from the working directory exists to protect.
+
+So the two behave differently on purpose: a tree **above the project** is on
+the docroot's own walk and falls back per kit; the **compiler's** tree is all
+or nothing.
 
 ## The resolver
 

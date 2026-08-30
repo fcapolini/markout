@@ -42,12 +42,42 @@ produces:
 npm i -g @markout-lang/cli @markout-lang/std-kit
 ```
 
-That fallback is deliberately all-or-nothing. A project with kits of its own
-never reaches past them for a global copy, so what it builds cannot depend on
-what happens to be installed on the machine building it — and two copies of
-one kit can never both be found, which is an error rather than a choice. The
-practical consequence is worth stating plainly: **the moment a docroot has one
-kit of its own, globally installed kits stop being visible to it.**
+That fallback is deliberately all-or-nothing, and the reason is what that
+directory *is*: it belongs to whoever installed the compiler, not to the
+project, and need not resemble it. Taken always, a docroot with one kit of its
+own, built by a CLI that happens to live inside some monorepo, would silently
+gain that monorepo's kits — and what a docroot builds would depend on where
+the compiler was installed. The practical consequence is worth stating
+plainly: **the moment a docroot has one kit of its own, kits installed
+alongside the CLI stop being visible to it.**
+
+The walk itself is not all-or-nothing, and the difference matters. Everything
+it passes through — including a `.markout/kits/` in a directory *above* the
+project, a home directory say — is an ordinary rung: a kit found there is used
+if the project has not got one of its own, and ignored if it has.
+
+**Two copies of one kit: the nearer one is used.** One in `node_modules/`, one
+in `.markout/kits/`, one in a home directory, one nested inside another kit —
+there is only ever one thing to mount and only the question of which copy, and
+the answer is the one every other lookup on this walk gives. Nearest means the
+walk above, in its order, with each kit's own private tree coming after every
+rung of it, so a hoisted copy beats a nested one.
+
+If the two declare different versions, the build says which it dropped, and
+carries on:
+
+```
+markout: kit "@markout-lang/std-kit" 0.4.0 at "/Users/you/.markout/kits/@markout-lang/std-kit"
+  is not used: 0.3.0 at "/app/node_modules/@markout-lang/std-kit" is nearer the docroot
+```
+
+Two copies at the same version say nothing, that being what an npm tree looks
+like on any ordinary day.
+
+**Two *different* kits claiming one root is still an error**, and there the
+advice is the only one there can be: one of them must declare a different
+`markout.root`. Nothing distinguishes them, and the root is the kit author's
+to change.
 
 #### `.markout/kits/`, and installing without npm
 
@@ -60,8 +90,11 @@ nowhere for npm to install to and its author generally has no npm to run.
 
 `.markout/` is never published by `markout build`, being dot-prefixed.
 
-Two copies of one kit — one in `node_modules`, one in `.markout/kits/` — is an
-error naming both, not a precedence rule. Remove one.
+Because it is on the same walk, a `.markout/kits/` created *above* a project —
+`markout add` run in a home directory leaves one — is a rung for every project
+underneath it. That is a fallback rather than a conflict: a kit the project
+installed itself wins, and one it has not got is simply found. See
+**Where kits are found** above.
 
 ## Installing kits without npm
 

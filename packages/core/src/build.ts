@@ -222,6 +222,12 @@ export interface BuildResult {
    * a URL space with a hole in it.
    */
   kitErrors: string[];
+  /**
+   * Copies of a kit a nearer one stands in front of, at a different version.
+   * Said, and not counted against the build -- picking the nearer copy is the
+   * rule rather than a failure of it. See `discoverKits`.
+   */
+  kitShadowed: string[];
 }
 
 /**
@@ -282,7 +288,7 @@ export async function build(props: BuildProps): Promise<BuildResult> {
   // imported, which is the same rule the middleware follows -- so the two
   // cannot disagree about whether a kit's resource exists. See docs/design/npm-kits.md.
   const discovered = props.kits
-    ? { kits: props.kits, errors: [] }
+    ? { kits: props.kits, errors: [], shadowed: [] }
     : discoverKits(docroot, [__dirname]);
   // content-hashed, so the built pages point at a URL that can only ever
   // mean these bytes -- which is what lets a host cache it forever, and what
@@ -307,6 +313,7 @@ export async function build(props: BuildProps): Promise<BuildResult> {
     runtimeErrors: [],
     serverErrors: [],
     kitErrors: discovered.errors,
+    kitShadowed: discovered.shadowed,
   };
   if (discovered.errors.length) {
     return result;

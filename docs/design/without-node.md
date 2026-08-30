@@ -385,12 +385,17 @@ exists for globally installed kits. Leaving it to that fallback works, and
 makes the two spellings of one file resolve by different mechanisms depending
 on how the kit arrived, which surfaces later as a diagnostic nobody can read.
 
-**Two copies of one kit has its own message.** The clash check covers it as a
-case of two kits claiming one root, and advises declaring a different
+**Two copies of one kit is not a refusal.** The clash check used to cover it
+as a case of two kits claiming one root, which advised declaring a different
 `markout.root` — advice nobody can follow when the two names are the same
-name. It reads *kit "X" is installed twice — at A and at B — remove one*,
-because `.markout/kits` gives the case an ordinary route: npm install, then
-tick the same kit.
+name. It then had a message of its own, and now it has a rule of its own: the
+copy nearer the docroot is used and the other is not, said out loud only when
+the two versions differ. `.markout/kits` is what gave the case an ordinary
+route — npm install, then tick the same kit — and one route more ordinary
+still, which is what settled it: this directory is per-project by design and
+nothing stops one being created in a home directory, where it sits above every
+project on the machine. See
+[Nearest wins](npm-kits.md#nearest-wins-for-two-copies-of-one-kit).
 
 **Where the installer lives, and why.** The sidebar's checkbox has to install
 a kit exactly the way `markout add` does, or one feature has two halves free

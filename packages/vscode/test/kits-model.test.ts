@@ -306,7 +306,7 @@ describe('refusedKits', () => {
   it('names the kit in each shape of refusal', () => {
     expect(
       refusedKits([
-        'kit "@a/one" is installed twice -- at A and at B -- remove one',
+        'kit "@a/one" declares markout.root "x", which is not an absolute path',
         'package "@a/two" has a "markout" section but no markout.root -- add one',
         'kit "@a/three" claims root "/x", but the docroot already has "/p/x"',
       ])
