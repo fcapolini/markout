@@ -54,6 +54,14 @@ design side:
   before anything else sees them, and the marked spelling of a branch was
   not on the list — so the shape the docs recommend for an error page did not
   compile. The docs' own example used a `<div>`, which is why nobody noticed.
+- **A previous request's rows stayed in the page.** A page is compiled once
+  and its document rendered into again and again, and the two renders never
+  meet — so a `:for-each` shorter than last time left the difference
+  standing. Filtering the catalog to books, after anyone had loaded the full
+  listing, showed ten items with two of them right. Here it is a wrong
+  count; keyed to a person it is one visitor's rows in another's page.
+  Fixed in `render.ts` (`dropStaleReplicas`), with the general case pinned
+  in `packages/core/test/render/rerender.test.ts`.
 - **A page cannot declare a value named after a server global.** `cart` is
   supplied to the render, so `:server-cart=${cart}` is refused rather than
   quietly reading itself. Correct, unguessable, and the reason the pages say

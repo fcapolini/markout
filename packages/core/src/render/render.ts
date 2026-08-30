@@ -6,7 +6,7 @@ import { STATE_GLOBAL } from "../runtime/core/core-context";
 import type { Page } from "../compiler/ir/Page";
 import { ServerText, type ServerElement, type ServerNode } from "../html/server-dom";
 import { loadProps } from "./props";
-import { RT_IF_VALUE } from "../runtime/core/core-scope";
+import { cloneId, RT_IF_VALUE } from "../runtime/core/core-scope";
 import { escapeScriptText, quote, serialize, UnserializableError } from "./serialize";
 
 /**
@@ -130,6 +130,7 @@ export async function renderPage(
     ctx.resetReported();
     ctx.refresh();
   }
+  dropStaleReplicas(ctx);
   dropSpentStencils(ctx);
   const state = ctx.collectState();
   props?.onState?.(state);
@@ -190,6 +191,51 @@ function dropSpentStencils(ctx: WebContext) {
     } else if (el && serverDecided(scope) && !dom?.isConnected) {
       // settled the other way, and settled for good
       el.unlink();
+    }
+    scope.children.forEach(walk);
+  };
+  walk(ctx.root);
+}
+
+/**
+ * Drops replicas a PREVIOUS render left behind.
+ *
+ * The document a render writes into is the compiled page's own, kept and
+ * reused -- which is what makes a second request for a page cost a render
+ * rather than a compile. Almost everything about it is put back or written
+ * over: `restoreStencils` returns what the last render spent, a region that
+ * showed and must not is hidden by its own condition, and text is replaced
+ * in place.
+ *
+ * A `:for-each` is the exception, because the two renders do not meet. Each
+ * builds a fresh scope tree from the props, so the second one knows nothing
+ * of the first's replicas: it stamps out `s11-0` and `s11-1`, finds those
+ * two elements already standing and adopts them -- and `s11-2` onward, which
+ * belong to nobody now, are simply not visited. A shorter array than last
+ * time left the difference in the page.
+ *
+ * Which is a visitor seeing rows rendered for the request before theirs. In
+ * a catalog that is a wrong count; in anything keyed to a person it is their
+ * data in somebody else's page, and nothing about it is loud.
+ *
+ * Swept per host rather than per document: a replica's id is its host's plus
+ * its index, so the ones to drop are exactly the ids from `clones.length`
+ * upward, and the walk stops at the first that is not there. `removeExcessClones`
+ * is the same job inside one context, where the scopes do know each other.
+ */
+function dropStaleReplicas(ctx: WebContext) {
+  const walk = (scope: CoreScope) => {
+    const host = scope as WebScope;
+    // a host is a scope that replicates: it has a clones list, empty or not,
+    // and its own element is the stencil's rather than a rendering
+    if (host.clones) {
+      const anchor = (host as unknown as { anchor?: { parentNode?: unknown } }).anchor;
+      const container = anchor?.parentNode as ServerElement | undefined;
+      for (let i = host.clones.length; container; i++) {
+        const stale = ctx.findElementById(cloneId(scope.props.id, i), container as never);
+        if (!stale) break;
+        (stale as unknown as ServerElement).unlink();
+      }
     }
     scope.children.forEach(walk);
   };

@@ -27,6 +27,17 @@ function shown(html: string): string {
   return html.replace(/<!---[^>]*-->/g, '');
 }
 
+/**
+ * How many product cards the page actually shows.
+ *
+ * The body alone, because the stencil the replicas are stamped from lives
+ * in `<head>` and counting it would say one more than anyone can see.
+ */
+function cards(html: string): number {
+  const body = /<body[\s\S]*?<script type="application\/json"/.exec(html)?.[0] ?? '';
+  return (body.match(/class="card"/g) ?? []).length;
+}
+
 /** everything a response set, to carry a session from one request to the next */
 function jar(res: { headers: Record<string, unknown> }): string {
   const set = (res.headers['set-cookie'] as string[] | undefined) ?? [];
@@ -94,6 +105,29 @@ describe('a shop, from the catalog to the order', () => {
     expect(html).toContain('£170.00');
     // and the header counts what is in it
     expect(html).toMatch(/Cart<span[^>]*> \(4\)<\/span>/);
+  });
+
+  it('does not leave one request rows in the next', async () => {
+    // the bug this shop found. A page's document is compiled once and
+    // rendered into again and again, and the two renders never meet: the
+    // second builds a fresh scope tree, stamps `s11-0` and `s11-1`, adopts
+    // the two elements already standing -- and the eight the last request
+    // left belong to nobody, so nothing visited them. A filter after a full
+    // listing showed ten items, two of them right.
+    //
+    // In a catalog that is a wrong count. Keyed to a person it is one
+    // visitor's rows in another's page, and nothing about it is loud.
+    const app = shop();
+    const all = await request(app).get('/');
+    expect(cards(all.text)).toBe(10);
+
+    const books = await request(app).get('/?tag=book');
+    expect(cards(books.text)).toBe(2);
+    expect(shown(books.text)).not.toContain('Dovetail saw');
+
+    // and back up again, so the sweep is not merely truncating
+    const again = await request(app).get('/');
+    expect(cards(again.text)).toBe(10);
   });
 
   it('sends an empty checkout back to the cart rather than showing a form', async () => {
