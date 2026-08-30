@@ -96,6 +96,10 @@ export function stage1load(page: Page) {
   // with nothing to show evaluates none of its values
   const root = page.source.doc.documentElement!;
   needsStencil(root) && refuseStructuralRegion(page, root);
+  // before load(), which is what turns a `:if` into a value and moves the
+  // element it was written on into a stencil: an attribute refused here has
+  // to be gone before any of that happens to a tag that cannot carry it
+  checkSlotAttributes(page, root);
   page.main = load(page, page.global, root, 'page');
   // expanding anything at all once a definition is based on another one
   // would work on a stencil that is about to be rewritten underneath it
@@ -111,6 +115,68 @@ export function stage1load(page: Page) {
   // exactly the fallback a usage supplying nothing should get
   unwrapSlots(page.source.doc.documentElement!);
   return page;
+}
+
+/**
+ * A `<:slot>` takes `name` and nothing else.
+ *
+ * It is a marker, not an element: `unwrapSlots` replaces it with its own
+ * content and nothing it carried is ever serialized. So every other
+ * attribute was dropped, and how loudly depended on which one -- `:if` and
+ * `:else` moved the marker into a stencil and then crashed
+ * `adoptSlottedScopes`, which walks up from the slot's host expecting
+ * elements and found a `<template>`'s content fragment; `:for-each` crashed
+ * elsewhere on the same shape; `:class-`, `:on-`, `:aka` and plain values
+ * compiled clean and did nothing at all. Three failure modes for one
+ * mistake, and the quiet one is the worst: the attribute reads as applying
+ * to whatever the caller passed.
+ *
+ * Refused rather than supported, for now. What `:if` on a slot would mean
+ * is a region holding the caller's content -- several nodes with no element
+ * of their own -- which is the same gap `<:group>` has and is designed in
+ * docs/design/group-regions.md. Until that exists the honest answer is the
+ * one the message gives: put it on an element around the slot.
+ *
+ * Runs before load() so the refusal lands before a stencil can be built
+ * around the marker, and strips what it refuses so the compile continues to
+ * whatever else is wrong with the page.
+ */
+function checkSlotAttributes(page: Page, root: ServerElement): void {
+  const self = SLOT_DIRECTIVE_TAG.toLowerCase();
+  const walk = (e: ServerElement) => {
+    const children =
+      e.tagName === 'TEMPLATE'
+        ? [...(e as ServerTemplateElement).content.childNodes]
+        : [...e.childNodes];
+    for (const child of children) {
+      if (child.nodeType !== NodeType.ELEMENT) continue;
+      const el = child as ServerElement;
+      if (el.tagName !== SLOT_DIRECTIVE_TAG) {
+        walk(el);
+        continue;
+      }
+      // getAttributeNames() rather than `attributes`, which is missing
+      // `class` and `style`: those are element properties here, and a
+      // `class` on a marker is dropped as quietly as anything else
+      for (const name of el.getAttributeNames()) {
+        if (name === SLOT_NAME_ATTR) continue;
+        const attr = el.getAttributeNode(name);
+        addError(
+          page,
+          `<${self}> takes only "${SLOT_NAME_ATTR}", so "${name}" here ` +
+            `does nothing: a slot marks where a definition takes the caller's ` +
+            `markup and is replaced by that markup, so there is no element ` +
+            `for this to be on. Put it on an element around the <${self}>`,
+          (attr?.loc as SourceLocation | undefined) ?? el.loc
+        );
+        // only what load() would otherwise act on: an attribute node can
+        // become a value and move this marker into a stencil, and that is
+        // the shape that used to crash rather than compile
+        attr && el.delAttributeNode(attr);
+      }
+    }
+  };
+  walk(root);
 }
 
 /**

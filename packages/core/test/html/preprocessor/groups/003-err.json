@@ -1,0 +1,4 @@
+[
+  "<:group> takes no attributes, so \"class\" here does nothing: the tag is spliced away before the page compiles and this goes with it. Put it on an element around the group, or on the content inside it",
+  "<:group> takes no attributes, so \":if\" here does nothing: the tag is spliced away before the page compiles and this goes with it. Put it on an element around the group, or on the content inside it"
+]

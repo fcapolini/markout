@@ -40,9 +40,12 @@ time alongside `<:include>` and triple-dash comment removal.
 
 So the tag is a syntactic wrapper for markup that has to parse as one tree
 and arrive as several nodes. Anything written **on** it is deleted with
-it, silently — the failure [silent-failures.md](silent-failures.md) exists
-to prevent, and today `<:group :if=${x}>` renders its content
-unconditionally and says nothing.
+it, which used to happen silently — `<:group :if=${x}>` rendered its
+content unconditionally and said nothing, the failure
+[silent-failures.md](silent-failures.md) exists to prevent. It is now
+refused with a message that says to put the attribute on an element
+around the group. That is the honest answer while a group cannot be one,
+and the rules below are what would let it be.
 
 ## Three rules
 
@@ -135,8 +138,9 @@ reason rather than an attribute quietly doing nothing:
 | `:for-each`, `:for-data`, `:for-as`, `:for-key` | `:on-` handlers |
 | `:aka`, declared values, `:server-` | attribute values (`:href=`, `:src=`) |
 
-That refusal is the point as much as the feature is: it replaces today's
-silent drop with a message, whichever rule the group ends up under.
+The refusal already exists — every attribute on a group is an error
+today. What changes is that the allowed column stops being refused and
+starts meaning something; the right-hand column keeps the message it has.
 
 ## Open
 

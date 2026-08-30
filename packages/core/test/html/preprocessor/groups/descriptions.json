@@ -1,4 +1,5 @@
 {
   "001": "a group's children are flattened into its parent",
-  "002": "nested groups are flattened recursively"
+  "002": "nested groups are flattened recursively",
+  "003": "attributes are refused: the tag is spliced away and would take them with it"
 }

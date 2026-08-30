@@ -667,22 +667,27 @@ carries a whole route tree. Nothing here has been measured.
 
 ---
 
-## Two compiler bugs in the way
+## What the two markers refuse
 
-Both are what a kit author writing this router hits in week one:
+Probing this design turned up three failures for one mistake — an
+attribute on a tag that is not an element — and they are now one message,
+in `checkSlotAttributes` (stage1) and in the preprocessor's group
+flattening:
 
-- **`<:slot :if=${...}>` crashes the compiler** —
-  `TypeError: owner.getAttribute is not a function` in
-  `adoptSlottedScopes`
-  ([stage1-load.ts](../../packages/core/src/compiler/stages/stage1-load.ts)).
-  An internal error rather than a diagnostic.
-- **Attributes on `<:group>` are dropped with the tag, and nothing
-  warns.** The group is spliced away at preprocess time, so
-  `<:group :if=${x}>` renders its content unconditionally — and it is the
-  natural way to write the wrapper-less conditional region a route wants.
-  [group-regions.md](group-regions.md) proposes making an active group a
-  real region, which would retire this and the wrapper element per route
-  level with it.
+- **`<:slot>` takes only `name`.** `:if` and `:else` used to crash the
+  compiler (`owner.getAttribute is not a function` in
+  `adoptSlottedScopes`, walking up from the slot's host into a
+  `<template>`'s content fragment), `:for-each` crashed elsewhere on the
+  same shape, and `:aka`, `:class-`, `:on-` and plain values compiled
+  clean and did nothing.
+- **`<:group>` takes no attributes.** The tag is spliced away at
+  preprocess time, so everything on it went too, silently.
+
+Refusing is the honest answer while it lasts, and the message says to put
+the attribute on an element around the marker. Supporting either means a
+region of several nodes with no element of its own, which is
+[group-regions.md](group-regions.md) — and that is also what would retire
+the wrapper element per route level.
 
 ---
 
