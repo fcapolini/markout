@@ -104,8 +104,8 @@
       ]
     },
     "set-operator-attribute": {
-      "comment": "`class+=` / `class-=` / `style+=` / `style-=`: the whole-set forms of the `:class-x` / `:style-x` families. Claimed here because HTML's own grammar reads `class+=` as the attribute `class` followed by a stray `+`, so the name is coloured as two things -- `class-=` it already reads whole, DASH being a name character there. Not an error either way, which is why this is about reading rather than about the illegal-character check.",
-      "begin": "(?<=[\\s\"'])([a-zA-Z_][\\w.:-]*[-+])(?==)",
+      "comment": "`class+=` / `class-=` / `style+=` / `style-=`, the whole-set forms of the `:class-x` / `:style-x` families, and `class!=` / `style!=`, which say a plain attribute replaces what a component composed. Claimed here because HTML's own grammar reads `class+=` as the attribute `class` followed by a stray `+`, so the name is coloured as two things -- `class-=` it already reads whole, DASH being a name character there. Not an error either way, which is why this is about reading rather than about the illegal-character check.",
+      "begin": "(?<=[\\s\"'])([a-zA-Z_][\\w.:-]*[-+!])(?==)",
       "end": "(?=\\s*+[^=\\s])",
       "beginCaptures": {
         "1": {

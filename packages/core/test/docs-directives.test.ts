@@ -268,6 +268,18 @@ const CASES: Record<string, Case> = {
       expect(p.body()).toContain('class="box"');
     },
   },
+  'class!=${expr}': {
+    works: async () => {
+      // a `class` like any other; what the spelling adds is the absence of
+      // the warning a plain one would have earned from a component
+      const p = await run(
+        '<html><head><:define tag="my-box:i" class="box"><:slot /></:define></head>' +
+          '<body><my-box class!="mine">x</my-box></body></html>'
+      );
+      expect(p.body()).toContain('class="mine"');
+      expect(p.body()).not.toContain('box');
+    },
+  },
   'class-=${expr}': {
     works: async () => {
       const p = await run('<html><body><i class="box lit" class-="lit">x</i></body></html>');

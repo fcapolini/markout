@@ -29,6 +29,7 @@ const APOS = "'".charCodeAt(0);
 const DOLLAR = '$'.charCodeAt(0);
 const STAR = '*'.charCodeAt(0);
 const PLUS = '+'.charCodeAt(0);
+const BANG = '!'.charCodeAt(0);
 const LEXP = '${';
 const REXP = '}'.charCodeAt(0);
 
@@ -933,9 +934,10 @@ function skipContent(
 }
 
 /**
- * Attribute names accept three characters tag names don't: `.`, `:` for
- * directive attributes (`:aka`, `:if`, `:foreach`) and `*` for wildcard class
- * bindings (`:class-badge-*`). The lexer stays permissive about where they
+ * Attribute names accept characters tag names don't: `.`, `:` for directive
+ * attributes (`:aka`, `:if`, `:foreach`), `*` for wildcard class bindings
+ * (`:class-badge-*`), and `+`/`!` for the composite-attribute operators
+ * (`class+=`, `class!=`). The lexer stays permissive about where they
  * appear — which names are meaningful is the compiler's judgement, not the
  * parser's.
  */
@@ -950,12 +952,14 @@ function skipName(src: Source, i: number, isAttribute = false) {
       code != DASH &&
       code != '_'.charCodeAt(0) &&
       // `+` is here for `class+=` / `style+=`; their `-=` counterparts need
-      // nothing, DASH being a name character already
+      // nothing, DASH being a name character already. `!` is `class!=` /
+      // `style!=`, the same family's third form
       (!isAttribute ||
         (code != '.'.charCodeAt(0) &&
           code != DOLLAR &&
           code != STAR &&
-          code != PLUS)) &&
+          code != PLUS &&
+          code != BANG)) &&
       code != ':'.charCodeAt(0)
     ) {
       break;

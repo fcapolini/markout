@@ -154,6 +154,33 @@ export const SET_OPERATOR_ATTRS = new Set([
  * or match on them, which is a different feature wearing this one's clothes.
  */
 export const SET_OPERATOR_MAP_ATTR = STYLE_ADD_ATTR;
+
+/**
+ * `class!=`, `style!=`: a plain attribute, written on purpose.
+ *
+ * `<bs-alert class="mb-0">` throws away the classes the alert derived for
+ * itself. That is legal and occasionally meant, so it warns rather than
+ * failing -- but a warning nobody can answer is a warning people learn to
+ * scroll past, and the two honest answers to this one were `class+=`, which
+ * changes the meaning, and silence. This is the third: the same replacement,
+ * said out loud, and the warning goes quiet because the question it asks has
+ * been answered.
+ *
+ * It compiles to exactly what `class=` compiles to. Nothing downstream knows
+ * this spelling exists -- the difference is entirely in what the author told
+ * the compiler, which is the whole point of it.
+ *
+ * `!` rather than another operator because it is not one: `+=`/`-=` describe
+ * what happens to the set, and this describes an author's intent about a
+ * collision. CSS spells that same idea `!important`, and for the same reason.
+ */
+export const CLASS_OVERRIDE_ATTR = 'class!';
+export const STYLE_OVERRIDE_ATTR = 'style!';
+/** the two, and the plain attribute each one is an emphatic spelling of */
+export const OVERRIDE_ATTRS = new Map([
+  [CLASS_OVERRIDE_ATTR, 'class'],
+  [STYLE_OVERRIDE_ATTR, 'style'],
+]);
 // deliberately not `attr$`: that one is already the value-setting form
 export const PRESENCE_VALUE_PREFIX = 'flag$';
 export const PROP_VALUE_PREFIX = 'prop$';

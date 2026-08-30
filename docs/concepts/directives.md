@@ -41,7 +41,10 @@ instead. `class+="mb-0"` adds those classes to whatever is there and
 for declarations; `:class-x` and `:style-x` below are the one-name-at-a-time
 form of the same thing. Two intents, two spellings — `class=` never quietly
 merges, and never behaves differently depending on what else is on the
-element. The full rule, and what each form takes, is in the [syntax
+element. A third, `class!=`, is the plain replacement written on purpose: it
+compiles to what `class=` compiles to, and answers the warning a component
+gets when a usage site throws away the classes it derived. The full rule, and
+what each form takes, is in the [syntax
 reference](../reference/syntax.md#a-composite-attribute-is-added-to-not-replaced).
 
 ### Presence, not value

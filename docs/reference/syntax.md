@@ -82,8 +82,10 @@ than a value, and those two can also be contributed to:
 | `class="a b"` | sets the class attribute — replaces |
 | `class+="a b"` | adds those classes to whatever is there |
 | `class-="a"` | takes them away |
+| `class!="a b"` | replaces, and says so — see below |
 | `style+="color: red"` | adds those declarations |
 | `style-="color"` | takes those properties away |
+| `style!="color: red"` | replaces, and says so |
 
 Which is the whole rule, and it has exactly two members because HTML has
 exactly two composite attributes. That is the same fact that gives `class`
@@ -92,7 +94,7 @@ whole-set form of `:class-x`, and `class-=` of `:class-x=${false}`.
 
 |  | one name | a set |
 | --- | --- | --- |
-| replace | — | `class=` |
+| replace | — | `class=`, `class!=` |
 | add | `:class-x` | `class+=` |
 | remove | `:class-x=${false}` | `class-=` |
 
@@ -116,12 +118,41 @@ almost never what someone wants from a component that derives its own
 classes, so it is said out loud:
 
 ```
-warning: <bs-alert> sets "class" itself, and a "class" here replaces it -- did you mean "class+="?
+warning: <bs-alert> sets "class" itself, and a "class" here replaces it -- did you mean "class+=", or "class!=" if you meant to replace it?
 ```
 
 A warning rather than an error, on the same footing as `nothing reads
 "varient"` below: a judgment about the page rather than a fact about whether
 it can be built.
+
+**And `class!=` is the answer that agrees with it.** Sometimes replacing is
+exactly the intention — a component whose classes are a starting point, a
+one-off that has to look nothing like the rest:
+
+```html
+<bs-alert ::variant="warning" class!="my-own-alert">Nothing of the kit's, thanks</bs-alert>
+```
+
+It compiles to precisely what `class=` compiles to. The whole of what it adds
+is the statement, which the compiler takes as its answer and says no more —
+and which the next person to read the line gets for free, since a plain
+`class` on a component is ambiguous between "I meant this" and "I did not
+know". `style!=` is the same for the other one.
+
+`!` because it is not a set operation like the other two: `+=` and `-=`
+describe what happens to the set, and this describes intent about a
+collision. CSS spells that idea `!important`, for the same reason.
+
+It expects something to replace. On a plain element, or on a component that
+sets no `class` of its own, there is nobody it can be addressing, and it says
+so — while going on working, since it is a `class` either way:
+
+```
+warning: <div> is not a component, so "class!=" replaces nothing -- "class=" is what this is
+```
+
+Which is what catches the stale one: a component that stops setting a class
+leaves every `class!=` aimed at it saying something that is no longer true.
 
 **A literal is read the way HTML spells that attribute; an expression carries
 the value itself.** Three of the four take a set of names, and `style+=` a
@@ -211,6 +242,7 @@ told, with a file and a line, the moment half the pair is written.
 | `:class-name` | Toggles the `name` CSS class. |
 | `:style-name` | Writes the `name` CSS property. |
 | `class+=${expr}` | Adds classes to whatever `class` holds, rather than replacing it. A literal is a list of names, an expression a `string[]` — see [a composite attribute is added to](#a-composite-attribute-is-added-to-not-replaced). |
+| `class!=${expr}` | Sets `class`, exactly as `class=` does, and states that replacing a component's own is meant — which is what the warning about it asks. `style!=` likewise. |
 | `class-=${expr}` | Takes those classes away, the whole-set form of `:class-name=${false}`. |
 | `style+=${expr}` | Adds declarations to whatever `style` holds. A literal is CSS text, an expression a `{ property: value }` map. |
 | `style-=${expr}` | Takes those properties away. Names, not declarations: removal names what to drop. |

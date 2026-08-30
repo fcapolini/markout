@@ -98,7 +98,8 @@ describe('adding to a composite attribute', () => {
     expect(served).toContain('<div class="mine"');
     // legal, and said out loud, because it is almost never what was meant
     expect(warnings).toStrictEqual([
-      '<my-box> sets "class" itself, and a "class" here replaces it -- did you mean "class+="?',
+      '<my-box> sets "class" itself, and a "class" here replaces it -- ' +
+        'did you mean "class+=", or "class!=" if you meant to replace it?',
     ]);
   });
 
@@ -113,7 +114,8 @@ describe('adding to a composite attribute', () => {
     expect(served).toContain('<div class="mine"');
     expect(served).not.toContain('box-red');
     expect(warnings).toStrictEqual([
-      '<my-box> sets "class" itself, and a "class" here replaces it -- did you mean "class+="?',
+      '<my-box> sets "class" itself, and a "class" here replaces it -- ' +
+        'did you mean "class+=", or "class!=" if you meant to replace it?',
     ]);
   });
 
@@ -142,7 +144,8 @@ describe('adding to a composite attribute', () => {
     );
     expect(errors).toStrictEqual([]);
     expect(warnings).toStrictEqual([
-      '<my-box> sets "style" itself, and a "style" here replaces it -- did you mean "style+="?',
+      '<my-box> sets "style" itself, and a "style" here replaces it -- ' +
+        'did you mean "style+=", or "style!=" if you meant to replace it?',
     ]);
   });
 
@@ -338,3 +341,132 @@ describe('what a served page carries', () => {
     expect(markup).toContain('<div class="b" style="color: red;"');
   });
 });
+
+/**
+ * `class!=`, `style!=`: the same replacement a plain attribute performs,
+ * said on purpose.
+ *
+ * The warning above is legal code being told it is probably a mistake, and
+ * the only answers it had were `class+=`, which means something else, and
+ * silence. This is the answer that agrees with it.
+ */
+describe('replacing a composite attribute on purpose', () => {
+  it('replaces what the definition computed, and says nothing about it', async () => {
+    const { errors, warnings, served } = await run(
+      `<html><head>${BOX}</head><body><my-box class!="mine">hi</my-box></body></html>`
+    );
+    expect(errors).toStrictEqual([]);
+    expect(warnings).toStrictEqual([]);
+    expect(served).toContain('<div class="mine"');
+    expect(served).not.toContain('box-red');
+  });
+
+  it('does the same for an expression', async () => {
+    const { errors, warnings, page, served } = await run(
+      '<html :mine=${"a b"}><head>' +
+        BOX +
+        '</head><body><my-box class!=${mine}>hi</my-box></body></html>'
+    );
+    expect(errors).toStrictEqual([]);
+    expect(warnings).toStrictEqual([]);
+    expect(classes(page)).toStrictEqual(['a', 'b']);
+    expect(served).not.toContain('box-red');
+  });
+
+  it('replaces a static class the same way', async () => {
+    const { errors, warnings, served } = await run(
+      '<html><head><:define tag="my-box:div" class="box"><:slot /></:define></head>' +
+        '<body><my-box class!="mine">hi</my-box></body></html>'
+    );
+    expect(errors).toStrictEqual([]);
+    expect(warnings).toStrictEqual([]);
+    expect(served).toContain('<div class="mine"');
+  });
+
+  it('does it for style too, computed or literal', async () => {
+    const DEF =
+      '<head><:define tag="my-box:div" style="gap: 1rem"><:slot /></:define></head>';
+    for (const written of ['style!="color: red"', 'style!=${"color: " + c}']) {
+      const { errors, warnings, page } = await run(
+        `<html :c=\${"red"}>${DEF}<body><my-box ${written}>hi</my-box></body></html>`
+      );
+      expect(errors).toStrictEqual([]);
+      expect(warnings).toStrictEqual([]);
+      expect(styles(page)).toBe('color: red;');
+    }
+  });
+
+  it('names the spelling in the warning it exists to answer', async () => {
+    const { warnings } = await run(
+      `<html><head>${BOX}</head><body><my-box class="mine">hi</my-box></body></html>`
+    );
+    expect(warnings).toStrictEqual([
+      '<my-box> sets "class" itself, and a "class" here replaces it -- did ' +
+        'you mean "class+=", or "class!=" if you meant to replace it?',
+    ]);
+  });
+
+  it('says so where the component sets no class to replace', async () => {
+    const { errors, warnings, served } = await run(
+      '<html><head><:define tag="my-box:div" ::v=${1}><:slot /></:define></head>' +
+        '<body><my-box class!="mine">hi</my-box></body></html>'
+    );
+    expect(errors).toStrictEqual([]);
+    expect(warnings).toStrictEqual([
+      '<my-box> sets no "class" of its own, so "class!=" replaces nothing ' +
+        'here -- "class=" is what this is',
+    ]);
+    // still a class, since that is all it ever was
+    expect(served).toContain('<div class="mine"');
+  });
+
+  it('says so on a plain element, and serves an ordinary class', async () => {
+    const { errors, warnings, served } = await run(
+      '<html><body><div class!="mine">hi</div></body></html>'
+    );
+    expect(errors).toStrictEqual([]);
+    expect(warnings).toStrictEqual([
+      '<div> is not a component, so "class!=" replaces nothing -- "class=" ' +
+        'is what this is',
+    ]);
+    expect(served).toContain('<div class="mine"');
+    expect(served).not.toContain('class!');
+  });
+
+  it('travels with a definition body into every copy of it', async () => {
+    // the case the spelling has to survive rather than be looked up: the
+    // `class!` is written inside a component, and what a usage site expands
+    // is a CLONE of that markup. Anything remembered against the original
+    // element would answer for the original and for nothing else
+    const { errors, warnings, served } = await run(
+      `<html><head>${BOX}` +
+        '<:define tag="my-row:p"><my-box class!="inner">x</my-box></:define>' +
+        '</head><body><my-row /><my-row /></body></html>'
+    );
+    expect(errors).toStrictEqual([]);
+    expect(warnings).toStrictEqual([]);
+    expect(served.match(/<div class="inner"/g)).toHaveLength(2);
+    expect(served).not.toContain('box-red');
+  });
+
+  it('exists for the two attributes that are composed, and no others', async () => {
+    const { errors } = await run('<html><body><a href!="/x">hi</a></body></html>');
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('"href!" is not an attribute');
+    expect(errors[0]).toContain('"href" already replaces');
+  });
+
+  it('composes over the class it replaced, when the caller asks for both', async () => {
+    const { errors, warnings, served } = await run(
+      `<html><head>${BOX}</head>` +
+        '<body><my-box class!="mine" class+="mb-0">hi</my-box></body></html>'
+    );
+    expect(errors).toStrictEqual([]);
+    expect(warnings).toStrictEqual([]);
+    expect(served).not.toContain('box-red');
+    expect(served).toContain('mine');
+    expect(served).toContain('mb-0');
+  });
+});
+
+

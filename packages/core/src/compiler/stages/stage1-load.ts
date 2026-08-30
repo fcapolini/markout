@@ -31,6 +31,9 @@ import {
   CLASS_DEL_ATTR,
   STYLE_ADD_ATTR,
   STYLE_DEL_ATTR,
+  CLASS_OVERRIDE_ATTR,
+  STYLE_OVERRIDE_ATTR,
+  OVERRIDE_ATTRS,
   EVENT_VALUE_PREFIX,
   DID_VALUE_PREFIX,
   WILL_VALUE_PREFIX,
@@ -108,6 +111,9 @@ export function stage1load(page: Page) {
   checkSlotNames(page);
   checkStraySlots(page);
   rejectDerivedDefines(page) || expandCustomTagUsages(page);
+  // after expansion, which is where an override spelling is read and taken
+  // off: what is still marked by now had no component to be addressing
+  reportStrayOverrides(page);
   rejectStrayParameters(page);
   linkElseChains(page);
   checkLogicPlacement(page);
@@ -1364,7 +1370,10 @@ function expandCustomTagUsages(page: Page): void {
     // loadedUsageScope, merged in below like every other usage-site value
     for (const name of usageEl.getAttributeNames()) {
       if (name.startsWith(SPECIAL_ATTR_PREFIX) || name === DOM_ID_ATTR) continue;
-      scope.attributes.set(name, usageEl.getAttribute(name));
+      // `class!="mine"` puts `class="mine"` on the instance, exactly as the
+      // plain spelling would. The `!` is a message to settleComposite, which
+      // reads it off the usage element a few lines down and takes it off
+      scope.attributes.set(OVERRIDE_ATTRS.get(name) ?? name, usageEl.getAttribute(name));
     }
     if (loadedUsageScope) {
       scope.name = loadedUsageScope.name;
@@ -2143,6 +2152,21 @@ function extractValues(page: Page, scope: Scope, e: ServerElement) {
           scope.values.set(setOp, new Value(setOp, attr, scope, page.createValueId()));
         continue;
       }
+      // `class!=` / `style!=`: the plain attribute, compiled under the plain
+      // name. What the spelling adds is a statement of intent, and the only
+      // reader of it is settleComposite -- so it is kept on the attribute
+      // NODE (which a cloned definition body carries with it) rather than in
+      // a table keyed by an element that cloning replaces. A literal one is
+      // left where it is: it is a static attribute like any other, and the
+      // usage site is where the two names are reconciled
+      const override = OVERRIDE_ATTRS.get(attr.name.toLowerCase());
+      if (override) {
+        if (isDynamic(attr)) {
+          const key = `${ATTR_VALUE_PREFIX}${override}`;
+          scope.values.set(key, new Value(key, attr, scope, page.createValueId()));
+        }
+        continue;
+      }
       if (rejectSetOperator(page, attr)) continue;
       // `href=${...}` and the like: no `:` needed, since the attribute is
       // already named by the HTML author -- the expression alone is what
@@ -2470,28 +2494,118 @@ function settleComposite(
   usageEl: ServerElement,
   tagName: string
 ): void {
-  for (const [name, add] of [
-    ['class', CLASS_ADD_ATTR],
-    ['style', STYLE_ADD_ATTR],
-  ] as [string, string][]) {
+  for (const [name, add, over] of [
+    ['class', CLASS_ADD_ATTR, CLASS_OVERRIDE_ATTR],
+    ['style', STYLE_ADD_ATTR, STYLE_OVERRIDE_ATTR],
+  ] as [string, string, string][]) {
     const key = `${ATTR_VALUE_PREFIX}${name}`;
     // written here, either way it can be: a literal lands among the
     // instance's static attributes, an expression among its values
     const literal = !!scope.attributes?.has(name);
     const written = literal || !!scope.callSiteValues?.has(key);
     if (!written) continue;
+    // and, either way, possibly written in the spelling that says the
+    // replacement is meant. The node is what carries that -- a definition
+    // body is CLONED per usage, so a table keyed by the usage element would
+    // answer for the original and nothing else, while the attribute travels
+    // with the clone. Renaming it is what marks the intent as read: the
+    // sweep at the end of this stage collects the ones nothing answered
+    const stated =
+      takeOverrideMark(asAttribute(scope.values.get(key)?.node), name) ||
+      takeOverrideMark(usageEl.getAttributeNode(over) as ServerAttribute | null, name);
     const sets = defScope.values.has(key) || !!defScope.e?.getAttribute(name);
-    if (!sets) continue;
+    if (!sets) {
+      // `class!=` against a component that sets no class is a claim about
+      // code that is no longer there -- most often a component that used to
+      // set one. Left working, since it is a plain attribute either way
+      stated &&
+        page.addWarning(
+          `<${tagName}> sets no "${name}" of its own, so "${over}=" replaces ` +
+            `nothing here -- "${name}=" is what this is`,
+          scope.values.get(key)?.node.loc ?? usageEl.loc
+        );
+      continue;
+    }
     // a literal here against a computed one there: the value would win on
     // ordering alone, so it goes. An expression here has already taken the
     // same slot, being merged over the definition's a few lines above
     literal && !scope.callSiteValues?.has(key) && scope.values.delete(key);
+    if (stated) continue;
     page.addWarning(
       `<${tagName}> sets "${name}" itself, and a "${name}" here replaces it ` +
-        `-- did you mean "${add}="?`,
+        `-- did you mean "${add}=", or "${over}=" if you meant to replace it?`,
       scope.values.get(key)?.node.loc ?? usageEl.loc
     );
   }
+}
+
+/**
+ * Whether this attribute was written in an override spelling, taking the
+ * mark as it reads it.
+ *
+ * Renaming the node to the plain attribute is both halves of the job: what
+ * is left of `class!=` is the `class=` it always compiled to, and nothing
+ * downstream has to know the spelling existed. A node is shared by every
+ * clone of the definition body it was written in, so the first usage to read
+ * it answers for all of them -- which is right, since they read the same
+ * definition and get the same answer.
+ */
+function takeOverrideMark(attr: ServerAttribute | null | undefined, name: string): boolean {
+  if (!attr || OVERRIDE_ATTRS.get(attr.name) !== name) return false;
+  attr.name = name;
+  return true;
+}
+
+/** a value's node, when it is the attribute it was written as */
+function asAttribute(node: ServerNode | undefined): ServerAttribute | null {
+  return node?.nodeType === NodeType.ATTRIBUTE ? (node as ServerAttribute) : null;
+}
+
+/**
+ * The override spellings nothing answered, once every usage has been
+ * expanded.
+ *
+ * `class!=` says something about a COMPONENT, so on a plain element there is
+ * nobody for it to be saying it to. Left working -- it is a `class` either
+ * way -- and renamed here, since `class!` is not an attribute any browser
+ * has heard of and would otherwise be served as one.
+ *
+ * A tag with a definition is skipped rather than reported: what is still
+ * marked under one of those is the stencil an expansion copies FROM, whose
+ * copies each answered for themselves at their own usage site.
+ */
+function reportStrayOverrides(page: Page): void {
+  const known = (e: ServerElement) => page.customTags.has(e.tagName.toLowerCase());
+  const stray = (attr: ServerAttribute, e: ServerElement) => {
+    const name = OVERRIDE_ATTRS.get(attr.name);
+    if (!name) return;
+    attr.name = name;
+    known(e) ||
+      page.addWarning(
+        `<${e.tagName.toLowerCase()}> is not a component, so "${name}!=" ` +
+          `replaces nothing -- "${name}=" is what this is`,
+        attr.loc
+      );
+  };
+  const walk = (e: ServerElement) => {
+    for (const attr of [...(e.attributes as ServerAttribute[])]) stray(attr, e);
+    const container = e.tagName === 'TEMPLATE' ? (e as ServerTemplateElement).content : e;
+    for (const child of container.childNodes) {
+      child.nodeType === NodeType.ELEMENT && walk(child as ServerElement);
+    }
+  };
+  const root = page.source.doc.documentElement;
+  root && walk(root);
+  // and the ones that never were attributes: an expression's node is taken
+  // off its element while loading, so the markup walk above cannot see it
+  const scopes = (scope: Scope) => {
+    for (const name of ['class', 'style']) {
+      const node = asAttribute(scope.values.get(`${ATTR_VALUE_PREFIX}${name}`)?.node);
+      node && scope.e && stray(node, scope.e);
+    }
+    scope.children.forEach(scopes);
+  };
+  page.main && scopes(page.main);
 }
 
 /**
@@ -2546,14 +2660,24 @@ function declareComposedBase(
  */
 function rejectSetOperator(page: Page, attr: ServerAttribute): boolean {
   const op = attr.name.slice(-1);
-  if (op !== '+' && op !== '-') return false;
+  if (op !== '+' && op !== '-' && op !== '!') return false;
   const name = attr.name.slice(0, -1);
+  // `!=` reaches here only on a name that is neither class nor style, the
+  // two being taken by OVERRIDE_ATTRS before this is called. Its own
+  // sentence, because it is not a set operator and the reason it does not
+  // exist here is a different one: nothing composes an `href`, so there is
+  // no replacement to be emphatic about
   addError(
     page,
-    `"${attr.name}" is not an attribute: "${op}=" adds to and takes from a ` +
-      `SET, and "${name}" holds a value. Only "class" and "style" hold a set, ` +
-      `so only "${CLASS_ADD_ATTR}"/"${CLASS_DEL_ATTR}"/"${STYLE_ADD_ATTR}"/` +
-      `"${STYLE_DEL_ATTR}" exist`,
+    op === '!'
+      ? `"${attr.name}" is not an attribute: "!=" says a plain attribute ` +
+          `REPLACES what a component composed, and only "class" and "style" ` +
+          `are composed, so only "${CLASS_OVERRIDE_ATTR}"/` +
+          `"${STYLE_OVERRIDE_ATTR}" exist. "${name}" already replaces`
+      : `"${attr.name}" is not an attribute: "${op}=" adds to and takes from a ` +
+          `SET, and "${name}" holds a value. Only "class" and "style" hold a set, ` +
+          `so only "${CLASS_ADD_ATTR}"/"${CLASS_DEL_ATTR}"/"${STYLE_ADD_ATTR}"/` +
+          `"${STYLE_DEL_ATTR}" exist`,
     attr.loc
   );
   return true;
