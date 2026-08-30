@@ -41,6 +41,7 @@ const CALLBACK_VALUE_PREFIXES = [EVENT_VALUE_PREFIX, DID_VALUE_PREFIX, WILL_VALU
 // runtime code -- and a test asserts the two lists stay identical.
 export const GLOBAL_NAMES = new Set([
   '$origin',
+  '$url',
   'Array', 'BigInt', 'Boolean', 'Date', 'Error', 'Infinity', 'Intl', 'JSON',
   'Map', 'Math', 'NaN', 'Number', 'Object', 'Promise', 'RegExp', 'Set',
   'String', 'Symbol', 'URL', 'WeakMap', 'WeakSet', 'clearInterval', 'clearTimeout',

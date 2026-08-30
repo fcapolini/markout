@@ -1067,7 +1067,7 @@ Available: `Array`, `BigInt`, `Boolean`, `Date`, `Error`, `Infinity`, `Intl`,
 `console`, `decodeURI`, `decodeURIComponent`, `encodeURI`,
 `encodeURIComponent`, `fetch`, `globalThis`, `isFinite`, `isNaN`,
 `parseFloat`, `parseInt`, `queueMicrotask`, `setInterval`, `setTimeout`,
-`structuredClone`, `URL`, `undefined`, and `$origin`.
+`structuredClone`, `URL`, `undefined`, `$origin` and `$url`.
 
 The timers, `fetch` and `URL` look like browser things and are on the list
 for the same reason as everything else: Node has them too, and they mean the
@@ -1076,12 +1076,13 @@ two environments would make a page that worked in the browser and failed on
 the server, or the reverse, and it would fail at the point of use rather than
 anywhere a reader would think to look.
 
-### `$origin`
+### `$origin` and `$url`
 
-The odd one out, and the only name here that isn't JavaScript's: the page's
-own origin, `https://example.test`. The server takes it from the request, the
-browser from `location.origin`, and it means the same thing in both — which
-is the bar everything on this list has to clear.
+The odd ones out, and the only names here that aren't JavaScript's: the
+page's own address. `$origin` is `https://example.test`; `$url` is the whole
+of it, as a `URL`. The server takes them from the request, the browser from
+`location`, and they mean the same thing in both — which is the bar
+everything on this list has to clear.
 
 It exists because the server has no page to be relative *to*. A `:server-`
 value fetching `/data.json` is not asking for a different address, it is not
@@ -1091,12 +1092,29 @@ asking for an address at all, so something has to say where the page is:
 <html :server-rows=${fetch($origin + '/data.json').then(r => r.json())}>
 ```
 
-It is spelled with a `$` because it is the runtime's rather than
-JavaScript's, and that also means a page cannot declare a value over it —
-`$` is reserved in a declared name. Where there is no server, it is
+`$url` is the same fact, unabridged, for a page that wants the part of the
+address the visitor asked for:
+
+```html
+<a class="here" :class-active=${$url.pathname === '/about'}>About</a>
+<p>Searching for ${$url.searchParams.get('q')}</p>
+```
+
+It is a `URL` because `URL` was already a name expressions could use, so
+`searchParams` comes with it and there is no new shape to learn. `$origin`
+is `$url.origin` and stays a name of its own: a page that wants the origin
+should not have to reach through an address to say so.
+
+Both are spelled with a `$` because they are the runtime's rather than
+JavaScript's, and that also means a page cannot declare a value over them —
+`$` is reserved in a declared name. Where there is no server, both are
 `undefined` — except in a build told what to be relative to, since
 `markout build --origin <url>` is exactly the answer to "where is this page
-going to be".
+going to be", and there `$url` is that origin with the page's own path.
+
+One caveat worth stating: `$url` is read where the page was *rendered*. A
+client-side navigation that replaces part of a document without a new
+request does not change it, because nothing has told the page it moved.
 
 Nothing else about the request is offered, and that is deliberate. Headers,
 cookies and the method have no browser counterpart, so a page reading one

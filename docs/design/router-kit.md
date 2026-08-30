@@ -79,11 +79,12 @@ nesting rather than as bookkeeping.
 
 ### 1. `$url`, and a build that can bind it per output
 
-Designed already as [TODO.md](../../TODO.md)'s `$url` entry: the path and
-the query mean the same thing on both sides of an isomorphic render, which
-is the bar `$origin` cleared. Every route is a match against it.
+**Built**, as [TODO.md](../../TODO.md)'s `$url` entry: the whole address as
+a `URL`, supplied from the request on the server and from `location.href`
+in the browser, with `$origin` taken from it. Every route is a match
+against it.
 
-Two things have to come with it.
+Two things still have to come with it.
 
 **The build must render one source page at many URLs.** Today it walks the
 docroot and renders each `.html` once

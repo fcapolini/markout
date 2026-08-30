@@ -412,7 +412,7 @@ export function markout(props: MarkoutProps) {
         // MarkoutProps.client. An error page is a page like any other
         const runtimeErrors = client
           ? []
-          : await renderPage(page, { origin: originOf(req), globals, nonce });
+          : await renderPage(page, { url: urlOf(req), globals, nonce });
         runtimeErrors.forEach(e =>
           logger('error', `[markout] ${pathname} ${formatRuntimeError(e)}`)
         );
@@ -604,7 +604,7 @@ export function markout(props: MarkoutProps) {
       reportWarnings(page, pathname);
       const runtimeErrors = client
         ? []
-        : await renderPage(page, { origin: originOf(req), globals, nonce });
+        : await renderPage(page, { url: urlOf(req), globals, nonce });
       // serialized HERE, inside this page's turn rather than after it: the
       // document holds this request's data only until the next render
       // starts writing over it
@@ -721,6 +721,20 @@ export function cspNonce(): RequestHandler {
 function originOf(req: Request): string | undefined {
   const host = req.get('host');
   return host ? `${req.protocol}://${host}` : undefined;
+}
+
+/**
+ * The whole address, as `$url` -- what a browser would call
+ * `location.href` for the same page.
+ *
+ * `req.originalUrl` rather than `req.url`: a middleware mounted under a
+ * path sees `req.url` stripped of it, and the page's own address is the
+ * one the visitor typed. Undefined where the origin is, since a path
+ * without a host is not an address.
+ */
+function urlOf(req: Request): string | undefined {
+  const origin = originOf(req);
+  return origin ? `${origin}${req.originalUrl}` : undefined;
 }
 
 /**

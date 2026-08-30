@@ -8,7 +8,7 @@ import { WebContext } from './web-context';
 // this deliberately avoids depending on the project's Node-oriented lib.dom-less
 // tsconfig: declare just the globals actually used, instead of pulling in "DOM"
 declare const window: Record<string, unknown>;
-declare const location: { origin: string };
+declare const location: { origin: string; href: string };
 declare const document: {
   readyState: string;
   addEventListener(type: string, listener: () => void): void;
@@ -46,8 +46,10 @@ export function init(): WebContext | undefined {
     locs: window[LOCS_GLOBAL] as { [key: string]: string } | undefined,
     // the same fact the server rendered with, arrived at the other way round.
     // Not carried in the state: each side knows its own, and a mismatch would
-    // mean the page is being served from somewhere it doesn't think it is
-    origin: typeof location === 'undefined' ? undefined : location.origin,
+    // mean the page is being served from somewhere it doesn't think it is.
+    // `$origin` is taken from the url when one is given, so this passes the
+    // whole address and lets the context split it
+    url: typeof location === 'undefined' ? undefined : location.href,
   });
   context.refresh();
   return context;

@@ -43,8 +43,31 @@ import { CoreValueProps } from './core-value';
  */
 export const ORIGIN_GLOBAL = '$origin';
 
+/**
+ * The address this page is being rendered for, as a `URL`.
+ *
+ * `$origin` is a strict subset of it and stays, because a page that only
+ * wants the origin should not have to reach through a URL to say so --
+ * `$url.origin` is the same string, and both are supplied from the same
+ * fact. Supplied rather than discovered, for the reason `$origin` is: the
+ * server has it from the request and the browser from `location`, and the
+ * whole value of the name is that the two agree.
+ *
+ * A `URL` rather than a path and a search: `URL` is already on the list
+ * below, so the shape needs no new type and no explaining, and
+ * `searchParams` comes with it -- which is the request-params half, at no
+ * design cost. Absent, it is `undefined`, which is what a page compiled
+ * outside any request sees.
+ *
+ * It is an instance, so a page CAN write to it (`$url.pathname = ...`).
+ * Nothing stops that and nothing reads it back: the value crosses no
+ * boundary, and the next render builds its own.
+ */
+export const URL_GLOBAL = '$url';
+
 export const GLOBAL_NAMES = [
   ORIGIN_GLOBAL,
+  URL_GLOBAL,
   'Array',
   'BigInt',
   'Boolean',

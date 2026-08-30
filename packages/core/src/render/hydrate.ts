@@ -72,6 +72,12 @@ export function hydrate(
      * than it reading nothing.
      */
     origin?: string;
+    /**
+     * The whole address, as `$url`, for the same reason: a test document's
+     * `location.href` is the runner's. `$origin` is taken from it when no
+     * origin is passed.
+     */
+    url?: string;
     /** paint failures into the page as the dev server does, as well as reporting them */
     dev?: boolean;
   }
@@ -94,6 +100,7 @@ export function hydrate(
     doc: props.doc,
     dev: props.dev,
     origin: props.origin,
+    url: props.url,
     state: stateOf(page),
     onError: e => errors.push(e),
   }).refresh();

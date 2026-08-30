@@ -355,7 +355,14 @@ export async function build(props: BuildProps): Promise<BuildResult> {
     collectDiagnostics(result, pathname, page);
     if (page.hasErrors) continue;
     if (props.prerender) {
-      const errors = await renderPage(page, { origin: props.origin });
+      // the address this page will answer at, which a build knows once it
+      // has been told the origin: `$url` is that, and `$origin` comes out
+      // of it. Without one there is no address to speak of, and both are
+      // undefined -- see BuildProps.origin
+      const errors = await renderPage(page, {
+        origin: props.origin,
+        url: props.origin ? `${props.origin}${pathname}` : undefined,
+      });
       const fatal = errors.filter(e => e.serverOnly);
       fatal.forEach(error => result.serverErrors.push({ pathname, error }));
       errors

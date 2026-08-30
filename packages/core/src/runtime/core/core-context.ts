@@ -1,4 +1,4 @@
-import { CoreGlobal, ORIGIN_GLOBAL } from './core-global';
+import { CoreGlobal, ORIGIN_GLOBAL, URL_GLOBAL } from './core-global';
 import { CoreScope, CoreScopeProps } from './core-scope';
 import { CoreValue, CoreValueProps, ValueExp } from './core-value';
 
@@ -156,6 +156,20 @@ export interface CoreContextProps {
    * any server should see.
    */
   origin?: string;
+  /**
+   * The whole address, as `$url` -- `location.href` in the browser, and
+   * what the request asked for on the server.
+   *
+   * Supplied as a string and built into a `URL` here, so a caller passes
+   * the one thing it has rather than constructing a value the runtime
+   * would have to validate anyway. An unparseable one is treated as none:
+   * a page whose address cannot be read is a page rendering without one,
+   * not a render that fails.
+   *
+   * Given this and no `origin`, `$origin` is taken from it -- the two are
+   * one fact, and a caller that knows the address knows the origin.
+   */
+  url?: string;
 }
 
 export class CoreContext {
@@ -193,8 +207,11 @@ export class CoreContext {
 
   constructor(props: CoreContextProps) {
     this.props = props;
+    const url = parseUrl(props.url);
+    const origin = props.origin ?? url?.origin;
     this.global = new CoreGlobal(this, {
-      ...(props.origin === undefined ? {} : { [ORIGIN_GLOBAL]: { val: props.origin } }),
+      ...(origin === undefined ? {} : { [ORIGIN_GLOBAL]: { val: origin } }),
+      ...(url === undefined ? {} : { [URL_GLOBAL]: { val: url } }),
       ...props.addedGlobals,
     });
     this.init();
@@ -620,5 +637,15 @@ export class CoreContext {
     const arrived = [...this.arrived];
     this.arrived.clear();
     arrived.forEach(s => s.settle());
+  }
+}
+
+/** a `URL` from what a caller had, or nothing if it was not an address */
+function parseUrl(href?: string): URL | undefined {
+  if (!href) return undefined;
+  try {
+    return new URL(href);
+  } catch {
+    return undefined;
   }
 }

@@ -28,6 +28,12 @@ export async function renderPage(
   page: Page,
   props?: {
     origin?: string;
+    /**
+     * The address being rendered for, as `$url`: the request's own, or the
+     * one a build is emitting this page at. `$origin` is taken from it
+     * when no origin is passed alongside.
+     */
+    url?: string;
     /** what the host supplied, by name -- see Compiler's serverGlobals */
     globals?: { [name: string]: unknown };
     settle?: { timeoutMs?: number; maxRounds?: number };
@@ -66,6 +72,7 @@ export async function renderPage(
     // WebContextProps.server); everything else renders as usual
     server: true,
     origin: props?.origin,
+    url: props?.url,
     // `val`, not `exp`: a supplied object is fixed for the life of the
     // render, so it links as an inert source the way the built-in globals do
     addedGlobals: props?.globals
