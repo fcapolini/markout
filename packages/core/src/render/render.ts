@@ -49,6 +49,20 @@ export async function renderPage(
      * to land in the same shape every time rather than accumulate.
      */
     nonce?: string;
+    /**
+     * What this render collected from `:server-` values, handed back.
+     *
+     * The state is a fact about the render rather than about the page, and
+     * it is already serialized into the markup for the browser to pick up
+     * -- this is the same thing, for a host that has to act on something
+     * the page worked out. An Express app reading a page's own `status` or
+     * `redirect` out of it is the case this exists for; a build reading
+     * the addresses a page answers would be another.
+     *
+     * A callback rather than a return value only because `renderPage`
+     * answers with its errors and every caller reads it that way.
+     */
+    onState?: (state: PageState) => void;
   }
 ): Promise<RuntimeError[]> {
   // before the early return: a page with no props still carries whatever
@@ -116,7 +130,9 @@ export async function renderPage(
     ctx.refresh();
   }
   dropSpentStencils(ctx);
-  emitState(page, ctx.collectState(), errors);
+  const state = ctx.collectState();
+  props?.onState?.(state);
+  emitState(page, state, errors);
   return errors;
 }
 

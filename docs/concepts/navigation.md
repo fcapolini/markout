@@ -122,6 +122,12 @@ prerendering a page per address, and navigation kept in the document with
 the Navigation API. That is a kit, not a language feature — see
 [why anything framework-shaped belongs in a kit](kits.md).
 
+One thing level 3 will not have to invent: a page can already say what its
+response should be. `<html :server-status=${row ? 200 : 404}>` serves the
+page with that status and `:server-redirect` answers in its place — see
+[the middleware options](../reference/cli.md). A route that turns out not to
+exist is a 404 today, without a router.
+
 **It is not built, and that is deliberate rather than pending.** The design
 is written down in [router-kit.md](../design/router-kit.md), along with the
 five additions to the language it needs — two of which now exist, because

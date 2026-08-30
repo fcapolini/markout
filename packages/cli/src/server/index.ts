@@ -1,6 +1,6 @@
 import compression from "compression";
 import rateLimit from "express-rate-limit";
-import express, { Application, RequestHandler } from "express";
+import express, { Application, Request, RequestHandler } from "express";
 import path from "path";
 import fs from "fs";
 import http from "http";
@@ -119,6 +119,8 @@ export interface ServerProps {
   compress?: boolean;
   /** objects pages may reach from a `:server-` value; see MarkoutProps */
   globals?: { [name: string]: unknown };
+  /** the same, built per request -- a session, the signed-in visitor; see MarkoutProps */
+  requestGlobals?: { [name: string]: (req: Request) => unknown };
   /** say what built the pages; on by default, see MarkoutProps */
   generator?: boolean;
   /**

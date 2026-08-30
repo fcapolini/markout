@@ -19,6 +19,7 @@ import {
   RuntimeError,
   type Kit,
   type Page,
+  type PageState,
 } from "@markout-lang/core";
 import { defaultLogger, MarkoutLogger } from "./logger";
 import { createReloader, RELOAD_REQ, Reloader, withReloadScript } from "./livereload";
@@ -109,6 +110,23 @@ export interface MarkoutProps {
    * a page reads out of one is as public as the page is.
    */
   globals?: { [name: string]: unknown };
+  /**
+   * The same, built per request: a session, the visitor a route already
+   * authenticated, whatever this request knows that the application as a
+   * whole does not.
+   *
+   *   markout({ docroot, requestGlobals: { user: (req) => req.user } })
+   *
+   * Named separately from `globals` rather than allowing a function there,
+   * because the compiler has to be told the NAMES before any request
+   * exists -- a function cannot say what it will return -- and because a
+   * global that IS a function is a perfectly ordinary thing to want.
+   *
+   * Same rules otherwise: readable only from a `:server-` value, and what
+   * a page does with the result is as public as the page is. A page that
+   * renders `${user.email}` has published it.
+   */
+  requestGlobals?: { [name: string]: (req: Request) => unknown };
   /**
    * Installed kits. Absent means discover them from the docroot; an explicit
    * list (`[]` included) is for a caller that has already scanned, or a test
@@ -304,6 +322,21 @@ export function markout(props: MarkoutProps) {
   const csp = props.csp;
   const logger = props.logger ?? defaultLogger;
   const globals = props.globals;
+  const requestGlobals = props.requestGlobals;
+  /**
+   * What a render is given: the application's own objects, plus whatever
+   * this request adds. Built per call, since that is the whole point of
+   * the second half -- `renderPage` takes them per render and the compiler
+   * was told the names of both at startup.
+   */
+  const globalsFor = (req: Request): { [name: string]: unknown } | undefined => {
+    if (!requestGlobals) return globals;
+    const built: { [name: string]: unknown } = { ...globals };
+    for (const [name, from] of Object.entries(requestGlobals)) {
+      built[name] = from(req);
+    }
+    return built;
+  };
   const discovered = props.kits
     ? { kits: props.kits, errors: [] }
     : discoverKits(docroot, [__dirname]);
@@ -323,7 +356,12 @@ export function markout(props: MarkoutProps) {
     kits: discovered.kits,
     generator: props.generator,
     runtimeSrc: clientSrc,
-    serverGlobals: globals ? Object.keys(globals) : undefined,
+    // both halves, because the compiler needs every name a `:server-`
+    // value may read and cannot tell which of them a request will supply
+    serverGlobals:
+      globals || requestGlobals
+        ? [...Object.keys(globals ?? {}), ...Object.keys(requestGlobals ?? {})]
+        : undefined,
   });
   // Dev only: nothing about this reaches a build, which has no server to
   // stream from. See ./livereload.
@@ -412,7 +450,7 @@ export function markout(props: MarkoutProps) {
         // MarkoutProps.client. An error page is a page like any other
         const runtimeErrors = client
           ? []
-          : await renderPage(page, { url: urlOf(req), globals, nonce });
+          : await renderPage(page, { url: urlOf(req), globals: globalsFor(req), nonce });
         runtimeErrors.forEach(e =>
           logger('error', `[markout] ${pathname} ${formatRuntimeError(e)}`)
         );
@@ -592,7 +630,12 @@ export function markout(props: MarkoutProps) {
     // page's document happens inside its turn in the queue
     type Served =
       | { errors: PageError[] }
-      | { runtimeErrors: RuntimeError[]; html: string };
+      | {
+          runtimeErrors: RuntimeError[];
+          html: string;
+          /** what the page said its response should be, if it said */
+          response?: PageResponse;
+        };
     const served: Served = await cache.use<Served>(pathname, async page => {
       if (page.hasErrors) {
         return { errors: page.source.errors };
@@ -602,13 +645,19 @@ export function markout(props: MarkoutProps) {
       // for. Logged on every render, like the runtime errors below -- the
       // cache means that is once per compile, which is when it is news
       reportWarnings(page, pathname);
+      let response: PageResponse | undefined;
       const runtimeErrors = client
         ? []
-        : await renderPage(page, { url: urlOf(req), globals, nonce });
+        : await renderPage(page, {
+            url: urlOf(req),
+            globals: globalsFor(req),
+            nonce,
+            onState: state => (response = pageResponse(page, state)),
+          });
       // serialized HERE, inside this page's turn rather than after it: the
       // document holds this request's data only until the next render
       // starts writing over it
-      return { runtimeErrors, html: page.source.doc.toString() };
+      return { runtimeErrors, html: page.source.doc.toString(), response };
     });
 
     if ('errors' in served) {
@@ -639,10 +688,53 @@ export function markout(props: MarkoutProps) {
       return serveRuntimeErrorPage(served.runtimeErrors, res, reloader, nonce);
     }
 
+    // what the page decided about its own response, before anything is
+    // written: a redirect answers instead of the markup rather than after it
+    if (served.response?.redirect) {
+      return res.redirect(served.response.status ?? 302, served.response.redirect);
+    }
+    served.response?.status && res.status(served.response.status);
+
     res.header('Content-Type', 'text/html;charset=UTF-8');
     const html = '<!doctype html>\n' + served.html;
     res.send(reloader ? withReloadScript(html, reloader.script(nonce)) : html);
   }
+}
+
+/** what a page asked its response to be, out of what its render collected */
+interface PageResponse {
+  status?: number;
+  redirect?: string;
+}
+
+/**
+ * `:server-status` and `:server-redirect`, read off the page's own scope.
+ *
+ * A page that knows something the router does not -- that this id is not a
+ * row, that this visitor is not signed in -- has to be able to say so, and
+ * a status is a fact about the response rather than about the markup. So
+ * it is an ordinary `:server-` value on `<html>`, and this is the host
+ * acting on what the render collected:
+ *
+ *   <html :server-status=${row ? 200 : 404}>
+ *   <html :server-redirect=${user ? null : '/login'}>
+ *
+ * `:server-` rather than a plain value for two reasons: a status means
+ * nothing in a browser and must not be re-derived there, and a `:server-`
+ * value may await -- the row that decides the answer usually has to be
+ * fetched first.
+ *
+ * Read from the page scope alone, which is `<html>`'s. A value of the same
+ * name deeper in the page is that scope's own business, and a rule that
+ * searched everywhere would make an ordinary name into a reserved one.
+ */
+function pageResponse(page: Page, state: PageState): PageResponse | undefined {
+  const rootId = page.global.children[0]?.id;
+  const values = rootId ? state[rootId] : undefined;
+  if (!values) return undefined;
+  const status = typeof values.status === 'number' ? values.status : undefined;
+  const redirect = typeof values.redirect === 'string' ? values.redirect : undefined;
+  return status || redirect ? { status, redirect } : undefined;
 }
 
 /**

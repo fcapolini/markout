@@ -650,6 +650,9 @@ await new Server({
   trustProxy: true,          // behind a proxy: what `$origin` is built from
   pageLimit: true,           // 300 pages a minute per address
   globals: { db },           // what a `:server-` value may reach
+  requestGlobals: {          // the same, built per request
+    user: (req) => req.user,
+  },
   routes: {
     '/api': myApiRouter,     // the application's own handlers, mounted FIRST
   },
@@ -663,6 +666,48 @@ them as a prop is what keeps that order the responsibility of the code that
 knows it. `init(app, props)` is the same position with the app itself, for
 anything that is not a mount, and it may be async so a database opens before
 the first request is answered.
+
+`globals` and `requestGlobals` are the two halves of what a `:server-` value
+can reach. The first is built once — a database handle, a mailer, whatever
+this application has — and the second per request, which is what a session or
+an authenticated visitor is:
+
+```html
+<html :server-who=${user ? user.name : 'nobody'}>
+  <body><p>Hello ${who}</p></body>
+</html>
+```
+
+That renders on the server with the request's own answer in it, rather than a
+shell that fetches it back. They are named separately because the compiler has
+to be told the NAMES before any request exists, and a function cannot say what
+it will return — and because a global that *is* a function is an ordinary
+thing to want.
+
+Both are readable only from a `:server-` value, and the compiler enforces it:
+reading one elsewhere is a build error rather than a page that works in dev
+and is empty in production. What a page then does with the result is as public
+as the page is — `${user.email}` in the markup has published it.
+
+### A page that decides its own response
+
+A page sometimes knows something the routes do not: that this id is not a row,
+that this visitor is not signed in. A status is a fact about the response
+rather than about the markup, so it is said as a `:server-` value on `<html>`
+and the middleware acts on it:
+
+```html
+<html :server-status=${row ? 200 : 404}>          <!-- served, with that status -->
+<html :server-redirect=${user ? null : '/login'}> <!-- answered instead -->
+```
+
+A status still serves the page — the page *is* the 404 — while a redirect
+answers in its place and sends no markup. Giving both makes the redirect use
+that status, which is how a permanent one is spelled.
+
+`:server-` rather than a plain value for two reasons: a status means nothing
+in a browser and must not be re-derived there, and a `:server-` value may
+await, since the row that decides the answer usually has to be fetched first.
 
 `create()` returns the configured app without listening on anything, which is
 what a test wants: drive it with supertest and no port is ever bound.
