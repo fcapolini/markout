@@ -182,6 +182,58 @@ describe('the middleware in each mode', () => {
     );
   });
 
+  /**
+   * The stream is a connection, a browser allows about six of them per origin,
+   * and a page that leaves one behind on the way out spends one of the six per
+   * navigation. Six clicks later the next one waits for the server to notice a
+   * client that is gone, which takes a heartbeat -- the thirty second pause a
+   * dev-mode shop showed on its sixth category. So: closed on the way out, and
+   * opened again if the page comes back from the back/forward cache, which
+   * never unloaded it and would otherwise be watching a stream it had closed.
+   */
+  it('closes the stream when the page goes away, and reopens from bfcache', async () => {
+    const res = await request(devApp).get('/index.html');
+    const body = /<script data-markout-reload[^>]*>([\s\S]*?)<\/script>/.exec(
+      res.text
+    )?.[1];
+    expect(body).toBeTruthy();
+
+    const opened: { closed: boolean }[] = [];
+    const on: Record<string, ((e: any) => void)[]> = {};
+    class FakeEventSource {
+      closed = false;
+      constructor() {
+        opened.push(this);
+      }
+      addEventListener() {}
+      close() {
+        this.closed = true;
+      }
+    }
+    new Function(
+      'EventSource',
+      'addEventListener',
+      'location',
+      body!
+    )(
+      FakeEventSource,
+      (type: string, fn: (e: any) => void) => (on[type] ??= []).push(fn),
+      { reload: () => {} }
+    );
+
+    expect(opened.length).toBe(1);
+    on['pagehide']?.forEach((fn) => fn({}));
+    expect(opened[0].closed).toBe(true);
+    expect(opened.length).toBe(1);
+
+    // a plain forward navigation is gone for good; only a restore reopens
+    on['pageshow']?.forEach((fn) => fn({ persisted: false }));
+    expect(opened.length).toBe(1);
+    on['pageshow']?.forEach((fn) => fn({ persisted: true }));
+    expect(opened.length).toBe(2);
+    expect(opened[1].closed).toBe(false);
+  });
+
   it('injects nothing outside dev', async () => {
     const res = await request(prodApp).get('/index.html');
     expect(res.text).not.toContain('data-markout-reload');

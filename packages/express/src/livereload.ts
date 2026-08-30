@@ -146,13 +146,31 @@ export function createReloader(bootId = `${Date.now()}-${process.pid}`): Reloade
  * later one that differs means the server restarted, so the page reloads
  * itself rather than sitting there connected to a server that has forgotten
  * it. `EventSource` does the reconnecting.
+ *
+ * **Closed on `pagehide`**, which is the part that is not obvious and the
+ * part that bites. A stream held open is a connection held open, a browser
+ * allows about six per origin over HTTP/1.1, and one left behind by every
+ * page visited is six clicks from a navigation that waits -- for as long as
+ * it takes the server to notice, which is one heartbeat. Reported as a
+ * shop that browsed happily and then hung for thirty seconds on the sixth
+ * category; thirty seconds is HEARTBEAT_MS, which is what makes it this
+ * rather than anything about the page.
+ *
+ * Reopened on `pageshow` when the page came back from the back/forward
+ * cache, because a document restored from there was never unloaded and
+ * would otherwise be watching a stream it closed on the way out.
  */
 const RELOAD_BODY =
   `(function(){` +
-  `var b=null,s=new EventSource(${JSON.stringify(RELOAD_REQ)});` +
+  `var b=null,s=null;` +
+  `function o(){` +
+  `s=new EventSource(${JSON.stringify(RELOAD_REQ)});` +
   `s.addEventListener("hello",function(e){` +
   `if(b!==null&&b!==e.data){location.reload();return}b=e.data});` +
-  `s.addEventListener("reload",function(){location.reload()})})()`;
+  `s.addEventListener("reload",function(){location.reload()})}` +
+  `o();` +
+  `addEventListener("pagehide",function(){if(s){s.close();s=null}});` +
+  `addEventListener("pageshow",function(e){if(e.persisted&&!s){o()}})})()`;
 
 /**
  * Carries the response's CSP nonce when there is one -- see MarkoutProps.csp.
