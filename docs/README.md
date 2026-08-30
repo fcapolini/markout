@@ -41,6 +41,8 @@ calls that out explicitly.
 - [The Markout sidebar](reference/vscode-extension-sidebar.md) - what the VS
   Code view does, and the two ways to install a kit: npm if you have Node, a
   checkbox that needs no toolchain at all if you do not.
+- [More than one page](concepts/navigation.md) - links, a page routed by its
+  fragment, and why the router is a kit that does not exist yet.
 - [Isomorphism](concepts/isomorphism.md) - one model on the server and in the
   browser, and the three ways a page can be delivered.
 - [Data](concepts/data.md) - what belongs in values, how long each kind needs
