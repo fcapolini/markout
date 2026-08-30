@@ -27,7 +27,11 @@ function run(html: string) {
   stage3qualify(page);
   stage4resolve(page);
   const errors = page.errors.map(e => e.msg);
-  if (errors.length) return { errors, runtime: [], ctx: undefined, markup: () => '' };
+  // the same shape either way, so that a caller reading `head()` after a
+  // compile error gets an empty string rather than a union it has to narrow
+  if (errors.length) {
+    return { errors, runtime: [], ctx: undefined, markup: () => '', head: () => '' };
+  }
   stage7generate(page);
   const runtime: RuntimeError[] = [];
   const ctx = new WebContext({

@@ -24,3 +24,9 @@ jobs:
       # rather than against what is committed.
       - run: npm ci --no-audit --no-fund
       - run: npm test
+      # The TESTS' types, which nothing else here reads. `npm test` runs
+      # vitest, which transpiles without checking, and `npm run build` checks
+      # each workspace's `tsconfig.json`, which covers src alone -- so two
+      # type errors sat in test files through every green build until someone
+      # ran this by hand.
+      - run: npm run typecheck

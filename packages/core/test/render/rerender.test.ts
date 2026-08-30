@@ -94,7 +94,7 @@ describe('a list that is shorter than it was last time', () => {
       (globalThis as unknown as { __thing: unknown }).__thing = thing;
       const errors = await renderPage(page);
       const body = /<body[\s\S]*?<script/.exec(page.source.doc.toString())?.[0] ?? '';
-      return { errors: errors.map(e => `${e.msg}`), body: body.replace(/<!---[^>]*-->/g, '') };
+      return { errors: errors.map(e => e.message), body: body.replace(/<!---[^>]*-->/g, '') };
     };
 
     expect((await render(undefined)).body).not.toContain('secret');
