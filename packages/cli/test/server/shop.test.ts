@@ -2,6 +2,7 @@ import path from 'path';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { Window } from 'happy-dom';
+import { Carts } from '../../../../sites/shop/cart';
 import { Catalog } from '../../../../sites/shop/catalog';
 import { createShop } from '../../../../sites/shop/server';
 import { Compiler, hydrate, renderPage } from '@markout-lang/core';
@@ -334,3 +335,73 @@ describe('the product page tabs', () => {
   });
 });
 
+/**
+ * Carts live in memory, so the question is not whether they work but whether
+ * they ever go away. A map keyed by cookie grows with traffic, and the
+ * traffic that grows it fastest is the traffic least likely to buy: every
+ * cookieless request is a new visitor id, and a crawler carries no cookies.
+ */
+describe('carts, and letting go of them', () => {
+  const shop = new Catalog();
+  const carts = (now: () => number, ttlMs = 1000) => new Carts({ ttlMs, now });
+
+  it('does not hold a cart for a visitor who never made one', () => {
+    // every page renders `cart` whether or not there is one, so a read that
+    // creates is one permanent entry per request -- worse than never
+    // expiring, because it is not even carts that accumulate
+    const c = carts(() => 0);
+    for (let i = 0; i < 100; i++) {
+      expect(c.view(`visitor${i}`, shop).lines).toStrictEqual([]);
+    }
+    expect(c.size).toBe(0);
+  });
+
+  it('drops a cart nobody has touched in a while', () => {
+    let t = 0;
+    const c = carts(() => t);
+    c.add('ada', 'saw');
+    expect(c.size).toBe(1);
+
+    // still within its life: a write by somebody else leaves it alone
+    t = 900;
+    c.add('grace', 'glue');
+    expect(c.size).toBe(2);
+
+    // past it, and the next write is what sweeps
+    t = 2500;
+    c.add('alan', 'oak');
+    expect(c.size).toBe(1);
+    expect(c.view('ada', shop).lines).toStrictEqual([]);
+    expect(c.view('alan', shop).lines.map(l => l.product.id)).toStrictEqual(['oak']);
+  });
+
+  it('counts browsing as touching it, so a visitor still looking keeps theirs', () => {
+    let t = 0;
+    const c = carts(() => t);
+    c.add('ada', 'saw');
+
+    // she is reading product pages, which renders her cart each time
+    for (t = 600; t < 3000; t += 600) {
+      expect(c.view('ada', shop).lines.map(l => l.product.id)).toStrictEqual(['saw']);
+    }
+    t = 3200;
+    c.add('grace', 'glue');
+    expect(c.view('ada', shop).lines.map(l => l.product.id)).toStrictEqual(['saw']);
+
+    // and once she stops, it goes
+    t = 5000;
+    c.add('grace', 'oak');
+    expect(c.size).toBe(1);
+  });
+
+  it('keeps nothing for a cart emptied line by line', () => {
+    const c = carts(() => 0);
+    c.add('ada', 'saw');
+    c.add('ada', 'glue');
+    expect(c.size).toBe(1);
+    c.remove('ada', 'saw');
+    expect(c.size).toBe(1);
+    c.remove('ada', 'glue');
+    expect(c.size).toBe(0);
+  });
+});
