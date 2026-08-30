@@ -289,6 +289,18 @@ export class Page {
    */
   usedTags: Set<string>;
   /**
+   * The usage GRAPH, of which `usedTags` above is only the flat shadow:
+   * which definition's body each use was written in -> the tags used there,
+   * with `null` for the uses the page makes itself.
+   *
+   * The distinction is what lets stage6 answer "reachable" rather than
+   * "mentioned". `<dash-stat>`'s body writes `<dash-chart>`, so the flat
+   * set calls the chart used on a page that writes neither -- and goes on
+   * calling it used after `dash-stat` itself has been dropped. Reachability
+   * from the page's own uses is the question that was meant.
+   */
+  tagUses: Map<string | null, Set<string>>;
+  /**
    * Custom tag name -> the `<template>` its markup was wrapped in.
    *
    * Recorded where that wrapping happens, because it cannot be found
@@ -308,6 +320,27 @@ export class Page {
    * stage6-treeshake.
    */
   usageStencils: Map<Scope, ServerElement>;
+  /**
+   * Custom tag name -> the static `<style>`s lifted out of its definition.
+   *
+   * A stylesheet written as a direct child of a `<:define>` is that
+   * component's, structurally rather than by an author's say-so, and it is
+   * moved to sit just before the definition's stencil -- once -- instead of
+   * riding inside it. Left in place it was copied per instance: the stencil
+   * holds one and every usage site given content clones another, so three
+   * `<x-p>` shipped four copies of the same rules and mounted one each.
+   *
+   * Beside the stencil rather than appended to `<head>`, because a stencil
+   * is inert and a stylesheet cascades: appending would put every
+   * component's rules AFTER the page's own, so a component would win an
+   * equal-specificity tie it should lose. In place, the cascade order is
+   * the order the fragments were imported, which is the order they were
+   * written.
+   *
+   * Recorded because stage6 has to drop these with the definition, and the
+   * tree cannot answer which is which once they are ordinary head children.
+   */
+  defineStyles: Map<string, ServerElement[]>;
   /** elements carrying `:when-used`, and the tags each waits on */
   whenUsed: Map<ServerElement, string[]>;
   /** the <:define> scopes themselves -- excluded from their parent's
@@ -473,8 +506,10 @@ export class Page {
     this.logicScopes = new Map();
     this.elementlessTags = new Set();
     this.usedTags = new Set();
+    this.tagUses = new Map();
     this.defineStencils = new Map();
     this.usageStencils = new Map();
+    this.defineStyles = new Map();
     this.whenUsed = new Map();
     this.values = new Map();
     this.readValues = new Set();

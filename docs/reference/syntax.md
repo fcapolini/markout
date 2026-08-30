@@ -1038,6 +1038,56 @@ trade: no reserved word reads as well as either. The price is that a page
 cannot declare values named `aka` or `slot`, and the error above is what
 keeps that price visible rather than silent.
 
+### A component's own stylesheet
+
+A `<style>` written as a direct child of a `<:define>` is that component's,
+and nothing has to say so:
+
+```html
+<:define tag="x-card:div" class="card">
+  <style>.card { border: 1px solid }</style>
+  <:slot />
+</:define>
+```
+
+It is served **once**, immediately before the definition, however many
+instances the page has — and it is dropped along with the definition when
+no page writes `<x-card>`. Ownership here is a matter of where the
+stylesheet is, not of what anyone claims about it, so there is no way to
+state it wrongly.
+
+Where it lands is part of the promise: just before the definition, not
+appended to the end of `<head>`. Imported fragments therefore cascade in
+the order they were imported, and a page's own rules — written later —
+still win an equal-specificity tie against a component's.
+
+Two cases are deliberately left where they were written. A `<style>` that
+interpolates a value renders once per instance, each with its own text, so
+there is no single copy to lift out. And one nested deeper — inside an
+[`:if`](#values) or a `:for-each` — is conditional markup, which is the
+author having already answered this question differently.
+
+A definition in `<body>` cannot carry one. Lifted out it would be invalid
+markup where it stands and would land somewhere else if moved, so it is
+refused rather than guessed at; put the definition in `<head>`, or in a
+file the page imports.
+
+Class names are global: nothing here is rewritten or hashed, so a page is
+free to apply `.card` by hand. If it does, and it never writes `<x-card>`,
+the definition is dropped and the rules go with it — and the compiler says
+so, naming the classes that lost them:
+
+```
+warning: <x-card> is never used, so its <style> went with it -- but "card"
+is still applied by markup that stayed, which now renders unstyled.
+Write <x-card>, or move those rules out of the definition
+```
+
+It is a warning rather than an error because the fix is a judgement: write
+the tag, or move those rules back to the page. And it is reported only when
+it has actually happened — a page that wears `.card` *and* writes
+`<x-card>` has lost nothing and hears nothing.
+
 ### Shipping a component's assets
 
 An unused `<:define>` is dropped, but a `<style>` next to it is not — and

@@ -1203,11 +1203,96 @@ function expandDefine(page: Page, defineEl: ServerElement): ServerElement | unde
   const parent = defineEl.parentElement!;
   parent.insertBefore(template, defineEl);
   parent.removeChild(defineEl);
+  hoistDefineStyles(page, customName, inner, parent, template);
   template.appendChild(inner);
   // noted now because it cannot be found later: appendChild on a template
   // moves the child onto its content fragment and nulls its parentElement
   page.defineStencils.set(customName, template);
   return inner;
+}
+
+/**
+ * Moves a definition's own stylesheets out of its stencil, to sit just
+ * before it.
+ *
+ * A `<style>` written as a direct child of a `<:define>` is that
+ * component's -- structurally, so there is no claim for an author to state
+ * and no way for one to be false, which is the whole difference between
+ * this and `:when-used`. Treeshaking then comes free: stage6 already drops
+ * the stencil, and it drops these beside it.
+ *
+ * Once, rather than per instance. Left inside, the rules were copied into
+ * every usage stencil as well -- three `<x-p>` given content shipped FOUR
+ * copies, and mounted one apiece into the live DOM -- which is the cost
+ * that made nobody write the pattern and put Orbit's CSS in a page-level
+ * block instead.
+ *
+ * Only DIRECT children, and only static ones:
+ *
+ * - Nested deeper, a `<style>` is inside a `:if` or a `:for-each` and its
+ *   being there at all is the point. Hoisting would answer a question the
+ *   author had already answered differently.
+ * - Interpolated, it is per-instance by nature -- `<style>.x{color:${hue}}`
+ *   renders once per instance, each with its own value -- so there is no
+ *   "once" to hoist it to. Those are left exactly as they were.
+ *
+ * A `<:define>` in `<body>` is refused rather than guessed at: a `<style>`
+ * there cannot stay (it is not conforming) and cannot move to `<head>`
+ * without landing somewhere other than where it was written, which is the
+ * one thing this placement rule promises not to do. Narrower than
+ * prohibiting body definitions, and liftable once there is a real page
+ * asking for it.
+ */
+function hoistDefineStyles(
+  page: Page,
+  customName: string,
+  inner: ServerElement,
+  parent: ServerElement,
+  template: ServerElement
+) {
+  const hoisted: ServerElement[] = [];
+  for (const child of [...inner.childNodes]) {
+    if (child.nodeType !== NodeType.ELEMENT) continue;
+    const el = child as ServerElement;
+    if (el.tagName !== 'STYLE' || !isStaticText(el)) continue;
+    if (inBody(parent)) {
+      addError(
+        page,
+        `a <style> in <${DEFINE_DIRECTIVE_TAG.toLowerCase()} ` +
+          `${DEFINE_TAG_ATTR}="${customName}:..."> written in <body> has nowhere to ` +
+          `go: it is lifted out of the definition to be served once, and in <body> ` +
+          `that is neither valid markup nor where it was written. Move the ` +
+          `definition to <head>, or to a file the page imports`,
+        el.loc
+      );
+      return;
+    }
+    inner.removeChild(el);
+    parent.insertBefore(el, template);
+    hoisted.push(el);
+  }
+  hoisted.length && page.defineStyles.set(customName, hoisted);
+}
+
+/** an atomic-text element holding no interpolation (or nothing at all) */
+function isStaticText(e: ServerElement): boolean {
+  return (e.childNodes as ServerNode[]).every(
+    n => n.nodeType !== NodeType.TEXT || typeof (n as ServerText).textContent === 'string'
+  );
+}
+
+/**
+ * Whether an element is written in the page's `<body>`.
+ *
+ * Asked of the definition's PARENT, not the `<:define>` itself: by the time
+ * the hoist runs that element has been spliced out of the tree and answers
+ * `null` for its own parent, so walking up from it found no `<body>` and
+ * the refusal never fired. The parent may itself be the body, hence the
+ * element-inclusive walk.
+ */
+function inBody(e: ServerElement | null): boolean {
+  for (let p = e; p; p = p.parentElement) if (p.tagName === 'BODY') return true;
+  return false;
 }
 
 /**
@@ -1324,6 +1409,11 @@ function expandCustomTagUsages(page: Page): void {
   for (const usageEl of ordered) {
     const tagName = usageEl.tagName.toLowerCase();
     page.usedTags.add(tagName);
+    // the same fact as the line above, but with its edge kept: `inside`
+    // already knows whose body this use sits in, and stage6 needs that to
+    // ask whether a definition is REACHABLE rather than merely mentioned
+    const from = inside.get(usageEl) ?? null;
+    (page.tagUses.get(from) ?? page.tagUses.set(from, new Set()).get(from)!).add(tagName);
     const defScope = page.customTags.get(tagName)!;
     const loadedUsageScope = findScopeForElement(page.main, usageEl);
     // reuses the definition's own values/children by reference, and sits

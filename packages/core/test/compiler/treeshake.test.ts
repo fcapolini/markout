@@ -149,12 +149,21 @@ describe('stage6-treeshake', () => {
     expect(markup).toContain('viaother-marker');
   });
 
-  it('keeps one reachable only through an unused definition', async () => {
-    // the conservative half of the same rule. `x-viaother` is used by
-    // `x-wrapper`'s body, `x-wrapper` is used by nobody -- so both could go,
-    // and neither does. Removing them needs the usage graph rather than a
-    // flat set, and getting that wrong deletes markup a page needs
+  it('drops one reachable only through an unused definition', async () => {
+    // `x-viaother` is used by `x-wrapper`'s body and `x-wrapper` is used by
+    // nobody, so neither is reachable from the page and both go. The flat
+    // set kept the inner one on the strength of a mention inside the very
+    // definition this pass had just deleted
     const { markup } = await build('<x-used>hi</x-used>');
+    expect(markup).not.toContain('viaother-marker');
+    expect(markup).not.toContain('wrapper-marker');
+  });
+
+  it('keeps one reached through a definition that is itself used', async () => {
+    // the edge that must NOT be cut: the page writes no <x-viaother>, and it
+    // survives because <x-wrapper> is written and its body reaches it
+    const { markup } = await build('<x-wrapper />');
+    expect(markup).toContain('wrapper-marker');
     expect(markup).toContain('viaother-marker');
   });
 
@@ -167,9 +176,9 @@ describe('stage6-treeshake', () => {
     // reachable only through the `template` its scope's props name, and the
     // scope went with the definition
     const { markup, page } = await build('<x-used>hi</x-used>');
-    // the DEFINITION survives, by the conservative rule above
-    expect(markup).toContain('viaother-marker');
-    // ...its instance inside the dropped wrapper does not
+    // the wrapper is unreachable, and so now is the definition it reached
+    expect(markup).not.toContain('viaother-marker');
+    // ...and the instance written inside it leaves no stencil behind
     expect(markup).not.toContain('>w<');
     const props = page.props!.data;
     const stencils = [...markup.matchAll(/data-markout="(s\d+t)"/g)].map(m => m[1]);
@@ -184,5 +193,151 @@ describe('stage6-treeshake', () => {
     for (const m of ['used-marker', 'unused-marker', 'wrapper-marker', 'viaother-marker']) {
       expect(markup).toContain(m);
     }
+  });
+});
+
+/**
+ * A `<style>` written as a direct child of a `<:define>` is that
+ * component's — structurally, so unlike `:when-used` there is no claim for
+ * an author to state and none for them to get wrong. Stage 1 lifts it out
+ * to sit just before the definition's stencil, once, and stage 6 drops it
+ * with the definition.
+ */
+describe('a definition stylesheet', () => {
+  const STYLED = [
+    '<lib>',
+    '  <:define tag="y-card:div" class="cc" ::heading=${\'\'}>',
+    '    <style>.cc { color: seagreen }</style>',
+    '    <h3>${heading}</h3><:slot />',
+    '  </:define>',
+    '  <:define tag="y-plain:div">plain</:define>',
+    '</lib>',
+  ].join('\n');
+  const styled = { 'styled.htm': STYLED, head: '<:import src="/styled.htm" />' };
+
+  it('ships once however many instances there are', async () => {
+    const { markup, errors } = await build(
+      '<y-card ::heading="a">A</y-card><y-card ::heading="b">B</y-card>' +
+        '<y-card ::heading="c">C</y-card>',
+      styled
+    );
+    expect(errors).toStrictEqual([]);
+    // one, not four: the definition's stencil held a copy and so did each
+    // instance's, which is the cost that made the pattern unwritable
+    expect(markup.split('seagreen').length - 1).toBe(1);
+  });
+
+  it('sits before its stencil, so the page still overrides it', async () => {
+    const { markup } = await build('<y-card>A</y-card>', styled);
+    const sheet = markup.indexOf('seagreen');
+    expect(sheet).toBeGreaterThan(-1);
+    // its OWN stencil: the shared lib above contributes earlier ones
+    expect(sheet).toBeLessThan(markup.indexOf('<div class="cc"'));
+    expect(sheet).toBeLessThan(markup.indexOf('</head>'));
+  });
+
+  it('goes when its definition does', async () => {
+    const { markup, errors } = await build('<y-plain />', styled);
+    expect(errors).toStrictEqual([]);
+    expect(markup).not.toContain('seagreen');
+    expect(markup).not.toContain('y-card');
+  });
+
+  it('is left alone when it interpolates, having no "once" to hoist to', async () => {
+    const REACTIVE = [
+      '<lib><:define tag="y-hue:div" class="hh" ::hue=${\'red\'}>',
+      '<style>.hh { color: ${hue} }</style><span>h</span>',
+      '</:define></lib>',
+    ].join('');
+    const { markup, errors } = await build('<y-hue ::hue="crimson" />', {
+      'reactive.htm': REACTIVE,
+      head: '<:import src="/reactive.htm" />',
+    });
+    expect(errors).toStrictEqual([]);
+    // still inside the stencil, still per instance: each one renders its own
+    expect(markup).toMatch(/<template>[\s\S]*?<style>/);
+  });
+
+  it("is left alone when it is nested rather than the definition's own", async () => {
+    const NESTED = [
+      '<lib><:define tag="y-cond:div" ::on=${false}>',
+      '<div :if=${on}><style>.deep { color: navy }</style></div>',
+      '</:define></lib>',
+    ].join('');
+    const { markup, errors } = await build('<y-cond />', {
+      'nested.htm': NESTED,
+      head: '<:import src="/nested.htm" />',
+    });
+    expect(errors).toStrictEqual([]);
+    // being inside the `:if` is the point; hoisting would answer a question
+    // the author had already answered differently
+    expect(markup).toMatch(/<template>[\s\S]*?navy/);
+  });
+
+  it('is refused in a definition written in <body>', async () => {
+    const { errors } = await build(
+      '<:define tag="y-inline:div"><style>.z { color: red }</style>z</:define><y-inline />'
+    );
+    expect(errors.length).toBe(1);
+    expect(errors[0]).toContain('written in <body> has nowhere to go');
+  });
+});
+
+/**
+ * A component's classes are global — nothing is rewritten or hashed — so a
+ * page can wear `.cc` without ever writing `<y-card>`. Do both and the
+ * definition's stylesheet is dropped out from under markup that stayed.
+ * That is the one silent failure global naming can produce, so it is said
+ * out loud, and only when it has actually happened.
+ */
+describe('a definition stylesheet the page borrowed from', () => {
+  const BORROWED = [
+    '<lib>',
+    '  <:define tag="z-card:div" class="cc">',
+    '    <style>.cc { color: seagreen } .cc-title { font-weight: 600 }</style>',
+    '    <span class="cc-title">t</span>',
+    '  </:define>',
+    '  <:define tag="z-other:div">other</:define>',
+    '</lib>',
+  ].join('\n');
+  const borrowed = { 'borrowed.htm': BORROWED, head: '<:import src="/borrowed.htm" />' };
+  const warnings = (page: { errors: { type: string; msg: string }[] }) =>
+    page.errors.filter(e => e.type === 'warning').map(e => e.msg);
+
+  it('warns, naming every class that lost its rules', async () => {
+    const { page } = await build('<z-other /><p class="cc cc-title">by hand</p>', borrowed);
+    const said = warnings(page);
+    expect(said.length).toBe(1);
+    expect(said[0]).toContain('<z-card> is never used');
+    expect(said[0]).toContain('"cc", "cc-title"');
+  });
+
+  it('says nothing when the page borrowed none of them', async () => {
+    const { page } = await build('<z-other /><p class="unrelated">nothing</p>', borrowed);
+    expect(warnings(page)).toStrictEqual([]);
+  });
+
+  it('says nothing when the definition survives', async () => {
+    // the page wears `.cc` by hand AND writes the tag: nothing was lost, and
+    // a lint that fires here is one people learn to skip
+    const { page } = await build('<z-card /><p class="cc">by hand</p>', borrowed);
+    expect(warnings(page)).toStrictEqual([]);
+  });
+
+  it('sees a class a `:class-` toggle would have applied', async () => {
+    const { page } = await build('<z-other /><p :class-cc=${true}>toggled</p>', borrowed);
+    expect(warnings(page)[0]).toContain('"cc"');
+  });
+
+  it('does not read a class out of a declaration', async () => {
+    // `url(logo.cc)` is not a selector; only the text before each `{` is read
+    const URLY = '<lib><:define tag="z-bg:div" class="bg">' +
+      '<style>.bg { background: url(logo.cc) }</style>x</:define>' +
+      '<:define tag="z-x:div">x</:define></lib>';
+    const { page } = await build('<z-x /><p class="cc">unrelated</p>', {
+      'urly.htm': URLY,
+      head: '<:import src="/urly.htm" />',
+    });
+    expect(warnings(page)).toStrictEqual([]);
   });
 });
