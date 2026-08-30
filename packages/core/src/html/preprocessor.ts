@@ -1,6 +1,6 @@
 import type { Kit } from '../kits';
 import { normalizeSeparators, Resolver } from '../paths';
-import { DIRECTIVE_TAG_PREFIX, NodeType } from './dom';
+import { DIRECTIVE_TAG_PREFIX, GROUP_DIRECTIVE_TAG, NodeType } from './dom';
 import { parse, Source } from './parser';
 import * as dom from './server-dom';
 import fs from 'fs';
@@ -11,7 +11,7 @@ export const IMPORT_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'IMPORT';
 export const INCLUDE_SRC_ATTR = 'src';
 export const INCLUDE_AS_ATTR = 'as';
 export const INCLUDE_ESCAPING_ATTR = 'escaping';
-export const GROUP_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'GROUP';
+export { GROUP_DIRECTIVE_TAG };
 
 export const MAX_NESTING = 100;
 

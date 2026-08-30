@@ -21,6 +21,7 @@ import { CoreValue, CoreValueProps } from '../core/core-value';
 import {
   DOM_ATOMIC_TEXT_TAGS,
   DOM_ID_ATTR,
+  DOM_REGION_END_MARKER,
   DOM_REGION_MARKER,
   DOM_TEXT_MARKER1,
   WebContext,
@@ -80,6 +81,12 @@ export class WebScope extends CoreScope {
   // belonged -- see docs/design/stencil-placement.md
   declare anchor?: Comment;
   declare stencil?: Element;
+  // A group region's other half, and where its markup waits while hidden.
+  // The holder is a detached element and never enters the document: it is
+  // somewhere to keep nodes that child scopes can still be found inside,
+  // which an array of loose nodes would not be
+  declare endAnchor?: Comment;
+  declare holder?: Element;
   // set by clone() right before constructing a new clone scope, so that
   // clone's own init() (running during its super()) can pick up the DOM
   // node clone() already resolved for it; not itself touched during any
@@ -100,7 +107,8 @@ export class WebScope extends CoreScope {
     super.init();
     this.texts = new Map();
     const templateId = this.props.template;
-    const parentDom = this.parent instanceof WebScope ? this.parent.dom : undefined;
+    const parentDom =
+      this.parent instanceof WebScope ? this.parent.childContainer() : undefined;
     const view = this.cloned
       ? (this.parent as WebScope)?.pendingCloneDom
       : this.isRegion()
@@ -120,12 +128,12 @@ export class WebScope extends CoreScope {
     // see CoreScope.builtin(). The comment above still holds: the name has
     // to be answerable on every scope, holding nothing where there is no
     // element, and never inherited from an ancestor
-    if (!view) {
+    if (!view && !this.props.group) {
       // Root scope or other scopes without corresponding DOM elements
       // should not try to perform DOM operations
       return;
     }
-    this.dom = view;
+    view && (this.dom = view);
     // keyed by the id the marker carries, never by how many came before it:
     // a text node's binding must not depend on the document order of its
     // siblings, or anything that inserts or moves markup within a scope's
@@ -140,13 +148,12 @@ export class WebScope extends CoreScope {
     // is neither an element nor a marker and costs one idle turn of the
     // loop. The copy, meanwhile, was an array per element of every scope's
     // territory: millions of them on a 10k-row mount, and the GC to match
-    const f = (e: Element) => {
-      const childNodes = e.childNodes;
+    const f = (childNodes: NodeList | Node[], container: ContainerNode) => {
       for (let i = 0; i < childNodes.length; i++) {
         const n = childNodes[i];
         if (n.nodeType === NodeType.ELEMENT && (n as Element).getAttribute(DOM_ID_ATTR) === null) {
           if (!DOM_ATOMIC_TEXT_TAGS.has((n as Element).tagName)) {
-            f(n as Element);
+            f((n as Element).childNodes, n as Element);
           }
           continue;
         }
@@ -181,7 +188,7 @@ export class WebScope extends CoreScope {
           id,
           next?.nodeType === NodeType.TEXT
             ? (next as Text)
-            : (e.insertBefore(
+            : (container.insertBefore(
                 (this.ctx.props as WebContextProps).doc.createTextNode(''),
                 next ?? null
               ) as Text)
@@ -194,7 +201,7 @@ export class WebScope extends CoreScope {
     // written inside would be read back as literal text -- so the marker
     // belongs to the parent's territory while the text value belongs to
     // this scope. Bind it from the sibling side before walking.
-    if (DOM_ATOMIC_TEXT_TAGS.has(this.dom.tagName)) {
+    if (this.dom && DOM_ATOMIC_TEXT_TAGS.has(this.dom.tagName)) {
       const marker = this.dom.previousSibling;
       const target = this.dom.childNodes[0];
       if (
@@ -217,7 +224,16 @@ export class WebScope extends CoreScope {
         );
       }
     }
-    f(this.dom);
+    if (this.props.group) {
+      // A region with no element of its own: what it holds is every node
+      // between its two markers, so there is no `dom` to set and nothing
+      // for `$dom` to answer with. Its texts are bound over that run
+      const within = this.acquireGroupRange(parentDom);
+      const nodes = this.showing ? this.groupNodes() : this.holder?.childNodes;
+      within && nodes && f(nodes, within);
+      return;
+    }
+    this.dom && f(this.dom.childNodes, this.dom);
   }
 
   override builtin(key: string): CoreValue<any> | undefined {
@@ -305,6 +321,84 @@ export class WebScope extends CoreScope {
     const node = proto.cloneNode(true) as unknown as Element;
     node.setAttribute(DOM_ID_ATTR, id);
     return node;
+  }
+
+  /**
+   * Where a child scope of THIS one should be looked for.
+   *
+   * Its own element, except for a group region, which has none: there the
+   * markup is either standing between the two markers -- so the marker's
+   * container is where to look -- or waiting in the holder.
+   */
+  private childContainer(): Element | undefined {
+    if (!this.props.group) return this.dom;
+    return this.showing
+      ? ((this.anchor as unknown as { parentNode?: Element })?.parentNode)
+      : this.holder;
+  }
+
+  /**
+   * Resolves a group region: both its markers, its stencil, and whether the
+   * markup between them is standing.
+   *
+   * The end marker is what an ordinary region gets from its element -- a
+   * way to say "this much is mine". Anything between the two means the
+   * server rendered it showing and it is adopted where it stands; an empty
+   * pair means hidden, and the stencil is stamped into the holder so that
+   * showing it later is a move rather than a build.
+   */
+  private acquireGroupRange(parentDom?: Element): ContainerNode | undefined {
+    const ctx = this.ctx as WebContext;
+    const id = `${this.props.id}`;
+    const marker = this.lookupMarker(id, parentDom);
+    if (!marker) return undefined;
+    this.anchor = marker;
+    const text = `${marker.textContent}`;
+    this.stencil = ctx.findStencil(text.slice(text.indexOf('.') + 1));
+    const endText = `${DOM_REGION_END_MARKER}${id}`;
+    let n = marker.nextSibling as Node | null;
+    let showing = false;
+    while (
+      n &&
+      !(n.nodeType === NodeType.COMMENT && `${(n as Comment).textContent}` === endText)
+    ) {
+      showing = true;
+      n = n.nextSibling as Node | null;
+    }
+    // no end marker is nothing this can act on: leave the markup alone
+    // rather than take a guess at where it stops
+    if (!n) return undefined;
+    this.endAnchor = n as Comment;
+    this.showing = showing;
+    const holder = (this.ctx.props as WebContextProps).doc.createElement('div');
+    this.holder = holder;
+    if (!showing) {
+      const content = (this.stencil as unknown as TemplateElement | undefined)?.content;
+      for (const child of [...(content?.childNodes ?? [])]) {
+        holder.appendChild(child.cloneNode(true));
+      }
+    }
+    return showing
+      ? ((marker as unknown as { parentNode: Element }).parentNode)
+      : holder;
+  }
+
+  /**
+   * The nodes standing between the two markers.
+   *
+   * Always the live run rather than "wherever the markup is": `toggle`
+   * clears `showing` before it calls `hideView`, so a reading that went by
+   * that flag would look in the holder at the one moment the page is what
+   * has to be emptied.
+   */
+  private groupNodes(): Node[] {
+    const ret: Node[] = [];
+    let n = this.anchor?.nextSibling as Node | null;
+    while (n && n !== (this.endAnchor as unknown as Node)) {
+      ret.push(n);
+      n = n.nextSibling as Node | null;
+    }
+    return ret;
   }
 
   /**
@@ -748,6 +842,17 @@ export class WebScope extends CoreScope {
    * counts what its author wrote and nothing else.
    */
   override showView(): void {
+    if (this.props.group) {
+      // insertBefore takes them one at a time, which is what keeps their
+      // order: the holder is emptied from the front as they go
+      const into = (this.endAnchor as unknown as { parentNode?: ContainerNode })
+        ?.parentNode;
+      if (!into || !this.holder) return;
+      for (const node of [...this.holder.childNodes]) {
+        into.insertBefore(node, this.endAnchor as unknown as Node);
+      }
+      return;
+    }
     const container = this.anchorContainer();
     if (!this.dom || !container || !this.anchor) return;
     container.insertBefore(this.dom, this.anchor.nextSibling);
@@ -764,6 +869,16 @@ export class WebScope extends CoreScope {
    * ever needed.
    */
   override hideView(): void {
+    if (this.props.group) {
+      // back into the holder rather than dropped, for the reason the
+      // element form gives below: what comes back has to be what went away
+      const holder = this.holder;
+      if (!holder || !this.anchor || !this.endAnchor) return;
+      for (const node of this.groupNodes()) {
+        holder.appendChild(node);
+      }
+      return;
+    }
     const dom = this.dom as unknown as { parentNode?: { removeChild(n: unknown): void } };
     dom?.parentNode?.removeChild(this.dom);
   }

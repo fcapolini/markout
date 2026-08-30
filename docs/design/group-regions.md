@@ -126,16 +126,19 @@ Only the first three assume one element. So:
 1. **Preprocessor**: flatten a group only when it carries no attribute.
    *Built* — one condition in `flattenGroups`, and stage1 takes an active
    group from there.
-2. **An end marker.** The identity check has nothing to attach to — a text
-   node cannot carry `data-markout` — so a group region is `[start … end]`
-   and the three operations become range operations. This is what Vue and
-   Solid do for fragments; it costs one comment per region.
-3. **stage1 / stage7**: a group with attributes takes the path an `:if`
-   element takes, plus the second marker.
-4. **The clone path.** `:for-each` over a group clones a range per
-   replica, and `acquireCloneDom`'s hydrated-prefix logic and
-   `reorderClones`' forward walk are both per element. This is the largest
-   piece and the least explored.
+2. **An end marker.** *Built.* The identity check has nothing to attach
+   to — a text node cannot carry `data-markout` — so a group region is
+   `[start … end]` and the three operations became range operations. The
+   pair is emitted whether the region shows or not: an empty pair is what
+   "hidden" looks like to a browser that has to fill it later. One comment
+   per region.
+3. **stage1 / stage7**: *Built.* A group with a branch takes the path an
+   `:if` element takes, plus the second marker — and stage7 unwraps the tag
+   afterwards, for the reason below.
+4. **The clone path.** *Not built*, and the reason `:for-each` over a run
+   is refused: replicating one clones a range per replica, and
+   `acquireCloneDom`'s hydrated-prefix logic and `reorderClones`' forward
+   walk are both per element.
 5. **The allowlist**, below. *Built*, in the refusing direction: every
    attribute a group cannot carry now says which of the two reasons it is.
 
@@ -157,16 +160,42 @@ which is missing: *no element of its own* for what needs one to apply to,
 *no scope of its own* for what needs somewhere to live. Building rule 2
 turns the first refusal into behaviour and leaves the second where it is.
 
+## What building it turned up
+
+**The tag cannot survive compilation, even on the server.** The first
+working version left the `<:group>` standing in the rendering document and
+made serialization transparent instead. That rendered correctly until a
+group was nested in another: the tag carries a scope id, `lookupWithin`
+declines to descend into another scope's element, and the inner region
+could not find its own marker — so it rendered empty on the server and
+appeared on hydration, the two halves of an isomorphic render disagreeing
+in silence. stage7 now unwraps every surviving group after the props are
+read off the scopes, and from there the rendering document holds exactly
+what a browser holds.
+
+**`showing` is already false when `hideView` runs.** `CoreScope.toggle`
+clears it first, so a range read that consulted the flag looked in the
+holder at the one moment the page is what has to be emptied. The run is
+read live, always.
+
+**Replicas needed nothing.** A group inside a `:for-each` works because
+each replica's marker lookup is bounded by the replica's own element, so
+ids never collide — the part expected to break.
+
+**A `<:slot>` is not a transfer target.** Rule 3 would have moved an `:if`
+onto one and turned a region into an error. A group holding a lone slot is
+the region form, which is exactly what a definition placing its caller's
+markup conditionally needs — and what removes the wrapper element
+router-kit was paying per route level.
+
 ## Open
 
-- **Replicating a range.** Keyed reordering over ranges is the part of
-  item 4 above that most wants a prototype before the design is trusted.
-- **Nested groups.** A group directly inside a group, both active, is two
-  regions with four markers; whether the compiler should collapse that
-  pair the way rule 3 collapses a single element is unexplored.
-- **Where the stencil goes.** Region stencils live in `<head>` and are
-  restored per render; a range stencil holds several top-level nodes,
-  which `restoreStencils` and `dropSpentStencils` have not seen before.
+- **Replicating a range.** Item 4 above, and why `:for-each` on a group is
+  refused. Keyed reordering over runs is the part that most wants a
+  prototype.
+- **Nested groups.** Two active groups nested is two regions and four
+  markers, which works; whether the compiler should collapse that pair the
+  way rule 3 collapses a single element is unexplored.
 - **Whether rule 3's fallback deserves a dev-mode note.** It is invisible
   by design, and invisible optimizations are hard to reason about when the
   output is bigger than expected.

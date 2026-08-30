@@ -105,6 +105,12 @@ export interface CoreScopeProps {
   elseNext?: string;
   /** plain attributes from a custom-tag usage site, applied to its stencil clone */
   attributes?: { [key: string]: string };
+  /**
+   * A `<:group>` region: markup with no element of its own, standing
+   * between a marker at each end. What show and hide move is the run of
+   * nodes between them rather than one element.
+   */
+  group?: boolean;
   /** markup written at a usage site and slotted into the instance: it lives
    * here but resolves names from outside (see lexicalParent()) */
   slotted?: boolean;

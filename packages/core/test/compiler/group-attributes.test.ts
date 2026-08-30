@@ -68,21 +68,32 @@ describe('a control attribute on a group holding one element', () => {
   });
 });
 
-describe('a control attribute with nowhere to land', () => {
+describe('a branch on a group holding several nodes', () => {
   it.each([
-    ['more than one element', '<:group :if=${ok}><p>one</p><p>two</p></:group>'],
+    ['two elements', '<:group :if=${ok}><p>one</p><p>two</p></:group>'],
     ['an element and some text', '<:group :if=${ok}>hello<p>one</p></:group>'],
-  ])('refuses %s, which is the region form', (_label, markup) => {
+  ])('makes a region of %s', (_label, markup) => {
     const found = compile(markup);
-    expect(found.errors.join()).toMatch(/holding more than one node needs the group to be a region/);
-    // and the content is still there to be fixed
-    expect(found.html).toMatch(/<p[^>]*>one<\/p>/);
+    expect(found.errors).toStrictEqual([]);
+    // a region, which at this stage means the stencil stage1 wraps it in.
+    // What that region actually renders is group-regions.test.ts, since the
+    // markers and the run between them are stage7's and the runtime's
+    expect(found.html).toMatch(/data-markout-region/);
   });
+});
 
+describe('a control attribute with nowhere to land', () => {
   it('refuses an empty group, naming what it holds', () => {
     expect(compile('<:group :if=${ok}></:group>').errors.join()).toMatch(
       /holding nothing needs the group to be a region/
     );
+  });
+
+  it('refuses a loop over several nodes, which the clone path cannot do', () => {
+    expect(
+      compile('<:group :for-each=${rows} :for-as="r"><p>${r}</p><i>${r}</i></:group>')
+        .errors.join()
+    ).toMatch(/replicating several nodes at once is not built/);
   });
 
   it.each([

@@ -28,6 +28,18 @@ export const DOM_USE_MARKER = '-u';
 // CSS counts what it wrote and nothing else. See
 // docs/design/stencil-placement.md
 export const DOM_REGION_MARKER = '-c';
+/**
+ * Where a `<:group>` region stops (see stage7-generate.ts's
+ * relocateStencils): `${DOM_REGION_END_MARKER}${scopeId}`, e.g. `-/cs4`.
+ *
+ * An ordinary region is one element, found after its marker by its id. A
+ * group has no element -- the tag is not markup and an HTML parser would
+ * not accept it back -- so what the region holds is every node between its
+ * two markers, and this is the one that says where that stops. Emitted
+ * whether the region shows or not: an empty pair is what "hidden" looks
+ * like to a browser that has to be able to fill it later.
+ */
+export const DOM_REGION_END_MARKER = '-/c';
 /** the key a relocated stencil answers to, matching its markers' */
 export const DOM_STENCIL_ATTR = 'data-markout-stencil';
 /**

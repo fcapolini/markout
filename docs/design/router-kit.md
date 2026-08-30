@@ -232,10 +232,12 @@ A component buys what the directive would have, for nothing:
   `<:slot>` in an element carrying `:if` and render its content or not.
 - **layout and route are one concept.** No `<Outlet>`, no `layout` file.
 
-What it costs: a wrapper element per route level, since a `:logic` base
-tag cannot hold content (*"holds values, not markup"* — **(verified)**).
-[group-regions.md](group-regions.md) would remove that cost, and the kit
-must not wait for it.
+What it costs: the component's own base tag per route level, since a
+`:logic` base tag cannot hold content (*"holds values, not markup"* —
+**(verified)**). The *second* element it used to cost — a wrapper around
+the `<:slot>` to carry the `:if` — is gone:
+`<:group :if=${matched}><:slot /></:group>` is a region with no element of
+its own, built in [group-regions.md](group-regions.md).
 
 Rejected: **file-system convention** (Next, SvelteKit, Astro), and **a
 route table as data**, which is a config file wearing HTML syntax and
@@ -686,10 +688,11 @@ flattening:
   element, and everything else says which of the two things a group has
   not got — an element to apply to, or a scope to live in.
 
-What is still refused is the case a router wants: several nodes under one
-condition, with no element of their own. That is rule 2 of
-[group-regions.md](group-regions.md), and building it would retire the
-wrapper element per route level.
+The case a router wants — several nodes under one condition, with no
+element of their own — is now built for branches, so a route gates its
+content with a `<:group :if>` and no wrapper. What is still refused is
+`:for-each` over a run, which needs the clone path to replicate several
+nodes at once. See [group-regions.md](group-regions.md).
 
 ---
 

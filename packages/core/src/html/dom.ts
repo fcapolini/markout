@@ -22,6 +22,16 @@
  */
 
 export const DIRECTIVE_TAG_PREFIX = ':';
+/**
+ * `<:group>`: several nodes handed to one splice, and -- where it carries a
+ * branch -- one region over all of them.
+ *
+ * Here rather than beside the preprocessor that flattens the passive ones,
+ * because serialization has to know it too: a directive tag is not markup,
+ * but a group's children are, and one that survives to be serialized is a
+ * region whose content has to come out.
+ */
+export const GROUP_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'GROUP';
 
 export const NodeType = {
   ELEMENT: 1,

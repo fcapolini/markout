@@ -166,7 +166,7 @@ function resolveActiveGroups(page: Page, root: ServerElement): void {
   ];
   const advice = `Put it on an element inside the group, or on one around it`;
 
-  const resolve = (el: ServerElement): void => {
+  const resolve = (el: ServerElement): 'region' | void => {
     const transfer: string[] = [];
     for (const name of el.getAttributeNames()) {
       const bare = name.startsWith(SPECIAL_ATTR_PREFIX)
@@ -198,18 +198,36 @@ function resolveActiveGroups(page: Page, root: ServerElement): void {
         n.nodeType !== NodeType.TEXT ||
         `${(n as ServerText).textContent}`.trim().length > 0
     );
-    const only =
+    // a directive tag is not a transfer target: `<:slot>` takes only its
+    // name, and moving an `:if` onto one turns a region into an error. A
+    // group holding one is the region form, which is what a definition
+    // wanting to place its caller's markup conditionally actually needs
+    const lone =
       content.length === 1 && content[0].nodeType === NodeType.ELEMENT
         ? (content[0] as ServerElement)
         : undefined;
+    const only = lone?.tagName.startsWith(SPECIAL_ATTR_PREFIX) ? undefined : lone;
     if (!only) {
+      // more than one node under a branch attribute is the region form, and
+      // the group stays standing for load() to make a scope of. The loop
+      // family cannot be one yet: replicating a range needs the clone path
+      // to work on several nodes at once
+      const loop = transfer.filter(n =>
+        [FOR_EACH_ATTR, FOR_DATA_ATTR, FOR_AS_ATTR, FOR_KEY_ATTR].includes(
+          n.slice(SPECIAL_ATTR_PREFIX.length)
+        )
+      );
+      if (!loop.length && content.length) return 'region';
       const held = content.length ? 'more than one node' : 'nothing';
-      transfer.forEach(name =>
+      (loop.length ? loop : transfer).forEach(name =>
         addError(
           page,
           `"${name}" on a <${self}> holding ${held} needs the group to be a ` +
-            `region, and it cannot be one yet. A group holding a single ` +
-            `element gives this to that element instead`,
+            `region, and only a branch can be one: ${
+              loop.length
+                ? 'replicating several nodes at once is not built'
+                : 'there is nothing here to show or hide'
+            }`,
           el.loc
         )
       );
@@ -266,8 +284,8 @@ function resolveActiveGroups(page: Page, root: ServerElement): void {
       // the time the outer one is asked what it holds
       walk(el);
       if (el.tagName !== GROUP_DIRECTIVE_TAG) continue;
-      el.getAttributeNames().length && resolve(el);
-      splice(el);
+      const kept = el.getAttributeNames().length && resolve(el) === 'region';
+      kept || splice(el);
     }
   };
   walk(root);

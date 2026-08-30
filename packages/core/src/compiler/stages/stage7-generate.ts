@@ -16,8 +16,9 @@ import {
   ServerTemplateElement,
   ServerText,
 } from '../../html/server-dom';
-import { NodeType } from '../../html/dom';
+import { GROUP_DIRECTIVE_TAG, NodeType } from '../../html/dom';
 import { DEV_GLOBAL, LOCS_GLOBAL, PROPS_DATA_ATTR, PROPS_GLOBAL } from '../../runtime/core/core-context';
+import { DOM_REGION_END_MARKER } from '../../runtime/web/web-context';
 import {
   EVENT_VALUE_PREFIX,
   REGION_STENCIL_MARKER,
@@ -118,7 +119,45 @@ export function stage7generate(
     page.clientProps = hasServerValues ? emitProps(root, true, dev) : page.props;
     injectBootstrapScripts(page, runtimeSrc, dev);
   }
+  // last, and after the props have been read off the scopes: from here on
+  // a group region is markers and markup, exactly as a browser sees it
+  unwrapGroups(page);
   return page;
+}
+
+/**
+ * Takes every surviving `<:group>` out of the tree, leaving its children.
+ *
+ * A group region's tag is not markup -- `<:group>` is not a name an HTML
+ * parser accepts, and would come back as text -- so what a browser holds
+ * between the region's two markers is the children alone. The rendering
+ * side has to hold the same thing, or the two disagree about what a scope's
+ * territory contains: the tag carries a scope id, `lookupWithin` declines
+ * to descend into another scope's element, and a region nested inside this
+ * one then cannot find its own marker. That is exactly what a nested group
+ * did -- it rendered empty on the server and appeared on hydration.
+ *
+ * After emitProps, which reads the tag off the scope to know it is a group,
+ * and after relocateStencils, which reads it to know the region needs an
+ * end marker. Both are done by now, and nothing downstream wants the tag.
+ */
+function unwrapGroups(page: Page): void {
+  const walk = (e: ServerElement): void => {
+    const container = e.tagName === 'TEMPLATE' ? (e as ServerTemplateElement).content : e;
+    for (const child of [...container.childNodes]) {
+      if (child.nodeType !== NodeType.ELEMENT) continue;
+      const el = child as ServerElement;
+      walk(el);
+      if (el.tagName !== GROUP_DIRECTIVE_TAG) continue;
+      for (const inner of [...el.childNodes]) {
+        el.removeChild(inner);
+        container.insertBefore(inner, el);
+      }
+      container.removeChild(el);
+    }
+  };
+  const root = page.source.doc.documentElement;
+  root && walk(root);
 }
 
 /**
@@ -405,10 +444,28 @@ function relocateStencils(page: Page) {
       new ServerComment(doc, `${DOM_REGION_MARKER}${scopeId}.${key}`, template.loc),
       template
     );
+    // A group region has no element to be found after its marker, so it
+    // needs a second one to say where it stops. Emitted whether or not the
+    // region ends up showing: what is between the two IS the region, and
+    // an empty pair is how "hidden" looks to the browser
+    isGroupStencil(template) &&
+      parent.insertBefore(
+        new ServerComment(doc, `${DOM_REGION_END_MARKER}${scopeId}`, template.loc),
+        template
+      );
     parent.removeChild(template);
     head.appendChild(template);
     page.regionStencils.push(template);
   }
+}
+
+/** whether what this stencil holds is a `<:group>` rather than an element */
+function isGroupStencil(template: ServerTemplateElement): boolean {
+  for (const n of template.content.childNodes) {
+    if (n.nodeType !== NodeType.ELEMENT) continue;
+    return (n as ServerElement).tagName === GROUP_DIRECTIVE_TAG;
+  }
+  return false;
 }
 
 /** the two namespaces an HTML document can switch into, and the way back */
@@ -732,6 +789,9 @@ class Locations {
 interface ScopeData {
   id: string;
   name?: string;
+  /** a `<:group>` region: markup with no element of its own, held between
+   * a marker at each end rather than by the element carrying the `:if` */
+  group?: true;
   slotted?: true;
   slottedText?: true;
   elseOf?: string;
@@ -825,6 +885,11 @@ function generateScope(
   }
   if (scope.name) {
     props.name = scope.name;
+  }
+  if (scope.e?.tagName === GROUP_DIRECTIVE_TAG) {
+    // the tag is not markup and never reaches a browser; what the runtime
+    // shows and hides is the run of nodes between this region's two markers
+    props.group = true;
   }
   if (scope.slotted) {
     // written at a usage site, living inside the instance: the runtime
