@@ -64,6 +64,55 @@ describe('a list that is shorter than it was last time', () => {
   });
 
   /**
+   * The other half of the same problem: not a list that shrank, but a
+   * region that showed.
+   *
+   * `acquireRegionDom` decides a region is showing by looking for its
+   * element next to its marker -- which is exactly where the LAST render
+   * left one. And the condition does not correct it, because a region
+   * toggles on change and a fresh scope tree starts at `undefined`: a
+   * condition that is falsy again never moves, so no callback runs.
+   *
+   * What that serves is the previous request's content inside this one's
+   * page, and an error for every expression in a branch that was never
+   * meant to be evaluated against this request's data. Found on the shop's
+   * product page, where `?id=nope` answered 404 with the product the
+   * previous visitor had been looking at.
+   */
+  it('shows nothing of a branch that showed for the request before', async () => {
+    fs.writeFileSync(
+      path.join(docroot, 'b.html'),
+      '<html><body :server-thing=${globalThis.__thing}>' +
+        '<:group :server-if=${thing}><p>${thing.name}</p></:group>' +
+        '<span :if=${thing}>${thing.name}</span>' +
+        '<:group :if=${thing}><b>${thing.name}</b></:group>' +
+        '</body></html>'
+    );
+    const page = await new Compiler({ docroot }).compile('/b.html');
+    expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+    const render = async (thing: unknown) => {
+      (globalThis as unknown as { __thing: unknown }).__thing = thing;
+      const errors = await renderPage(page);
+      const body = /<body[\s\S]*?<script/.exec(page.source.doc.toString())?.[0] ?? '';
+      return { errors: errors.map(e => `${e.msg}`), body: body.replace(/<!---[^>]*-->/g, '') };
+    };
+
+    expect((await render(undefined)).body).not.toContain('secret');
+    const shown = await render({ name: 'secret' });
+    expect(shown.errors).toStrictEqual([]);
+    expect(shown.body).toContain('secret');
+
+    // and now the request that must not see it
+    const after = await render(undefined);
+    expect(after.body).not.toContain('secret');
+    // nor evaluate a branch it is not showing, which is the same fact
+    expect(after.errors).toStrictEqual([]);
+
+    // still works when it comes back, so this is emptying and not breaking
+    expect((await render({ name: 'again' })).body).toContain('again');
+  });
+
+  /**
    * The same bug, in the one shape the first fix could not see.
    *
    * A `<:group>` replica is not an element: it is a run of siblings between

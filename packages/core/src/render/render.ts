@@ -1,9 +1,16 @@
-import { DOM_STENCIL_ONCE_ATTR, WebContext } from "../runtime/web/web-context";
+import {
+  DOM_ID_ATTR,
+  DOM_REGION_END_MARKER,
+  DOM_REGION_MARKER,
+  DOM_STENCIL_ONCE_ATTR,
+  WebContext,
+} from "../runtime/web/web-context";
 import { WebScope } from "../runtime/web/web-scope";
 import type { CoreScope, CoreScopeProps } from "../runtime/core/core-scope";
 import type { PageState, RuntimeError } from "../runtime/core/core-context";
 import { STATE_GLOBAL } from "../runtime/core/core-context";
 import type { Page } from "../compiler/ir/Page";
+import { NodeType } from "../html/dom";
 import { ServerText, type ServerElement, type ServerNode } from "../html/server-dom";
 import { loadProps } from "./props";
 import { cloneId, RT_IF_VALUE } from "../runtime/core/core-scope";
@@ -70,6 +77,7 @@ export async function renderPage(
   // scripts stage7 gave it, and one served under a policy needs them stamped
   applyNonce(page, props?.nonce);
   restoreStencils(page);
+  emptyRegions(page);
   if (!page.props) {
     return [];
   }
@@ -155,6 +163,85 @@ function restoreStencils(page: Page) {
   for (const template of page.regionStencils) {
     template.unlink();
     head.appendChild(template);
+  }
+}
+
+/**
+ * Takes back the markup a previous render stamped into the page.
+ *
+ * The other half of `restoreStencils`, and the same reason: a compiled page
+ * is rendered into again and again, and the two renders never meet. A region
+ * that showed last time left its element standing next to its marker, and
+ * `acquireRegionDom` reads exactly that spot to decide it is showing -- so
+ * this render adopts the previous one's markup as its own.
+ *
+ * Which would merely be untidy if the condition then corrected it, and it
+ * does not. A region's `:if` toggles on CHANGE, and a fresh scope tree
+ * starts at `undefined`: for a condition that is falsy this time the value
+ * never moves, no callback runs, and the region stays showing. What that
+ * serves is the last visitor's content under this visitor's page --
+ * `/product?id=nope` answering 404 with the product someone else just
+ * looked at -- plus an error for every expression inside a branch that was
+ * never supposed to be evaluated with this request's data.
+ *
+ * Emptied before the render rather than corrected after it, so the branch is
+ * never evaluated at all: adoption finds the pristine marker, concludes the
+ * region is not showing, and its contents stay in the stencil where they
+ * belong. A first render walks a document that has nothing to take back and
+ * this costs it one pass.
+ *
+ * Replicas are left alone. A `:for-each` stamps `s11-0`, `s11-1`, which are
+ * not the host's id and do not sit at the host's marker; those are
+ * `dropStaleReplicas`, after the render, where the count is known.
+ */
+function emptyRegions(page: Page) {
+  const doc = page.source.doc;
+  const walk = (node: ServerNode) => {
+    const children = (node as unknown as { childNodes?: ServerNode[] }).childNodes;
+    if (!children) return;
+    // by index and backwards, since taking a run out from under a forward
+    // walk is how a sibling gets skipped
+    for (let i = children.length - 1; i >= 0; i--) {
+      const child = children[i];
+      if (child.nodeType === NodeType.COMMENT) {
+        emptyAt(child as unknown as ServerNode, children, i);
+      } else {
+        walk(child);
+      }
+    }
+  };
+  walk(doc as unknown as ServerNode);
+}
+
+/** the one marker, and whatever of its region is standing after it */
+function emptyAt(marker: ServerNode, siblings: ServerNode[], at: number) {
+  const text = `${(marker as unknown as { textContent?: string }).textContent ?? ''}`;
+  if (!text.startsWith(DOM_REGION_MARKER)) return;
+  const id = text.slice(DOM_REGION_MARKER.length, text.indexOf('.'));
+  if (!id || id.includes('-')) return; // a replica's marker: not ours to take
+  const next = siblings[at + 1] as ServerElement | undefined;
+  // an element region: the one element the marker owns, in the one place
+  // acquireRegionDom looks for it
+  if (
+    next?.nodeType === NodeType.ELEMENT &&
+    next.getAttribute?.(DOM_ID_ATTR) === id
+  ) {
+    next.unlink();
+    return;
+  }
+  // a group region: everything up to its end marker, which is what says
+  // where the region stops. No end marker is a host that replicates, and
+  // its clones are somebody else's business
+  const endText = `${DOM_REGION_END_MARKER}${id}`;
+  for (let i = at + 1; i < siblings.length; i++) {
+    const n = siblings[i];
+    if (
+      n.nodeType === NodeType.COMMENT &&
+      `${(n as unknown as { textContent?: string }).textContent}` === endText
+    ) {
+      for (let j = i - 1; j > at; j--) (siblings[j] as ServerElement).unlink?.();
+      return;
+    }
   }
 }
 
