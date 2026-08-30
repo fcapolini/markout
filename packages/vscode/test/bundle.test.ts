@@ -237,3 +237,35 @@ describe('the sidecar under an Electron-flavoured interpreter', () => {
     expect(src).toContain('ELECTRON_RUN_AS_NODE');
   });
 });
+
+/**
+ * What the extension must NOT do to the process it lives in.
+ *
+ * An extension host's environment is inherited by every terminal the editor
+ * opens. Setting `MARKOUT_RUNTIME_BUNDLE` there pointed any dev server
+ * started in this repository at the installed extension's runtime, and
+ * served pages compiled by the checkout to a runtime from whenever the
+ * extension was last published -- rendering fine, throwing nothing, and
+ * failing in the browser in a way that reads as two bugs in the language.
+ *
+ * The path is a parameter now, and the variable is kept for the sidecar
+ * alone, which is a separate process and has no other channel.
+ */
+describe('the runtime path the extension carries', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'src', 'preview.ts'),
+    'utf8'
+  );
+
+  it('is never written into the extension host environment', () => {
+    expect(source).not.toMatch(/process\.env\.MARKOUT_RUNTIME_BUNDLE\s*=/);
+  });
+
+  it('is handed to the build that needs it', () => {
+    expect(source).toMatch(/build\(\{[^}]*runtimeBundle:/);
+  });
+
+  it('is still given to the sidecar, which is a process of its own', () => {
+    expect(source).toMatch(/MARKOUT_RUNTIME_BUNDLE: runtimeBundle\(context\)/);
+  });
+});

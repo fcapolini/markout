@@ -61,6 +61,15 @@ export interface BuildProps {
   /** `src` the built pages use for the runtime; defaults to DEFAULT_RUNTIME_SRC */
   runtimeSrc?: string;
   /**
+   * Where the runtime bundle is, for a host that repackages this code and
+   * so breaks the walk from core's own directory -- see runtimeBundlePath.
+   *
+   * A parameter rather than the environment variable that does the same
+   * job, because a host setting one on its own process leaks it into every
+   * terminal it opens. Told here, it reaches this build and nothing else.
+   */
+  runtimeBundle?: string;
+  /**
    * Drop an installed kit's files when no page in this build mentions its
    * root. Off by default, and opt-in on purpose -- see pruneKits().
    */
@@ -259,12 +268,12 @@ export async function build(props: BuildProps): Promise<BuildResult> {
   props.gitignore && ignoreOutput(outdir);
 
   // not needed by a manifest-only run, which writes no page to load it
-  const clientCode = props.classesOnly ? '' : loadClientCode();
+  const clientCode = props.classesOnly ? '' : loadClientCode(props.runtimeBundle);
   if (!props.classesOnly && !clientCode) {
     // fatal here, unlike in the server: output is written once and then read
     // by somebody who was not watching this console
     throw new Error(
-      `markout: runtime bundle not found at "${runtimeBundlePath()}" -- ` +
+      `markout: runtime bundle not found at "${runtimeBundlePath(props.runtimeBundle)}" -- ` +
         `run "npm run build:runtime"`
     );
   }

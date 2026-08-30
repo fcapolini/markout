@@ -128,6 +128,13 @@ export interface MarkoutProps {
    */
   requestGlobals?: { [name: string]: (req: Request) => unknown };
   /**
+   * Where the runtime bundle is, for a host that repackages this code --
+   * see core's runtimeBundlePath. A parameter rather than the environment
+   * variable that does the same job, so it reaches this middleware and
+   * nothing else.
+   */
+  runtimeBundle?: string;
+  /**
    * Installed kits. Absent means discover them from the docroot; an explicit
    * list (`[]` included) is for a caller that has already scanned, or a test
    * that wants neither.
@@ -348,7 +355,7 @@ export function markout(props: MarkoutProps) {
     logger('info', `[markout] kit ${kit.name} at ${kit.root}`)
   );
   const resolver = new Resolver(docroot, discovered.kits);
-  const clientCode = loadClientCode();
+  const clientCode = loadClientCode(props.runtimeBundle);
   const clientSrc = runtimeSrcFor(clientCode);
   const compiler = new Compiler({
     docroot,

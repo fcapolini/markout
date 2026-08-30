@@ -61,17 +61,31 @@ export function previewRunning(): boolean {
   return !!server;
 }
 
+/**
+ * The runtime this extension carries, for the two things that need it.
+ *
+ * Core finds its own by walking two levels up from its directory, and
+ * bundled into an extension there is nothing two levels up -- so it has to
+ * be told. Told, and not set in `process.env`: an extension host's
+ * environment reaches every terminal the editor opens, so setting it there
+ * pointed any dev server started in this repository at the INSTALLED
+ * extension's runtime, and served pages compiled by the checkout to a
+ * runtime from whenever the extension was published. Everything rendered,
+ * nothing threw, and the browser quietly ran a different version.
+ *
+ * The sidecar still gets it through the environment, because it is a
+ * separate process and that is the one place a variable is the right
+ * mechanism -- see the spawn below.
+ */
+function runtimeBundle(context: vscode.ExtensionContext): string {
+  return context.asAbsolutePath(path.join('dist', RUNTIME));
+}
+
 export function registerPreview(context: vscode.ExtensionContext) {
-  // Set for THIS process, and read at call time rather than at load time --
-  // core walks two levels up from its own directory to find the runtime, and
-  // bundled into an extension there is nothing two levels up. Without it
-  // `build` refuses to write and says why, which is better than writing
-  // pages that never come alive.
-  process.env.MARKOUT_RUNTIME_BUNDLE = context.asAbsolutePath(path.join('dist', RUNTIME));
   context.subscriptions.push(
     vscode.commands.registerCommand('markout.preview', () => preview(context)),
     vscode.commands.registerCommand('markout.stopPreview', () => stop()),
-    vscode.commands.registerCommand('markout.build', () => runBuild()),
+    vscode.commands.registerCommand('markout.build', () => runBuild(context)),
     { dispose: () => stop() }
   );
 }
@@ -112,7 +126,7 @@ async function preview(context: vscode.ExtensionContext) {
         // the documented way to run a script with the editor's own runtime,
         // and the reason no node has to be found on a PATH.
         ELECTRON_RUN_AS_NODE: '1',
-        MARKOUT_RUNTIME_BUNDLE: context.asAbsolutePath(path.join('dist', RUNTIME)),
+        MARKOUT_RUNTIME_BUNDLE: runtimeBundle(context),
       },
     }
   );
@@ -154,7 +168,7 @@ function setRunning(running: boolean) {
   return vscode.commands.executeCommand('setContext', 'markout.previewRunning', running);
 }
 
-async function runBuild() {
+async function runBuild(context: vscode.ExtensionContext) {
   const docroot = docrootOf();
   if (!docroot) {
     vscode.window.showInformationMessage('Markout: no project open to build.');
@@ -170,7 +184,7 @@ async function runBuild() {
   try {
     result = await vscode.window.withProgress(
       { location: vscode.ProgressLocation.Notification, title: 'Markout: building…' },
-      () => build({ docroot, outdir, gitignore: true })
+      () => build({ docroot, outdir, gitignore: true, runtimeBundle: runtimeBundle(context) })
     );
   } catch (e) {
     log.appendLine(`[markout] ${(e as Error).message}`);

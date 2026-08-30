@@ -9,22 +9,32 @@ import path from 'path';
  * that is exactly two levels below the package root, where esbuild puts the
  * bundle (see scripts/build-runtime.mjs).
  *
- * `MARKOUT_RUNTIME_BUNDLE` overrides it, for a distribution that REPACKAGES
- * this code and so breaks the relative walk. The VS Code extension is one:
- * it bundles core into `dist/client.js` and the CLI into a sidecar beside
- * it, at which point `../../dist` is two levels above the extension and
- * names nothing. Without an override the pages compile, the runtime is
- * missing, and every one of them is inert -- which is the failure this
- * whole design is least willing to ship, because it looks like the language
- * not working.
+ * A distribution that REPACKAGES this code breaks that walk, and says so by
+ * passing `runtimeBundle`. The VS Code extension is one: it bundles core
+ * into `dist/client.js`, at which point `../../dist` is two levels above the
+ * extension and names nothing. Without an override the pages compile, the
+ * runtime is missing, and every one of them is inert -- the failure this
+ * design is least willing to ship, because it looks like the language not
+ * working.
+ *
+ * `MARKOUT_RUNTIME_BUNDLE` does the same for a SEPARATE PROCESS, which is
+ * the case a parameter cannot reach: the extension spawns the CLI as a
+ * sidecar and hands it the path in its environment. It is the fallback and
+ * not the first answer, because an environment variable goes where it is
+ * not wanted -- an editor extension setting one on its own process leaks it
+ * into every terminal that editor opens, and a dev server started there
+ * then serves the EXTENSION's runtime to pages compiled by the checkout.
+ * Everything renders, nothing throws, and the browser quietly runs a
+ * different version: the one mismatch runtimeSrcFor exists to prevent.
  *
  * A function and not a const, which matters more than it looks: a const is
  * evaluated when the module is loaded, and a host that bundles this code has
  * loaded it before its own `activate` runs. It could then never set the
  * variable in time.
  */
-export function runtimeBundlePath(): string {
+export function runtimeBundlePath(override?: string): string {
   return (
+    override ||
     process.env.MARKOUT_RUNTIME_BUNDLE ||
     path.join(__dirname, '../../dist/markout-runtime.js')
   );
@@ -39,12 +49,12 @@ export function runtimeBundlePath(): string {
  * there is nobody to read a warning about output that has already been
  * written.
  */
-export function loadClientCode(): string {
+export function loadClientCode(override?: string): string {
   try {
-    return fs.readFileSync(runtimeBundlePath(), 'utf8');
+    return fs.readFileSync(runtimeBundlePath(override), 'utf8');
   } catch {
     console.warn(
-      `[markout] runtime bundle not found at "${runtimeBundlePath()}" -- run "npm run build:runtime"`
+      `[markout] runtime bundle not found at "${runtimeBundlePath(override)}" -- run "npm run build:runtime"`
     );
     return '';
   }

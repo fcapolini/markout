@@ -121,6 +121,8 @@ export interface ServerProps {
   globals?: { [name: string]: unknown };
   /** the same, built per request -- a session, the signed-in visitor; see MarkoutProps */
   requestGlobals?: { [name: string]: (req: Request) => unknown };
+  /** where the runtime bundle is, for a repackaged host; see MarkoutProps */
+  runtimeBundle?: string;
   /** say what built the pages; on by default, see MarkoutProps */
   generator?: boolean;
   /**
