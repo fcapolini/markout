@@ -2,7 +2,8 @@
 
 Status: **living.** What stands between "the language is good" and "someone
 else can use it", written down 2026-08-24 after a pass over the language
-surface, the compiler stages and the adoption surface.
+surface, the compiler stages and the adoption surface. Items 1-7 are closed;
+what remains is at the end, and is shorter than what went.
 
 ## Why this file exists, and not TODO.md
 
@@ -250,7 +251,7 @@ directory and run a smoke test. That is what catches an undeclared dependency
 and a wrong `files` list, and it is the only way to be sure a kit ships the
 fragments it promises. Changesets does not do it.
 
-## 6. Client-side navigation is unanswered -- **answered 2026-08-24**
+## 6. Client-side navigation is unanswered -- **answered 2026-08-24, built 2026-08-30**
 
 Not "build a router". The multi-page position is defensible and the compile
 numbers support it: an ordinary page is ~2ms and the heaviest page on this
@@ -291,3 +292,84 @@ refused for the usual reason. But the path and the query are not like headers
 and cookies -- both sides have them and they mean the same thing -- so they
 clear the bar `$origin` clears, and something has to be supplied the way
 `$origin` is before any router can be written. See TODO.md.
+
+**Built, two levels of it, 2026-08-30.** The language dependency named above
+is closed: `$url` is the whole address, supplied from the request on the
+server and `location.href` in the browser, and **live** -- a navigation that
+keeps the document moves it and everything reading it re-runs, which makes
+it the one global the compiler emits a dependency for. It is read-only,
+because navigating is a side effect with a lifetime and belongs to the kit
+layer; core only follows the address, through `navigatesuccess`, `popstate`
+and `hashchange` alike. That third one was found by asking whether a
+fragment link worked. It did not.
+
+With that and `<:group>` regions, a fragment-routed page is a working SPA
+built out of parts that are not routing features, and nothing in the
+compiler knows what a route is. Levels 1 and 2 are operational, level 3 is a
+stated pause, and the position is written for a reader in
+[docs/concepts/navigation.md](docs/concepts/navigation.md) -- which is what
+this entry asked for in the first place, since an unstated position reads as
+an oversight.
+
+## 7. An application cannot see its own request -- **closed 2026-08-30**
+
+The language looked done and the host adapter did not, which is a better
+place to be than the reverse but was invisible from inside: both of the
+gaps left in "markout is complete enough for real use" turned out to be the
+seam between a page and the response it is part of -- where
+[docs/design/router-kit.md](docs/design/router-kit.md)'s open questions 4
+and 5 already sat.
+
+**What this request knows.** `globals` was built once per application, which
+is right for a database handle and useless for a session -- so any page
+whose content belonged to the visitor had to be a shell that fetched itself
+back. `requestGlobals` names the same kind of thing and builds it per
+render. Authenticated pages server-render now, and a form POST can hand its
+result to the page that reports it.
+
+**What the page decides.** A page sometimes knows what the routes do not --
+that this id is not a row, that this visitor is not signed in -- and a
+status is a fact about the response rather than about the markup.
+`:server-status` and `:server-redirect` are read out of what the render
+collected, from `<html>` or from `<head>`, the second so that a KIT can ship
+one: `<:import>` is head-only, so head is the only scope a kit can decorate.
+
+That needed a channel the renderer did not have -- a render handing back
+what it collected -- which is also router-kit's second primitive, arriving
+early because a host needed it before routing did.
+
+**And one thing nobody had asked for.** Following the same seam turned up
+that `<div :if=${user.isAdmin}>` ships the admin panel to everyone: an
+ordinary `:if` must keep the markup of the branch it did not show, because
+its condition is live and the browser may turn it. `:server-if` says the
+decision is the server's and final, so the branch that did not show is not
+sent -- markup, not logic, since props are a function of the source. The
+spelling was already reserved and refused with a message explaining why;
+this relaxes that refusal for the one member of the family a branch is.
+
+## What is left, honestly
+
+Four things, none of them a use case nobody can serve:
+
+- **No streaming.** `:server-` values settle before serialization, so
+  time-to-first-byte is bounded by the slowest one. Fine against a database,
+  awkward against a slow third-party API. The only outright capability
+  missing.
+- **`:server-if` removes markup, not logic.** Props are a function of the
+  source rather than of the request, so expressions inside a branch travel
+  whatever it decided. Where the logic is the secret, that is what
+  `:server-` values are for.
+- **A component cannot act on the server.** Nothing runs there but value
+  evaluation, so a component's only lever is a side effect in a value
+  nobody reads -- which value-transfer.md already calls dead. That gates a
+  class of kit component, including a `<std-not-found>`, and wants either a
+  contract or a declarative way to contribute before anything ships in
+  std-kit.
+- **Level 3 routing**, which is a stated pause rather than a hole.
+
+And the caveat that outranks all four: **nothing real has been built on
+this.** Every gap closed on 2026-08-30 was found by reasoning, and the two
+most useful findings of the day -- a fragment link that did not update
+`$url`, and admin markup shipped to everyone -- came from someone asking a
+question rather than from the analysis. A first application will find more
+of those than another pass over the design will.
