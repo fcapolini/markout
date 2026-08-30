@@ -70,6 +70,39 @@ The root HTML elements have built-in names:
 That makes shared application state easy to place at the top level and read from
 any descendant.
 
+The two named halves are also where a convention lives, and it is worth
+saying out loud because the rest of these docs assume it. **`<head>` holds
+what the page is — its title, its styling, its design tokens. `<body>` holds
+what it does.** That is why a token is written `<head :const-accent="#6f42c1">`
+here and in the syntax reference: it belongs with the stylesheet it feeds,
+not with the application.
+
+The split works because it is not a wall. `head` and `body` are sibling names
+under the page scope, so either side reads the other, and a value declared on
+`<head>` can be *written* from below — which is how a page's own markup sets
+the document title, with no portal and no metadata API:
+
+```html
+<html>
+  <head :pageTitle=${'Home'}>
+    <title>${pageTitle} — Example</title>
+  </head>
+  <body>
+    <h1>${head.pageTitle}</h1>
+    <button :on-click=${() => head.pageTitle = 'About'}>About</button>
+  </body>
+</html>
+```
+
+The write reaches `<title>` because it is the same value the title renders, so
+the tab follows on the next cycle like anything else.
+
+This holds inside a `<:define>` as well, which is what lets a *component* set
+the title. A definition cannot read its caller's names — that isolation is
+deliberate — but `head` is not the caller's name. It is a name on the page
+scope, and the page scope is an ancestor of everything in the document,
+definitions included.
+
 ## `<:import>`
 
 `<:import>` splices a fragment into the page at compile time.

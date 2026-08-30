@@ -251,6 +251,37 @@ describe('docs/concepts/scope.md', () => {
   });
 });
 
+describe('docs/concepts/page.md', () => {
+  it('renders the default-scopes example, and writes the title from the body', async () => {
+    const result = await render(
+      "<html><head :pageTitle=${'Home'}><title>${pageTitle} — Example</title></head>" +
+        '<body><h1>${head.pageTitle}</h1>' +
+        "<button :on-click=${() => head.pageTitle = 'About'}>About</button>" +
+        '</body></html>'
+    );
+
+    expectClean(result);
+    expect(result.head).toContain('<title>Home — Example</title>');
+    // the same value, read from the other side of the page
+    expect(result.body).toContain('<h1>Home</h1>');
+  });
+
+  it('lets a definition set it, since `head` is not the caller\'s name', async () => {
+    // the isolation rule a definition lives under is about names its CALLER
+    // declared; `head` is on the page scope, which is an ancestor of the
+    // definition's own markup as much as of anything else
+    const result = await render(
+      "<html><head :pageTitle=${'Home'}><title>${pageTitle}</title>" +
+        '<:define tag="my-page:div" ::t="x" :_titled=${(head.pageTitle = t, true)}>' +
+        '${t}</:define></head>' +
+        "<body><my-page ::t=${'About'} /></body></html>"
+    );
+
+    expectClean(result);
+    expect(result.head).toContain('<title>About</title>');
+  });
+});
+
 describe('docs/concepts/navigation.md', () => {
   // the fragment-routed page, exactly as the doc prints it. `render()` has
   // no address to give it, which is the case that matters here and the
