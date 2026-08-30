@@ -110,6 +110,42 @@ describe('a shop, from the catalog to the order', () => {
     expect(html).toMatch(/Cart<span[^>]*> \(4\)<\/span>/);
   });
 
+  it('shortens the cart when a line is removed, first line included', async () => {
+    // the same staleness one shape further in: a cart line is a `<:group>`
+    // replica, a run between markers rather than an element, so the sweep
+    // that drops last render's rows had nothing to look up and stopped at
+    // the first one it should have taken. Two lines, remove the first, and
+    // the page served two -- the survivor printed twice.
+    const app = shop();
+    const lines = (html: string) => [
+      ...shown(html).matchAll(/<td><a[^>]* href="\/product\.html\?id=([a-z]+)"/g),
+    ].map(m => m[1]);
+
+    const added = await request(app).post('/cart/add').type('form').send({ id: 'saw' });
+    const cookie = jar(added);
+    await request(app).post('/cart/add').set('Cookie', cookie).type('form').send({ id: 'glue' });
+    await request(app).post('/cart/add').set('Cookie', cookie).type('form').send({ id: 'oak' });
+    expect(lines((await request(app).get('/cart.html').set('Cookie', cookie)).text)).toStrictEqual(
+      ['saw', 'glue', 'oak']
+    );
+
+    await request(app).post('/cart/remove').set('Cookie', cookie).type('form').send({ id: 'saw' });
+    const after = await request(app).get('/cart.html').set('Cookie', cookie);
+    expect(lines(after.text)).toStrictEqual(['glue', 'oak']);
+    // and the money follows the rows rather than the markup: 15.00 + 42.00
+    expect(shown(after.text)).toContain('£57.00');
+
+    // down to one, and then to the empty branch
+    await request(app).post('/cart/remove').set('Cookie', cookie).type('form').send({ id: 'oak' });
+    expect(lines((await request(app).get('/cart.html').set('Cookie', cookie)).text)).toStrictEqual(
+      ['glue']
+    );
+    await request(app).post('/cart/remove').set('Cookie', cookie).type('form').send({ id: 'glue' });
+    const empty = await request(app).get('/cart.html').set('Cookie', cookie);
+    expect(lines(empty.text)).toStrictEqual([]);
+    expect(shown(empty.text)).toContain('Nothing in it yet');
+  });
+
   it('does not leave one request rows in the next', async () => {
     // the bug this shop found. A page's document is compiled once and
     // rendered into again and again, and the two renders never meet: the

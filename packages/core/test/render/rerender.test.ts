@@ -62,4 +62,51 @@ describe('a list that is shorter than it was last time', () => {
     // and back up, so the sweep is not merely truncating what it finds
     expect(await render(['p', 'q'])).toStrictEqual(['p', 'q']);
   });
+
+  /**
+   * The same bug, in the one shape the first fix could not see.
+   *
+   * A `<:group>` replica is not an element: it is a run of siblings between
+   * a start marker and an end marker, so there is no id to look up and the
+   * sweep found nothing, concluded there was nothing left, and stopped --
+   * on the first replica it was meant to remove.
+   *
+   * Also found by using sites/shop: a cart with two lines in it, one line
+   * removed, served two lines with the survivor printed twice.
+   */
+  it('leaves nothing of a group replica either', async () => {
+    fs.writeFileSync(
+      path.join(docroot, 'g.html'),
+      '<html><body :server-rows=${globalThis.__grows}>' +
+        '<:group :for-each=${rows} :for-as="r" :for-key=${r}>' +
+        '<i>${r}</i><b>${r}!</b>' +
+        '</:group></body></html>'
+    );
+    const page = await new Compiler({ docroot }).compile('/g.html');
+    expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+    const shown = (tag: string): string[] => {
+      const body = /<body[\s\S]*?<script/.exec(page.source.doc.toString())?.[0] ?? '';
+      return [
+        ...body
+          .replace(/<!---[^>]*-->/g, '')
+          .matchAll(new RegExp(`<${tag}[^>]*>([^<]*)</${tag}>`, 'g')),
+      ].map(m => m[1]);
+    };
+    const render = async (items: string[]) => {
+      (globalThis as unknown as { __grows: string[] }).__grows = items;
+      expect(await renderPage(page)).toStrictEqual([]);
+      return shown('i');
+    };
+
+    expect(await render(['a', 'b', 'c'])).toStrictEqual(['a', 'b', 'c']);
+    // the reported case: the first of two removed, and the list has to shorten
+    expect(await render(['b', 'c'])).toStrictEqual(['b', 'c']);
+    expect(await render(['c'])).toStrictEqual(['c']);
+    // both nodes of the run go, not just the one that was looked for
+    expect(shown('b')).toStrictEqual(['c!']);
+    expect(await render([])).toStrictEqual([]);
+    expect(shown('b')).toStrictEqual([]);
+    expect(await render(['p', 'q'])).toStrictEqual(['p', 'q']);
+    expect(shown('b')).toStrictEqual(['p!', 'q!']);
+  });
 });

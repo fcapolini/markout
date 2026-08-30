@@ -297,6 +297,43 @@ export class WebContext extends CoreContext {
     return this.findMarker(`${DOM_USE_MARKER}${scopeId}`, within);
   }
 
+  /**
+   * A group region's whole run: its start marker, its content, its end
+   * marker.
+   *
+   * The counterpart of findElementById for a region that has no element of
+   * its own. A `<:group>` occupies a span of siblings rather than a single
+   * node, so "where is scope cs10-1" cannot be answered with one node and
+   * anything meaning to remove one has to be handed the run.
+   *
+   * Empty when either marker is missing, the end one included: a start with
+   * no end is markup this cannot bound, and guessing where it stops would
+   * mean deleting a caller's nodes on a hunch.
+   */
+  findRegionRange(scopeId: string, within?: Element | Node[]): Node[] {
+    const prefix = `${DOM_REGION_MARKER}${scopeId}.`;
+    const start = this.searchDocument(
+      n =>
+        n.nodeType === NodeType.COMMENT &&
+        `${(n as Comment).textContent}`.startsWith(prefix)
+          ? (n as Comment)
+          : undefined,
+      within
+    );
+    if (!start) return [];
+    const endText = `${DOM_REGION_END_MARKER}${scopeId}`;
+    const ret: Node[] = [start as unknown as Node];
+    let n = (start as unknown as Node).nextSibling as Node | null;
+    while (n) {
+      ret.push(n);
+      if (n.nodeType === NodeType.COMMENT && `${(n as Comment).textContent}` === endText) {
+        return ret;
+      }
+      n = n.nextSibling as Node | null;
+    }
+    return [];
+  }
+
   private findMarker(marker: string, within?: Element | Node[]): Comment | undefined {
     return this.searchDocument(
       n =>

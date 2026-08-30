@@ -232,9 +232,19 @@ function dropStaleReplicas(ctx: WebContext) {
       const anchor = (host as unknown as { anchor?: { parentNode?: unknown } }).anchor;
       const container = anchor?.parentNode as ServerElement | undefined;
       for (let i = host.clones.length; container; i++) {
-        const stale = ctx.findElementById(cloneId(scope.props.id, i), container as never);
-        if (!stale) break;
-        (stale as unknown as ServerElement).unlink();
+        const id = cloneId(scope.props.id, i);
+        const stale = ctx.findElementById(id, container as never);
+        if (stale) {
+          (stale as unknown as ServerElement).unlink();
+          continue;
+        }
+        // a `<:group>` replica is a run of siblings between markers rather
+        // than an element, so there is no id to find and the whole span has
+        // to go -- markers and all. Without this a cart that had two lines
+        // and now has one serves two rows, the second one last render's
+        const range = ctx.findRegionRange(id, container as never);
+        if (!range.length) break;
+        range.forEach(n => (n as unknown as ServerNode).unlink?.());
       }
     }
     scope.children.forEach(walk);
