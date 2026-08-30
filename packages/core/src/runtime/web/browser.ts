@@ -62,12 +62,24 @@ export function init(): WebContext | undefined {
 /**
  * Keeps `$url` on whatever address the document actually has.
  *
- * `navigatesuccess` is the whole story where the Navigation API is
- * there -- it fires for a traversal, a form submission and an intercepted
- * navigation alike, which is exactly the set of ways a document's address
- * changes without a new document. `popstate` is the same story told worse,
- * and is here for browsers without the API; where both exist the second
- * call finds the value already right and does nothing.
+ * All three signals, because no one of them is the whole story and the
+ * gaps are not obvious:
+ *
+ * - **`navigatesuccess`** covers everything the Navigation API sees --
+ *   traversals, form submissions, an intercepted navigation -- and is the
+ *   only one that hears an interception at all. It does not exist in every
+ *   browser.
+ * - **`popstate`** is a traversal, and only a traversal.
+ * - **`hashchange`** is the one that is easy to miss: `<a href="#x">` is a
+ *   same-document navigation that pushes a history entry and fires THIS,
+ *   not `popstate`. Without it a fragment link moves the address bar and
+ *   `$url` goes on answering with the old one -- which was true here until
+ *   somebody asked whether a fragment link worked, and it did not.
+ *
+ * Overlap is free: `adoptUrl` compares hrefs and a second delivery of the
+ * same address does nothing. `history.pushState` is the one same-document
+ * change none of these announce -- by design, since nothing fires for it --
+ * so code that calls it says so itself.
  *
  * Reading `location.href` rather than the event: the address bar is the
  * fact, and anything else is a description of how it got there.
@@ -76,15 +88,14 @@ function watchAddress(context: WebContext): void {
   if (typeof location === 'undefined') return;
   const update = () => context.adoptUrl(location.href);
   const nav = window.navigation;
-  if (typeof nav?.addEventListener === 'function') {
+  typeof nav?.addEventListener === 'function' &&
     nav.addEventListener('navigatesuccess', update);
-    return;
-  }
   // guarded like the document is above: somewhere without a real window
   // (a test harness, an accidental non-browser bundle) has no address to
   // follow, and nothing here should be what says so
-  typeof window.addEventListener === 'function' &&
-    window.addEventListener('popstate', update);
+  if (typeof window.addEventListener !== 'function') return;
+  window.addEventListener('popstate', update);
+  window.addEventListener('hashchange', update);
 }
 
 function autoInit() {

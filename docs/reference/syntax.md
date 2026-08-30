@@ -1132,7 +1132,10 @@ for exactly that:
 <button :on-click=${() => globalThis.location.assign('/about')}>About</button>
 ```
 
-`$url` follows on its own once the address changes.
+`$url` follows on its own once the address changes — a traversal, a
+fragment link, or a navigation a router kept in the document. The one
+change it cannot see is `history.pushState`, which announces itself to
+nobody by design, so code that calls it says so.
 
 Nothing else about the request is offered, and that is deliberate. Headers,
 cookies and the method have no browser counterpart, so a page reading one
