@@ -709,6 +709,24 @@ that status, which is how a permanent one is spelled.
 in a browser and must not be re-derived there, and a `:server-` value may
 await, since the row that decides the answer usually has to be fetched first.
 
+Both are read from `<html>`, and from `<head>` when the page says nothing
+itself — which is what lets a **kit** ship this. `<:import>` is only allowed
+in `<head>` and a fragment's root attributes land where the directive sits,
+so a kit declares `:server-status` there and a component it ships writes to
+it:
+
+```html
+<lib :server-status=${null}>
+  <:define tag="std-not-found:div" :_status=${(head.status = 404, true)}>
+    <:slot>Not found</:slot>
+  </:define>
+</lib>
+```
+
+A page that imported the kit then writes `<std-not-found>no such row</std-not-found>`
+and is a 404, with no line of its own. Where the page does say something, the
+page wins — the rule an import default already follows.
+
 `create()` returns the configured app without listening on anything, which is
 what a test wants: drive it with supertest and no port is ever bound.
 

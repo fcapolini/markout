@@ -154,3 +154,56 @@ describe('what the page decides', () => {
     expect(shown(res.text)).toContain('<p>ordinary</p>');
   });
 });
+
+describe('a kit shipping it, so a page says nothing at all', () => {
+  // `<:import>` is head-only and a fragment's root attributes land on the
+  // element the directive sits in, so `<head>` is the one scope a kit can
+  // decorate. That is why the response is read from there too: without it a
+  // kit can declare the value and set it, and nothing would ever look.
+  const KIT =
+    '<lib :server-status=${null} :server-redirect=${null}>' +
+    '<:define tag="std-not-found:div" :_status=${(head.status = 404, true)}>' +
+    '<:slot>Not found</:slot></:define>' +
+    '<:define tag="std-go:logic" ::to="/" :_go=${(head.redirect = to, true)} />' +
+    '</lib>';
+
+  it('lets a component be the 404, with no opt-in from the page', async () => {
+    const app = site({
+      'std.htm': KIT,
+      'index.html':
+        '<html><head><:import src="/std.htm" /></head>' +
+        '<body><std-not-found>no such row</std-not-found></body></html>',
+    });
+
+    const res = await request(app).get('/index.html');
+    expect(res.status).toBe(404);
+    expect(shown(res.text)).toContain('no such row');
+  });
+
+  it('lets one redirect', async () => {
+    const app = site({
+      'std.htm': KIT,
+      'index.html':
+        '<html><head><:import src="/std.htm" /></head>' +
+        '<body><std-go ::to="/login" /></body></html>',
+    });
+
+    const res = await request(app).get('/index.html');
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('/login');
+  });
+
+  it('leaves the page in charge where it says so itself', async () => {
+    const app = site({
+      'std.htm': KIT,
+      'index.html':
+        '<html :server-status=${418}><head><:import src="/std.htm" /></head>' +
+        '<body><std-not-found /></body></html>',
+    });
+
+    // the kit's component still runs and still writes 404 onto <head>; the
+    // page's own statement is the one that answers
+    const res = await request(app).get('/index.html');
+    expect(res.status).toBe(418);
+  });
+});

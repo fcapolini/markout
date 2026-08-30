@@ -724,16 +724,28 @@ interface PageResponse {
  * value may await -- the row that decides the answer usually has to be
  * fetched first.
  *
- * Read from the page scope alone, which is `<html>`'s. A value of the same
- * name deeper in the page is that scope's own business, and a rule that
- * searched everywhere would make an ordinary name into a reserved one.
+ * Read from `<html>`'s scope, and from `<head>`'s when the page itself says
+ * nothing. The second is what lets a KIT ship this: `<:import>` is only
+ * allowed in `<head>`, and a fragment's root attributes land on the element
+ * the directive sits in, so a kit's `:server-status` becomes a value on
+ * `<head>` and nowhere else. A component it ships can then write
+ * `head.status = 404` and a page that imported the kit needs no line of its
+ * own. The page's own statement wins, which is the rule an import default
+ * already follows.
+ *
+ * Read from those two scopes and no deeper. A value of this name further
+ * down is that scope's own business, and a rule that searched everywhere
+ * would turn an ordinary name into a reserved one.
  */
 function pageResponse(page: Page, state: PageState): PageResponse | undefined {
-  const rootId = page.global.children[0]?.id;
-  const values = rootId ? state[rootId] : undefined;
-  if (!values) return undefined;
-  const status = typeof values.status === 'number' ? values.status : undefined;
-  const redirect = typeof values.redirect === 'string' ? values.redirect : undefined;
+  const root = page.global.children[0];
+  const from = (scope?: { id: string }) => (scope ? state[scope.id] : undefined);
+  const here = from(root);
+  const inHead = from(root?.children.find(c => c.name === 'head'));
+  const pick = (key: 'status' | 'redirect') => here?.[key] ?? inHead?.[key];
+  const status = typeof pick('status') === 'number' ? (pick('status') as number) : undefined;
+  const redirect =
+    typeof pick('redirect') === 'string' ? (pick('redirect') as string) : undefined;
   return status || redirect ? { status, redirect } : undefined;
 }
 
