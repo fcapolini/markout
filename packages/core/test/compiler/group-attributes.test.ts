@@ -68,10 +68,11 @@ describe('a control attribute on a group holding one element', () => {
   });
 });
 
-describe('a branch on a group holding several nodes', () => {
+describe('a control attribute on a group holding several nodes', () => {
   it.each([
     ['two elements', '<:group :if=${ok}><p>one</p><p>two</p></:group>'],
     ['an element and some text', '<:group :if=${ok}>hello<p>one</p></:group>'],
+    ['a repeated run', '<:group :for-each=${rows} :for-as="r"><p>${r}</p><i>${r}</i></:group>'],
   ])('makes a region of %s', (_label, markup) => {
     const found = compile(markup);
     expect(found.errors).toStrictEqual([]);
@@ -83,17 +84,10 @@ describe('a branch on a group holding several nodes', () => {
 });
 
 describe('a control attribute with nowhere to land', () => {
-  it('refuses an empty group, naming what it holds', () => {
+  it('refuses an empty group, which has nothing to be a region over', () => {
     expect(compile('<:group :if=${ok}></:group>').errors.join()).toMatch(
-      /holding nothing needs the group to be a region/
+      /has nothing to show, hide or repeat/
     );
-  });
-
-  it('refuses a loop over several nodes, which the clone path cannot do', () => {
-    expect(
-      compile('<:group :for-each=${rows} :for-as="r"><p>${r}</p><i>${r}</i></:group>')
-        .errors.join()
-    ).toMatch(/replicating several nodes at once is not built/);
   });
 
   it.each([

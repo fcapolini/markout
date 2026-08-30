@@ -1295,6 +1295,9 @@ export class CoreScope {
       // read the host's unset item. init() checks `cloned` first, so the DOM
       // still comes from the stencil rather than from here
       template: this.props.template,
+      // a replica of a group region is one too: what it holds is a run of
+      // nodes between a marker pair of its own, stamped out per item
+      group: this.props.group,
       children: this.props.children,
       values: this.props.values,
       // a replica declares what the usage site declared, once per item: its

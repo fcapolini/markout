@@ -35,6 +35,18 @@ import {
  */
 type ContainerNode = Pick<Element, 'childNodes' | 'insertBefore' | 'removeChild'>;
 
+/**
+ * Where one scope's markup ends and the next scope's begins.
+ *
+ * An element for almost everything: a scope owns what is under its own
+ * element, down to but never into another scope's. A group region has no
+ * element, so its territory is the run of nodes between its markers -- and
+ * a replica's is its own run, which is what keeps two replicas of one group
+ * from finding each other's markers, the way two replicas of an element are
+ * kept apart by having an element each.
+ */
+type Territory = Element | Node[];
+
 export const RT_ATTR_VALUE_PREFIX = 'attr$';
 /** `:prop-x`: the element's JS property, for what an attribute can't carry */
 export const RT_PROP_VALUE_PREFIX = 'prop$';
@@ -109,7 +121,9 @@ export class WebScope extends CoreScope {
     const templateId = this.props.template;
     const parentDom =
       this.parent instanceof WebScope ? this.parent.childContainer() : undefined;
-    const view = this.cloned
+    const view = this.props.group
+      ? undefined
+      : this.cloned
       ? (this.parent as WebScope)?.pendingCloneDom
       : this.isRegion()
         ? this.acquireRegionDom(parentDom)
@@ -278,7 +292,7 @@ export class WebScope extends CoreScope {
    *   writing into what its siblings are about to stamp out. The clone is
    *   held detached until `showView` puts it after the marker.
    */
-  private acquireRegionDom(parentDom?: Element): Element | undefined {
+  private acquireRegionDom(parentDom?: Territory): Element | undefined {
     const ctx = this.ctx as WebContext;
     const id = `${this.props.id}`;
     const marker = this.lookupMarker(id, parentDom);
@@ -330,11 +344,64 @@ export class WebScope extends CoreScope {
    * markup is either standing between the two markers -- so the marker's
    * container is where to look -- or waiting in the holder.
    */
-  private childContainer(): Element | undefined {
+  private childContainer(): Territory | undefined {
     if (!this.props.group) return this.dom;
-    return this.showing
-      ? ((this.anchor as unknown as { parentNode?: Element })?.parentNode)
-      : this.holder;
+    // the run, not the container it sits in: two replicas of one group are
+    // siblings under the same element, and a search over that element would
+    // hand the second replica the first one's markers
+    return this.showing || this.stampsPerItem() ? this.groupNodes() : this.holder;
+  }
+
+  /** whether this scope stamps its markup out per item */
+  private stampsPerItem(): boolean {
+    return !!this.props.values?.[RT_FOR_EACH_VALUE];
+  }
+
+  /** the stencil key this region's markers carry, for making a replica's */
+  private stencilKey(): string {
+    const text = `${this.anchor?.textContent ?? ''}`;
+    return text.slice(text.indexOf('.') + 1);
+  }
+
+  /**
+   * Puts a replica's marker pair, and the run between them, in the page.
+   *
+   * The element form clones one node and stamps the clone id on it. A run
+   * has no node to stamp, so each replica gets markers of its own carrying
+   * that id -- which is what the replica's own init() then finds, through
+   * the same lookup an unreplicated region uses. Nothing else about it is
+   * special: what lies between the two is its markup, and it moves and goes
+   * as a unit.
+   *
+   * Server-rendered replicas are already there, markers and all, and are
+   * left standing. The prefix scan stops for good once it misses, for the
+   * reason acquireCloneDom gives: it is O(n) per replica otherwise.
+   */
+  private prepareCloneRange(id: string): void {
+    const container = this.anchorContainer();
+    const anchor = this.anchor;
+    if (!container || !anchor) return;
+    const prefix = `${DOM_REGION_MARKER}${id}.`;
+    if (!this.noMoreHydratedClones) {
+      const found = [...container.childNodes].some(
+        n =>
+          n.nodeType === NodeType.COMMENT &&
+          `${(n as Comment).textContent}`.startsWith(prefix)
+      );
+      if (found) return;
+      this.noMoreHydratedClones = true;
+    }
+    const doc = (this.ctx.props as WebContextProps).doc;
+    const prev = this.clones?.at(-1) as WebScope | undefined;
+    const ref = (prev?.endAnchor ?? anchor) as unknown as Node;
+    const start = doc.createComment(`${prefix}${this.stencilKey()}`);
+    const end = doc.createComment(`${DOM_REGION_END_MARKER}${id}`);
+    container.insertBefore(end, ref.nextSibling);
+    container.insertBefore(start, end);
+    const content = (this.stencil as unknown as TemplateElement | undefined)?.content;
+    for (const child of [...(content?.childNodes ?? [])]) {
+      container.insertBefore(child.cloneNode(true), end);
+    }
   }
 
   /**
@@ -347,7 +414,7 @@ export class WebScope extends CoreScope {
    * pair means hidden, and the stencil is stamped into the holder so that
    * showing it later is a move rather than a build.
    */
-  private acquireGroupRange(parentDom?: Element): ContainerNode | undefined {
+  private acquireGroupRange(parentDom?: Territory): ContainerNode | undefined {
     const ctx = this.ctx as WebContext;
     const id = `${this.props.id}`;
     const marker = this.lookupMarker(id, parentDom);
@@ -372,7 +439,11 @@ export class WebScope extends CoreScope {
     this.showing = showing;
     const holder = (this.ctx.props as WebContextProps).doc.createElement('div');
     this.holder = holder;
-    if (!showing) {
+    // a replicating host renders nothing of its own: the stencil is what
+    // its replicas are stamped from, and filling a holder here would leave
+    // a spare copy of the run in the page. The same rule acquireRegionDom
+    // keeps for an element host, which hands back the stencil's element
+    if (!showing && !this.stampsPerItem()) {
       const content = (this.stencil as unknown as TemplateElement | undefined)?.content;
       for (const child of [...(content?.childNodes ?? [])]) {
         holder.appendChild(child.cloneNode(true));
@@ -391,6 +462,15 @@ export class WebScope extends CoreScope {
    * that flag would look in the holder at the one moment the page is what
    * has to be emptied.
    */
+  private rangeWithMarkers(): Node[] {
+    if (!this.anchor || !this.endAnchor) return [];
+    return [
+      this.anchor as unknown as Node,
+      ...this.groupNodes(),
+      this.endAnchor as unknown as Node,
+    ];
+  }
+
   private groupNodes(): Node[] {
     const ret: Node[] = [];
     let n = this.anchor?.nextSibling as Node | null;
@@ -415,7 +495,7 @@ export class WebScope extends CoreScope {
    * The <:define> stencil is the exception to the exception: it lives in
    * <head> and is nowhere near either, so that lookup stays document-wide.
    */
-  private acquireUsageDom(templateId: string, within?: Element): Element | undefined {
+  private acquireUsageDom(templateId: string, within?: Territory): Element | undefined {
     const ctx = this.ctx as WebContext;
     const id = `${this.props.id}`;
     const existing = ctx.findElementById(id, within);
@@ -446,7 +526,7 @@ export class WebScope extends CoreScope {
    * document-wide, so repeated/list instances don't collide with each
    * other's ids.
    */
-  private lookupView(parentView?: Element): Element | undefined {
+  private lookupView(parentView?: Territory): Element | undefined {
     const id = `${this.props.id}`;
     return this.lookupWithin(parentView, n =>
       n.nodeType === NodeType.ELEMENT && (n as Element).getAttribute(DOM_ID_ATTR) === id
@@ -463,7 +543,7 @@ export class WebScope extends CoreScope {
    * which one is mine is answered by whose territory it is in, exactly as
    * lookupView answers it for an element.
    */
-  private lookupMarker(id: string, parentView?: Element): Comment | undefined {
+  private lookupMarker(id: string, parentView?: Territory): Comment | undefined {
     const prefix = `${DOM_REGION_MARKER}${id}.`;
     return this.lookupWithin(parentView, n =>
       n.nodeType === NodeType.COMMENT &&
@@ -483,12 +563,14 @@ export class WebScope extends CoreScope {
    * above cost the subtree they are asking about rather than the document.
    */
   private lookupWithin<T>(
-    parentView: Element | undefined,
+    parentView: Territory | undefined,
     match: (n: Node) => T | undefined
   ): T | undefined {
-    const container: Element | Document | undefined =
-      parentView ?? (this.ctx.props as WebContextProps).doc;
-    if (!container) return undefined;
+    const roots = Array.isArray(parentView) ? parentView : undefined;
+    const container: Element | Document | undefined = roots
+      ? undefined
+      : (parentView as Element | undefined) ?? (this.ctx.props as WebContextProps).doc;
+    if (!container && !roots) return undefined;
     const childNodesOf = (e: Element | Document): NodeList =>
       (e as Element).tagName === 'TEMPLATE'
         ? (e as unknown as TemplateElement).content.childNodes
@@ -509,7 +591,7 @@ export class WebScope extends CoreScope {
       }
       return undefined;
     };
-    return lookup(childNodesOf(container));
+    return lookup(roots ?? childNodesOf(container!));
   }
 
   override dispose(): void {
@@ -517,6 +599,15 @@ export class WebScope extends CoreScope {
       this.dom?.removeEventListener(name, listener);
     });
     this.domListeners = [];
+    if (this.props.group) {
+      // markers included: they carry this replica's id, and a pair left
+      // behind would be found again by whatever takes that id next
+      const container = (this.anchor as unknown as { parentNode?: ContainerNode })
+        ?.parentNode;
+      this.rangeWithMarkers().forEach(node => container?.removeChild(node));
+      super.dispose();
+      return;
+    }
     // a stencil's own dom (inside a <template>) has no parentElement (a
     // DocumentFragment isn't an Element), so this is a no-op for it
     this.dom?.parentElement?.removeChild(this.dom);
@@ -908,6 +999,13 @@ export class WebScope extends CoreScope {
   }
 
   override clone(index: number): WebScope {
+    if (this.props.group) {
+      // in the page before construction, for the reason pendingCloneDom is
+      // resolved first: the replica's init() runs during super(), and the
+      // markers it looks for have to be there by then
+      this.prepareCloneRange(cloneId(this.props.id, index));
+      return super.clone(index) as WebScope;
+    }
     // resolved before construction, so the clone's own init() (running
     // during super()) can pick it up via pendingCloneDom
     this.pendingCloneDom = this.acquireCloneDom(cloneId(this.props.id, index));
@@ -930,6 +1028,24 @@ export class WebScope extends CoreScope {
     const anchor = this.anchor;
     const container = this.anchorContainer();
     if (!anchor || !container || !this.clones?.length) return;
+    if (this.props.group) {
+      // a run at a time, markers included, under the same rule: only what
+      // is out of place moves, asked of the replica's first marker
+      let at: Node = anchor;
+      for (const clone of this.clones as WebScope[]) {
+        const start = clone.anchor as unknown as Node | undefined;
+        if (!start || !clone.endAnchor) continue;
+        if (at.nextSibling !== start) {
+          for (const node of clone.rangeWithMarkers()) {
+            container.insertBefore(node, at.nextSibling);
+            at = node;
+          }
+        } else {
+          at = clone.endAnchor as unknown as Node;
+        }
+      }
+      return;
+    }
     // walks forward from the anchor comparing `nextSibling` directly, rather
     // than mirroring childNodes into an array and doing indexOf()/splice()
     // per replica -- those are O(n) each, which made a full reorder O(n^2)

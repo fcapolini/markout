@@ -131,6 +131,7 @@ export interface Document extends Node {
   documentElement: Element | null;
 
   createTextNode(text: string): Text;
+  createComment(text: string): Comment;
   createElement(tagName: string): Element;
   appendChild(n: Node): Node;
   insertBefore(n: Node, ref: Node | null): Node;

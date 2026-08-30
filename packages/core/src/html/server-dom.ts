@@ -579,6 +579,10 @@ export class ServerDocument extends ServerElement implements Document {
     return new ServerText(this, text, this.loc, false);
   }
 
+  createComment(text: string): ServerComment {
+    return new ServerComment(this, text, this.loc);
+  }
+
   /**
    * `<template>` gets the class that has a content fragment, as in a
    * browser: one created here is otherwise an ordinary element whose

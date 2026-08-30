@@ -212,22 +212,13 @@ function resolveActiveGroups(page: Page, root: ServerElement): void {
       // the group stays standing for load() to make a scope of. The loop
       // family cannot be one yet: replicating a range needs the clone path
       // to work on several nodes at once
-      const loop = transfer.filter(n =>
-        [FOR_EACH_ATTR, FOR_DATA_ATTR, FOR_AS_ATTR, FOR_KEY_ATTR].includes(
-          n.slice(SPECIAL_ATTR_PREFIX.length)
-        )
-      );
-      if (!loop.length && content.length) return 'region';
-      const held = content.length ? 'more than one node' : 'nothing';
-      (loop.length ? loop : transfer).forEach(name =>
+      if (content.length) return 'region';
+      transfer.forEach(name =>
         addError(
           page,
-          `"${name}" on a <${self}> holding ${held} needs the group to be a ` +
-            `region, and only a branch can be one: ${
-              loop.length
-                ? 'replicating several nodes at once is not built'
-                : 'there is nothing here to show or hide'
-            }`,
+          `"${name}" on an empty <${self}> has nothing to show, hide or ` +
+            `repeat. A group is a region over what it holds, and this holds ` +
+            `nothing`,
           el.loc
         )
       );

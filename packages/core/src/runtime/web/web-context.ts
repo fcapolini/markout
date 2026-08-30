@@ -184,7 +184,7 @@ export class WebContext extends CoreContext {
 
   private searchDocument<T>(
     match: (n: Node) => T | undefined,
-    within?: Element
+    within?: Element | Node[]
   ): T | undefined {
     const doc = (this.props as WebContextProps).doc;
     const childNodesOf = (e: Element): NodeList =>
@@ -213,13 +213,22 @@ export class WebContext extends CoreContext {
       return undefined;
     };
     this.foundInTemplate = undefined;
-    return search(within ? childNodesOf(within) : doc.childNodes);
+    // an array is a group region's run: it has no element to be searched
+    // within, and searching the element it sits in would hand one replica
+    // of a group what belongs to the next
+    return search(
+      Array.isArray(within)
+        ? (within as unknown as NodeList)
+        : within
+          ? childNodesOf(within)
+          : doc.childNodes
+    );
   }
 
   /** finds an element bearing the given data-markout id, descending into
    * <template> content -- across the whole document, or within `within` when
    * one instance per container is what's wanted (see acquireUsageDom) */
-  findElementById(id: string, within?: Element): Element | undefined {
+  findElementById(id: string, within?: Element | Node[]): Element | undefined {
     return this.searchDocument(
       n =>
         n.nodeType === NodeType.ELEMENT && (n as Element).getAttribute(DOM_ID_ATTR) === id
@@ -231,11 +240,11 @@ export class WebContext extends CoreContext {
 
   /** finds a custom-tag usage site's marker comment, if it hasn't been
    * replaced with a real instantiated element yet (e.g. by SSR) */
-  findUseMarker(scopeId: string, within?: Element): Comment | undefined {
+  findUseMarker(scopeId: string, within?: Element | Node[]): Comment | undefined {
     return this.findMarker(`${DOM_USE_MARKER}${scopeId}`, within);
   }
 
-  private findMarker(marker: string, within?: Element): Comment | undefined {
+  private findMarker(marker: string, within?: Element | Node[]): Comment | undefined {
     return this.searchDocument(
       n =>
         n.nodeType === NodeType.COMMENT && (n as Comment).textContent === marker

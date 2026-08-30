@@ -689,10 +689,8 @@ flattening:
   not got — an element to apply to, or a scope to live in.
 
 The case a router wants — several nodes under one condition, with no
-element of their own — is now built for branches, so a route gates its
-content with a `<:group :if>` and no wrapper. What is still refused is
-`:for-each` over a run, which needs the clone path to replicate several
-nodes at once. See [group-regions.md](group-regions.md).
+element of their own — is built, so a route gates its content with a
+`<:group :if>` and no wrapper. See [group-regions.md](group-regions.md).
 
 ---
 

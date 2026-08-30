@@ -1,9 +1,10 @@
 # Wrapper-less regions — `<:group>` with attributes
 
-Status: **partly built.** Rules 1 and 3 are in stage1's
-`resolveActiveGroups`, with the refusals that go with them; rule 2 — the
-region itself — is not, and what it needs from the runtime is the last
-section of this note.
+Status: **built.** All three rules hold, for both families: a group
+carrying `:if`, `:else-if`, `:else`, `:for-each` or `:for-data` over
+several nodes is a region delimited by a marker at each end, and a
+replicated one gets a marker pair per item. What a group may not carry is
+refused as before, saying which of the two things it has not got.
 
 ## The gap
 
@@ -54,10 +55,14 @@ and the rules below are what would let it be.
 the preprocessor splices it as it always did. An active one is left
 standing for the compiler.
 
-**2. An active group with more than one child is a region.** *(not
-built)* It gets a scope and a stencil like any `:if` or `:for-each` does,
-and is delimited by a marker at each end rather than by the element that
-used to carry the attribute. Refused with a message meanwhile.
+**2. An active group with more than one child is a region.** *(built)* It
+gets a scope and a stencil like any `:if` or `:for-each` does, and is
+delimited by a marker at each end rather than by the element that used to
+carry the attribute. Showing and hiding move the run between the two;
+while hidden it waits in a detached holder, which is somewhere child
+scopes can still be found inside. Replicated, each item gets a marker pair
+of its own carrying its clone id — the element form stamps that id on the
+element, and a run has no element to stamp.
 
 **3. An active group with a single element child transfers its attributes
 onto that child.** *(built)* `<:group :if=${x}><p>…</p></:group>` compiles
@@ -135,12 +140,20 @@ Only the first three assume one element. So:
 3. **stage1 / stage7**: *Built.* A group with a branch takes the path an
    `:if` element takes, plus the second marker — and stage7 unwraps the tag
    afterwards, for the reason below.
-4. **The clone path.** *Not built*, and the reason `:for-each` over a run
-   is refused: replicating one clones a range per replica, and
-   `acquireCloneDom`'s hydrated-prefix logic and `reorderClones`' forward
-   walk are both per element.
-5. **The allowlist**, below. *Built*, in the refusing direction: every
-   attribute a group cannot carry now says which of the two reasons it is.
+4. **The clone path.** *Built.* `prepareCloneRange` puts a replica's
+   markers and its run in the page before the replica scope is built, so
+   the replica's own `init()` finds them through the same lookup an
+   unreplicated region uses. Reordering moves runs, disposal takes the
+   markers with the run, and the hydrated-prefix scan looks for a marker
+   rather than an element.
+5. **Territory.** *Built, and the piece this note did not foresee.* A
+   scope owns what is under its element, down to but never into the next
+   scope's — which is what keeps two replicas of an element apart. A run
+   has no element, so `WebScope.lookupWithin` and
+   `WebContext.searchDocument` both take a run of nodes as well, and a
+   replica is looked for inside its own run.
+6. **The allowlist**, below. *Built*, in the refusing direction: every
+   attribute a group cannot carry says which of the two reasons it is.
 
 ## What a group must refuse
 
@@ -178,9 +191,13 @@ clears it first, so a range read that consulted the flag looked in the
 holder at the one moment the page is what has to be emptied. The run is
 read live, always.
 
-**Replicas needed nothing.** A group inside a `:for-each` works because
-each replica's marker lookup is bounded by the replica's own element, so
-ids never collide — the part expected to break.
+**A group INSIDE a `:for-each` element needed nothing**, because each
+replica's lookup is bounded by the replica's own element. A group that IS
+the `:for-each` needed the territory work above: its replicas are siblings
+under one element, and until the searches could take a run, the second
+replica found the first one's nested regions and its custom-tag instances.
+It showed as one nested region rendering once, in the wrong replica, with
+the last item's values.
 
 **A `<:slot>` is not a transfer target.** Rule 3 would have moved an `:if`
 onto one and turned a region into an error. A group holding a lone slot is
@@ -190,9 +207,11 @@ router-kit was paying per route level.
 
 ## Open
 
-- **Replicating a range.** Item 4 above, and why `:for-each` on a group is
-  refused. Keyed reordering over runs is the part that most wants a
-  prototype.
+- **What a run costs at scale.** Replication was tuned hard for elements
+  — the prefix scan that stops once it misses, the reorder that compares
+  `nextSibling` rather than indexing — and a run does the same work over
+  two markers plus its nodes. The catalog benchmark is where that should
+  be asked, and it has not been.
 - **Nested groups.** Two active groups nested is two regions and four
   markers, which works; whether the compiler should collapse that pair the
   way rule 3 collapses a single element is unexplored.

@@ -175,3 +175,95 @@ describe('a group among the language it has to live with', () => {
     expect(p.body()).not.toMatch(/<p>/);
   });
 });
+
+describe('a run repeated per item', () => {
+  it('renders, hydrates, grows and shrinks', async () => {
+    const p = await mount(
+      ':rows=${["a", "b"]}',
+      '<:group :for-each=${rows} :for-as="r"><p>${r}1</p><p>${r}2</p></:group>'
+    );
+    expect(p.ssr).toBe('<p>a1</p><p>a2</p><p>b1</p><p>b2</p>');
+    expect(p.hydrated).toBe(p.ssr);
+
+    p.root.body.rows = ['a', 'b', 'c'];
+    expect(p.body()).toBe('<p>a1</p><p>a2</p><p>b1</p><p>b2</p><p>c1</p><p>c2</p>');
+    p.root.body.rows = ['z'];
+    expect(p.body()).toBe('<p>z1</p><p>z2</p>');
+    expect(p.errors()).toStrictEqual([]);
+  });
+
+  it('reorders whole runs on a keyed pass', async () => {
+    const p = await mount(
+      ':rows=${[{ k: 1 }, { k: 2 }]}',
+      '<:group :for-each=${rows} :for-as="r" :for-key=${r.k}>' +
+        '<p>${r.k}a</p><p>${r.k}b</p></:group>'
+    );
+    expect(p.ssr).toBe('<p>1a</p><p>1b</p><p>2a</p><p>2b</p>');
+    p.root.body.rows = [{ k: 2 }, { k: 1 }];
+    expect(p.body()).toBe('<p>2a</p><p>2b</p><p>1a</p><p>1b</p>');
+  });
+
+  it('repeats <tr> pairs, which no wrapper element could', async () => {
+    // the motivating case: a <div> in a <tbody> is invalid and the browser
+    // relocates it, so a run of rows had nowhere to hang its `:for-each`
+    const p = await mount(
+      ':rows=${[1, 2]}',
+      '<table><tbody><:group :for-each=${rows} :for-as="r">' +
+        '<tr><td>${r}</td></tr><tr><td>note</td></tr></:group></tbody></table>'
+    );
+    expect(p.ssr).toBe(
+      '<table><tbody><tr><td>1</td></tr><tr><td>note</td></tr>' +
+        '<tr><td>2</td></tr><tr><td>note</td></tr></tbody></table>'
+    );
+  });
+
+  it('keeps each replica out of the next one\'s markup', async () => {
+    // runs differ in length once a region nests inside one, so a replica
+    // cannot be found by counting nodes: it is delimited by markers of its
+    // own, and looked for inside its own run
+    const p = await mount(
+      ':rows=${[1, 2]} :on=${true}',
+      '<:group :for-each=${rows} :for-as="r"><p>${r}</p>' +
+        '<:group :if=${on}><i>x${r}</i><i>y${r}</i></:group></:group>'
+    );
+    expect(p.ssr).toBe('<p>1</p><i>x1</i><i>y1</i><p>2</p><i>x2</i><i>y2</i>');
+    p.root.body.on = false;
+    expect(p.body()).toBe('<p>1</p><p>2</p>');
+    p.root.body.rows = [1, 2, 3];
+    expect(p.body()).toBe('<p>1</p><p>2</p><p>3</p>');
+  });
+
+  it('gives each replica its own instance of a custom tag', async () => {
+    fs.writeFileSync(
+      path.join(docroot, 'tag.htm'),
+      '<lib><:define tag="my-tag:b" ::v=${0}>[${v}]</:define></lib>'
+    );
+    const name = `g${seq++}.html`;
+    fs.writeFileSync(
+      path.join(docroot, name),
+      '<html><head><:import src="/tag.htm" /></head><body :rows=${[1, 2]}>' +
+        '<:group :for-each=${rows} :for-as="r"><my-tag ::v=${r} /><i>-</i></:group>' +
+        '</body></html>'
+    );
+    const compiled = await new Compiler({ docroot }).compile(`/${name}`);
+    expect(compiled.errors.map(e => e.msg)).toStrictEqual([]);
+    expect(await renderPage(compiled)).toStrictEqual([]);
+    const served = compiled.source.doc.toString();
+    expect(
+      (/<body[^>]*>([\s\S]*?)<script type="application\/json"/.exec(served)?.[1] ?? '')
+        .replace(/<!---[^>]*-->/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+    ).toBe('<b data-markout="s7">[1]</b><i>-</i><b data-markout="s7">[2]</b><i>-</i>');
+  });
+
+  it('shows a :for-data run only when there is data', async () => {
+    const p = await mount(
+      ':d=${null}',
+      '<:group :for-data=${d}><p>${data}</p><i>seen</i></:group>'
+    );
+    expect(p.ssr).toBe('');
+    p.root.body.d = 'hi';
+    expect(p.body()).toBe('<p>hi</p><i>seen</i>');
+  });
+});
