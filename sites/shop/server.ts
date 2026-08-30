@@ -35,6 +35,21 @@ export interface ShopProps {
   dev?: boolean;
 }
 
+/**
+ * Where a write sends the browser next.
+ *
+ * The page puts its own address in a hidden field so that adding to the cart
+ * from the books shelf leaves you on the books shelf. That field arrives in a
+ * POST body, though, which means it arrives from whoever posted -- so it is
+ * taken only when it is a path on this site. Anything else, a `//host` or a
+ * `https://` among them, is somebody else's page wearing our redirect, and
+ * gets the fallback instead.
+ */
+function backTo(value: unknown, fallback: string): string {
+  const to = `${value ?? ''}`;
+  return to.startsWith('/') && !to.startsWith('//') ? to : fallback;
+}
+
 export function createShop(props: ShopProps): Express {
   const app = express();
   const shop = new Catalog();
@@ -51,7 +66,7 @@ export function createShop(props: ShopProps): Express {
     const visitor = carts.visitor(req, res);
     const id = `${req.body.id ?? ''}`;
     shop.find(id) && carts.add(visitor, id, Number(req.body.quantity) || 1);
-    res.redirect(303, `${req.body.back ?? '/cart.html'}`);
+    res.redirect(303, backTo(req.body.back, '/cart.html'));
   });
 
   app.post('/cart/remove', (req, res) => {

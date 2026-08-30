@@ -133,6 +133,30 @@ describe('a shop, from the catalog to the order', () => {
     expect(cards(again.text)).toBe(10);
   });
 
+  it('comes back to the shelf you added from, and only to a shelf here', async () => {
+    // the catalog puts its own address in the form, filter and all; without
+    // that the redirect lands on the unfiltered catalog and the visitor's
+    // category silently resets under them
+    const app = shop();
+    const shelf = await request(app).get('/?tag=book');
+    expect(shelf.status).toBe(200);
+    // the hidden field carries this address, not a hard-coded '/'
+    expect(shown(shelf.text)).toContain('value="/?tag=book"');
+
+    const added = await request(app)
+      .post('/cart/add')
+      .type('form')
+      .send({ id: 'saw', back: '/?tag=book' });
+    expect(added.headers.location).toBe('/?tag=book');
+
+    // that field arrives from whoever posted it, so it is a path here or
+    // it is the fallback -- a redirect off-site is not ours to offer
+    for (const hostile of ['//evil.example.com', 'https://evil.example.com', 'javascript:alert(1)']) {
+      const res = await request(app).post('/cart/add').type('form').send({ id: 'saw', back: hostile });
+      expect(res.headers.location).toBe('/cart.html');
+    }
+  });
+
   it('sends an empty checkout back to the cart rather than showing a form', async () => {
     const res = await request(shop()).get('/checkout.html');
 
@@ -273,3 +297,4 @@ describe('the product page tabs', () => {
     expect(p.errors).toStrictEqual([]);
   });
 });
+

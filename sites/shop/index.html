@@ -35,7 +35,13 @@
           <div class="price">${money(p.price)}</div>
           <form method="post" action="/cart/add" style="margin-top:.75rem">
             <input type="hidden" name="id" value="${p.id}" />
-            <input type="hidden" name="back" value="/" />
+            <!--- where to come back to: HERE, filter and all, so adding
+                  something from the books shelf leaves you on it -->
+            <input
+              type="hidden"
+              name="back"
+              value="${($url?.pathname ?? '/') + ($url?.search ?? '')}"
+            />
             <button :if=${p.stock > 0}>Add to cart</button>
             <span class="out" :else>Out of stock</span>
           </form>
