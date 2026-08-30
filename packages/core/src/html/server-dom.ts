@@ -435,6 +435,18 @@ export class ServerElement extends ServerContainerNode implements Element {
       return;
     }
 
+    // `style` on exactly the same terms, which it was not: it fell through
+    // to the generic path below and left an attribute node BESIDE the
+    // property, which getAttribute then merged. So writing one REPLACED a
+    // class and ADDED to a style -- and a usage site's `style="color: red"`
+    // against `<:define style="gap: 1rem">` served both, while its `class`
+    // replaced. Two behaviours for the rule the compiler warns about having
+    // exactly one, decided by which of the two attributes it was
+    if (name === 'style') {
+      this.style = value ?? '';
+      return;
+    }
+
     let a = this.getAttributeNode(name);
     if (a) {
       a.value = value;

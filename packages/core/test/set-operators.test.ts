@@ -146,6 +146,19 @@ describe('adding to a composite attribute', () => {
     ]);
   });
 
+  it("replaces a definition's static style, as the warning says it does", async () => {
+    // it did not: `class` is an element PROPERTY and writing one replaces
+    // it, while `style` used to land in an attribute node beside the
+    // property and be merged with it on the way out. One rule, two
+    // behaviours, decided by which composite attribute it was
+    const { errors, page } = await run(
+      '<html><head><:define tag="my-box:div" style="gap: 1rem"><:slot /></:define></head>' +
+        '<body><my-box style="color: red">hi</my-box></body></html>'
+    );
+    expect(errors).toStrictEqual([]);
+    expect(styles(page)).toBe('color: red;');
+  });
+
   it('adds and removes style declarations', async () => {
     const { errors, served } = await run(
       '<html><head><:define tag="my-box:div" style="color: red; gap: 1rem"><:slot /></:define></head>' +
