@@ -193,6 +193,45 @@ describe('a kit shipping it, so a page says nothing at all', () => {
     expect(res.headers.location).toBe('/login');
   });
 
+  it('says nothing while its component is behind an :if that is false', async () => {
+    // the whole of what makes the conditional form work. A hidden region is
+    // a stencil, its scopes are never live, and a `:server-` value inside
+    // one reaches page state as nothing -- so the tag can carry the whole
+    // error page, custom markup and all, and cost the successful response
+    // its status only when it renders
+    const app = site({
+      'std.htm': KIT,
+      'my404.htm': '<div class="oops"><h1>Nothing here</h1></div>',
+      'index.html':
+        '<html><head><:import src="/std.htm" /></head><body :row=${{ id: 1 }}>' +
+        '<std-not-found :if=${!row}><:include src="/my404.htm" /></std-not-found>' +
+        '<p :if=${row}>the row</p></body></html>',
+    });
+
+    const res = await request(app).get('/index.html');
+    expect(res.status).toBe(200);
+    expect(shown(res.text)).toMatch(/>the row</);
+    // rendered nowhere -- though the markup does still travel, in the
+    // stencil the browser would build it from
+    const body = /<body[^>]*>([\s\S]*?)<script/.exec(res.text)?.[1] ?? '';
+    expect(body).not.toContain('Nothing here');
+  });
+
+  it('and answers with it when the same page finds nothing', async () => {
+    const app = site({
+      'std.htm': KIT,
+      'my404.htm': '<div class="oops"><h1>Nothing here</h1></div>',
+      'index.html':
+        '<html><head><:import src="/std.htm" /></head><body :row=${null}>' +
+        '<std-not-found :if=${!row}><:include src="/my404.htm" /></std-not-found>' +
+        '<p :if=${row}>the row</p></body></html>',
+    });
+
+    const res = await request(app).get('/index.html');
+    expect(res.status).toBe(404);
+    expect(shown(res.text)).toContain('<h1>Nothing here</h1>');
+  });
+
   it('leaves the page in charge where it says so itself', async () => {
     const app = site({
       'std.htm': KIT,

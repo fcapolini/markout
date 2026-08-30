@@ -727,6 +727,24 @@ A page that imported the kit then writes `<std-not-found>no such row</std-not-fo
 and is a 404, with no line of its own. Where the page does say something, the
 page wins — the rule an import default already follows.
 
+Put it behind an `:if` and it becomes the page's error branch, custom markup
+and all:
+
+```html
+<body :server-row=${db.find(id)}>
+  <std-not-found :if=${!row}>
+    <:include src="/parts/my-404.htm" />
+  </std-not-found>
+  <article :if=${row}>...</article>
+</body>
+```
+
+When there is a row the component is hidden, and a hidden region is a stencil
+whose scopes are never live — so its `:server-status` is never evaluated and
+nothing sets a status. That is what makes this work rather than merely look
+right. The error page's markup does still travel, in the stencil the browser
+would build it from, which is worth knowing before putting a large one there.
+
 `create()` returns the configured app without listening on anything, which is
 what a test wants: drive it with supertest and no port is ever bound.
 
