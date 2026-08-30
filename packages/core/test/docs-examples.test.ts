@@ -231,6 +231,33 @@ describe('docs/reference/syntax.md', () => {
   });
 });
 
+describe('docs/concepts/values.md — how far a change travels', () => {
+  // the behaviour these examples describe is pinned in
+  // reactivity-pitfalls.test.ts, which drives the propagation; what is
+  // checked here is that the markup a reader would copy compiles and says
+  // what the prose says it says
+  it('renders the projection example', async () => {
+    const result = await render(
+      '<html><body><div :src=${({ a: 1, b: 2 })} :b=${src.b}>' +
+        '<p>${b}</p></div></body></html>'
+    );
+
+    expectClean(result);
+    expect(result.body).toContain('<p>2</p>');
+  });
+
+  it('renders the whole-value write example', async () => {
+    const result = await render(
+      '<html><body><div :src=${({ a: 1, b: 2 })}>' +
+        '<button :on-click=${() => src = { ...src, b: 3 }}>bump</button>' +
+        '<p>${src.b}</p></div></body></html>'
+    );
+
+    expectClean(result);
+    expect(result.body).toContain('<p>2</p>');
+  });
+});
+
 describe('docs/concepts/scope.md', () => {
   it('renders the $id anchoring example', async () => {
     const result = await render(

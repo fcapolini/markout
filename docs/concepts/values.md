@@ -116,6 +116,58 @@ When a dependency changes, Markout propagates updates through the dependency
 graph. Dependencies are updated when needed so that added or
 removed scopes and values stay in sync.
 
+### Writes are whole values; reads can be as narrow as you like
+
+A value is written by assigning it, and that means a whole value at a time.
+To change one field of an object, you assign a new object:
+
+```html
+<div :src=${({ a: 1, b: 2 })}>
+  <button :on-click=${() => src = { ...src, b: 3 }}>bump</button>
+</div>
+```
+
+That looks coarse, and the reading side is where it stops being so. **Every
+derived value is a filter**: it re-evaluates when something it reads moves,
+and then propagates *only if its own result changed*. So a projection is a
+place where a wave stops:
+
+```html
+<div :src=${({ a: 1, b: 2 })} :b=${src.b}>
+  <p>${b}</p>
+</div>
+```
+
+Assigning `src` a whole new object whose `b` is still `2` re-evaluates `b`
+and goes no further — the paragraph is not touched. Give the new object a
+different `b` and it updates. Neither is configuration: the boundary is the
+value you declared, and you can see where it is.
+
+The two halves are meant to be used together. A broad write is how you make
+several changes and have them land in one cycle, with no `batch()` to
+remember. A refinement is how you say which of those changes you actually
+care about.
+
+### Two things to know about the filter
+
+**It compares by identity.** For a string, a number or a boolean that is
+what anyone would want. For an object it means a *rebuilt* one always
+travels, even when its contents are the same:
+
+```html
+<div :src=${[1]} :ids=${new Set(src)}>   <!-- a new Set every time -->
+```
+
+Deliberately, and not a rough edge to smooth: a page that stores that Set,
+or hands it to something that keys off identity, has to see the new one. It
+does mean a refinement over a sub-object refines nothing, so project the
+primitive you actually depend on when you want the wave to stop.
+
+**Writing into a value notifies nobody.** `src.b = 3` changes the object and
+tells no one — Markout sees a value being assigned, not a member of one
+being written. `count++` works because `count` is the value; `src.b = 3`
+does not because `src` is. Assign the whole thing, as above.
+
 ### A value that holds a function
 
 A helper can live in a value and be called from anywhere that can see it:
