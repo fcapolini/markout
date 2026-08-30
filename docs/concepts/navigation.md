@@ -62,6 +62,22 @@ a page compiled ahead of time with nothing to be relative to, which is
 `markout build` without `--origin`. A page whose whole shape is decided by
 its address should say what it is when it has none — here, `home`.
 
+The address is supplied rather than guessed, for the same reason the origin
+is: a build that invented one would be deciding where your pages live. So
+`markout build` says when a page reads `$url` and has no address to give
+it, naming the page and what it will render instead:
+
+```
+route.html: warning: this page reads $url and there is no address to read:
+nothing was passed to --origin, so $url is undefined here and whatever the
+page derives from it renders as the no-address case. Pass --origin <url> to
+say where these pages will live
+```
+
+Which for a fragment-routed page means every built address is the default
+route — true of any fragment SPA, and worth being told at build time rather
+than found in a browser.
+
 Nothing in that page is a routing feature. `$url` is a global, `<:group>` is
 a region over several nodes, and `<a href="#about">` is a link the browser
 follows on its own — no interception, no library, no router. Back and

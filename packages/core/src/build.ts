@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Compiler } from './compiler';
+import { URL_GLOBAL } from './runtime/core/core-global';
 import { discoverKits, type Kit } from './kits';
 import { contains, Resolver } from './paths';
 import { allowedPageKits, walkTree } from './publish';
@@ -11,7 +12,8 @@ import {
   runtimeBundlePath,
   runtimeSrcFor,
 } from './render/runtime-bundle';
-import type { PageError } from './html/parser';
+import { PageError } from './html/parser';
+import type { Page } from './compiler/ir/Page';
 import type { RuntimeError } from './runtime/core/core-context';
 
 /**
@@ -359,6 +361,17 @@ export async function build(props: BuildProps): Promise<BuildResult> {
       // has been told the origin: `$url` is that, and `$origin` comes out
       // of it. Without one there is no address to speak of, and both are
       // undefined -- see BuildProps.origin
+      !props.origin && readsUrl(page) && result.warnings.push({
+        pathname,
+        error: new PageError(
+          'warning',
+          `this page reads $url and there is no address to read: nothing ` +
+            `was passed to --origin, so $url is undefined here and whatever ` +
+            `the page derives from it renders as the no-address case. Pass ` +
+            `--origin <url> to say where these pages will live`,
+          undefined
+        ),
+      });
       const errors = await renderPage(page, {
         origin: props.origin,
         url: props.origin ? `${props.origin}${pathname}` : undefined,
@@ -586,6 +599,43 @@ async function copy(from: string, target: string) {
  * and a warning reaching `errors` would fail a build for something the
  * compiler deliberately declined to fail on.
  */
+/**
+ * Whether anything on this page depends on `$url`.
+ *
+ * Asked of the compiled props rather than of the source, because that is
+ * what will actually run: `$url` is the one global the compiler emits a
+ * dependency for, so a page that reads it says so there and a page that
+ * merely mentions it in a comment does not.
+ *
+ * The distinction it CANNOT make is guarded from unguarded -- `$url.hash`
+ * and `$url?.hash` compile to the same dependency, since `?.` on a member
+ * is not a crossing between scopes. Which is why the warning says what the
+ * page will render rather than that it will fail: for a guarded page the
+ * answer is "the no-address branch", and that is worth knowing too.
+ */
+function readsUrl(page: Page): boolean {
+  const data = page.props?.data;
+  if (!data) return false;
+  type ScopeJson = {
+    values?: { [key: string]: { deps?: unknown[][] } };
+    usageValues?: { [key: string]: { deps?: unknown[][] } };
+    children?: ScopeJson[];
+  };
+  const named = (values?: { [key: string]: { deps?: unknown[][] } }) =>
+    Object.values(values ?? {}).some(v =>
+      (v.deps ?? []).some(dep => dep.length === 1 && dep[0] === URL_GLOBAL)
+    );
+  const walk = (scope: ScopeJson): boolean =>
+    named(scope.values) ||
+    named(scope.usageValues) ||
+    (scope.children ?? []).some(walk);
+  try {
+    return walk(JSON.parse(data) as ScopeJson);
+  } catch {
+    return false;
+  }
+}
+
 function collectDiagnostics(
   result: { errors: { pathname: string; error: PageError }[];
             warnings: { pathname: string; error: PageError }[] },
