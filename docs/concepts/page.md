@@ -105,7 +105,8 @@ definitions included.
 
 ## `<:import>`
 
-`<:import>` splices a fragment into the page at compile time.
+`<:import>` splices a fragment into the page at compile time, and **only
+directly in `<head>`** — the compiler refuses it anywhere else.
 
 ```html
 <html>
@@ -114,6 +115,14 @@ definitions included.
   </head>
 </html>
 ```
+
+That restriction is the convention above, enforced. A kit is what a page is
+made *of* — definitions, and the design tokens they ship — rather than what
+it does, so `<head>` is where it belongs. And the placement is not only
+tidiness: a fragment's root attributes land on the element the directive
+sits in, so an imported kit's tokens become values on `<head>`, which is
+where the page overrides them and where the stylesheet they feed can read
+them.
 
 The imported fragment can provide defaults on its root element. Those defaults
 are applied at the import site unless the import site already defines the same
