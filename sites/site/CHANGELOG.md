@@ -1,5 +1,15 @@
 # @markout-lang/site
 
+## 0.5.3
+
+### Patch Changes
+
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+  - @markout-lang/express@0.8.0
+
 ## 0.5.2
 
 ### Patch Changes

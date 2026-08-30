@@ -1,5 +1,51 @@
 # @markout-lang/cli
 
+## 0.8.0
+
+### Minor Changes
+
+- `requestGlobals`: globals built per request -- a session, the visitor a route
+  already authenticated, whatever this request knows that the application as a
+  whole does not.
+  
+  ```js
+  new Server({ docroot, requestGlobals: { user: (req) => req.user } })
+  ```
+  
+  Named separately from `globals` rather than allowing a function there,
+  because the compiler has to be told the names before any request exists -- a
+  function cannot say what it will return -- and because a global that *is* a
+  function is a perfectly ordinary thing to want. Same rules otherwise:
+  readable only from a `:server-` value, and what a page does with the result
+  is as public as the page is. A page that renders `${user.email}` has
+  published it.
+- `runtimeBundle`, a parameter, for a host that repackages this code and so
+  breaks the relative walk to the bundle. `runtimeBundlePath()` and
+  `loadClientCode()` take the override; the middleware and the server take it
+  as a prop.
+  
+  `MARKOUT_RUNTIME_BUNDLE` stays, for the case a parameter cannot reach -- a
+  separate process, such as the CLI spawned as a sidecar -- but it is now the
+  fallback rather than the first answer. An environment variable goes where it
+  is not wanted: an editor extension setting one on its own process leaks it
+  into every terminal that editor opens, and a dev server started there then
+  served the *extension's* runtime to pages compiled by the checkout. Nothing
+  threw, every page rendered, and the browser quietly ran a different version
+  -- the one mismatch this design exists to prevent.
+
+### Patch Changes
+
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+  - @markout-lang/core@0.8.0
+  - @markout-lang/express@0.8.0
+
 ## 0.7.0
 
 ### Minor Changes

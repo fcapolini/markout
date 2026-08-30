@@ -1,5 +1,83 @@
 # @markout-lang/express
 
+## 0.8.0
+
+### Minor Changes
+
+- `:server-status` and `:server-redirect`: a page that knows something the
+  router does not -- that this id is not a row, that this visitor is not signed
+  in -- can say so.
+  
+  ```html
+  <html :server-status=${row ? 200 : 404}>
+  <html :server-redirect=${user ? null : '/login'}>
+  ```
+  
+  Ordinary `:server-` values on `<html>`, read off the page's own scope once
+  the render has collected them. `:server-` rather than a plain value for two
+  reasons: a status means nothing in a browser and must not be re-derived
+  there, and a `:server-` value may await -- the row that decides the answer
+  usually has to be fetched first.
+  
+  Read from `<head>`'s scope too when the page itself says nothing, which is
+  what lets a **kit** ship this: `<:import>` is only allowed in `<head>`, and a
+  fragment's root attributes land on the element the directive sits in, so a
+  kit's `:server-status` becomes a value on `<head>` and nowhere else. A
+  component it ships can then write `head.status = 404` and a page that
+  imported the kit needs no line of its own. The page's own statement wins,
+  which is the rule an import default already follows. Those two scopes and no
+  deeper: a value of this name further down is that scope's own business, and a
+  rule that searched everywhere would turn an ordinary name into a reserved one.
+- `requestGlobals`: globals built per request -- a session, the visitor a route
+  already authenticated, whatever this request knows that the application as a
+  whole does not.
+  
+  ```js
+  markout({ docroot, requestGlobals: { user: (req) => req.user } })
+  ```
+  
+  Named separately from `globals` rather than allowing a function there,
+  because the compiler has to be told the names before any request exists -- a
+  function cannot say what it will return -- and because a global that *is* a
+  function is a perfectly ordinary thing to want. Same rules otherwise:
+  readable only from a `:server-` value, and what a page does with the result
+  is as public as the page is. A page that renders `${user.email}` has
+  published it.
+- `runtimeBundle`, a parameter, for a host that repackages this code and so
+  breaks the relative walk to the bundle. `runtimeBundlePath()` and
+  `loadClientCode()` take the override; the middleware and the server take it
+  as a prop.
+  
+  `MARKOUT_RUNTIME_BUNDLE` stays, for the case a parameter cannot reach -- a
+  separate process, such as the CLI spawned as a sidecar -- but it is now the
+  fallback rather than the first answer. An environment variable goes where it
+  is not wanted: an editor extension setting one on its own process leaks it
+  into every terminal that editor opens, and a dev server started there then
+  served the *extension's* runtime to pages compiled by the checkout. Nothing
+  threw, every page rendered, and the browser quietly ran a different version
+  -- the one mismatch this design exists to prevent.
+
+### Patch Changes
+
+- A dev page closes its reload stream on the way out.
+  
+  The injected `EventSource` was opened and never closed. That stream is a
+  connection, a browser allows about six per origin, and a page that leaves one
+  behind spends one of the six per navigation -- so the sixth click waited for
+  the server to notice a client that was already gone, which it does on its
+  next heartbeat write. `HEARTBEAT_MS` is thirty seconds, which is what a shop
+  in dev mode paused for on its sixth category.
+  
+  Closed on `pagehide`, and opened again on a `pageshow` that came from the
+  back/forward cache: such a document was never unloaded and would otherwise be
+  watching a stream it had closed on its way out.
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+  - @markout-lang/core@0.8.0
+
 ## 0.7.0
 
 ### Minor Changes

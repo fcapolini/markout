@@ -1,5 +1,111 @@
 # @markout-lang/core
 
+## 0.8.0
+
+### Minor Changes
+
+- `<:group>` -- a branch or a replica with no element of its own.
+  
+  Every other directive goes on an element, which makes the element the unit:
+  one condition, one thing shown. `<:group>` lifts that. It is a tag that never
+  renders, and the branch and replication attributes it carries -- `:if`,
+  `:else-if`, `:else`, `:server-if`, `:for-each`, `:for-as`, `:for-key`,
+  `:for-data` -- apply to its contents, however many nodes those are.
+  
+  ```html
+  <tbody>
+    <:group :for-each=${lines} :for-as="line" :for-key=${line.id}>
+      <tr><td>${line.name}</td><td class="num">${line.total}</td></tr>
+      <tr class="note"><td colspan="2">${line.blurb}</td></tr>
+    </:group>
+  </tbody>
+  ```
+  
+  Two rows per item and no wrapper, which matters here because there is no
+  element you are allowed to put between `<tbody>` and `<tr>`. The same holds
+  for `<dt>`/`<dd>` pairs, for `<option>`s, and for a branch that is a heading
+  and a paragraph rather than a `<div>` around both.
+  
+  Attributes on `<:slot>` and `<:group>` are now refused rather than silently
+  dropped: neither tag renders, so an attribute on one had nowhere to go.
+- `runtimeBundle`, a parameter, for a host that repackages this code and so
+  breaks the relative walk to the bundle. `runtimeBundlePath()` and
+  `loadClientCode()` take the override; the middleware and the server take it
+  as a prop.
+  
+  `MARKOUT_RUNTIME_BUNDLE` stays, for the case a parameter cannot reach -- a
+  separate process, such as the CLI spawned as a sidecar -- but it is now the
+  fallback rather than the first answer. An environment variable goes where it
+  is not wanted: an editor extension setting one on its own process leaks it
+  into every terminal that editor opens, and a dev server started there then
+  served the *extension's* runtime to pages compiled by the checkout. Nothing
+  threw, every page rendered, and the browser quietly ran a different version
+  -- the one mismatch this design exists to prevent.
+- `:server-if` -- a branch decided once, on the server.
+  
+  The one directive `:server-` may mark. An ordinary `:if` has a live
+  condition, so the markup of the branch that did *not* show still travels, in
+  the stencil it would be built from -- which behind `${user.isAdmin}` is the
+  admin panel, its links and its labels, in the page source of every visitor
+  who is not an admin. A `:server-if` that did not show can never show, so
+  there is nothing to build and its markup is not sent at all. One that did
+  show hydrates as usual; only the decision is frozen.
+  
+  Precisely: the elements, their attributes and their text. Expressions inside
+  the branch are compiled into the page's props, which are a function of the
+  source rather than of the request, so they travel whatever the branch
+  decided. Where the logic itself is the secret, keep it in a `:server-` value,
+  whose expression the browser never receives.
+- `$url` in page scope: the page's whole address, as a `URL`.
+  
+  `$origin` already answered "where is this page", and answered it for the one
+  case that forced the question -- a `:server-` value fetching `/data.json` on
+  a server that has no page to be relative to. `$url` is the same fact
+  unabridged, for a page that wants the part the visitor asked for:
+  `$url.pathname`, `$url.searchParams.get('q')`. It is a `URL` because `URL`
+  was already a name expressions could use, so there is no new shape to learn,
+  and `$origin` stays a name of its own rather than something reached through
+  an address.
+  
+  Two things it does that nothing else on the globals list does:
+  
+  - **It changes while the page is up.** Everything else there is fixed for the
+    life of a render, which is why reading one is not a dependency. An address
+    is not fixed: a traversal, a fragment link, or a navigation a router kept
+    in the document moves it, and every expression that read it re-runs.
+  - **It is read-only, in whole and in part.** `$url = '/about'` and
+    `$url.pathname = '/about'` are both refused with a message rather than
+    quietly doing nothing -- a page assigning its own address would be claiming
+    to have arrived somewhere it has not. Navigating is a side effect with a
+    lifetime, so it belongs to a component; `globalThis.location.assign` is the
+    name the language offers for it, and `$url` follows on its own.
+  
+  `markout build` now warns when a page reads `$url` and no `--origin` was
+  passed, because there `$url` is undefined and whatever the page derived from
+  it renders as though the address were empty.
+
+### Patch Changes
+
+- A page's document is rendered into again and again -- that is what makes a
+  second visitor cost a render rather than a compile -- and three things the
+  last render left behind were being served to the next one.
+  
+  - **A `:for-each`'s rows.** Almost everything in the document is put back or
+    written over between renders; replication was the exception, so filtering
+    the shop's catalog to books answered with the correct state, the correct
+    heading, and the eight rows of whoever asked before.
+  - **A `<:group>` replica.** The sweep that removes them looked each one up by
+    its `data-markout` id, and a group replica is a run of siblings between two
+    markers with no element to carry one. The lookup found nothing, the loop
+    read that as "none left", and it stopped on the first replica it was there
+    to remove -- a cart with a line removed served the survivor twice.
+  - **A region the last render showed.** `acquireRegionDom` decides a region is
+    showing by finding its element next to its marker, which is exactly where
+    the last render left one, so this render adopted it. The condition does not
+    correct that: a region toggles on *change*, and a fresh scope tree starts at
+    `undefined`, so a condition that is falsy again never moves. `/product?id=nope`
+    answered 404 with the previous visitor's product inside it.
+
 ## 0.7.0
 
 ### Minor Changes

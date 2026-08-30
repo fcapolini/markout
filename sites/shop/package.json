@@ -1,7 +1,7 @@
 {
   "name": "@markout-lang/shop",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A catalog, a cart and a purchase: the worked example of an application written in Markout",
   "scripts": {
     "dev": "tsx --tsconfig ../../packages/cli/tsconfig.dev.json server.ts",
@@ -17,7 +17,7 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
-    "@markout-lang/express": "^0.7.0",
+    "@markout-lang/express": "^0.8.0",
     "express": "^5.2.1"
   }
 }
