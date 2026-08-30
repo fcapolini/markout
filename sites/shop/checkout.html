@@ -1,0 +1,37 @@
+<!---
+  The form, and the page that refuses to be reached with an empty cart.
+
+  `:server-redirect` is the page saying where the visitor should be instead:
+  a cart with nothing in it has no checkout, and answering with one would be
+  a form that cannot be submitted.
+-->
+<html
+  :server-basket=${cart}
+  :server-redirect=${basket.lines.length === 0 ? '/cart.html' : null}
+>
+  <:include src="/parts/values.htm" />
+  <head>
+    <:include src="/parts/shell.htm" />
+    <title>Checkout — The Bench</title>
+  </head>
+  <body>
+    <:include src="/parts/header.htm" />
+    <main>
+      <h1>Checkout</h1>
+      <p>${basket.count} item${basket.count === 1 ? '' : 's'}, ${money(basket.total)}.</p>
+
+      <form method="post" action="/checkout" style="max-width:24rem">
+        <p>
+          <label for="name">Your name</label>
+          <input id="name" name="name" required autocomplete="name" />
+        </p>
+        <p><button>Place the order</button></p>
+      </form>
+
+      <p class="empty">
+        Nothing is charged and nothing is shipped: this is an example of a
+        workflow, not a shop.
+      </p>
+    </main>
+  </body>
+</html>

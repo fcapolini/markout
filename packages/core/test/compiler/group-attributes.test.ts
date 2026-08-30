@@ -83,6 +83,34 @@ describe('a control attribute on a group holding several nodes', () => {
   });
 });
 
+describe('a branch the server decides', () => {
+  // found by writing an application rather than by thinking about one: the
+  // docs recommend `<:group :server-if>` for an error branch, the example
+  // there used a `<div>`, and a group refused the marked spelling outright
+  // -- it read as a value, and a group was told it had no scope to keep one
+  it('is a region over a run, like any other branch', () => {
+    const found = compile(
+      '<:group :server-if=${ok}><h1>No such thing</h1><p>sorry</p></:group>'
+    );
+    expect(found.errors).toStrictEqual([]);
+    expect(found.html).toMatch(/data-markout-region/);
+  });
+
+  it('transfers onto a lone element, like any other branch', () => {
+    const viaGroup = compile('<:group :server-if=${ok}><p>one</p></:group>');
+    const direct = compile('<p :server-if=${ok}>one</p>');
+    expect(viaGroup.errors).toStrictEqual([]);
+    expect(viaGroup.html).toBe(direct.html);
+  });
+
+  it('still refuses the rest of the family, which is not a branch', () => {
+    expect(
+      compile('<:group :server-for-each=${rows}><p>one</p><i>two</i></:group>')
+        .errors.join()
+    ).toMatch(/has no scope of its own/);
+  });
+});
+
 describe('a control attribute with nowhere to land', () => {
   it('refuses an empty group, which has nothing to be a region over', () => {
     expect(compile('<:group :if=${ok}></:group>').errors.join()).toMatch(

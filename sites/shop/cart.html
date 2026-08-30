@@ -1,0 +1,66 @@
+<!---
+  The cart, rendered from what THIS request knows.
+
+  `cart` is a request global: built per render out of the visitor's cookie,
+  so these lines are in the markup the server sent rather than fetched back
+  by a script. The table is where `<:group>` earns its place -- each line is
+  two rows, and a `<div>` around a pair of `<tr>`s is markup the browser
+  would move somewhere else.
+-->
+<html :server-basket=${cart}>
+  <:include src="/parts/values.htm" />
+  <head>
+    <:include src="/parts/shell.htm" />
+    <title>Your cart — The Bench</title>
+  </head>
+  <body>
+    <:include src="/parts/header.htm" />
+    <main>
+      <h1>Your cart</h1>
+
+      <p class="empty" :if=${basket.lines.length === 0}>
+        Nothing in it yet. <a href="/">Have a look around</a>.
+      </p>
+
+      <div :else>
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th class="num">Price</th>
+              <th class="num">Qty</th>
+              <th class="num">Total</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <:group :for-each=${basket.lines} :for-as="line" :for-key=${line.product.id}>
+              <tr>
+                <td><a href="/product.html?id=${line.product.id}">${line.product.name}</a></td>
+                <td class="num">${money(line.product.price)}</td>
+                <td class="num">${line.quantity}</td>
+                <td class="num">${money(line.total)}</td>
+                <td class="num">
+                  <form method="post" action="/cart/remove">
+                    <input type="hidden" name="id" value="${line.product.id}" />
+                    <button class="plain">Remove</button>
+                  </form>
+                </td>
+              </tr>
+              <tr class="note">
+                <td colspan="5">${line.product.blurb}</td>
+              </tr>
+            </:group>
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <span>Total</span>
+          <strong class="price">${money(basket.total)}</strong>
+        </div>
+
+        <p style="margin-top:1.5rem"><a href="/checkout.html"><button>Check out</button></a></p>
+      </div>
+    </main>
+  </body>
+</html>

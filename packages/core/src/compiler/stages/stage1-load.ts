@@ -165,6 +165,25 @@ function resolveActiveGroups(page: Page, root: ServerElement): void {
     PROP_VALUE_ATTR_PREFIX,
   ];
   const advice = `Put it on an element inside the group, or on one around it`;
+  /**
+   * The control attribute this name is, `:server-` and all.
+   *
+   * A branch may be marked server-decided (see SERVER_DECIDED_ATTRS), and a
+   * group is where that is most worth writing: `<:group :server-if>` is a
+   * run of nodes the server decides once, which is the shape an error page
+   * or an authenticated panel actually has. Without this the marked
+   * spelling read as a value, and a group was told it had no scope to keep
+   * one in.
+   */
+  const control = (name: string): string | undefined => {
+    if (!name.startsWith(SPECIAL_ATTR_PREFIX)) return undefined;
+    const bare = name.slice(SPECIAL_ATTR_PREFIX.length);
+    const plain = bare.startsWith(SERVER_VALUE_ATTR_PREFIX)
+      ? bare.slice(SERVER_VALUE_ATTR_PREFIX.length)
+      : bare;
+    if (plain !== bare && !SERVER_DECIDED_ATTRS.has(plain)) return undefined;
+    return TRANSFER.includes(plain) ? plain : undefined;
+  };
 
   const resolve = (el: ServerElement): 'region' | void => {
     const transfer: string[] = [];
@@ -172,7 +191,7 @@ function resolveActiveGroups(page: Page, root: ServerElement): void {
       const bare = name.startsWith(SPECIAL_ATTR_PREFIX)
         ? name.slice(SPECIAL_ATTR_PREFIX.length)
         : null;
-      if (bare && TRANSFER.includes(bare)) {
+      if (control(name)) {
         transfer.push(name);
       } else if (!bare || ELEMENT_ONLY.some(prefix => bare.startsWith(prefix))) {
         addError(
@@ -226,7 +245,7 @@ function resolveActiveGroups(page: Page, root: ServerElement): void {
     }
 
     for (const name of transfer) {
-      const bare = name.slice(SPECIAL_ATTR_PREFIX.length);
+      const bare = control(name)!;
       const family = BRANCH.includes(bare)
         ? BRANCH
         : LOOP.includes(bare)

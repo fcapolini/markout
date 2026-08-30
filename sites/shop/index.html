@@ -1,0 +1,46 @@
+<!---
+  The catalog.
+
+  Everything on this page is in the markup the server sent: the rows come
+  from a `:server-` value reading the catalog handed to the render, so a
+  visitor with scripting off sees the shop, and a crawler indexes it.
+-->
+<html
+  :server-tag=${$url?.searchParams.get('tag') ?? null}
+  :server-products=${shop.list(tag ?? undefined)}
+  :server-tags=${shop.tags()}
+  :server-basket=${cart}
+>
+  <:include src="/parts/values.htm" />
+  <head>
+    <:include src="/parts/shell.htm" />
+    <title>${tag ? tag + 's' : 'Everything'} — The Bench</title>
+  </head>
+  <body>
+    <:include src="/parts/header.htm" />
+    <main>
+      <h1>${tag ? tag + 's' : 'Everything we sell'}</h1>
+
+      <p style="margin-bottom:1.5rem">
+        <a href="/" :class-active=${!tag}>All</a>
+        <:group :for-each=${tags} :for-as="t">
+          · <a href="/?tag=${t}" :class-active=${tag === t}>${t}s</a>
+        </:group>
+      </p>
+
+      <div class="grid">
+        <div class="card" :for-each=${products} :for-as="p" :for-key=${p.id}>
+          <h2><a href="/product.html?id=${p.id}">${p.name}</a></h2>
+          <p>${p.blurb}</p>
+          <div class="price">${money(p.price)}</div>
+          <form method="post" action="/cart/add" style="margin-top:.75rem">
+            <input type="hidden" name="id" value="${p.id}" />
+            <input type="hidden" name="back" value="/" />
+            <button :if=${p.stock > 0}>Add to cart</button>
+            <span class="out" :else>Out of stock</span>
+          </form>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

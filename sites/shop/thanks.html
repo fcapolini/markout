@@ -1,0 +1,42 @@
+<!---
+  The order, found by the id in the address.
+
+  The same shape as the product page: an order that is not there is a 404
+  said by this page, and the branch that says so does not travel to the
+  visitors whose order was found.
+-->
+<html
+  :server-order=${shop.order($url?.searchParams.get('order'))}
+  :server-status=${order ? 200 : 404}
+  :server-basket=${cart}
+>
+  <:include src="/parts/values.htm" />
+  <head>
+    <:include src="/parts/shell.htm" />
+    <title>${order ? 'Order ' + order.id : 'No such order'} — The Bench</title>
+  </head>
+  <body>
+    <:include src="/parts/header.htm" />
+    <main>
+      <:group :server-if=${!order}>
+        <h1>No such order</h1>
+        <p class="empty">That order number is not one of ours.</p>
+      </:group>
+
+      <:group :server-if=${order}>
+        <h1>Thank you, ${order.placedBy}</h1>
+        <p>Order <strong>${order.id}</strong>, ${money(order.total)}.</p>
+        <table>
+          <tbody>
+            <tr :for-each=${order.lines} :for-as="line" :for-key=${line.product.id}>
+              <td>${line.product.name}</td>
+              <td class="num">${line.quantity}</td>
+              <td class="num">${money(line.total)}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="margin-top:1.5rem"><a href="/">Back to the catalog</a></p>
+      </:group>
+    </main>
+  </body>
+</html>

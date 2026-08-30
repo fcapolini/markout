@@ -1,0 +1,44 @@
+<!---
+  One product, or a 404 that is this page rather than another one.
+
+  `:server-status` is the page saying what its response should be -- the row
+  decides, and the row is only known while rendering. The not-found branch is
+  a `:server-if`, so on a page that DID find its product the missing-product
+  markup is not in the response at all.
+-->
+<html
+  :server-product=${shop.find($url?.searchParams.get('id'))}
+  :server-status=${product ? 200 : 404}
+  :server-basket=${cart}
+>
+  <:include src="/parts/values.htm" />
+  <head>
+    <:include src="/parts/shell.htm" />
+    <title>${product ? product.name : 'Not found'} — The Bench</title>
+  </head>
+  <body>
+    <:include src="/parts/header.htm" />
+    <main>
+      <:group :server-if=${!product}>
+        <h1>No such thing</h1>
+        <p class="empty">
+          We do not sell that. <a href="/">Everything we do sell</a> is one
+          click away.
+        </p>
+      </:group>
+
+      <:group :server-if=${product}>
+        <h1>${product.name}</h1>
+        <p>${product.blurb}</p>
+        <p class="price">${money(product.price)}</p>
+        <p class="out" :if=${product.stock === 0}>Out of stock.</p>
+        <p :else>${product.stock} in stock.</p>
+        <form method="post" action="/cart/add">
+          <input type="hidden" name="id" value="${product.id}" />
+          <input type="hidden" name="back" value="/cart.html" />
+          <button :if=${product.stock > 0}>Add to cart</button>
+        </form>
+      </:group>
+    </main>
+  </body>
+</html>

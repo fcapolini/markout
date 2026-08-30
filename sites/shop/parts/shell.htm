@@ -1,0 +1,55 @@
+<!---
+  The shell every page includes: the tokens, the stylesheet, and the header.
+
+  An `<:include>` splices this where it is written, so its root attributes
+  land on the element that included it -- which is why the tokens below
+  become values on `<head>`, where a page may override them and where the
+  stylesheet reads them. See docs/concepts/page.md.
+-->
+<lib
+  :const-ink="#1a1a1a"
+  :const-paper="#fbfaf8"
+  :const-rule="#e3ded6"
+  :const-accent="#7a5c3e"
+>
+  <style>
+    :root { --ink: ${ink}; --paper: ${paper}; --rule: ${rule}; --accent: ${accent}; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--paper); color: var(--ink);
+      font: 16px/1.55 ui-serif, Georgia, serif;
+    }
+    header {
+      display: flex; align-items: baseline; gap: 1.5rem;
+      padding: 1rem 1.5rem; border-bottom: 1px solid var(--rule);
+    }
+    header a { color: inherit; text-decoration: none; }
+    header .brand { font-size: 1.25rem; letter-spacing: .02em; }
+    header nav { display: flex; gap: 1rem; margin-left: auto; font-size: .95rem; }
+    header nav a.active { text-decoration: underline; text-underline-offset: 4px; }
+    main { max-width: 62rem; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+    h1 { font-weight: 500; letter-spacing: -.01em; margin: 0 0 1.5rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1.25rem; }
+    .card { border: 1px solid var(--rule); background: #fff; padding: 1rem; }
+    .card h2 { font-size: 1.05rem; font-weight: 500; margin: 0 0 .25rem; }
+    .card h2 a { color: inherit; }
+    .card p { margin: 0 0 .75rem; color: #5c574f; font-size: .9rem; }
+    .price { font-variant-numeric: tabular-nums; }
+    .out { color: #8a6d3b; font-size: .85rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: .6rem .5rem; border-bottom: 1px solid var(--rule); }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    tr.note td { border-bottom: 1px solid var(--rule); color: #5c574f; font-size: .85rem; padding-top: 0; }
+    button {
+      font: inherit; border: 1px solid var(--accent); background: var(--accent);
+      color: #fff; padding: .4rem .9rem; cursor: pointer;
+    }
+    button.plain { background: none; color: var(--accent); }
+    input {
+      font: inherit; padding: .45rem .6rem; border: 1px solid var(--rule);
+      background: #fff; width: 100%;
+    }
+    .empty { color: #5c574f; }
+    .totals { display: flex; justify-content: flex-end; gap: 2rem; margin-top: 1.5rem; font-size: 1.1rem; }
+  </style>
+</lib>
