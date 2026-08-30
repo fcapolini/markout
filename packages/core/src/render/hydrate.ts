@@ -104,6 +104,10 @@ export function hydrate(
     state: stateOf(page),
     onError: e => errors.push(e),
   }).refresh();
+  // the same following a page gets when it boots itself: a page mounted
+  // here is a page, and one that cannot see it moved would answer with the
+  // address it was handed forever
+  ctx.followAddress();
   return { root: ctx.root.proxy as { [name: string]: any }, errors };
 }
 

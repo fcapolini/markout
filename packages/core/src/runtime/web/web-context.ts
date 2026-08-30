@@ -82,6 +82,60 @@ export class WebContext extends CoreContext {
     super(props);
   }
 
+  /**
+   * Keeps `$url` on whatever address this context's document actually has.
+   *
+   * All three signals, because no one of them is the whole story and the
+   * gaps are not obvious:
+   *
+   * - **`navigatesuccess`** covers everything the Navigation API sees,
+   *   including a navigation a router kept in the document, and is the only
+   *   one that hears an interception at all. It does not exist everywhere.
+   * - **`popstate`** is a traversal, and only a traversal.
+   * - **`hashchange`** is the one that is easy to miss: `<a href="#x">` is a
+   *   same-document navigation that pushes a history entry and fires THIS.
+   *
+   * Overlap is free: `adoptUrl` compares hrefs, so a second delivery of the
+   * same address does nothing. `history.pushState` is the one same-document
+   * change none of them announce -- by design, nothing fires for it -- so
+   * code that calls it says so itself.
+   *
+   * Called by both ways a page comes alive: `browser.ts` when it boots
+   * itself, and `hydrate()` when something mounts it. A page that cannot
+   * see it moved would answer with the address it was handed, forever.
+   *
+   * The window is the document's own rather than `globalThis`: in a browser
+   * they are the same object, and where they are not -- a test document, an
+   * iframe -- the document's is the one whose address means anything here.
+   */
+  followAddress(): void {
+    type Win = {
+      location?: { href: string };
+      addEventListener?(type: string, fn: () => void): void;
+      navigation?: { addEventListener?(type: string, fn: () => void): void };
+    };
+    const doc = (this.props as WebContextProps).doc as unknown as { defaultView?: Win };
+    // the document's own window, then the page's, then whatever is running
+    // this. In a browser all three are one object; where they are not, the
+    // first that exists is the one whose address this document has
+    const g = globalThis as unknown as { window?: Win } & Win;
+    const win: Win | undefined = doc?.defaultView ?? g.window ?? g;
+    // the address is asked of the window and then of the environment, which
+    // are the same thing in a browser and are not in a runner that supplies
+    // one and not the other
+    const location = win?.location ?? g.location;
+    if (!location) return;
+    const update = () => this.adoptUrl(location.href);
+    typeof win.navigation?.addEventListener === 'function' &&
+      win.navigation.addEventListener('navigatesuccess', update);
+    // guarded because somewhere without a real window -- a test harness, an
+    // accidental non-browser bundle -- has no address to follow, and nothing
+    // here should be what says so
+    if (typeof win.addEventListener !== 'function') return;
+    win.addEventListener('popstate', update);
+    win.addEventListener('hashchange', update);
+  }
+
   // ===========================================================================
   // dev-mode error panel
   // ===========================================================================

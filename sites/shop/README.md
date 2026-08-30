@@ -23,6 +23,7 @@ and one visitor not seeing another's cart.
 | `cart.html` | `requestGlobals` — this visitor's cart, built per render, server-rendered; and `<:group :for-each>` over a pair of `<tr>`s, which no wrapper element could hold |
 | `checkout.html` | `:server-redirect` — an empty cart has no checkout, so the page says where to go instead |
 | `thanks.html` | the same shape as the product page, for an order |
+| `product.html` tabs | the one fragment-routed part: `$url.hash` over a plain `:if`, so the branches the server did not show still travel and the browser switches without asking. [Level 2](../../docs/concepts/navigation.md#level-2--one-page-routed-by-its-fragment) inside a level 1 site, which is what the navigation doc recommends |
 | `parts/values.htm` | an `<:include>` directly in `<html>`, so its root attributes become values on the **page** scope and every part of the page reads them |
 | `parts/shell.htm` | the same in `<head>`, where design tokens belong |
 
@@ -62,6 +63,11 @@ design side:
   count; keyed to a person it is one visitor's rows in another's page.
   Fixed in `render.ts` (`dropStaleReplicas`), with the general case pinned
   in `packages/core/test/render/rerender.test.ts`.
+- **`hydrate()` did not follow the address.** Only the browser's own boot
+  path attached the listeners, so a page mounted any other way answered
+  with the address it was handed, forever — the product tabs switched on a
+  deep link and not on a click. `followAddress()` is now one method both
+  paths call.
 - **A page cannot declare a value named after a server global.** `cart` is
   supplied to the render, so `:server-cart=${cart}` is refused rather than
   quietly reading itself. Correct, unguessable, and the reason the pages say

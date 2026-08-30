@@ -8,6 +8,7 @@
 -->
 <html
   :server-product=${shop.find($url?.searchParams.get('id'))}
+  :tab=${$url?.hash.slice(1) || 'about'}
   :server-status=${product ? 200 : 404}
   :server-basket=${cart}
 >
@@ -38,6 +39,46 @@
           <input type="hidden" name="back" value="/cart.html" />
           <button :if=${product.stock > 0}>Add to cart</button>
         </form>
+
+        <!---
+          The one part of this shop that is a fragment SPA.
+
+          Which tab is showing is nobody's business but the browser's: it is
+          not a different page, it should not cost a request, and no crawler
+          needs its own address for "Delivery". So it is `$url.hash` -- live,
+          so a click re-renders -- and a plain `:if`, so the branches the
+          server did not show still travel and the browser can switch to
+          them. That is the difference from the not-found branch above,
+          which is `:server-if` because it is decided once and for good.
+
+          The server never sees a fragment, so a deep link to `#specs`
+          arrives rendering `about` and corrects itself. For a tab that is
+          exactly right: the description is what a link preview should say.
+        -->
+        <nav class="tabs">
+          <a href="#about" :class-active=${tab === 'about'}>Description</a>
+          <a href="#specs" :class-active=${tab === 'specs'}>Specifications</a>
+          <a href="#delivery" :class-active=${tab === 'delivery'}>Delivery</a>
+        </nav>
+
+        <:group :if=${tab === 'about'}>
+          <p>${product.blurb} Made to be used, sharpened and handed on.</p>
+        </:group>
+
+        <:group :if=${tab === 'specs'}>
+          <table class="specs">
+            <tbody>
+              <tr><td>Catalogue number</td><td class="num">${product.id}</td></tr>
+              <tr><td>Category</td><td class="num">${product.tag}</td></tr>
+              <tr><td>In stock</td><td class="num">${product.stock}</td></tr>
+            </tbody>
+          </table>
+        </:group>
+
+        <:group :if=${tab === 'delivery'}>
+          <p>Two working days, or collect from the bench.</p>
+          <p class="empty">Nothing is really shipped: this is an example.</p>
+        </:group>
       </:group>
     </main>
   </body>

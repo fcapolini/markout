@@ -1,7 +1,10 @@
 import path from 'path';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
+import { Window } from 'happy-dom';
+import { Catalog } from '../../../../sites/shop/catalog';
 import { createShop } from '../../../../sites/shop/server';
+import { Compiler, hydrate, renderPage } from '@markout-lang/core';
 
 /**
  * The shop, driven the way a visitor drives one: catalog, product, cart,
@@ -188,5 +191,85 @@ describe('a shop, from the catalog to the order', () => {
     expect(shown(seen.text)).toContain('Bench chisel');
     expect(shown(seen.text)).not.toContain('Walnut');
     expect(mine).not.toBe(theirs);
+  });
+});
+
+/**
+ * The one part of the shop that is a fragment SPA.
+ *
+ * Which tab is showing is nobody's business but the browser's -- not a
+ * different page, not worth a request, not worth an address of its own to
+ * anything that indexes. So it is `$url.hash`, live, over a plain `:if`:
+ * the branches the server did not show still travel, which is exactly what
+ * lets the browser switch to them without asking.
+ *
+ * Mounted in a real DOM rather than asserted on the response, because the
+ * half worth testing is the half the response cannot show. And on the same
+ * page whose product came from a `:server-` value, which is the pairing an
+ * application actually has: decided-once and live, in one page.
+ */
+describe('the product page tabs', () => {
+  const docroot = path.resolve(__dirname, '../../../../sites/shop');
+
+  async function product(hash: string) {
+    const shop = new Catalog();
+    const compiler = new Compiler({ docroot, serverGlobals: ['shop', 'cart'] });
+    const page = await compiler.compile('/product.html');
+    expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+    const url = 'http://shop.test/product.html?id=saw';
+    expect(
+      await renderPage(page, {
+        url,
+        globals: { shop, cart: { lines: [], count: 0, total: 0 } },
+      })
+    ).toStrictEqual([]);
+    const served = page.source.doc.toString();
+    const window = new Window({ url: url + hash });
+    window.document.write(served);
+    const mounted = hydrate(page, { doc: window.document as never, url: url + hash });
+    const text = () =>
+      (window.document.querySelector('main') as unknown as { textContent: string })
+        .textContent.replace(/\s+/g, ' ');
+    return { served, text, window, errors: mounted.errors.map(e => e.message) };
+  }
+
+  it('serves the first tab, since a server never sees a fragment', async () => {
+    const p = await product('');
+
+    expect(p.served).toContain('Made to be used');
+    // and carries the others, which is what makes them reachable at all
+    expect(p.served).toContain('Catalogue number');
+    expect(p.served).toContain('Two working days');
+  });
+
+  it('shows the tab a deep link asked for, once the page is alive', async () => {
+    const p = await product('#specs');
+
+    expect(p.text()).toContain('Catalogue number');
+    expect(p.text()).not.toContain('Made to be used');
+    // the product itself came from a `:server-` value and is untouched by
+    // any of this
+    expect(p.text()).toContain('Dovetail saw');
+    expect(p.errors).toStrictEqual([]);
+  });
+
+  it('switches on a click, with no request', async () => {
+    const p = await product('');
+    expect(p.text()).toContain('Made to be used');
+
+    const tab = (label: string) =>
+      [...(p.window.document.querySelectorAll('nav.tabs a') as unknown as Iterable<
+        { textContent: string; click(): void }
+      >)].find(a => a.textContent.trim() === label);
+
+    tab('Delivery')!.click();
+    await new Promise(r => setTimeout(r, 20));
+    expect(p.text()).toContain('Two working days');
+    expect(p.text()).not.toContain('Made to be used');
+
+    tab('Description')!.click();
+    await new Promise(r => setTimeout(r, 20));
+    expect(p.text()).toContain('Made to be used');
+    expect(p.errors).toStrictEqual([]);
   });
 });
