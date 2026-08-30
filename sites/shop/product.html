@@ -1,26 +1,24 @@
 <!---
   One product, or a 404 that is this page rather than another one.
 
-  `:server-status` is the page saying what its response should be -- the row
-  decides, and the row is only known while rendering. The not-found branch is
-  a `:server-if`, so on a page that DID find its product the missing-product
-  markup is not in the response at all.
+  `:server-status` comes out of the view: the row decides, and the row is
+  only known while rendering. The not-found branch is a `:server-if`, so on a
+  page that DID find its product the missing-product markup is not in the
+  response at all.
 -->
 <html
-  :server-product=${shop.find($url?.searchParams.get('id'))}
+  :server-view=${shop.productPage($url)}
+  :server-status=${view.status}
   :tab=${$url?.hash.slice(1) || 'about'}
-  :server-status=${product ? 200 : 404}
-  :server-basket=${cart}
 >
-  <:include src="/parts/values.htm" />
   <head>
     <:include src="/parts/shell.htm" />
-    <title>${product ? product.name : 'Not found'} — The Bench</title>
+    <title>${view.title}</title>
   </head>
   <body>
     <:include src="/parts/header.htm" />
     <main>
-      <:group :server-if=${!product}>
+      <:group :server-if=${!view.product}>
         <h1>No such thing</h1>
         <p class="empty">
           We do not sell that. <a href="/">Everything we do sell</a> is one
@@ -28,16 +26,16 @@
         </p>
       </:group>
 
-      <:group :server-if=${product}>
-        <h1>${product.name}</h1>
-        <p>${product.blurb}</p>
-        <p class="price">${money(product.price)}</p>
-        <p class="out" :if=${product.stock === 0}>Out of stock.</p>
-        <p :else>${product.stock} in stock.</p>
+      <:group :server-if=${view.product}>
+        <h1>${view.product.name}</h1>
+        <p>${view.product.blurb}</p>
+        <p class="price">${view.product.price}</p>
+        <p class="out" :if=${!view.product.inStock}>Out of stock.</p>
+        <p :else>${view.product.stock} in stock.</p>
         <form method="post" action="/cart/add">
-          <input type="hidden" name="id" value="${product.id}" />
-          <input type="hidden" name="back" value="/cart.html" />
-          <button :if=${product.stock > 0}>Add to cart</button>
+          <input type="hidden" name="id" value="${view.product.id}" />
+          <input type="hidden" name="back" value="${view.back}" />
+          <button :if=${view.product.inStock}>Add to cart</button>
         </form>
 
         <!---
@@ -62,17 +60,18 @@
         </nav>
 
         <:group :if=${tab === 'about'}>
-          <p>${product.blurb} Made to be used, sharpened and handed on.</p>
+          <p>${view.product.blurb} Made to be used, sharpened and handed on.</p>
         </:group>
 
         <:group :if=${tab === 'specs'}>
-          <table class="specs">
-            <tbody>
-              <tr><td>Catalogue number</td><td class="num">${product.id}</td></tr>
-              <tr><td>Category</td><td class="num">${product.tag}</td></tr>
-              <tr><td>In stock</td><td class="num">${product.stock}</td></tr>
-            </tbody>
-          </table>
+          <!--- a description list, because that is what a spec sheet is:
+                pairs of name and value, not a grid of data -->
+          <dl class="specs">
+            <:group :for-each=${view.product.specs} :for-as="row" :for-key=${row.label}>
+              <dt>${row.label}</dt>
+              <dd>${row.value}</dd>
+            </:group>
+          </dl>
         </:group>
 
         <:group :if=${tab === 'delivery'}>

@@ -1,48 +1,41 @@
 <!---
   The catalog.
 
-  Everything on this page is in the markup the server sent: the rows come
-  from a `:server-` value reading the catalog handed to the render, so a
-  visitor with scripting off sees the shop, and a crawler indexes it.
+  One value: the view this page is about to render, asked of the one object
+  the shop's rules live in. Everything in it is display-ready, so what is
+  below is the structure of the document and nothing else -- no arithmetic,
+  no formatting, no reaching into the catalog from an attribute.
+
+  All of it is in the markup the server sent, so a visitor with scripting off
+  sees the shop and a crawler indexes it.
 -->
-<html
-  :server-tag=${$url?.searchParams.get('tag') ?? null}
-  :server-products=${shop.list(tag ?? undefined)}
-  :server-tags=${shop.tags()}
-  :server-basket=${cart}
->
-  <:include src="/parts/values.htm" />
+<html :server-view=${shop.catalogPage($url)}>
   <head>
     <:include src="/parts/shell.htm" />
-    <title>${tag ? tag + 's' : 'Everything'} — The Bench</title>
+    <title>${view.title}</title>
   </head>
   <body>
     <:include src="/parts/header.htm" />
     <main>
-      <h1>${tag ? tag + 's' : 'Everything we sell'}</h1>
+      <h1>${view.heading}</h1>
 
-      <p style="margin-bottom:1.5rem">
-        <a href="/" :class-active=${!tag}>All</a>
-        <:group :for-each=${tags} :for-as="t">
-          · <a href="/?tag=${t}" :class-active=${tag === t}>${t}s</a>
+      <p class="filters">
+        <:group :for-each=${view.filters} :for-as="f">
+          <a href="${f.href}" :class-active=${f.active}>${f.label}</a>
         </:group>
       </p>
 
       <div class="grid">
-        <div class="card" :for-each=${products} :for-as="p" :for-key=${p.id}>
-          <h2><a href="/product.html?id=${p.id}">${p.name}</a></h2>
+        <div class="card" :for-each=${view.products} :for-as="p" :for-key=${p.id}>
+          <h2><a href="${p.href}">${p.name}</a></h2>
           <p>${p.blurb}</p>
-          <div class="price">${money(p.price)}</div>
+          <div class="price">${p.price}</div>
           <form method="post" action="/cart/add" style="margin-top:.75rem">
             <input type="hidden" name="id" value="${p.id}" />
-            <!--- where to come back to: HERE, filter and all, so adding
-                  something from the books shelf leaves you on it -->
-            <input
-              type="hidden"
-              name="back"
-              value="${($url?.pathname ?? '/') + ($url?.search ?? '')}"
-            />
-            <button :if=${p.stock > 0}>Add to cart</button>
+            <!--- back to this shelf, filter and all: the view worked out
+                  where "here" is, so the page does not have to -->
+            <input type="hidden" name="back" value="${view.back}" />
+            <button :if=${p.inStock}>Add to cart</button>
             <span class="out" :else>Out of stock</span>
           </form>
         </div>

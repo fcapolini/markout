@@ -1,37 +1,32 @@
 <!---
-  The order, found by the id in the address.
+  The receipt, and the page for an order number that is not one of ours.
 
-  The same shape as the product page: an order that is not there is a 404
-  said by this page, and the branch that says so does not travel to the
-  visitors whose order was found.
+  `:server-status` is the page saying what its response should be, out of a
+  view that already knows: an order it could not find is a 404, and saying so
+  is one attribute rather than a route that has to guess.
 -->
-<html
-  :server-order=${shop.order($url?.searchParams.get('order'))}
-  :server-status=${order ? 200 : 404}
-  :server-basket=${cart}
->
-  <:include src="/parts/values.htm" />
+<html :server-view=${shop.orderPage($url)} :server-status=${view.status}>
   <head>
     <:include src="/parts/shell.htm" />
-    <title>${order ? 'Order ' + order.id : 'No such order'} — The Bench</title>
+    <title>${view.title}</title>
   </head>
   <body>
     <:include src="/parts/header.htm" />
     <main>
-      <:group :server-if=${!order}>
+      <:group :server-if=${!view.order}>
         <h1>No such order</h1>
         <p class="empty">That order number is not one of ours.</p>
       </:group>
 
-      <:group :server-if=${order}>
-        <h1>Thank you, ${order.placedBy}</h1>
-        <p>Order <strong>${order.id}</strong>, ${money(order.total)}.</p>
+      <:group :server-if=${view.order}>
+        <h1>Thank you, ${view.order.placedBy}</h1>
+        <p>Order <strong>${view.order.id}</strong>, ${view.order.total}.</p>
         <table>
           <tbody>
-            <tr :for-each=${order.lines} :for-as="line" :for-key=${line.product.id}>
-              <td>${line.product.name}</td>
+            <tr :for-each=${view.order.lines} :for-as="line" :for-key=${line.id}>
+              <td>${line.name}</td>
               <td class="num">${line.quantity}</td>
-              <td class="num">${money(line.total)}</td>
+              <td class="num">${line.total}</td>
             </tr>
           </tbody>
         </table>

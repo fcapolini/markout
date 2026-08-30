@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { Window } from 'happy-dom';
 import { Carts } from '../../../../sites/shop/cart';
 import { Catalog } from '../../../../sites/shop/catalog';
+import { Shop } from '../../../../sites/shop/shop';
 import { createShop } from '../../../../sites/shop/server';
 import { Compiler, hydrate, renderPage } from '@markout-lang/core';
 
@@ -67,7 +68,7 @@ describe('a shop, from the catalog to the order', () => {
     expect(shown(res.text)).toContain('The Joinery Book');
     expect(shown(res.text)).not.toContain('Block plane');
     // and says so in the title, which is a value over the same address
-    expect(res.text).toMatch(/<title>books — The Bench<\/title>/);
+    expect(res.text).toMatch(/<title>Books — The Bench<\/title>/);
   });
 
   it('answers a product page, and a 404 that is the same page', async () => {
@@ -82,6 +83,29 @@ describe('a shop, from the catalog to the order', () => {
     const missing = await request(shop()).get('/product.html?id=nope');
     expect(missing.status).toBe(404);
     expect(shown(missing.text)).toContain('No such thing');
+  });
+
+  it('does not answer a 404 with the product the last visitor looked at', async () => {
+    // a page's document is rendered into again and again, and a region that
+    // showed left its markup standing where the next render reads to decide
+    // whether it is showing. So the not-found page carried the product from
+    // the request before it -- one visitor's page inside another's, which is
+    // the shape of this that matters rather than the wrong markup
+    const app = shop();
+    const found = await request(app).get('/product.html?id=saw');
+    expect(found.status).toBe(200);
+
+    const missing = await request(app).get('/product.html?id=nope');
+    expect(missing.status).toBe(404);
+    expect(shown(missing.text)).toContain('No such thing');
+    expect(shown(missing.text)).not.toContain('Dovetail saw');
+    expect(shown(missing.text)).not.toContain('Rip filed');
+
+    // and the way back, so this empties rather than breaks
+    const again = await request(app).get('/product.html?id=plane');
+    expect(again.status).toBe(200);
+    expect(shown(again.text)).toContain('Block plane');
+    expect(shown(again.text)).not.toContain('No such thing');
   });
 
   it('carries a cart from one request to the next, and prices it', async () => {
@@ -273,17 +297,14 @@ describe('the product page tabs', () => {
   const docroot = path.resolve(__dirname, '../../../../sites/shop');
 
   async function product(hash: string) {
-    const shop = new Catalog();
-    const compiler = new Compiler({ docroot, serverGlobals: ['shop', 'cart'] });
+    // the one name a page is given: this visitor's shop, which is what the
+    // middleware builds per request -- see requestGlobals in server.ts
+    const shop = new Shop(new Catalog(), new Carts(), 'tester');
+    const compiler = new Compiler({ docroot, serverGlobals: ['shop'] });
     const page = await compiler.compile('/product.html');
     expect(page.errors.map(e => e.msg)).toStrictEqual([]);
     const url = 'http://shop.test/product.html?id=saw';
-    expect(
-      await renderPage(page, {
-        url,
-        globals: { shop, cart: { lines: [], count: 0, total: 0 } },
-      })
-    ).toStrictEqual([]);
+    expect(await renderPage(page, { url, globals: { shop } })).toStrictEqual([]);
     const served = page.source.doc.toString();
     const window = new Window({ url: url + hash });
     window.document.write(served);
@@ -403,5 +424,98 @@ describe('carts, and letting go of them', () => {
     expect(c.size).toBe(1);
     c.remove('ada', 'glue');
     expect(c.size).toBe(0);
+  });
+});
+
+/**
+ * The REST adapter, and the thing worth testing about it: that it is the
+ * same shop.
+ *
+ * A second way in is the classic place for a second set of rules to grow --
+ * one that agrees with the pages today and drifts by the next feature. So
+ * these check the answers, and then check that a write made over HTTP shows
+ * up in a page rendered for the same visitor.
+ */
+describe('the shop over HTTP', () => {
+  const jsonJar = (res: request.Response) => `${res.headers['set-cookie']?.[0] ?? ''}`.split(';')[0];
+
+  it('lists products, display-ready, and filters them', async () => {
+    const app = shop();
+    const all = await request(app).get('/api/products');
+    expect(all.status).toBe(200);
+    expect(all.body.length).toBe(10);
+    // formatted here, not in the page, which is the point of the view model
+    expect(all.body[0]).toMatchObject({ price: expect.stringMatching(/^£\d/), href: expect.any(String) });
+
+    const books = await request(app).get('/api/products?tag=book');
+    expect(books.body.map((p: { id: string }) => p.id).sort()).toStrictEqual([
+      'joinery',
+      'sharpening',
+    ]);
+  });
+
+  it('answers for one product, and 404s for one it does not sell', async () => {
+    const app = shop();
+    const found = await request(app).get('/api/products/saw');
+    expect(found.status).toBe(200);
+    expect(found.body).toMatchObject({ id: 'saw', name: 'Dovetail saw', stock: 2 });
+
+    const missing = await request(app).get('/api/products/nope');
+    expect(missing.status).toBe(404);
+    expect(missing.body).toStrictEqual({ error: 'no such product' });
+  });
+
+  it('adds, reads and removes a cart line', async () => {
+    const app = shop();
+    const added = await request(app).post('/api/cart').send({ id: 'saw', quantity: 2 });
+    expect(added.status).toBe(201);
+    expect(added.body.total).toBe('£250.00');
+    const cookie = jsonJar(added);
+
+    const read = await request(app).get('/api/cart').set('Cookie', cookie);
+    expect(read.body.lines.map((l: { id: string }) => l.id)).toStrictEqual(['saw']);
+
+    const gone = await request(app).delete('/api/cart/saw').set('Cookie', cookie);
+    expect(gone.body.lines).toStrictEqual([]);
+
+    const nonsense = await request(app).post('/api/cart').send({ id: 'nope' });
+    expect(nonsense.status).toBe(404);
+  });
+
+  it('refuses an order the same way the form route does', async () => {
+    const app = shop();
+    // nothing in the cart, and no name: the page asks for both
+    const empty = await request(app).post('/api/orders').send({ name: 'Ada' });
+    expect(empty.status).toBe(422);
+
+    const added = await request(app).post('/api/cart').send({ id: 'plane' });
+    const cookie = jsonJar(added);
+    const nameless = await request(app).post('/api/orders').set('Cookie', cookie).send({});
+    expect(nameless.status).toBe(422);
+
+    const placed = await request(app)
+      .post('/api/orders')
+      .set('Cookie', cookie)
+      .send({ name: 'Ada Lovelace' });
+    expect(placed.status).toBe(201);
+    expect(placed.body.id).toMatch(/^A\d+$/);
+    expect(placed.body.placedBy).toBe('Ada Lovelace');
+  });
+
+  it('is the same shop the pages are: a write here shows up there', async () => {
+    // the claim the adapter exists to keep. One visitor, two doors.
+    const app = shop();
+    const added = await request(app).post('/api/cart').send({ id: 'saw', quantity: 3 });
+    const cookie = jsonJar(added);
+
+    const page = await request(app).get('/cart.html').set('Cookie', cookie);
+    expect(page.status).toBe(200);
+    expect(shown(page.text)).toContain('Dovetail saw');
+    expect(shown(page.text)).toContain('£375.00');
+
+    // and the other way round: a form write, read back over HTTP
+    await request(app).post('/cart/add').set('Cookie', cookie).type('form').send({ id: 'glue' });
+    const cart = await request(app).get('/api/cart').set('Cookie', cookie);
+    expect(cart.body.lines.map((l: { id: string }) => l.id).sort()).toStrictEqual(['glue', 'saw']);
   });
 });

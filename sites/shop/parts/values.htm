@@ -1,9 +1,0 @@
-<!---
-  Page-wide values every page has.
-
-  Included directly in `<html>` rather than in `<head>`, which is the whole
-  point: a fragment's root attributes land on the element the directive sits
-  in, so these become values on the PAGE scope and every part of the page --
-  head and body alike -- reads them by name.
--->
-<lib :money=${(cents) => '£' + (cents / 100).toFixed(2)} />

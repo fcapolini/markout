@@ -1,8 +1,9 @@
 <!---
   The header, included by every page.
 
-  `$url.pathname` is what marks the current link, which is the whole of what
-  this needs from the outside: no page tells it where it is.
+  It reads two things: where we are, and what is in the basket. Every page's
+  view carries a `basket`, so this needs no value of its own -- and `$url` is
+  what marks the current link, so no page tells it where it is either.
 -->
 <lib>
   <header>
@@ -10,7 +11,7 @@
     <nav>
       <a href="/" :class-active=${$url?.pathname === '/' || $url?.pathname === '/index.html'}>Catalog</a>
       <a href="/cart.html" :class-active=${$url?.pathname === '/cart.html'}>
-        Cart<span :if=${basket.count > 0}> (${basket.count})</span>
+        Cart<span :if=${view.basket.count > 0}> (${view.basket.count})</span>
       </a>
     </nav>
   </header>

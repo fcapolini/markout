@@ -9,26 +9,34 @@
  *
  *     npm run dev -w @markout-lang/shop
  *
- * What it is here to prove, page by page:
+ * **One object holds the shop's rules**, and everything here is a way in to
+ * it. `Shop` (shop.ts) answers a page's questions with a view it can render
+ * and answers a write with what happened; the form routes below turn that
+ * into a redirect, the REST routes in api.ts turn it into a status, and a
+ * page calls it directly. None of the three holds a rule the others lack,
+ * which is what stops a browser without scripting and a client with an HTTP
+ * library from being two shops that agree for now.
  *
- * - **`globals`** hands every render the catalog, built once. A page reads it
- *   in a `:server-` value and the rows are in the markup, not fetched into it.
- * - **`requestGlobals`** hands every render THIS visitor's cart, built per
- *   request. That is the half an application-wide handle cannot be, and it is
- *   why the cart page server-renders instead of shipping a shell.
+ * What this is here to prove, page by page:
+ *
+ * - **`requestGlobals`** hands every render THIS visitor's shop, built per
+ *   request. That is the half an application-wide handle cannot be, and it
+ *   is why the cart page server-renders instead of shipping a shell.
  * - **`:server-status`** makes `/product?id=nope` a real 404, and
  *   **`:server-redirect`** sends an empty checkout back to the catalog.
  * - **`:server-if`** keeps the not-found markup out of the pages that found
  *   something.
  * - **Every write is an ordinary POST** to a route below, which redirects
- *   back. There is no client-side state, no fetch, and no JSON API: the whole
- *   workflow works with scripting off, which is the position this project
- *   takes rather than a feature it is missing.
+ *   back. The pages need no scripting at all: the whole workflow works with
+ *   it off, which is the position this project takes rather than a feature
+ *   it is missing. The REST routes are for the clients that are not a page.
  */
 import express, { type Express } from 'express';
 import { markout } from '@markout-lang/express';
+import { api } from './api';
 import { Carts } from './cart';
 import { Catalog } from './catalog';
+import { Shop } from './shop';
 
 export interface ShopProps {
   docroot: string;
@@ -52,55 +60,53 @@ function backTo(value: unknown, fallback: string): string {
 
 export function createShop(props: ShopProps): Express {
   const app = express();
-  const shop = new Catalog();
+  const catalog = new Catalog();
   const carts = new Carts();
   app.use(express.urlencoded({ extended: false }));
+  app.use(express.json());
 
-  // --------------------------------------------------------------- the writes
+  // ----------------------------------------------------------------- REST
   //
-  // First, because they are the application's own and because a POST is not a
-  // page. Each answers with a redirect rather than markup: the browser then
-  // GETs the page it was going to get anyway, which is what keeps a reload
-  // from placing a second order.
+  // Mounted under its own prefix, and a thin adapter over the same object
+  // the pages use. See api.ts for why the pages do not go through it.
+  app.use('/api', api(catalog, carts));
+
+  // ------------------------------------------------------- the form writes
+  //
+  // What a browser can do with no scripting: a POST and a redirect. They
+  // answer with a 303 rather than markup so that a reload does not place a
+  // second order, and each is three lines because the shop is elsewhere.
   app.post('/cart/add', (req, res) => {
-    const visitor = carts.visitor(req, res);
-    const id = `${req.body.id ?? ''}`;
-    shop.find(id) && carts.add(visitor, id, Number(req.body.quantity) || 1);
+    const shop = Shop.forRequest(catalog, carts, req, res);
+    shop.add(`${req.body.id ?? ''}`, Number(req.body.quantity) || 1);
     res.redirect(303, backTo(req.body.back, '/cart.html'));
   });
 
   app.post('/cart/remove', (req, res) => {
-    carts.remove(carts.visitor(req, res), `${req.body.id ?? ''}`);
+    Shop.forRequest(catalog, carts, req, res).remove(`${req.body.id ?? ''}`);
     res.redirect(303, '/cart.html');
   });
 
   app.post('/checkout', (req, res) => {
-    const visitor = carts.visitor(req, res);
-    const cart = carts.view(visitor, shop);
-    const name = `${req.body.name ?? ''}`.trim();
-    // the page's own form asks for both; a request that arrives without them
-    // is not a visitor who made a mistake, it is one who skipped the page
-    if (!cart.lines.length || !name) {
-      return res.redirect(303, '/checkout.html');
-    }
-    const order = shop.place(name, cart.lines);
-    carts.empty(visitor);
-    res.redirect(303, `/thanks.html?order=${encodeURIComponent(order.id)}`);
+    const order = Shop.forRequest(catalog, carts, req, res).place(`${req.body.name ?? ''}`);
+    res.redirect(
+      303,
+      order ? `/thanks.html?order=${encodeURIComponent(order.id)}` : '/checkout.html'
+    );
   });
 
   // --------------------------------------------------------------- the pages
   //
-  // `globals` is what every page may reach; `requestGlobals` is what THIS
-  // request adds. Both are readable only from a `:server-` value, and the
-  // compiler is told their names so that reading one anywhere else is a
-  // build error rather than a page that is empty in production.
+  // One name, and it is this visitor's shop. A page reads it in a `:server-`
+  // value -- the compiler is told the name, so reading it anywhere else is a
+  // build error rather than a page that is empty in production -- and asks it
+  // for the view it is about to render.
   app.use(
     markout({
       docroot: props.docroot,
       dev: props.dev,
-      globals: { shop },
       requestGlobals: {
-        cart: req => carts.view(carts.visitor(req), shop),
+        shop: req => Shop.forRequest(catalog, carts, req),
       },
     })
   );

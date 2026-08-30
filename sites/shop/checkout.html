@@ -1,24 +1,20 @@
 <!---
   The form, and the page that refuses to be reached with an empty cart.
 
-  `:server-redirect` is the page saying where the visitor should be instead:
-  a cart with nothing in it has no checkout, and answering with one would be
-  a form that cannot be submitted.
+  `:server-redirect` is the page saying where the visitor should be instead,
+  and the view is what decided it: a cart with nothing in it has no checkout,
+  and answering with one would be a form that cannot be submitted.
 -->
-<html
-  :server-basket=${cart}
-  :server-redirect=${basket.lines.length === 0 ? '/cart.html' : null}
->
-  <:include src="/parts/values.htm" />
+<html :server-view=${shop.checkoutPage()} :server-redirect=${view.redirect}>
   <head>
     <:include src="/parts/shell.htm" />
-    <title>Checkout — The Bench</title>
+    <title>${view.title}</title>
   </head>
   <body>
     <:include src="/parts/header.htm" />
     <main>
       <h1>Checkout</h1>
-      <p>${basket.count} item${basket.count === 1 ? '' : 's'}, ${money(basket.total)}.</p>
+      <p>${view.basket.count} item${view.basket.count === 1 ? '' : 's'}, ${view.basket.total}.</p>
 
       <form method="post" action="/checkout" style="max-width:24rem">
         <p>
