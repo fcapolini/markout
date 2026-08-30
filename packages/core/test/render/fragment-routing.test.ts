@@ -108,3 +108,62 @@ describe('routing on the fragment alone', () => {
     expect(errors).toStrictEqual([]);
   });
 });
+
+/**
+ * The head is a page's markup like any other, which is the whole of what
+ * per-page metadata needs -- `<title>` here is a value over `$url`, and
+ * nothing about it is a metadata API.
+ *
+ * The half it does NOT fix is worth pinning too. A browser corrects the
+ * title on arrival; a link unfurler, an RSS reader or a `curl` reads the
+ * response and stops, and the response was rendered without a fragment
+ * because no fragment was sent. So a deep link previews as the default
+ * route however right the tab looks.
+ */
+describe('what the head does on a deep link', () => {
+  it('corrects itself on arrival and on every navigation after', async () => {
+    fs.writeFileSync(
+      path.join(docroot, 't.html'),
+      '<html><head><title>${$url.hash.slice(1) || "home"} — site</title></head>' +
+        '<body :route=${$url.hash.slice(1) || "home"}><a href="#list">list</a>' +
+        '<:group :if=${route === "about"}><h1>About</h1></:group>' +
+        '</body></html>'
+    );
+    const page = await new Compiler({ docroot }).compile('/t.html');
+    expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+    expect(await renderPage(page, { url: 'http://x.test/t.html' })).toStrictEqual([]);
+    const served = page.source.doc.toString();
+
+    // what anything reading the response gets, whichever route was asked for
+    expect(
+      /<title>([\s\S]*?)<\/title>/.exec(served)?.[1]?.replace(/<!---[^>]*-->/g, '')
+    ).toBe('home — site');
+
+    const window = new Window({ url: 'http://x.test/t.html#about' });
+    window.document.write(served);
+    const win = window as unknown as {
+      addEventListener(type: string, fn: () => void): void;
+      location: { href: string };
+      document: { title: string };
+    };
+    const ctx = new WebContext({
+      ...loadProps(page.clientProps ?? page.props!),
+      doc: window.document as any,
+      url: `${win.location.href}`,
+      onError: () => undefined,
+    }).refresh();
+    const update = () => ctx.adoptUrl(`${win.location.href}`);
+    win.addEventListener('popstate', update);
+    win.addEventListener('hashchange', update);
+
+    const title = () =>
+      (window.document.querySelector('title') as unknown as { textContent: string })
+        .textContent;
+    expect(title()).toBe('about — site');
+    expect(`${win.document.title}`).toBe('about — site');
+
+    (window.document.querySelector('a') as unknown as { click(): void }).click();
+    await new Promise(r => setTimeout(r, 20));
+    expect(title()).toBe('list — site');
+  });
+});
