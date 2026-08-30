@@ -246,3 +246,33 @@ describe('a kit shipping it, so a page says nothing at all', () => {
     expect(res.status).toBe(418);
   });
 });
+
+describe('the same, with no kit at all', () => {
+  it('is the shorter spelling, and keeps the error page out of a 200', async () => {
+    // what the docs recommend over a component: `:server-if` decides once,
+    // so the branch that did not show is not in the response. A plain `:if`
+    // could not do that -- its condition is live, so the markup has to
+    // travel in case the browser turns it
+    const page =
+      '<html :server-row=${row} :server-status=${row ? 200 : 404}><body>' +
+      '<div :server-if=${!row}><:include src="/my404.htm" /></div>' +
+      '<article :server-if=${row}>the row</article></body></html>';
+
+    const found = site({
+      'my404.htm': '<div><h1>Nothing here</h1></div>',
+      'index.html': page.replace('${row}', '${{ id: 1 }}'),
+    });
+    const ok = await request(found).get('/index.html');
+    expect(ok.status).toBe(200);
+    expect(shown(ok.text)).toContain('the row');
+    expect(ok.text).not.toContain('Nothing here');
+
+    const missing = site({
+      'my404.htm': '<div><h1>Nothing here</h1></div>',
+      'index.html': page.replace('${row}', '${null}'),
+    });
+    const gone = await request(missing).get('/index.html');
+    expect(gone.status).toBe(404);
+    expect(shown(gone.text)).toContain('<h1>Nothing here</h1>');
+  });
+});

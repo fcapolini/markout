@@ -727,23 +727,28 @@ A page that imported the kit then writes `<std-not-found>no such row</std-not-fo
 and is a 404, with no line of its own. Where the page does say something, the
 page wins — the rule an import default already follows.
 
-Put it behind an `:if` and it becomes the page's error branch, custom markup
-and all:
+Put it behind an `:if` and it becomes the page's error branch: when there is
+a row the component is hidden, and a hidden region is a stencil whose scopes
+are never live — so its `:server-status` is never evaluated and nothing sets
+a status. That is what makes the conditional form work rather than merely
+look right.
+
+A page needs no kit for this at all, though, and the plain spelling is the
+better one because [`:server-if`](syntax.md#server-if--a-branch-decided-once)
+keeps the error page out of the successful response:
 
 ```html
-<body :server-row=${db.find(id)}>
-  <std-not-found :if=${!row}>
-    <:include src="/parts/my-404.htm" />
-  </std-not-found>
-  <article :if=${row}>...</article>
-</body>
+<html :server-row=${db.find(id)} :server-status=${row ? 200 : 404}>
+  <body>
+    <div :server-if=${!row}><:include src="/parts/my-404.htm" /></div>
+    <article :server-if=${row}>...</article>
+  </body>
+</html>
 ```
 
-When there is a row the component is hidden, and a hidden region is a stencil
-whose scopes are never live — so its `:server-status` is never evaluated and
-nothing sets a status. That is what makes this work rather than merely look
-right. The error page's markup does still travel, in the stencil the browser
-would build it from, which is worth knowing before putting a large one there.
+Found: 200, and the 404 markup is not in the response. Missing: 404, with the
+custom page. Behind a plain `:if` the error markup would travel either way,
+in the stencil the browser would build it from.
 
 `create()` returns the configured app without listening on anything, which is
 what a test wants: drive it with supertest and no port is ever bound.
