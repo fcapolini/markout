@@ -114,6 +114,11 @@ chosen; these say what was considered and why it is still sitting there.
   nearly free and a new dependency list is not, where a replacement resolves,
   and why a conditional expression already covers most of what it looked
   like it was for.
+- [Scoped slots](explorations/scoped-slots.md) - letting a component
+  replicate the markup a caller slotted into it and hand each copy an item,
+  why it is the outbound half of `::` rather than a hole in the isolation
+  wall, and why the fallback wants a placeholder the caller writes rather
+  than an emptiness the runtime infers.
 
 ## Mental model
 
