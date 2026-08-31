@@ -1028,8 +1028,8 @@ stays the error it has always been.
 
 ### `<:mode>` — a scope on its parent's element
 
-**Partly built: handlers, children and classes.** Styles and attributes are
-refused with a message saying so. See
+**Partly built: handlers, children, classes and attributes.** Styles and
+`:priority` are refused with a message saying so. See
 [conditional scopes](../design/conditional-scopes.md) for the whole design.
 
 A `<:logic>` has no element and wants none. A **mode** has none of its own and
@@ -1092,8 +1092,30 @@ classes nor lose them:
 `dragging` arrives and leaves with the modality; `card` and `selected` are the
 element's own throughout, and go on changing while the mode is applied.
 
-What it takes today: `:on-`, `:class-`, children, values of its own, the
-lifecycle callbacks, a condition, and `:aka`. What it refuses:
+**An attribute has one owner at a time**, and while a mode is on, the owner is
+the mode:
+
+```html
+<div title=${label}>
+  <:mode :if=${dragging} :attr-aria-grabbed=${true} title=${"Drop me somewhere"} />
+</div>
+```
+
+Nothing is remembered and nothing is restored from a snapshot. What an
+element's `title` is, is whatever the innermost live declaration says — and the
+one underneath was live the whole time the mode was over it, evaluating as its
+own dependencies changed, simply not the one writing. So handing back is asking
+it to say again. Where nobody underneath declares it, the attribute existed
+only because the mode did, and goes with it.
+
+Two modes on one element declaring the same attribute is a **compile error**: a
+class is a set and two modes adding one are no conflict, but an attribute is
+one answer to one question, and precedence between siblings is a rule nobody
+could guess.
+
+What it takes today: `:on-`, `:class-`, `:attr-`, plain attributes written as
+expressions, children, values of its own, the lifecycle callbacks, a condition,
+and `:aka`. What it refuses:
 
 | | |
 | --- | --- |
@@ -1103,12 +1125,14 @@ lifecycle callbacks, a condition, and `:aka`. What it refuses:
 `:else` and `:else-if` are refused **with children**, since a branch chain is
 resolved by position among siblings and a mode's condition becomes an arity.
 
-And what is **not built yet**, each refused in those words rather than
-half-applied: `:style-`, `:attr-`, `:prop-` and plain attributes. All four are
-single-valued, so two declarations of one of them need an *owner* — which is
-what `:class-` did not, two modes adding a class being no conflict at all.
-Until that is written, put those on the element itself with an expression that
-reads the same condition.
+| `:prop-` | a DOM property is state on the element itself, so there is nothing underneath to hand it back to |
+| a *static* plain attribute | a mode has no markup of its own for one to be written in — `title=${…}` sets it on the element |
+
+And what is **not built yet**: `:style-`, whose machinery diffs a base the way
+classes do and wants the same empty-base treatment first, and **`:priority`**,
+which is what will let two modes declare one attribute — equal ranks refusing,
+declared ranks deciding. Until then, put a style on the element itself with an
+expression that reads the same condition.
 
 ### A base tag is a real element
 

@@ -613,7 +613,10 @@ export class WebScope extends CoreScope {
     // leaves its class behind on an element it no longer has anything to do
     // with. Everything else removes the element itself and takes its classes
     // with it
-    this.props.mode && this.withdrawPaint();
+    if (this.props.mode) {
+      this.withdrawPaint();
+      this.releaseOwned();
+    }
     if (this.props.group) {
       // markers included: they carry this replica's id, and a pair left
       // behind would be found again by whatever takes that id next
@@ -714,6 +717,7 @@ export class WebScope extends CoreScope {
       }
       ret.setCB((_, val) => {
         if (!this.dom) return this.unbound(ret, `no element to set "${name}" on`);
+        this.claim(key);
         if (val == null) {
           this.dom.removeAttribute(name);
         } else {
@@ -737,6 +741,7 @@ export class WebScope extends CoreScope {
       const name = key.slice(RT_PRESENCE_VALUE_PREFIX.length);
       ret.setCB((_, val) => {
         if (!this.dom) return this.unbound(ret, `no element to toggle "${name}" on`);
+        this.claim(key);
         // empty string, not "true": an HTML boolean attribute means true by
         // being present at all, and that is the form every browser writes
         val ? this.dom.setAttribute(name, '') : this.dom.removeAttribute(name);
@@ -1072,6 +1077,7 @@ export class WebScope extends CoreScope {
       this.dom?.removeEventListener(name, listener)
     );
     this.withdrawPaint();
+    this.releaseOwned();
   }
 
   /** whether `lifetimeEnded` took this mode's handlers off the element */
@@ -1080,9 +1086,58 @@ export class WebScope extends CoreScope {
   private borrowedDom(): Element | undefined {
     for (let s = this.parent; s; s = s.parent) {
       const dom = (s as WebScope).dom;
-      if (dom) return dom;
+      if (dom) {
+        // kept, because handing an attribute back means asking whoever owns
+        // the element to say again what it should be
+        this.borrowedFrom = s as WebScope;
+        return dom;
+      }
     }
     return undefined;
+  }
+
+  /** the scope a mode borrowed its element from */
+  declare private borrowedFrom?: WebScope;
+  /** the value keys a mode has written on that element */
+  declare private owned?: Set<string>;
+
+  /**
+   * Gives an attribute back to whoever owns the element.
+   *
+   * Nothing is remembered and nothing is restored from a snapshot: what an
+   * element's `title` is, is whatever the innermost live declaration says, and
+   * the one underneath has been live the whole time a mode was over it --
+   * evaluating as its own dependencies changed, simply not the one writing. So
+   * handing back is asking it to say again. Where there is nobody underneath,
+   * the attribute existed only because the mode did, and goes.
+   */
+  private releaseOwned(): void {
+    if (!this.owned?.size || !this.dom) return;
+    const owner = this.borrowedFrom;
+    let ask = false;
+    for (const key of this.owned) {
+      // off first, in every case: what the mode wrote is the mode's, and if
+      // nobody underneath says otherwise the attribute existed only because
+      // it did
+      this.dom.removeAttribute(key.slice(key.indexOf('$') + 1));
+      const under = owner?.values[key];
+      if (!under) continue;
+      // A value only announces itself when it CHANGES, and the one underneath
+      // has been answering the same thing all along -- so marking it dirty
+      // alone would re-evaluate it to what it already held and tell nobody.
+      // Clearing what it holds is what makes saying it again a change
+      (under as unknown as { value?: unknown }).value = undefined;
+      under.dirty = true;
+      ask = true;
+    }
+    this.owned.clear();
+    ask && owner && this.ctx.refresh(owner);
+  }
+
+  /** notes that this mode now writes `key`, so it can hand it back later */
+  private claim(key: string): void {
+    if (!this.props.mode) return;
+    (this.owned ??= new Set()).add(key);
   }
 
   /**

@@ -1,6 +1,6 @@
 # Conditional scopes, and modes on an element
 
-Status: **rules 1 and 2 built; rule 3 begun — handlers, children, classes.** One crash found
+Status: **rules 1 and 2 built; rule 3 all but `:style-` and `:priority`.** One crash found
 while checking them and fixed on the way (`cae581a`). Prompted by asking what
 markout misses next to OpenLaszlo's `<state>` tag — the answer is *not that
 tag*.
@@ -151,9 +151,9 @@ it. See *What the crash was* below.
 
 ### 3. `<:mode>` — a scope on its parent's element
 
-*Begun. The tag carries handlers, children and classes; styles, attributes and
-`:priority` are refused in so many words — see* What slice 1 built, What slice
-2 needed *and* What classes settled.
+*Built except `:style-` and `:priority`, both refused in so many words — see*
+What slice 1 built, What slice 2 needed, What classes settled *and* What
+ownership came to.
 
 `<:logic>` is a scope with **no** element. A mode is a scope whose element is
 **its parent's**, so it can carry the families that need one and take them all
@@ -551,6 +551,33 @@ This is also why `:style-` did not come with it. A style property is
 single-valued: two declarations of `color` need an owner in a way two
 declarations of a class never do, so it belongs with the attributes rather than
 with the classes it is spelled like.
+
+## What ownership came to
+
+`:attr-` and plain attributes work, and the layering rule turned out to be
+smaller in code than in prose. **Nothing is remembered.** A mode records which
+value keys it wrote; on the way out it takes the attribute off and asks the
+scope that owns the element to say what it should be — which is not a restore
+from a snapshot but a re-run of a declaration that was live the whole time.
+
+Two things it needed that the design did not say:
+
+- **A value only announces itself when it changes**, so marking the one
+  underneath dirty re-evaluated it to what it already held and told nobody.
+  Clearing what it holds is what makes saying it again a change.
+- **The attribute comes off first, in every case.** Where nobody underneath
+  declares it, that is the whole of the answer; where somebody does, the
+  re-run writes over it immediately. Ordering it the other way leaves the
+  mode's value standing whenever the owner's evaluates to nothing.
+
+**`:prop-` is refused for good rather than deferred.** A DOM property is state
+on an element instance: there is no declaration underneath to hand it back to,
+and no such thing as unsetting one. That is a different answer from `:style-`,
+which is merely unbuilt.
+
+**A static plain attribute is refused too**, and for a reason worth saying: a
+mode has no markup of its own, so a static one would be written nowhere at all
+— the silent kind of nothing.
 
 ## What is still open
 

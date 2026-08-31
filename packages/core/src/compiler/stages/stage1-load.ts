@@ -627,6 +627,7 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
     }
   }
   extractValues(page, scope, e);
+  refuseModeOverlap(page, e);
   let i = -1;
   // what an `:else` here would be continuing: the previous element sibling
   // and the scope it got, kept as the walk goes because that is the only
@@ -1045,12 +1046,25 @@ const MODE_FORBIDDEN_ATTRS: [string, string][] = [
 ];
 /** and what is merely not built yet, said as that rather than as a rule */
 const MODE_UNBUILT_PREFIXES: [string, string][] = [
-  [PRESENCE_VALUE_ATTR_PREFIX, 'an attribute has one owner at a time and handing it back is not built'],
-  [PROP_VALUE_ATTR_PREFIX, 'a DOM property has one owner at a time and handing it back is not built'],
-  // `:style-` is single-valued per property, so it is the attribute question
-  // wearing different punctuation: two declarations of `color` need an owner,
-  // where two of `:class-x` simply both add. Classes are built; this waits
+  // `:style-` is the attribute question wearing different punctuation -- two
+  // declarations of `color` need an owner, where two of `:class-x` simply both
+  // add -- and the style machinery diffs a base the way the class one does, so
+  // it wants the same empty-base treatment before it can be handed back
   [STYLE_VALUE_ATTR_PREFIX, 'a style property has one owner at a time and handing it back is not built'],
+];
+/**
+ * And what a mode refuses for good: a DOM property is state on an element
+ * INSTANCE, so there is no declaration underneath to hand it back to and no
+ * such thing as unsetting one. Everything else a mode carries can be given
+ * back by asking whoever owns the element to say again what it should be.
+ */
+const MODE_REFUSED_PREFIXES: [string, string][] = [
+  [
+    PROP_VALUE_ATTR_PREFIX,
+    'a DOM property is state on the element itself, so there is nothing ' +
+      'underneath to hand it back to -- set it on the element, from an ' +
+      'expression that reads the same condition',
+  ],
 ];
 
 const LOGIC_FORBIDDEN_ATTRS: [string, string][] = [
@@ -1150,6 +1164,45 @@ function modeWithChildren(page: Page, e: ServerElement): void {
   e.setAttribute(`${SPECIAL_ATTR_PREFIX}${FOR_AS_ATTR}`, '_mode', e.loc);
 }
 
+/**
+ * Two modes on one element declaring the same single-valued thing.
+ *
+ * A class is a set and two modes adding one are not in conflict; an attribute
+ * is not, so a second declaration of it is a second answer to the same
+ * question. Precedence between siblings is a rule nobody could guess, so this
+ * is refused rather than settled by which was written first.
+ *
+ * `:priority` is what will lift it -- equal ranks refusing, declared ranks
+ * deciding -- and is not built, so the message says the shape that works
+ * today rather than naming a spelling that does nothing.
+ */
+function refuseModeOverlap(page: Page, e: ServerElement): void {
+  const claims = new Map<string, ServerElement>();
+  for (const child of e.childNodes) {
+    const el = child as ServerElement;
+    if (el.tagName !== MODE_DIRECTIVE_TAG) continue;
+    for (const name of el.getAttributeNames()) {
+      const single = name.startsWith(SPECIAL_ATTR_PREFIX)
+        ? name.startsWith(`${SPECIAL_ATTR_PREFIX}${PRESENCE_VALUE_ATTR_PREFIX}`)
+          ? name.slice(`${SPECIAL_ATTR_PREFIX}${PRESENCE_VALUE_ATTR_PREFIX}`.length)
+          : undefined
+        : name;
+      if (!single) continue;
+      if (claims.has(single)) {
+        addError(
+          page,
+          `two modes on this element both set "${single}", and an attribute ` +
+            `has one owner at a time. Move it to the element, from an ` +
+            `expression that reads both conditions`,
+          el.loc
+        );
+        continue;
+      }
+      claims.set(single, el);
+    }
+  }
+}
+
 function loadMode(page: Page, parent: Scope, e: ServerElement): void {
   const what = `<${MODE_DIRECTIVE_TAG.toLowerCase()}>`;
   for (const [attr, why] of MODE_FORBIDDEN_ATTRS) {
@@ -1159,16 +1212,23 @@ function loadMode(page: Page, parent: Scope, e: ServerElement): void {
     const found = e.getAttributeNames().find(n => n.startsWith(`${SPECIAL_ATTR_PREFIX}${prefix}`));
     found && addError(page, `${what} does not take "${found}" yet: ${why}`, e.loc);
   }
-  // A plain attribute is the same question as `:attr-`, and gets the same
-  // answer while ownership is unbuilt
-  for (const name of e.getAttributeNames()) {
-    if (name.startsWith(SPECIAL_ATTR_PREFIX)) continue;
-    addError(
-      page,
-      `${what} does not take the plain attribute "${name}" yet: an attribute ` +
-        `has one owner at a time and handing it back is not built`,
-      e.loc
-    );
+  for (const [prefix, why] of MODE_REFUSED_PREFIXES) {
+    const found = e.getAttributeNames().find(n => n.startsWith(`${SPECIAL_ATTR_PREFIX}${prefix}`));
+    found && addError(page, `${what} has no "${found}": ${why}`, e.loc);
+  }
+  // A plain attribute has to be an expression here. A static one is markup,
+  // and this tag's markup is removed -- so it would be written nowhere, which
+  // is the silent kind of nothing
+  for (const attr of e.attributes as ServerAttribute[]) {
+    if (attr.name.startsWith(SPECIAL_ATTR_PREFIX)) continue;
+    typeof attr.value === 'string' &&
+      addError(
+        page,
+        `${what} needs "${attr.name}" to be an expression: a mode has no ` +
+          `markup of its own for a plain attribute to be written in, so it ` +
+          `sets one on the element it is in -- write "${attr.name}=\${...}"`,
+        e.loc
+      );
   }
   const scope = new Scope(page, parent, e);
   page.modeScopes.add(scope);

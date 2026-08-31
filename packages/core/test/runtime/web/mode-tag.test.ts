@@ -123,10 +123,12 @@ describe('<:mode>', () => {
     // Saying "not yet" is the difference between a tag that is unfinished and
     // one that is quietly wrong
     const cases: [string, RegExp][] = [
-      [':attr-open=${true}', /does not take ":attr-open" yet/],
-      [':prop-value=${1}', /does not take ":prop-value" yet/],
       [':style-color=${"red"}', /does not take ":style-color" yet/],
-      ['title="t"', /does not take the plain attribute "title" yet/],
+      // not "yet": a DOM property is state on the element itself, so there is
+      // no declaration underneath for a mode to hand it back to
+      [':prop-value=${1}', /nothing underneath to hand it back to/],
+      // and a static plain attribute would be written nowhere at all
+      ['title="t"', /needs "title" to be an expression/],
     ];
     for (const [attr, message] of cases) {
       const page = compile(`<html><body><div><:mode ${attr} /></div></body></html>`);
@@ -186,6 +188,65 @@ describe('<:mode>', () => {
     expect(painted(r as any)).toBe('card dragging');
     r.ctx!.root.proxy.on = false;
     expect(painted(r as any)).toBe('card');
+  });
+
+  it('sets an attribute nobody else declares, and takes it away again', () => {
+    const r = live(
+      '<html :on=${false}><body><div>' +
+        '<:mode :if=${on} :attr-draggable=${true} />x</div></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    const el = find((r.doc as any).documentElement, 'DIV');
+    expect(el.getAttribute('draggable')).toBe(null);
+    r.ctx!.root.proxy.on = true;
+    expect(el.getAttribute('draggable')).toBe('');
+    r.ctx!.root.proxy.on = false;
+    // it existed only because the mode did
+    expect(el.getAttribute('draggable')).toBe(null);
+  });
+
+  it('overrides one the element declares, and hands it back', () => {
+    // nothing is remembered: what an element's `title` is, is whatever the
+    // innermost live declaration says, and the one underneath was live the
+    // whole time -- so handing back is asking it to say again
+    const r = live(
+      '<html :on=${false} :t=${"base"}><body>' +
+        '<div title=${t}><:mode :if=${on} title=${"MODE"} />x</div></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    const el = find((r.doc as any).documentElement, 'DIV');
+    expect(el.getAttribute('title')).toBe('base');
+
+    r.ctx!.root.proxy.on = true;
+    expect(el.getAttribute('title')).toBe('MODE');
+
+    r.ctx!.root.proxy.on = false;
+    expect(el.getAttribute('title')).toBe('base');
+
+    // and the element's own declaration was never anything but live
+    r.ctx!.root.proxy.t = 'CHANGED';
+    expect(el.getAttribute('title')).toBe('CHANGED');
+  });
+
+  it('refuses two modes claiming one attribute', () => {
+    const page = compile(
+      '<html :a=${true} :b=${true}><body><div>' +
+        '<:mode :if=${a} :attr-hidden=${true} />' +
+        '<:mode :if=${b} :attr-hidden=${false} />x</div></body></html>'
+    );
+    expect(page.errors.map(e => e.msg).join()).toMatch(
+      /two modes on this element both set "hidden"/
+    );
+  });
+
+  it('lets two modes add the same class, which is no conflict at all', () => {
+    // the difference the refusal above turns on: a class list is a set
+    const page = compile(
+      '<html :a=${true} :b=${true}><body><div>' +
+        '<:mode :if=${a} :class-busy />' +
+        '<:mode :if=${b} :class-busy />x</div></body></html>'
+    );
+    expect(page.errors).toStrictEqual([]);
   });
 
   it('builds and destroys its children, rather than parking them', () => {
