@@ -451,6 +451,11 @@ the page rather than to anything on it had to invent a `<span>` to live on
 before this existed — and that `<span>` is then real: in the document, in the
 accessibility tree, and in the way of `:first-child`
 
+NOTE: give it a condition — `<:logic :if=${dragging}>` — and the condition
+becomes its lifetime, so `:did-init` and `:will-dispose` are where a listener
+is registered and released. `<:mode>` is the same idea on the nearest element
+above it, for a modality that element enters and leaves
+
 NOTE: `:_timer` is private by convention, not by rule — a leading underscore
 is how the kits mark a value that is the component's own business
 

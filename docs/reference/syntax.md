@@ -958,20 +958,44 @@ which is the point when what it declares is behaviour rather than data:
         :will-dispose=${() => clearInterval(_timer)} />
 ```
 
-What it refuses, in both cases because there is no element:
+**It takes a condition, and the condition is its lifetime.** `:if`,
+`:else-if`, `:else` and `:for-data` are what decide whether the scope exists
+at all — so `:did-init` runs when the condition becomes true and
+`:will-dispose` when it stops being, once per lifetime as always, with the
+lifetimes now able to repeat:
+
+```html
+<!-- listening only while dragging, and nowhere else -->
+<:logic :if=${dragging}
+        :_move=${(e) => track(e)}
+        :did-init=${() => window.addEventListener('pointermove', _move)}
+        :will-dispose=${() => window.removeEventListener('pointermove', _move)} />
+```
+
+A **named** one that may come and go is a name that may not answer, so every
+reference to it needs `?.` — `${app?.foo}` — and the compiler says so rather
+than letting the read be evaluated once against a name that was not there. See
+[a name inside a region is read with `?.`](#a-name-inside-a-region-is-read-with-).
+
+What it refuses, because there is no element:
 
 | | |
 | --- | --- |
 | `:class-`, `:style-`, `:on-`, plain attributes | nothing to apply them to |
-| `:for-each`, `:for-data`, `:if`, `:else-if`, `:else`, `:slot` | nothing to replicate, show, or slot |
+| `:for-each`, `:slot` | nothing to replicate or slot |
 | content of any kind | it holds values, not markup |
+
+`:for-each` stays refused where the conditionals are allowed, and the
+difference is the point: the objection there was never lifetime but **arity**.
+A name that means as many scopes as there are items is not fixed by knowing
+when each of them ends.
 
 And where it refuses to go: inside a `:for-each`, a `:for-data`, an `:if`, a
 `<:define>`, or a custom tag's content. Each of those turns a declaration
 that reads as one-per-page into one per item, one per instance, or one that
 comes and goes — a timer started per row is not something to discover at
-runtime. Every one of them is a coherent feature on its own; none of them is
-this one.
+runtime. A condition written **on** the `<:logic>` is the supported way to
+have one that comes and goes, and says so where a reader is looking.
 
 ### `:logic` as a base tag — a definition with no element
 
@@ -991,7 +1015,9 @@ attribute to hide it. This is `std-data`'s own definition, and what it used
 to be was `tag="std-data:span" hidden`.
 
 It takes the same refusals as `<:logic>`: nothing that needs an element to
-apply to, and no content. It does **not** take `<:logic>`'s placement
+apply to, and no content. Its instances take a condition the same way, and
+mean the same thing by it — `<std-data :if=${open} />` opens its socket when
+the panel opens and closes it when the panel closes. It does **not** take `<:logic>`'s placement
 rules — a `<:logic>` is a singleton declaration, so it is refused where it
 would silently become many, while an instance is written deliberately and
 `<std-data :for-each=${urls} />` means exactly what it says.
@@ -999,6 +1025,55 @@ would silently become many, while an instance is written deliberately and
 The base tag is spelled out rather than left off. `tag="my-panel"` with no
 base at all would read as this, and it is much more often a typo — so it
 stays the error it has always been.
+
+### `<:mode>` — a scope on its parent's element
+
+**Partly built: handlers only.** Everything else it will carry is refused with
+a message saying so. See
+[conditional scopes](../design/conditional-scopes.md) for the whole design.
+
+A `<:logic>` has no element and wants none. A **mode** has none of its own and
+borrows the nearest one above it, which is what lets it carry the families
+that need an element — and take them back when its condition goes false:
+
+```html
+<div class="card">
+  <:mode :if=${dragging} :on-pointermove=${(e) => track(e)} />
+  …the card, which never re-renders…
+</div>
+```
+
+**The element stays.** That is the whole difference from `:if` on the element,
+which takes the markup away and loses focus, scroll position and anything else
+the DOM was holding — and from a handler bound once and guarded from inside,
+which goes on firing for every `pointermove` in order to decide it has nothing
+to do.
+
+A mode is a scope, so it holds values of its own, and they last exactly as
+long as the modality does:
+
+```html
+<:mode :if=${editing} :_from=${null} :on-pointerup=${() => commit(_from)} />
+```
+
+`_from` belongs to the edit rather than to the card, and it is gone when the
+edit is. That is the argument for the tag more than the listener is: without
+it, a modality's state lives on the element and has to be cleared by hand.
+
+What it takes today: `:on-`, values of its own, the lifecycle callbacks, a
+condition, and `:aka`. What it refuses:
+
+| | |
+| --- | --- |
+| `:for-each`, `:for-as`, `:for-key` | one delta on one element — nothing to replicate |
+| `:slot` | no markup to put in a slot |
+
+And what is **not built yet**, each refused in those words rather than
+half-applied: `:class-`, `:style-`, `:attr-`, `:prop-`, plain attributes, and
+content. The first four all need one answer — an attribute or a class has one
+owner at a time, and handing it back is the part that is not written. Until it
+is, put the paint on the element with an expression that reads the same
+condition, and the markup in a `<:group>` beside the mode.
 
 ### A base tag is a real element
 

@@ -310,8 +310,16 @@ A group carries directives only. There is no element for `class` or a
 handler to land on and no scope for a value to live in, and both are compile
 errors rather than silent drops —
 [`<:logic>`](../reference/syntax.md#logic--a-scope-with-no-element) is the
-tag for a scope with no element of its own. See
+tag for a scope with no element of its own, and
+[`<:mode>`](../reference/syntax.md#mode--a-scope-on-its-parents-element) the
+one for a scope on the element above it. See
 [`<:group>` in the syntax reference](../reference/syntax.md#group--a-branch-or-a-replica-with-no-element).
+
+Which of the three a piece of markup wants is the same question three ways.
+`<:group>` is markup that needs no element; `<:logic>` is a scope that needs
+none; `<:mode>` is a scope that needs somebody else's, because what it
+declares — a handler, and the state that goes with it — belongs to a modality
+the element is in rather than to the element.
 
 ## Optional rendering
 
