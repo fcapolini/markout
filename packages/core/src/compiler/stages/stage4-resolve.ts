@@ -912,16 +912,19 @@ function reachable(
       }
     }
     const written = (host.values.get(region)!.node as ServerAttribute).name;
-    // named by the segment BEFORE this one: `at` is what we are navigating
-    // to, and there is always a previous segment, since at the first the host
-    // would be the scope this expression sits in and the walk above would
-    // have found it
     const path = segments.slice(at).map(s => s.name).join('.');
-    const through = segments[at - 1].name;
+    // The segment BEFORE this one is what the page navigated through, and
+    // naming it locates the crossing. There is not always one. `at` is the
+    // segment that lands inside, and it is the FIRST whenever the region host
+    // is UNNAMED: `<div :if>` around `<span :aka="field">` is reached as
+    // `field.text`, where a named host would have made it `panel.field.text`.
+    // Then there is no crossing to name -- the reference starts inside -- and
+    // saying so is the whole of the difference between the two wordings.
+    const via = at > 0 ? ` through "${segments[at - 1].name}"` : '';
     if (region === FOR_EACH_VALUE) {
       addError(
         page,
-        `Cannot read "${path}" through "${through}": "${segments[at].name}" is ` +
+        `Cannot read "${path}"${via}: "${segments[at].name}" is ` +
           `inside a "${written}", which renders it once per item -- so the name ` +
           `means as many scopes as there are items and none of them in ` +
           `particular. Declare what the outside needs to read outside the loop`,
@@ -941,7 +944,7 @@ function reachable(
       const rest = segments.slice(at + 1).map(s => s.name).join('.');
       addError(
         page,
-        `Cannot assign to "${path}" through "${through}": ` +
+        `Cannot assign to "${path}"${via}: ` +
           `"${segments[at].name}" is inside a "${written}", so it is there ` +
           `only while that region is showing, and "?." cannot go on the left ` +
           `of an "=". Write it as "${target}?.${RT_SET_FN_KEY}('${rest}', ...)", ` +

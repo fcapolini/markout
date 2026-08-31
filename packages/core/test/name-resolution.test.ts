@@ -187,6 +187,72 @@ describe('a name inside a region', () => {
     expect(r.errors[0]).toMatch(/Read it as "panel\.field\?\.text"/);
   });
 
+  /**
+   * The same rule, with the region host UNNAMED -- which is what makes the
+   * name that lands inside the FIRST segment of the chain rather than the
+   * second. Every case above reaches `panel.field`, so there was always a
+   * segment before the crossing to name; here there is not, and reading
+   * `segments[at - 1]` for it threw `Cannot read properties of undefined`
+   * out of the compiler instead of reporting anything. The `?.` case threw
+   * too, since the name was built before the guard was checked -- so the
+   * crash landed on the one spelling that was supposed to be accepted.
+   */
+  const BARE = '<div :if=${on}><span :aka="field" :text=${msg}></span></div>';
+
+  it('refuses the unguarded read with no host to name', () => {
+    const r = run(
+      '<html :on=${true} :msg=${"A"}><body>' +
+        BARE +
+        '<i>${field.text}</i></body></html>'
+    );
+    expect(r.errors).toHaveLength(1);
+    expect(r.errors[0]).toMatch(/"field" is inside a ":if"/);
+    expect(r.errors[0]).toMatch(/Read it as "field\?\.text"/);
+    // the wording that has nothing to fill it in
+    expect(r.errors[0]).not.toMatch(/through/);
+  });
+
+  it('accepts the guarded read with no host to name', () => {
+    const r = live(
+      '<html :on=${false} :msg=${"A"}><body>' +
+        BARE +
+        '<i>${field?.text ?? "away"}</i></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    expect(r.read()).toBe('away');
+
+    r.ctx.root.proxy['on'] = true;
+    expect(r.read()).toBe('A');
+
+    r.ctx.root.proxy['on'] = false;
+    expect(r.read()).toBe('away');
+    expect(r.runtime).toStrictEqual([]);
+  });
+
+  it('sends an assignment with no host to name to $set', () => {
+    const r = run(
+      '<html :on=${true} :msg=${"A"}><body>' +
+        BARE +
+        '<button :on-click=${() => field.text = "X"}>b</button></body></html>'
+    );
+    expect(r.errors).toHaveLength(1);
+    expect(r.errors[0]).toMatch(/Cannot assign to "field\.text":/);
+    expect(r.errors[0]).toMatch(/Write it as "field\?\.\$set\('text', \.\.\.\)"/);
+    expect(r.errors[0]).not.toMatch(/through/);
+  });
+
+  it('refuses a :for-each with no host to name, and gets to say why', () => {
+    // this one had the message ready and crashed before printing it
+    const r = run(
+      '<html><body><div :for-each=${[1, 2]}>' +
+        '<span :aka="pane" :open=${1}></span></div>' +
+        '<i>${pane?.open}</i></body></html>'
+    );
+    expect(r.errors).toHaveLength(1);
+    expect(r.errors[0]).toMatch(/once per item/);
+    expect(r.errors[0]).not.toMatch(/through/);
+  });
+
   it('names the directive as the page spelled it', () => {
     // `:else` compiles to the same value `:if` does, and being told about an
     // ":if" that is not in the source is a puzzle rather than a report
