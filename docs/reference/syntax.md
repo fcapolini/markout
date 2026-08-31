@@ -1141,10 +1141,8 @@ resolved by position among siblings and a mode's condition becomes an arity.
 | a *static* plain attribute | a mode has no markup of its own for one to be written in — `title=${…}` sets it on the element |
 
 And what is **not built yet**: `:style-`, whose machinery diffs a base the way
-classes do and wants the same empty-base treatment first, and **`:priority`**,
-which is what will let two modes declare one attribute — equal ranks refusing,
-declared ranks deciding. Until then, put a style on the element itself with an
-expression that reads the same condition.
+classes do and wants the same empty-base treatment first. Until then, put a
+style on the element itself with an expression that reads the same condition.
 
 ### A base tag is a real element
 

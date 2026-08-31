@@ -1,6 +1,6 @@
 # Conditional scopes, and modes on an element
 
-Status: **rules 1 and 2 built; rule 3 all but `:style-` and `:priority`.** One crash found
+Status: **rules 1 and 2 built; rule 3 all but `:style-`.** One crash found
 while checking them and fixed on the way (`cae581a`). Prompted by asking what
 markout misses next to OpenLaszlo's `<state>` tag — the answer is *not that
 tag*.
@@ -151,9 +151,8 @@ it. See *What the crash was* below.
 
 ### 3. `<:mode>` — a scope on its parent's element
 
-*Built except `:style-` and `:priority`, both refused in so many words — see*
-What slice 1 built, What slice 2 needed, What classes settled *and* What
-ownership came to.
+*Built except `:style-`, refused in so many words — see* What slice 1 built,
+What slice 2 needed, What classes settled *and* What ownership came to.
 
 `<:logic>` is a scope with **no** element. A mode is a scope whose element is
 **its parent's**, so it can carry the families that need one and take them all
@@ -578,6 +577,18 @@ which is merely unbuilt.
 **A static plain attribute is refused too**, and for a reason worth saying: a
 mode has no markup of its own, so a static one would be written nowhere at all
 — the silent kind of nothing.
+
+**`:priority` is a list rather than a comparison.** The claimants on one key
+live on the scope that owns the element, sorted by rank, and only the first of
+them writes. Two at the same rank were refused at compile time, so the order is
+total and nothing at runtime has to guess — which is the whole reason a rank
+has to be a number written in the page. Releasing pops the claim and hands the
+attribute to the next one down: to a lower-ranked mode if one is waiting, and
+to the element's own declaration only when none is.
+
+The rank is taken off the element before its values are extracted, or
+`:priority` would read as a local named `priority` — a value nobody declared
+and nothing reads.
 
 ## What is still open
 
