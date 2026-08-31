@@ -179,19 +179,44 @@ Three things follow, and the third is the one that earns the feature:
   it has to live on the card and be nulled by hand when the drag ends, which is
   the same bug everybody writes once.
 
-**Decided: a mode may carry only what it can take back.** `:on-` unbinds by
-construction. `:class-x` and `:style-x` already have add-and-remove spellings,
-so a composition model exists and reverting is defined. Plain attributes,
-`:attr-` and `:prop-` have none — reverting means remembering what was there
-before, which is state, and two applied modes writing the same attribute makes
-it worse. They are refused, the way `<:logic>` refuses what it has no element
-for. Additive-only is also the restriction that can be widened later without
-breaking a page, which is the direction a rule should be wrong in.
+**Decided: a mode owns what it declares, for as long as it is on.** An earlier
+draft of this section refused plain attributes, `:attr-` and `:prop-`, on the
+grounds that taking them back means remembering what was there before. That
+reasoning was wrong, and the cases it excluded are the obvious ones —
+`contenteditable` while editing, `draggable` in a drag mode, `aria-grabbed`,
+`aria-busy`, `tabindex`, `:attr-disabled` while a form is submitting. Every one
+of them is a modality, and refusing all of them would have made the tag answer
+only half its own use case.
 
-That constraint is what keeps a mode from becoming `<state>` again. `<state>`
-bundled markup, attributes, handlers and paint into one togglable container; a
-mode is a set of **reversible deltas on an element that stays**, and markup is
-not among them — `:if` and `<:group>` already own that question.
+**Nothing is remembered, because nothing is accumulated.** A markout attribute
+is *declared*, not patched: what an element's `title` is, is whatever the
+innermost live declaration says. So reverting is not restoring a snapshot, it
+is re-running the declaration underneath — and that one is still live the whole
+time the mode is on, evaluating as its own dependencies change, simply not the
+one writing. A literal on the parent is the same case with a constant
+expression, which the compiler already knows.
+
+So an attribute has **one owner at a time**, the innermost active declaration,
+and a mode takes ownership while it is on and hands it back when it goes. That
+is a layering rule rather than a composition rule, and it is the right shape
+for single-valued things. `:class-` and `:style-` keep composing as sets, since
+add-and-remove is what they already mean.
+
+**Two modes on the same element declaring the same attribute is the case that
+stays refused**, and it is statically detectable — same parent element, same
+name. Precedence between siblings is a rule nobody could guess, so it is a
+compile error rather than an order-of-appearance answer.
+
+**Overriding the parent is worth being told about**, and there is a precedent
+for exactly that: a usage site whose `class` would replace a component's own
+warns, and `class!=` is the spelling that says the replacement is meant. A mode
+taking over an attribute its parent declares is the same event one level in,
+and should say so the same way.
+
+None of this makes a mode into `<state>` again. `<state>` bundled markup,
+attributes, handlers and paint into one togglable container; a mode carries no
+markup — `:if` and `<:group>` already own that question — and what it does
+carry it owns openly rather than patching.
 
 **The name.** `<:state>` is the worst of the candidates: values already *are*
 state, and every page has them. `<:mixin>` and `<:addon>` suggest composition
@@ -308,42 +333,43 @@ These are implementation questions. None of them changes a rule above.
 
 1. **What two modes on one element do about a `:class-` they both set.** A set
    union with removal on the last leaver is the obvious answer and is not
-   obviously the right one. This moves from theoretical to likely now that page
-   code is the audience: a panel being edited *and* dragged is an ordinary
-   thing to write, where a kit's modalities would more often be designed not to
-   overlap.
+   obviously the right one. Single-valued families avoid the question by
+   refusing the overlap outright, which a set cannot do — `class` composing is
+   the whole point of it. This moves from theoretical to likely now that page
+   code is the audience: a panel being edited *and* dragged is ordinary, where
+   a kit's modalities would more often be designed not to overlap.
 
-2. **What exactly a mode's element is.** Its nearest element ancestor, which
+2. **What the override signal is, exactly.** A mode taking an attribute its
+   parent declares is legitimate and worth saying, on the `class!=` precedent —
+   but whether that is a warning, a spelling, or both is not settled, and the
+   answer wants to be the same one `class!=` gives rather than a second
+   dialect.
+
+3. **What exactly a mode's element is.** Its nearest element ancestor, which
    makes `<:mode>` at the page root an error with nothing to attach to.
    Whether it reaches through a `<:group>`, and what it means inside a
    `<:define>` whose instances each have their own element, both need saying
    before anything is written.
 
-3. **`:did-init` running more than once.** Today it is *once, when this scope
+4. **`:did-init` running more than once.** Today it is *once, when this scope
    has come up*, guarded by an `inited` flag that is never cleared. The rule is
    unchanged — once per lifetime — but lifetimes start multiplying, and
    `inited` has to be reset on dispose. Any `:handle-` on the same scope
    re-runs with it, since it fires once at start.
 
-4. **A mode on the server.** A modality true at render time should arrive
+5. **A mode on the server.** A modality true at render time should arrive
    painted — its `:class-` in the markup — while its listeners stay
    browser-only like every other callback family. That is the existing split,
    but a mode is the first construct where both halves sit in one declaration.
 
-5. **The silent case, before any of this.** `<my-logic :if=${x} />` compiling
-   and reporting nothing is what [silent-failures](silent-failures.md) exists
-   to hunt. Rule 1 fixes it by making the spelling mean something; the stopgap
-   is to refuse region directives on a `:logic`-base usage site. Worth the
-   stopgap only if rule 1 is not coming soon, since it forbids the exact
-   spelling rule 1 makes correct.
-
 ## Order of work
 
-1. **Rule 2's walk correction**, which is a few lines and has its test harness
-   already — and is a prerequisite for rule 1 being safe.
-2. **Rule 1**, which is the `inited` reset, lifting two entries out of
-   `LOGIC_FORBIDDEN_ATTRS`, and disposal on hide for scopes with no `dom`.
-   Closes the silent case as a side effect.
+1. ~~Rule 2's walk correction.~~ **Built**, and not separable from rule 1 —
+   see *What building rules 1 and 2 found*.
+2. ~~Rule 1.~~ **Built.** It closed the silent case that opened this document:
+   `<my-logic :if=${x} />` compiled and reported nothing across a toggle, which
+   is the shape [silent-failures](silent-failures.md) exists to hunt, and now
+   the spelling means something.
 3. **Rule 3**, which is a smaller delta than when this was written. A mode is a
    conditional scope that borrows its parent's element, and conditional scopes
    are done: lifetime, disposal, name absence and reader wiring all arrive from
