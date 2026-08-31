@@ -244,6 +244,15 @@ export const LOGIC_BASE_TAG = 'logic';
  * See docs/design/conditional-scopes.md.
  */
 export const MODE_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'MODE';
+/**
+ * `:priority` on a `<:mode>`: which of two claims an attribute answers to.
+ *
+ * Opt-in, and absent is the default every mode shares. Two at the same rank
+ * declaring one attribute is refused, since precedence between siblings is a
+ * rule nobody could guess; give one a rank the other has not got and the
+ * higher owns it while both are on, with the lower resuming when it leaves.
+ */
+export const MODE_PRIORITY_ATTR = 'priority';
 // `<:slot name="header">`; a slot with no name is the default one, taking
 // everything a usage site doesn't address to another
 export const SLOT_NAME_ATTR = 'name';
@@ -370,9 +379,15 @@ export class Page {
    * until every `<:define>` on the page has been read.
    */
   logicScopes: Map<Scope, string[]>;
-  /** every `<:mode>` scope: elementless like a `<:logic>`, but acting on the
-   * nearest element above it rather than on nothing */
-  modeScopes: Set<Scope>;
+  /**
+   * Every `<:mode>` scope, against the rank it declared.
+   *
+   * Elementless like a `<:logic>`, but acting on the nearest element above it
+   * rather than on nothing -- and where two of them want the same attribute,
+   * the rank is what decides. Absent is zero, which is what every mode shares
+   * until one says otherwise.
+   */
+  modeScopes: Map<Scope, number>;
   /** custom tags declared `tag="x:logic"`: their instances have no element,
    *  so no stencil is emitted and no usage marker is left for one */
   elementlessTags: Set<string>;
@@ -520,7 +535,7 @@ export class Page {
     this.slottedInto = new Map();
     this.definitionScopes = new Set();
     this.logicScopes = new Map();
-    this.modeScopes = new Set();
+    this.modeScopes = new Map();
     this.elementlessTags = new Set();
     this.usedTags = new Set();
     this.tagUses = new Map();

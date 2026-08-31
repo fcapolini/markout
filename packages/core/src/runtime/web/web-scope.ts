@@ -717,7 +717,7 @@ export class WebScope extends CoreScope {
       }
       ret.setCB((_, val) => {
         if (!this.dom) return this.unbound(ret, `no element to set "${name}" on`);
-        this.claim(key);
+        if (!this.claim(key)) return;
         if (val == null) {
           this.dom.removeAttribute(name);
         } else {
@@ -741,7 +741,7 @@ export class WebScope extends CoreScope {
       const name = key.slice(RT_PRESENCE_VALUE_PREFIX.length);
       ret.setCB((_, val) => {
         if (!this.dom) return this.unbound(ret, `no element to toggle "${name}" on`);
-        this.claim(key);
+        if (!this.claim(key)) return;
         // empty string, not "true": an HTML boolean attribute means true by
         // being present at all, and that is the form every browser writes
         val ? this.dom.setAttribute(name, '') : this.dom.removeAttribute(name);
@@ -1114,30 +1114,66 @@ export class WebScope extends CoreScope {
   private releaseOwned(): void {
     if (!this.owned?.size || !this.dom) return;
     const owner = this.borrowedFrom;
-    let ask = false;
+    const wake = new Set<WebScope>();
     for (const key of this.owned) {
+      const list = owner?.claimants?.get(key);
+      const i = list?.indexOf(this) ?? -1;
+      i >= 0 && list!.splice(i, 1);
       // off first, in every case: what the mode wrote is the mode's, and if
-      // nobody underneath says otherwise the attribute existed only because
-      // it did
+      // nobody says otherwise the attribute existed only because it did
       this.dom.removeAttribute(key.slice(key.indexOf('$') + 1));
-      const under = owner?.values[key];
-      if (!under) continue;
-      // A value only announces itself when it CHANGES, and the one underneath
-      // has been answering the same thing all along -- so marking it dirty
-      // alone would re-evaluate it to what it already held and tell nobody.
-      // Clearing what it holds is what makes saying it again a change
-      (under as unknown as { value?: unknown }).value = undefined;
-      under.dirty = true;
-      ask = true;
+      // the next claim down, if a lower-ranked mode was waiting under this
+      // one, and the element's own declaration otherwise
+      const next = list?.[0];
+      if (next && WebScope.resay(next, key)) {
+        wake.add(next);
+        continue;
+      }
+      owner && WebScope.resay(owner, key) && wake.add(owner);
     }
     this.owned.clear();
-    ask && owner && this.ctx.refresh(owner);
+    wake.forEach(scope => this.ctx.refresh(scope));
   }
 
-  /** notes that this mode now writes `key`, so it can hand it back later */
-  private claim(key: string): void {
-    if (!this.props.mode) return;
+  /**
+   * Whether this scope may write `key`, and a note that it wants to.
+   *
+   * The claimants on one key live on the scope that OWNS the element, sorted
+   * by rank, and only the first of them writes. Two at the same rank were
+   * refused at compile time, so the order is total and nothing here has to
+   * guess. A scope that is not a mode owns its own element and answers yes
+   * without bookkeeping.
+   */
+  private claim(key: string): boolean {
+    if (!this.props.mode) return true;
+    const owner = this.borrowedFrom;
+    if (!owner) return true;
     (this.owned ??= new Set()).add(key);
+    const list: WebScope[] = (owner.claimants ??= new Map()).get(key) ?? [];
+    if (!list.includes(this)) {
+      list.push(this);
+      list.sort((a, b) => (b.props.priority ?? 0) - (a.props.priority ?? 0));
+      owner.claimants.set(key, list);
+    }
+    return list[0] === this;
+  }
+
+  /** modes currently claiming each key, highest rank first; on the owner */
+  declare private claimants?: Map<string, WebScope[]>;
+
+  /**
+   * Makes a value say again what it already says.
+   *
+   * A value only announces itself when it CHANGES, so the one being handed an
+   * attribute back would re-evaluate to what it already held and tell nobody.
+   * Clearing what it holds is what makes saying it again a change.
+   */
+  private static resay(scope: WebScope, key: string): boolean {
+    const value = scope.values[key];
+    if (!value) return false;
+    (value as unknown as { value?: unknown }).value = undefined;
+    value.dirty = true;
+    return true;
   }
 
   /**

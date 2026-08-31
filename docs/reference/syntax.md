@@ -1028,8 +1028,8 @@ stays the error it has always been.
 
 ### `<:mode>` — a scope on its parent's element
 
-**Partly built: handlers, children, classes and attributes.** Styles and
-`:priority` are refused with a message saying so. See
+**Partly built: everything but `:style-`**, which is refused with a message
+saying so. See
 [conditional scopes](../design/conditional-scopes.md) for the whole design.
 
 A `<:logic>` has no element and wants none. A **mode** has none of its own and
@@ -1108,10 +1108,22 @@ own dependencies changed, simply not the one writing. So handing back is asking
 it to say again. Where nobody underneath declares it, the attribute existed
 only because the mode did, and goes with it.
 
-Two modes on one element declaring the same attribute is a **compile error**: a
-class is a set and two modes adding one are no conflict, but an attribute is
-one answer to one question, and precedence between siblings is a rule nobody
-could guess.
+Two modes on one element declaring the same attribute **at the same rank** is a
+compile error: a class is a set and two modes adding one are no conflict, but
+an attribute is one answer to one question. `:priority` is what settles it —
+higher owns the attribute while both are on, and hands it back down the stack
+rather than to the element when it leaves:
+
+```html
+<div title=${label}>
+  <:mode :if=${editing} title=${"Editing"} />
+  <:mode :if=${dragging} :priority=${1} title=${"Drop me somewhere"} />
+</div>
+```
+
+Absent is the rank every mode shares, and it has to be a **number written
+there**: one worked out while the page runs could tie, and the error this
+exists to give would arrive as a silent last-write-wins instead.
 
 What it takes today: `:on-`, `:class-`, `:attr-`, plain attributes written as
 expressions, children, values of its own, the lifecycle callbacks, a condition,

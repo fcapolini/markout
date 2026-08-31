@@ -131,6 +131,11 @@ export interface CoreScopeProps {
    * element it owns.
    */
   mode?: boolean;
+  /**
+   * Which of two modes owns an attribute they both declare: higher wins,
+   * absent is zero, and two at the same rank were refused at compile time.
+   */
+  priority?: number;
   /** markup written at a usage site and slotted into the instance: it lives
    * here but resolves names from outside (see lexicalParent()) */
   slotted?: boolean;
@@ -1374,6 +1379,7 @@ export class CoreScope {
       // silently absent -- which for this one meant a replica with no element
       // to bind its handlers on, reported as a binding that found nothing
       mode: this.props.mode,
+      priority: this.props.priority,
       elementless: this.props.elementless,
       children: this.props.children,
       values: this.props.values,

@@ -228,14 +228,52 @@ describe('<:mode>', () => {
     expect(el.getAttribute('title')).toBe('CHANGED');
   });
 
-  it('refuses two modes claiming one attribute', () => {
+  it('refuses two modes claiming one attribute at the same rank', () => {
     const page = compile(
       '<html :a=${true} :b=${true}><body><div>' +
         '<:mode :if=${a} :attr-hidden=${true} />' +
         '<:mode :if=${b} :attr-hidden=${false} />x</div></body></html>'
     );
     expect(page.errors.map(e => e.msg).join()).toMatch(
-      /two modes on this element both set "hidden"/
+      /both set "hidden" at priority 0/
+    );
+    // and names the spelling that lifts it, rather than only what does not work
+    expect(page.errors.map(e => e.msg).join()).toMatch(/":priority"/);
+  });
+
+  it('lets declared ranks decide, and hands back down the stack', () => {
+    const r = live(
+      '<html :a=${false} :b=${false}><body><div title=${"base"}>' +
+        '<:mode :if=${a} title=${"LOW"} />' +
+        '<:mode :if=${b} :priority=${1} title=${"HIGH"} />x</div></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    const el = find((r.doc as any).documentElement, 'DIV');
+    expect(el.getAttribute('title')).toBe('base');
+
+    r.ctx!.root.proxy.a = true;
+    expect(el.getAttribute('title')).toBe('LOW');
+
+    // the higher rank takes it while both are on
+    r.ctx!.root.proxy.b = true;
+    expect(el.getAttribute('title')).toBe('HIGH');
+
+    // and gives it back to the one still underneath, not to the element
+    r.ctx!.root.proxy.b = false;
+    expect(el.getAttribute('title')).toBe('LOW');
+
+    r.ctx!.root.proxy.a = false;
+    expect(el.getAttribute('title')).toBe('base');
+  });
+
+  it('refuses a rank it cannot decide at compile time', () => {
+    // one worked out while the page runs could tie, and the error this exists
+    // to give would arrive as a silent last-write-wins instead
+    const page = compile(
+      '<html :n=${2}><body><div><:mode :priority=${n} :attr-x=${1} /></div></body></html>'
+    );
+    expect(page.errors.map(e => e.msg).join()).toMatch(
+      /has to be a number written here/
     );
   });
 

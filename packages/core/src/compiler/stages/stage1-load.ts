@@ -56,6 +56,7 @@ import {
   LOGIC_DIRECTIVE_TAG,
   LOGIC_BASE_TAG,
   MODE_DIRECTIVE_TAG,
+  MODE_PRIORITY_ATTR,
   DEFINE_TAG_ATTR,
   DEFINE_NAME_MARKER,
   REGION_STENCIL_MARKER,
@@ -627,7 +628,14 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
     }
   }
   extractValues(page, scope, e);
-  refuseModeOverlap(page, e);
+  // before the walk below loads any of them, since taking a rank off an
+  // element has to happen before that element's values are extracted
+  const ranks = new Map<ServerElement, number>();
+  for (const child of e.childNodes) {
+    const el = child as ServerElement;
+    el.tagName === MODE_DIRECTIVE_TAG && ranks.set(el, takeModePriority(page, el));
+  }
+  refuseModeOverlap(page, e, ranks);
   let i = -1;
   // what an `:else` here would be continuing: the previous element sibling
   // and the scope it got, kept as the walk goes because that is the only
@@ -649,7 +657,7 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
         continue;
       }
       if (childEl.tagName === MODE_DIRECTIVE_TAG && !childEl.childNodes.length) {
-        loadMode(page, scope, childEl);
+        loadMode(page, scope, childEl, ranks.get(childEl) ?? 0);
         previous = undefined;
         separated = false;
         continue;
@@ -690,7 +698,8 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
         optional && page.optionalStencils.add(stencil);
       }
       const childScope = load(page, scope, childEl);
-      childEl.tagName === MODE_DIRECTIVE_TAG && page.modeScopes.add(childScope);
+      childEl.tagName === MODE_DIRECTIVE_TAG &&
+        page.modeScopes.set(childScope, ranks.get(childEl) ?? 0);
       after && page.elseChains.set(childScope, after);
       previous = { scope: childScope, branch };
       separated = false;
@@ -1176,8 +1185,38 @@ function modeWithChildren(page: Page, e: ServerElement): void {
  * deciding -- and is not built, so the message says the shape that works
  * today rather than naming a spelling that does nothing.
  */
-function refuseModeOverlap(page: Page, e: ServerElement): void {
-  const claims = new Map<string, ServerElement>();
+/**
+ * The rank a `<:mode>` declared, taken off the element before anything reads
+ * it as a value.
+ *
+ * A compile-time constant, or the check that two modes do not tie stops being
+ * one: a rank that is an expression could tie at runtime, and the error this
+ * exists to give would arrive as a silent last-write-wins instead. Absent is
+ * the default every mode shares, and compares as zero.
+ */
+function takeModePriority(page: Page, e: ServerElement): number {
+  const name = `${SPECIAL_ATTR_PREFIX}${MODE_PRIORITY_ATTR}`;
+  const attr = (e.attributes as ServerAttribute[]).find(a => a.name === name);
+  if (!attr) return 0;
+  e.removeAttribute(name);
+  const exp = attr.value as unknown as { type?: string; value?: unknown };
+  const literal = exp?.type === 'Literal' && typeof exp.value === 'number';
+  if (!literal) {
+    addError(
+      page,
+      `"${name}" has to be a number written here: it decides which of two ` +
+        `modes owns an attribute, and one worked out while the page runs ` +
+        `could tie -- which is the error this exists to give, arriving as a ` +
+        `silent last-write-wins instead`,
+      e.loc
+    );
+    return 0;
+  }
+  return exp.value as number;
+}
+
+function refuseModeOverlap(page: Page, e: ServerElement, ranks: Map<ServerElement, number>): void {
+  const claims = new Map<string, { el: ServerElement; rank: number }>();
   for (const child of e.childNodes) {
     const el = child as ServerElement;
     if (el.tagName !== MODE_DIRECTIVE_TAG) continue;
@@ -1188,22 +1227,27 @@ function refuseModeOverlap(page: Page, e: ServerElement): void {
           : undefined
         : name;
       if (!single) continue;
-      if (claims.has(single)) {
+      const rank = ranks.get(el) ?? 0;
+      const seen = claims.get(single);
+      if (seen && seen.rank === rank) {
         addError(
           page,
-          `two modes on this element both set "${single}", and an attribute ` +
-            `has one owner at a time. Move it to the element, from an ` +
-            `expression that reads both conditions`,
+          `two modes on this element both set "${single}" at priority ` +
+            `${rank}, and an attribute has one owner at a time. Give one of ` +
+            `them a "${SPECIAL_ATTR_PREFIX}${MODE_PRIORITY_ATTR}" the other ` +
+            `has not got -- higher wins -- or move it to the element, from ` +
+            `an expression that reads both conditions`,
           el.loc
         );
         continue;
       }
-      claims.set(single, el);
+      // the higher one is the one to report a third claim against
+      (!seen || rank > seen.rank) && claims.set(single, { el, rank });
     }
   }
 }
 
-function loadMode(page: Page, parent: Scope, e: ServerElement): void {
+function loadMode(page: Page, parent: Scope, e: ServerElement, modeRank = 0): void {
   const what = `<${MODE_DIRECTIVE_TAG.toLowerCase()}>`;
   for (const [attr, why] of MODE_FORBIDDEN_ATTRS) {
     hasAttr(e, attr) && addError(page, `${what} ${why}`, e.loc);
@@ -1231,7 +1275,7 @@ function loadMode(page: Page, parent: Scope, e: ServerElement): void {
       );
   }
   const scope = new Scope(page, parent, e);
-  page.modeScopes.add(scope);
+  page.modeScopes.set(scope, modeRank);
   extractValues(page, scope, e);
   e.parentElement?.removeChild(e);
 }

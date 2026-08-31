@@ -798,6 +798,8 @@ interface ScopeData {
   /** a `<:mode>`: elementless, but acting on the nearest element above it,
    * which the runtime borrows and must never move */
   mode?: true;
+  /** and which of two claims on one attribute it wins: higher owns it */
+  priority?: number;
   slotted?: true;
   slottedText?: true;
   elseOf?: string;
@@ -905,6 +907,8 @@ function generateScope(
   }
   if (scope.page.modeScopes.has(scope)) {
     props.mode = true;
+    const rank = scope.page.modeScopes.get(scope)!;
+    rank && (props.priority = rank);
   }
   if (
     scope.page.logicScopes.has(scope) ||
