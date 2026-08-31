@@ -91,15 +91,26 @@ long line:
     <:define tag="my-counter:div"
 
       // parameters
+
       ::start=${0}
       ::step=${1}
 
       // private
+
       :_count=${start}
 
       // read from outside
+
       :value=${_count}
-      :bump=${() => _count += step}
+      :bump=${() => {
+        /*
+         since properties are reactive,
+         this assignment transparently updates all
+         dependents of `_count`
+        */
+        _count += step;
+      }}
+
     >${_count}</:define>
 
     <my-counter :aka="clicks" ::start=${5} ::step=${2} />
