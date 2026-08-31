@@ -31,17 +31,23 @@ what a method costs in dependency terms.
 ## Declaring values
 
 Use `:name=${expr}` on an element to declare a value on that element's scope.
+Everything nested inside that element can then read it, which is what decides
+where a value goes: the nearest element containing everything that reads it.
 
 ```html
-<html :count=${0} :light=${true}>
-  <body>
+<html :light=${true}>
+  <head>
+    <style>body { color: ${light ? 'black' : 'white'} }</style>
+  </head>
+  <body :count=${0}>
     <p>Clicked ${count} times</p>
   </body>
 </html>
 ```
 
-The element's descendants can read `count` and `light` directly through lexical
-scope lookup.
+`light` is on `<html>` because the stylesheet in `<head>` and anything in
+`<body>` both read it. `count` is on `<body>` because only the paragraph does.
+Nothing is registered anywhere: the nesting already says what can see what.
 
 ### Values the compiler works out
 

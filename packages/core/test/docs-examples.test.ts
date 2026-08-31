@@ -41,6 +41,21 @@ function expectClean(result: Awaited<ReturnType<typeof render>>) {
 }
 
 describe('docs/concepts/values.md', () => {
+  // "Declaring values": the example makes a claim about PLACEMENT -- `light` on
+  // <html> because both halves read it, `count` on <body> because one does --
+  // so both reads are checked, in the head and in the body.
+  it('renders the declaring-values example, in both halves', async () => {
+    const result = await render(
+      '<html :light=${true}><head>' +
+        "<style>body { color: ${light ? 'black' : 'white'} }</style>" +
+        '</head><body :count=${0}><p>Clicked ${count} times</p></body></html>'
+    );
+
+    expectClean(result);
+    expect(result.head).toContain('color: black');
+    expect(result.body).toContain('Clicked 0 times');
+  });
+
   it('renders the interpolated-attribute example', async () => {
     const result = await render(
       '<html :section=${{ id: "top", title: "Top" }}><body>' +
