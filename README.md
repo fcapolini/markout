@@ -50,12 +50,12 @@ than a language feature.
 
 ## Reactivity, in the page itself
 
-Values are declared on the element they belong to, and `<html>` has a scope of
-its own — so a value declared there is visible to the whole page, stylesheet
-included. Anything that reads one re-renders when it changes.
+A value is declared on the element that owns it, and everything nested inside
+sees it. Anything reading one re-renders when it changes — text, an attribute,
+or a rule in a stylesheet alike.
 
 ```html
-<html :count=${0} :light=${true}>
+<html :light=${true}>
   <head>
     <style>
       body {
@@ -64,7 +64,7 @@ included. Anything that reads one re-renders when it changes.
       }
     </style>
   </head>
-  <body>
+  <body :count=${0}>
     <button :on-click=${() => count++}>
       Clicked ${count} time${count !== 1 ? 's' : ''}
     </button>
@@ -74,6 +74,17 @@ included. Anything that reads one re-renders when it changes.
   </body>
 </html>
 ```
+
+Where each one sits is the whole of the rule. `light` is on `<html>` because
+both halves of the page read it — the stylesheet in `<head>` and the button in
+`<body>` — and `<html>` is the nearest element that contains them both.
+`count` is on `<body>` because only the button reads it. There is no store to
+register with and nothing to wire: the markup already says what can see what.
+
+A scope can also be reached by *name* where nesting does not reach it.
+`<html>`, `<head>` and `<body>` are always scopes, named `page`, `head` and
+`body`, so a button in the body can write `head.light` — which is what the
+fragment two sections down does.
 
 ## Attributes are properties and methods, not strings
 
@@ -795,7 +806,7 @@ A TypeScript monorepo on npm workspaces, MIT licensed.
 | [`kits/`](kits/) | `bootstrap-kit` (every component on Bootstrap's 5.3 cheatsheet, one file each) and `std-kit`, both written in Markout rather than in TypeScript |
 | [`sites/site`](sites/site/) | markout.dev and its demos, written in Markout and served by the Express package |
 
-2,884 tests across 147 files, with coverage and CodeQL on every push.
+2,889 tests across 148 files, with coverage and CodeQL on every push.
 
 Three decisions, rather than the rest of the inventory:
 
