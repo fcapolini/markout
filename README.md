@@ -73,7 +73,7 @@ than a language feature.
 
 ## Attributes are properties and methods, not strings
 
-The most common thing people assume about markout, and the one worth
+The most common thing people assume about Markout, and the one worth
 correcting first: expressing logic in attributes does **not** mean inheriting
 HTML's rules for attributes. A scope is a JavaScript object, what a tag
 declares are its properties and methods, and an interpolation's extent is
