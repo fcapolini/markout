@@ -1028,7 +1028,7 @@ stays the error it has always been.
 
 ### `<:mode>` — a scope on its parent's element
 
-**Partly built: handlers only.** Everything else it will carry is refused with
+**Partly built: handlers and children.** Paint and attributes are refused with
 a message saying so. See
 [conditional scopes](../design/conditional-scopes.md) for the whole design.
 
@@ -1060,20 +1060,41 @@ long as the modality does:
 edit is. That is the argument for the tag more than the listener is: without
 it, a modality's state lives on the element and has to be cleared by hand.
 
-What it takes today: `:on-`, values of its own, the lifecycle callbacks, a
-condition, and `:aka`. What it refuses:
+**Its children are built and destroyed, not parked.** That is the one place a
+mode departs from the region machinery rather than reusing it: every region
+here preserves — `:if` moves markup aside so a hide keeps focus, a scroll
+offset, a playing video — and a modality wants the opposite, so the next one
+starts clean:
+
+```html
+<div class="panel">
+  <:mode :if=${editing} :_draft=${text}>
+    <button :on-click=${() => save(_draft)}>Save</button>
+    <button :on-click=${() => editing = false}>Cancel</button>
+  </:mode>
+  <p>${text}</p>
+</div>
+```
+
+The buttons appear where the tag is written, and `_draft` starts from `text`
+every time the edit begins rather than resuming the last one.
+
+What it takes today: `:on-`, children, values of its own, the lifecycle
+callbacks, a condition, and `:aka`. What it refuses:
 
 | | |
 | --- | --- |
 | `:for-each`, `:for-as`, `:for-key` | one delta on one element — nothing to replicate |
 | `:slot` | no markup to put in a slot |
 
+`:else` and `:else-if` are refused **with children**, since a branch chain is
+resolved by position among siblings and a mode's condition becomes an arity.
+
 And what is **not built yet**, each refused in those words rather than
-half-applied: `:class-`, `:style-`, `:attr-`, `:prop-`, plain attributes, and
-content. The first four all need one answer — an attribute or a class has one
-owner at a time, and handing it back is the part that is not written. Until it
-is, put the paint on the element with an expression that reads the same
-condition, and the markup in a `<:group>` beside the mode.
+half-applied: `:class-`, `:style-`, `:attr-`, `:prop-` and plain attributes.
+They all need one answer — an attribute or a class has one owner at a time,
+and handing it back is the part that is not written. Until it is, put the paint
+on the element itself with an expression that reads the same condition.
 
 ### A base tag is a real element
 

@@ -1369,6 +1369,12 @@ export class CoreScope {
       // a replica of a group region is one too: what it holds is a run of
       // nodes between a marker pair of its own, stamped out per item
       group: this.props.group,
+      // and a replica of a mode borrows the same element the host would have.
+      // Props are listed here rather than spread, so anything not named is
+      // silently absent -- which for this one meant a replica with no element
+      // to bind its handlers on, reported as a binding that found nothing
+      mode: this.props.mode,
+      elementless: this.props.elementless,
       children: this.props.children,
       values: this.props.values,
       // a replica declares what the usage site declared, once per item: its

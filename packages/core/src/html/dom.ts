@@ -32,6 +32,18 @@ export const DIRECTIVE_TAG_PREFIX = ':';
  * region whose content has to come out.
  */
 export const GROUP_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'GROUP';
+/** `<:mode>`, which is a region as well as a delta once it has children */
+export const MODE_TAG = DIRECTIVE_TAG_PREFIX + 'MODE';
+/**
+ * Tags that are a run of nodes rather than an element.
+ *
+ * Both serialize to nothing and hold their children between a marker at each
+ * end. A `<:group>` is only that; a `<:mode>` is that AND a delta on the
+ * element above it, but everything structural treats them alike.
+ */
+export function isRegionTag(tagName: string): boolean {
+  return tagName === GROUP_DIRECTIVE_TAG || tagName === MODE_TAG;
+}
 
 export const NodeType = {
   ELEMENT: 1,

@@ -74,6 +74,7 @@ import {
 import { COMPTIME_MARKER } from './stage5-comptime';
 import { NodeType } from '../../html/dom';
 import { GROUP_DIRECTIVE_TAG } from '../../html/preprocessor';
+import { isRegionTag, MODE_TAG } from '../../html/dom';
 import { ATOMIC_TEXT_TAGS } from '../../html/parser';
 import { DOM_ID_ATTR, DOM_TEXT_MARKER1, DOM_TEXT_MARKER2, DOM_USE_MARKER } from '../../runtime/web/web-context';
 
@@ -193,6 +194,11 @@ function resolveActiveGroups(page: Page, root: ServerElement): void {
   };
 
   const resolve = (el: ServerElement): 'region' | void => {
+    // A `<:mode>` is the one region tag that DOES have an element: the nearest
+    // one above it, borrowed. So the families refused below are the families
+    // it exists to carry, and its attributes are its own rather than something
+    // to hand down to a lone child -- it is always the region form.
+    if (el.tagName === MODE_TAG) return 'region';
     const transfer: string[] = [];
     for (const name of el.getAttributeNames()) {
       const bare = name.startsWith(SPECIAL_ATTR_PREFIX)
@@ -300,7 +306,7 @@ function resolveActiveGroups(page: Page, root: ServerElement): void {
       // innermost first, so a group holding one group holds one element by
       // the time the outer one is asked what it holds
       walk(el);
-      if (el.tagName !== GROUP_DIRECTIVE_TAG) continue;
+      if (!isRegionTag(el.tagName)) continue;
       const kept = el.getAttributeNames().length && resolve(el) === 'region';
       kept || splice(el);
     }
@@ -641,11 +647,21 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
         separated = false;
         continue;
       }
-      if (childEl.tagName === MODE_DIRECTIVE_TAG) {
+      if (childEl.tagName === MODE_DIRECTIVE_TAG && !childEl.childNodes.length) {
         loadMode(page, scope, childEl);
         previous = undefined;
         separated = false;
         continue;
+      }
+      if (childEl.tagName === MODE_DIRECTIVE_TAG) {
+        // With children a mode is a region as well as a delta, and the two
+        // halves want different machinery. Rewriting the condition as an
+        // arity of zero-or-one is what buys the second half outright: a
+        // replica is built when it exists and disposed when it does not,
+        // where every region in this runtime parks instead -- which is the
+        // whole difference, and why the children do not come back holding
+        // what the last modality left in them
+        modeWithChildren(page, childEl);
       }
       if (childEl.tagName === DEFINE_DIRECTIVE_TAG) {
         // <:define> never itself becomes a live scope; expandDefine() moves
@@ -673,6 +689,7 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
         optional && page.optionalStencils.add(stencil);
       }
       const childScope = load(page, scope, childEl);
+      childEl.tagName === MODE_DIRECTIVE_TAG && page.modeScopes.add(childScope);
       after && page.elseChains.set(childScope, after);
       previous = { scope: childScope, branch };
       separated = false;
@@ -1077,6 +1094,64 @@ const LOGIC_FORBIDDEN_ATTRS: [string, string][] = [
  * unsound, and each message says so, because a tag that quietly does half
  * of what it reads as doing is the failure this repository hunts.
  */
+/**
+ * The condition of a `<:mode>` that has children, rewritten as an arity.
+ *
+ * `:if=${c}` becomes `:for-each=${(c) ? [0] : []}` on the same attribute, and
+ * everything downstream then does the right thing without knowing a mode was
+ * involved: the element gets a stencil, the runtime replicates it zero or one
+ * times, and a replica is BUILT when it exists and DISPOSED when it does not.
+ * That last part is the whole reason for the rewrite. Every region here parks
+ * -- `toggle` moves markup between the document and its stencil precisely so a
+ * hide keeps focus, a scroll offset, a playing video -- and a modality wants
+ * the opposite: its children and its state go, so the next one starts clean.
+ *
+ * Rewritten as an AST rather than as text, the way `desugarHandler` does it,
+ * because an attribute's value IS an expression by this point and there is no
+ * source to munge.
+ *
+ * `:else` and `:else-if` are refused with children: their chain is resolved by
+ * position among siblings, and an arity is not in one.
+ */
+function modeWithChildren(page: Page, e: ServerElement): void {
+  const what = `<${MODE_DIRECTIVE_TAG.toLowerCase()}>`;
+  for (const attr of [ELSE_ATTR, ELSE_IF_ATTR]) {
+    hasAttr(e, attr) &&
+      addError(
+        page,
+        `${what} does not take ":${attr}" with children yet: a branch chain is ` +
+          `resolved by position among siblings, and this one becomes an arity`,
+        e.loc
+      );
+  }
+  const attr = (e.attributes as ServerAttribute[]).find(
+    a => a.name === `${SPECIAL_ATTR_PREFIX}${IF_ATTR}`
+  );
+  if (!attr) return;
+  const exp = attr.value;
+  if (!exp || typeof exp === 'string') {
+    addError(page, `${what} needs its ":if" to be an expression`, e.loc);
+    return;
+  }
+  const node = exp as unknown as acorn.Expression;
+  const at = { start: node.start, end: node.end, loc: node.loc };
+  attr.name = `${SPECIAL_ATTR_PREFIX}${FOR_EACH_ATTR}`;
+  attr.value = {
+    type: 'ConditionalExpression',
+    test: node,
+    consequent: {
+      type: 'ArrayExpression',
+      elements: [{ type: 'Literal', value: 0, ...at }],
+      ...at,
+    },
+    alternate: { type: 'ArrayExpression', elements: [], ...at },
+    ...at,
+  } as unknown as acorn.Expression;
+  // the per-item name a `:for-each` declares, which a mode has no item for --
+  // named out of the way so `data` stays free for whatever encloses it
+  e.setAttribute(`${SPECIAL_ATTR_PREFIX}${FOR_AS_ATTR}`, '_mode', e.loc);
+}
+
 function loadMode(page: Page, parent: Scope, e: ServerElement): void {
   const what = `<${MODE_DIRECTIVE_TAG.toLowerCase()}>`;
   for (const [attr, why] of MODE_FORBIDDEN_ATTRS) {
@@ -1094,15 +1169,6 @@ function loadMode(page: Page, parent: Scope, e: ServerElement): void {
       page,
       `${what} does not take the plain attribute "${name}" yet: an attribute ` +
         `has one owner at a time and handing it back is not built`,
-      e.loc
-    );
-  }
-  if (e.childNodes.length) {
-    addError(
-      page,
-      `${what} does not take content yet: its children are built and destroyed ` +
-        `with it, which is the one thing here that is not a region -- write ` +
-        `them in a "<:group>" beside it for now`,
       e.loc
     );
   }

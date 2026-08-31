@@ -135,11 +135,70 @@ describe('<:mode>', () => {
     }
   });
 
-  it('refuses content, naming the shape that works today', () => {
-    const page = compile(
-      '<html><body><div><:mode><b>x</b></:mode></div></body></html>'
+  it('builds and destroys its children, rather than parking them', () => {
+    // the one place a mode departs from the region machinery instead of
+    // reusing it: every region here PRESERVES, so that a hide keeps focus, a
+    // scroll offset, a playing video. A modality wants the opposite -- its
+    // markup and its state go, so the next one starts clean
+    const r = live(
+      '<html :on=${false}><body><div id="p">' +
+        '<:mode :if=${on} :_draft=${"start"}><b>${_draft}</b></:mode>' +
+        '<i>t</i></div></body></html>'
     );
-    expect(page.errors.map(e => e.msg).join()).toMatch(/does not take content yet/);
-    expect(page.errors.map(e => e.msg).join()).toMatch(/<:group>/);
+    expect(r.errors).toStrictEqual([]);
+    const body = () => {
+      const s = (r.doc as any).toString();
+      return s
+        .slice(s.indexOf('<body'), s.indexOf('<script'))
+        .replace(/<!--.*?-->/g, '')
+        .replace(/\s+/g, ' ');
+    };
+    expect(body()).not.toContain('<b>');
+
+    r.ctx!.root.proxy.on = true;
+    expect(body()).toContain('<b>start</b>');
+    // written where the tag was: before the sibling that followed it
+    expect(body().indexOf('<b>')).toBeLessThan(body().indexOf('<i>'));
+
+    // edit the modality's own state, then take the modality away and back
+    const all: any[] = [];
+    const walk = (s: any) => {
+      all.push(s);
+      (s.children ?? []).forEach(walk);
+      (s.clones ?? []).forEach(walk);
+    };
+    walk((r.ctx as any).root);
+    const replica = all.find(s => s.cloned && s.values?._draft);
+    expect(replica).toBeTruthy();
+    replica.proxy._draft = 'EDITED';
+    expect(body()).toContain('<b>EDITED</b>');
+
+    r.ctx!.root.proxy.on = false;
+    expect(body()).not.toContain('<b>');
+    r.ctx!.root.proxy.on = true;
+    // start, not EDITED: the draft died with the edit, which is the whole
+    // reason this is a replica and not a region
+    expect(body()).toContain('<b>start</b>');
+  });
+
+  it('binds on the borrowed element once, with children in play', () => {
+    const r = live(
+      '<html :on=${true}><body><div id="p">' +
+        '<:mode :if=${on} :on-ping=${() => 1}><b>x</b></:mode></div></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    const el = find((r.doc as any).documentElement, 'DIV');
+    const log: string[] = [];
+    el.addEventListener = (type: string) => log.push(`add ${type}`);
+    el.removeEventListener = (type: string) => log.push(`remove ${type}`);
+
+    r.ctx!.root.proxy.on = false;
+    expect(log).toStrictEqual(['remove ping']);
+
+    log.length = 0;
+    r.ctx!.root.proxy.on = true;
+    // once. The host of the replication borrows the same element its replica
+    // does, and a page seeing every event twice is what that costs
+    expect(log).toStrictEqual(['add ping']);
   });
 });

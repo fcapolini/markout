@@ -16,7 +16,7 @@ import {
   ServerTemplateElement,
   ServerText,
 } from '../../html/server-dom';
-import { GROUP_DIRECTIVE_TAG, NodeType } from '../../html/dom';
+import { GROUP_DIRECTIVE_TAG, MODE_TAG, NodeType, isRegionTag } from '../../html/dom';
 import { DEV_GLOBAL, LOCS_GLOBAL, PROPS_DATA_ATTR, PROPS_GLOBAL } from '../../runtime/core/core-context';
 import { DOM_REGION_END_MARKER } from '../../runtime/web/web-context';
 import {
@@ -148,7 +148,7 @@ function unwrapGroups(page: Page): void {
       if (child.nodeType !== NodeType.ELEMENT) continue;
       const el = child as ServerElement;
       walk(el);
-      if (el.tagName !== GROUP_DIRECTIVE_TAG) continue;
+      if (!isRegionTag(el.tagName)) continue;
       for (const inner of [...el.childNodes]) {
         el.removeChild(inner);
         container.insertBefore(inner, el);
@@ -463,7 +463,7 @@ function relocateStencils(page: Page) {
 function isGroupStencil(template: ServerTemplateElement): boolean {
   for (const n of template.content.childNodes) {
     if (n.nodeType !== NodeType.ELEMENT) continue;
-    return (n as ServerElement).tagName === GROUP_DIRECTIVE_TAG;
+    return isRegionTag((n as ServerElement).tagName);
   }
   return false;
 }
@@ -892,7 +892,13 @@ function generateScope(
   if (scope.name) {
     props.name = scope.name;
   }
-  if (scope.e?.tagName === GROUP_DIRECTIVE_TAG) {
+  // A mode is a range only once it has markup to be one of. Childless, it is
+  // a delta and nothing else, and a marker pair around nothing would be two
+  // comments the runtime then has to keep in step for no reason
+  if (
+    scope.e?.tagName === GROUP_DIRECTIVE_TAG ||
+    (scope.e?.tagName === MODE_TAG && !!scope.e.childNodes.length)
+  ) {
     // the tag is not markup and never reaches a browser; what the runtime
     // shows and hides is the run of nodes between this region's two markers
     props.group = true;
@@ -902,7 +908,11 @@ function generateScope(
   }
   if (
     scope.page.logicScopes.has(scope) ||
-    scope.page.modeScopes.has(scope) ||
+    // A mode with CHILDREN is a replica: it is built and disposed by the
+    // replication that the compiler rewrote its condition into, so its
+    // lifetime needs no help. Only a childless one needs the elementless
+    // rule, which is what gives a scope with nothing to render a lifetime
+    (scope.page.modeScopes.has(scope) && !scope.e?.childNodes.length) ||
     (scope.usesTag && scope.page.elementlessTags.has(scope.usesTag))
   ) {
     // said here rather than inferred from there being no DOM: the runtime

@@ -116,13 +116,19 @@ export class WebScope extends CoreScope {
   }
 
   override init() {
+    // Before super.init(), which is where values are constructed -- and a
+    // `:on-` binds its listener as it is constructed, so a mode that had not
+    // found its element yet would report having none to bind on
+    if (this.props.mode) {
+      this.dom = this.borrowedDom() as typeof this.dom;
+    }
     super.init();
     this.texts = new Map();
     const templateId = this.props.template;
     const parentDom =
       this.parent instanceof WebScope ? this.parent.childContainer() : undefined;
     const view = this.props.mode
-      ? this.borrowedDom()
+      ? this.dom
       : this.props.group
       ? undefined
       : this.cloned
@@ -601,19 +607,19 @@ export class WebScope extends CoreScope {
       this.dom?.removeEventListener(name, listener);
     });
     this.domListeners = [];
-    // Listeners go, the element stays. Everything below removes the DOM a
-    // scope OWNS, and a mode owns none of it -- running that here would take
-    // the parent's element out of the page on the way past
-    if (this.props.mode) {
-      super.dispose();
-      return;
-    }
     if (this.props.group) {
       // markers included: they carry this replica's id, and a pair left
       // behind would be found again by whatever takes that id next
       const container = (this.anchor as unknown as { parentNode?: ContainerNode })
         ?.parentNode;
       this.rangeWithMarkers().forEach(node => container?.removeChild(node));
+      super.dispose();
+      return;
+    }
+    // Listeners go, the element stays. What follows removes the DOM a scope
+    // OWNS, and a mode owns none of it -- below the group branch, because a
+    // mode WITH children owns its range and has to take that with it
+    if (this.props.mode) {
       super.dispose();
       return;
     }
@@ -774,6 +780,18 @@ export class WebScope extends CoreScope {
       // the compiler keeps dash-case event names (e.g. custom events like
       // "item-selected") verbatim in the compiled key, same as class$/style$
       const name = key.slice(RT_EVENT_VALUE_PREFIX.length);
+      // A replication HOST is a prototype and listens to nothing: its
+      // replicas do. Harmless where the host's element is the one inside its
+      // `<template>`, and not harmless at all for a `<:mode>` with children,
+      // whose host borrows the SAME element its replica does -- both would
+      // bind, and the page would see every event twice.
+      //
+      // Asked of `:for-each` rather than of `isStencil()`, which is also true
+      // of a region that is merely not showing yet -- and a childless mode is
+      // its own region host, so that reading bound nothing at all
+      if (this.props.values?.[RT_FOR_EACH_VALUE] && !this.cloned) {
+        return ret;
+      }
       if (typeof ret.exp?.(this.proxy) === "function") {
         const listener: EventListener = (e: Event) => this.proxy[key]?.(e);
         this.domListeners ||= [];
@@ -942,8 +960,6 @@ export class WebScope extends CoreScope {
    * counts what its author wrote and nothing else.
    */
   override showView(): void {
-    // borrowed: the element is someone else's and was never taken out
-    if (this.props.mode) return;
     if (this.props.group) {
       // insertBefore takes them one at a time, which is what keeps their
       // order: the holder is emptied from the front as they go
@@ -955,6 +971,10 @@ export class WebScope extends CoreScope {
       }
       return;
     }
+    // Borrowed: the element is someone else's and was never taken out. Below
+    // the group branch rather than above it, because a mode WITH children has
+    // a range of its own to move even though its element is not its to touch
+    if (this.props.mode) return;
     const container = this.anchorContainer();
     if (!this.dom || !container || !this.anchor) return;
     container.insertBefore(this.dom, this.anchor.nextSibling);
@@ -971,7 +991,6 @@ export class WebScope extends CoreScope {
    * ever needed.
    */
   override hideView(): void {
-    if (this.props.mode) return;
     if (this.props.group) {
       // back into the holder rather than dropped, for the reason the
       // element form gives below: what comes back has to be what went away
@@ -982,6 +1001,7 @@ export class WebScope extends CoreScope {
       }
       return;
     }
+    if (this.props.mode) return;
     const dom = this.dom as unknown as { parentNode?: { removeChild(n: unknown): void } };
     dom?.parentNode?.removeChild(this.dom);
   }
@@ -1003,18 +1023,30 @@ export class WebScope extends CoreScope {
    * waiting for a construction that will not happen again.
    */
   protected override lifetimeBegun(): void {
-    if (!this.props.mode) return;
+    // Only what this actually took off. A mode with CHILDREN is a replica,
+    // rebuilt from scratch each time its condition comes back, so its values
+    // are constructed afresh and bind as they go -- re-adding here would bind
+    // a second time and the page would see every event twice. A childless one
+    // is the case this exists for: the same scope returns, its values are
+    // re-evaluated rather than rebuilt, and the branch that binds runs only
+    // at construction
+    if (!this.disarmed) return;
+    this.disarmed = false;
     this.domListeners?.forEach(({ name, listener }) =>
       this.dom?.addEventListener(name, listener)
     );
   }
 
   protected override lifetimeEnded(): void {
-    if (!this.props.mode) return;
+    if (!this.props.mode || this.disarmed) return;
+    this.disarmed = true;
     this.domListeners?.forEach(({ name, listener }) =>
       this.dom?.removeEventListener(name, listener)
     );
   }
+
+  /** whether `lifetimeEnded` took this mode's handlers off the element */
+  private disarmed = false;
 
   private borrowedDom(): Element | undefined {
     for (let s = this.parent; s; s = s.parent) {

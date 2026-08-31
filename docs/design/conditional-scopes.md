@@ -1,6 +1,6 @@
 # Conditional scopes, and modes on an element
 
-Status: **rules 1 and 2 built; rule 3 begun — handlers only.** One crash found
+Status: **rules 1 and 2 built; rule 3 begun — handlers and children.** One crash found
 while checking them and fixed on the way (`cae581a`). Prompted by asking what
 markout misses next to OpenLaszlo's `<state>` tag — the answer is *not that
 tag*.
@@ -151,8 +151,9 @@ it. See *What the crash was* below.
 
 ### 3. `<:mode>` — a scope on its parent's element
 
-*Begun. The tag exists and carries handlers; paint, attributes, children and
-`:priority` are refused in so many words — see* What slice 1 built.
+*Begun. The tag exists and carries handlers and children; paint, attributes
+and `:priority` are refused in so many words — see* What slice 1 built *and*
+What slice 2 needed.
 
 `<:logic>` is a scope with **no** element. A mode is a scope whose element is
 **its parent's**, so it can carry the families that need one and take them all
@@ -484,46 +485,46 @@ Rules 1 and 2 carried more of this than expected. A mode is marked
 `elementless`, so its lifetime already follows its condition and its name is
 already absent while it is off, with the reader wiring that goes with that.
 
-## What slice 2 tried, and what stopped it
+## What slice 2 needed
 
-Children were attempted and reverted. The tree is at slice 1; this is what the
-attempt established, so the next one starts further along.
+Children are built, and the desugar is the whole idea: `:if=${c}` on a mode
+with children becomes `:for-each=${(c) ? [0] : []}` on the same attribute,
+rewritten as an AST rather than as text, the way `desugarHandler` already
+rewrites one. Everything downstream then does the right thing without knowing
+a mode was involved — a stencil, a replica built when it exists and disposed
+when it does not, and `clone()` as the DOM-creating primitive a rebuild needs
+and a park never had.
 
-**Most of it works, and is not the hard part.** A `<:mode>` with children wants
-to be structurally a `<:group>` — a run of nodes between two markers, the tag
-serializing to nothing — and the group's special cases are centralised enough
-that one `isRegionTag` predicate covers them. A mode then needs one exemption
-from the group's own rules, and it is the interesting one: `resolveActiveGroups`
-refuses `:on-` and friends on a group *because it has no element*, which is
-exactly the premise a mode denies. With that exemption the children rendered at
-the written position and vanished on the way out, on the first try.
+**The first attempt reverted**, and the reason is worth keeping: made a region
+instead, its children *parked*, so they came back holding the last modality's
+draft while `:will-dispose` had said they were gone. That is a decision
+reversed by accident, and the desugar is what makes the decision true.
 
-**What stopped it is that the vanishing was a park, not a destroy.** Every
-region in this runtime preserves — that is what `toggle` is — so the children
-came back and so did the mode's state, with the draft the last modality left in
-them. The lifecycle callbacks *did* fire, because rule 1's elementless path
-fires them, which makes the failure worse rather than better: a tag saying
-`:will-dispose` while keeping everything it had is the shape this document
-exists to refuse.
+Four things it needed beyond the idea:
 
-**The route to destroy is the replica path, and the way in is a desugar.**
-`:if=${c}` on a mode with children becomes `:for-each=${(c) ? [0] : []}`, after
-which every existing piece does the right thing: a replica is built when it
-exists and disposed when it does not, its values are its own, and `clone()` is
-the DOM-creating primitive that a rebuild needs and a park never did. The
-attempt failed on a detail rather than on the idea — reading the condition's
-source text back off the element, to rewrite it — and that is worth knowing
-before someone concludes the approach was wrong.
+- **`clone()` lists props rather than spreading them**, so `mode` was silently
+  absent from every replica — reported as a handler that found no element to
+  bind on. Anything a mode adds to props has to be named there too.
+- **A replication host must not bind.** It borrows the same element its replica
+  does, so both bound and the page saw every event twice. Asked of `:for-each`
+  rather than of `isStencil()`, which is also true of a region not showing yet
+  — and a childless mode is its own region host, so that reading bound nothing
+  at all.
+- **`lifetimeBegun` must re-arm only what it disarmed.** A mode with children
+  is rebuilt from scratch and binds as it goes; re-adding there was the same
+  double-binding by another route. A childless one is the case the hook exists
+  for, since the same scope returns and its values are re-evaluated rather than
+  rebuilt.
+- **A borrowed element is protected below the range, not above it.** `dispose`,
+  `showView` and `hideView` each have a group branch and an element branch; the
+  mode guard belongs after the first and before the second, or a mode with
+  children never takes its own markup away.
 
-Two smaller things it turned up:
-
-- **`elementless` cannot be decided by counting child scopes.** A mode whose
-  children are plain markup has no child *scopes* — their text values land on
-  the mode's own — so "has children" has to be asked of the markup.
-- **A mode with children needs its range moved and its element left alone**,
-  which are two branches of the same method. Slice 1 returns early for a mode
-  in `showView`/`hideView`; that early return has to move below the group
-  branch rather than above it.
+One thing the compiler had to be told rather than work out: `elementless` is
+decided by markup children, not by child scopes. A mode whose children are
+plain markup has no child scopes at all — their text values land on the mode's
+own — so counting scopes called it elementless and gave it a second lifetime it
+did not need.
 
 ## What is still open
 
