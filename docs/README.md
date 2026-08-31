@@ -104,6 +104,10 @@ chosen; these say what was considered and why it is still sitting there.
   it would take for a `<:define>` to compile into a registered custom element,
   why the scoping objection dissolves on inspection, where a library's design
   tokens would live, and the costs that are left once it does.
+- [Re-initializing a value](explorations/value-reinitialization.md) - putting
+  a value back to following an expression, why re-attaching to the same one is
+  nearly free and a new dependency list is not, and the one language question
+  that decides the rest.
 
 ## Mental model
 
