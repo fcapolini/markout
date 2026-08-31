@@ -998,15 +998,6 @@ export class WebScope extends CoreScope {
     return !!this.dom?.isConnected;
   }
 
-  /**
-   * No element of its own -- which is not the same as no markup. A group
-   * region has no `dom` either and is excluded deliberately: its run of nodes
-   * waits in a holder while hidden, so it has exactly the DOM state that
-   * detaching exists to preserve.
-   */
-  protected override elementless(): boolean {
-    return !this.dom && !this.props.group;
-  }
 
   override clone(index: number): WebScope {
     if (this.props.group) {

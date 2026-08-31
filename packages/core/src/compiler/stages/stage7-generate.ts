@@ -792,6 +792,9 @@ interface ScopeData {
   /** a `<:group>` region: markup with no element of its own, held between
    * a marker at each end rather than by the element carrying the `:if` */
   group?: true;
+  /** a `<:logic>`, or an instance of a `tag="x:logic"`: a scope with no
+   * element of ITS OWN, which is what gives it a lifetime rather than a view */
+  elementless?: true;
   slotted?: true;
   slottedText?: true;
   elseOf?: string;
@@ -890,6 +893,15 @@ function generateScope(
     // the tag is not markup and never reaches a browser; what the runtime
     // shows and hides is the run of nodes between this region's two markers
     props.group = true;
+  }
+  if (
+    scope.page.logicScopes.has(scope) ||
+    (scope.usesTag && scope.page.elementlessTags.has(scope.usesTag))
+  ) {
+    // said here rather than inferred from there being no DOM: the runtime
+    // needs the answer while LINKING, before `init` has looked for an
+    // element, and "no element yet" and "no element ever" are not the same
+    props.elementless = true;
   }
   if (scope.slotted) {
     // written at a usage site, living inside the instance: the runtime

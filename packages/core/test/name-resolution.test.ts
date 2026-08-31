@@ -359,19 +359,58 @@ describe('a name inside a region', () => {
   });
 
   /**
-   * A conditional `<:logic>` is a region HOST, so the exemption below covers
-   * it: the scope is there whether or not its condition holds, and its values
-   * go on answering. Only its LIFETIME callbacks follow the condition -- see
-   * lifecycle.test.ts, and docs/design/conditional-scopes.md, which wants the
-   * scope itself to go away and records what that would still take.
+   * The exemption below -- no guard for a value ON the region host -- rests on
+   * the host being there whether or not it is showing, which is exactly as
+   * true as hiding being a detach. A `<:logic>` has no markup to park, so it
+   * disposes instead and its name really does stop answering.
+   *
+   * The guard is not only a check, either. Classifying the read as guarded is
+   * what registers the reader as a maybe, and that is what `relinkMaybes`
+   * walks when the region comes back -- called plain, the read is evaluated
+   * once against a name that is not there yet and never asked again.
+   * docs/design/conditional-scopes.md
    */
-  it('reads a conditional <:logic> unguarded, host that it is', () => {
+  const COND_LOGIC = '<:logic :aka="app" :if=${on} :foo=${5} />';
+
+  it('refuses the unguarded read of a conditional <:logic>', () => {
+    const r = run(
+      '<html :on=${true}><body>' + COND_LOGIC + '<i>${app.foo}</i></body></html>'
+    );
+    expect(r.errors).toHaveLength(1);
+    // "carries", not "is inside": it IS the conditional scope, and being told
+    // it is inside one reads as a puzzle
+    expect(r.errors[0]).toMatch(/"app" carries a ":if"/);
+    expect(r.errors[0]).toMatch(/Read it as "app\?\.foo"/);
+  });
+
+  it('answers the guarded read across the whole cycle', () => {
     const r = live(
-      '<html :on=${false}><body><:logic :aka="app" :if=${on} :foo=${"RIGHT"} />' +
+      '<html :on=${false}><body>' +
+        COND_LOGIC +
+        '<i>${app?.foo ?? "away"}</i></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    expect(r.read()).toBe('away');
+
+    r.ctx.root.proxy['on'] = true;
+    expect(r.read()).toBe('5');
+
+    r.ctx.root.proxy['on'] = false;
+    expect(r.read()).toBe('away');
+
+    r.ctx.root.proxy['on'] = true;
+    expect(r.read()).toBe('5');
+    expect(r.runtime).toStrictEqual([]);
+  });
+
+  it('leaves an unconditional <:logic> needing no guard', () => {
+    // the walk starts one level higher for these, so it has to find nothing
+    // where there is no condition to find
+    const r = run(
+      '<html><body><:logic :aka="app" :foo=${"RIGHT"} />' +
         '<i>${app.foo}</i></body></html>'
     );
     expect(r.errors).toStrictEqual([]);
-    expect(r.runtime).toStrictEqual([]);
     expect(r.read()).toBe('RIGHT');
   });
 

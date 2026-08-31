@@ -890,6 +890,23 @@ function resolveChain(
  * read. And anything read from inside the same region, where everything is
  * built together and stops existing together.
  */
+/**
+ * A scope with no element of its own: a `<:logic>`, or an instance of a
+ * `tag="x:logic"` component.
+ *
+ * The same answer the generator writes into props as `elementless`, and it
+ * matters here for the same reason: such a scope DISPOSES when its condition
+ * goes false rather than parking markup it has not got, so its name really
+ * does stop answering. Unlike every other region host, a value on one is
+ * absent while it is away.
+ */
+function elementlessScope(scope: Scope, page: Page): boolean {
+  return (
+    page.logicScopes.has(scope) ||
+    (!!scope.usesTag && page.elementlessTags.has(scope.usesTag))
+  );
+}
+
 function reachable(
   into: Scope,
   value: Value,
@@ -899,7 +916,19 @@ function reachable(
   writing: boolean
 ): 'plain' | 'guarded' | 'refused' {
   const from = resolvesFrom(value);
-  for (let host: Scope | undefined = into.parent; host; host = host.parent) {
+  // Normally from the PARENT: a value on a region host needs no guard,
+  // because an element host is there whether or not it is showing. That
+  // reasoning is exactly as good as hiding being a detach, and an elementless
+  // host does not detach -- it disposes -- so for one of those the host
+  // itself is the first crossing to consider. An unconditional one carries no
+  // region value and the loop moves on to the parent as before.
+  //
+  // It is not only a check. Classifying the read as `guarded` is what
+  // registers the reader as a maybe, which is what `relinkMaybes` walks when
+  // the region comes back; called `plain`, the read is evaluated once against
+  // a name that was not there yet and never asked again.
+  const start = elementlessScope(into, page) ? into : into.parent;
+  for (let host: Scope | undefined = start; host; host = host.parent) {
     const region = [FOR_EACH_VALUE, FOR_DATA_VALUE, IF_VALUE].find(k => host!.values.has(k));
     if (!region) {
       continue;
@@ -921,6 +950,13 @@ function reachable(
     // Then there is no crossing to name -- the reference starts inside -- and
     // saying so is the whole of the difference between the two wordings.
     const via = at > 0 ? ` through "${segments[at - 1].name}"` : '';
+    // A scope that CARRIES the directive is not inside anything, and being
+    // told that it is reads as a puzzle -- the same reason an `:else` is
+    // reported as ":else" rather than as the ":if" it compiles to
+    const where =
+      host === into
+        ? `carries a "${written}", so it is there only while that condition holds`
+        : `is inside a "${written}", so it is there only while that region is showing`;
     if (region === FOR_EACH_VALUE) {
       addError(
         page,
@@ -945,8 +981,7 @@ function reachable(
       addError(
         page,
         `Cannot assign to "${path}"${via}: ` +
-          `"${segments[at].name}" is inside a "${written}", so it is there ` +
-          `only while that region is showing, and "?." cannot go on the left ` +
+          `"${segments[at].name}" ${where}, and "?." cannot go on the left ` +
           `of an "=". Write it as "${target}?.${RT_SET_FN_KEY}('${rest}', ...)", ` +
           `which does nothing while the region is away and answers whether it ` +
           `did -- or declare what the outside changes outside the region`,
@@ -959,8 +994,7 @@ function reachable(
       `${segments.slice(at + 1).map(s => s.name).join('.')}`;
     addError(
       page,
-      `"${segments[at].name}" is inside a "${written}", so it is there only ` +
-        `while that region is showing. ` +
+      `"${segments[at].name}" ${where}. ` +
         (segments[segments.length - 1].name === RT_SET_FN_KEY
           ? // a `$set` is a write wearing a call, so "read it as" would be
             // the wrong verb for the one thing this spelling exists to allow

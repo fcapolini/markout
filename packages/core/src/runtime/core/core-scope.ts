@@ -111,6 +111,16 @@ export interface CoreScopeProps {
    * nodes between them rather than one element.
    */
   group?: boolean;
+  /**
+   * A scope with no element of its own -- a `<:logic>`, or an instance of a
+   * `tag="x:logic"` component.
+   *
+   * Set by the compiler rather than worked out from `dom` being absent,
+   * because `link()` runs before `init()` and needs the answer: a scope that
+   * has not looked for its element yet is indistinguishable from one that
+   * will never have one.
+   */
+  elementless?: boolean;
   /** markup written at a usage site and slotted into the instance: it lives
    * here but resolves names from outside (see lexicalParent()) */
   slotted?: boolean;
@@ -352,7 +362,7 @@ export class CoreScope {
    * See docs/design/conditional-scopes.md.
    */
   protected elementless(): boolean {
-    return false;
+    return !!this.props.elementless;
   }
 
   private attachSelf(): void {
@@ -437,7 +447,14 @@ export class CoreScope {
    * time anyway, being as many scopes as there are items.
    */
   private regionHost(): CoreScope | undefined {
-    for (let s: CoreScope | undefined = this.parent; s; s = s.parent) {
+    // From `this` when it has no element of its own, and from the parent
+    // otherwise. An element host is present whether or not it is showing, so
+    // a value on one needs no guard and its name must go on answering. One
+    // with no element has nothing to park and nothing to come back to: while
+    // its condition is false it is genuinely away, and its name has to say so
+    // or a reader outside sees the last thing it held.
+    const start = this.elementless() ? this : this.parent;
+    for (let s: CoreScope | undefined = start; s; s = s.parent) {
       const values = s.props.values;
       if (values?.[RT_IF_VALUE] || values?.[RT_FOR_DATA_VALUE]) {
         return s;
