@@ -1,6 +1,7 @@
 # Conditional scopes, and modes on an element
 
-Status: **rules 1 and 2 built; rule 3 all but `:style-`.** One crash found
+Status: **all three rules built**, apart from what `<:mode>` refuses on
+purpose. One crash found
 while checking them and fixed on the way (`cae581a`). Prompted by asking what
 markout misses next to OpenLaszlo's `<state>` tag — the answer is *not that
 tag*.
@@ -151,8 +152,8 @@ it. See *What the crash was* below.
 
 ### 3. `<:mode>` — a scope on its parent's element
 
-*Built except `:style-`, refused in so many words — see* What slice 1 built,
-What slice 2 needed, What classes settled *and* What ownership came to.
+*Built — see* What slice 1 built, What slice 2 needed, What classes settled
+*and* What ownership came to.
 
 `<:logic>` is a scope with **no** element. A mode is a scope whose element is
 **its parent's**, so it can carry the families that need one and take them all
@@ -589,6 +590,15 @@ to the element's own declaration only when none is.
 The rank is taken off the element before its values are extracted, or
 `:priority` would read as a local named `priority` — a value nobody declared
 and nothing reads.
+
+**`:style-` needed both halves and one thing neither had.** The empty base the
+classes needed, so a mode touches only its own properties; the hand-back the
+attributes needed, since a property is single-valued. And then the owner's
+record of having applied it has to be cleared as well — `applyStyles` diffs
+against what it last wrote, which stays true of the owner while the mode is
+over it and stops being true of the element the moment the property comes off.
+Without that the hand-back said nothing had changed and left the property
+gone.
 
 ## What is still open
 

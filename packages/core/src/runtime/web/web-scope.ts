@@ -759,6 +759,7 @@ export class WebScope extends CoreScope {
     if (key.startsWith(RT_STYLE_VALUE_PREFIX)) {
       const name = key.slice(RT_STYLE_VALUE_PREFIX.length);
       ret.setCB((_, val) => {
+        if (!this.claim(key)) return;
         (this.styleOn ??= new Map()).set(name, val == null || val === '' ? null : `${val}`);
         this.applyStyles(ret);
       });
@@ -901,8 +902,12 @@ export class WebScope extends CoreScope {
     if (!this.dom) return this.unbound(value, 'no element to set styles on');
     if (this.stylePending) return;
     const on = new Map(parseDeclarations(this.dom.style.cssText));
-    const had = this.styleApplied ?? on;
-    this.styleBase ??= on;
+    // empty for a mode, for the reason `applyClasses` gives: the element is
+    // borrowed, so everything already declared on it belongs to whoever owns
+    // it, and a base taken from there would be adopted and then handed back
+    const base = this.props.mode ? new Map<string, string>() : on;
+    const had = this.styleApplied ?? base;
+    this.styleBase ??= base;
     const want = new Map(this.styleBase);
     this.styleAdd?.forEach((v, k) => want.set(k, v));
     this.styleOn?.forEach((v, k) => (v == null ? want.delete(k) : want.set(k, v)));
@@ -1120,8 +1125,19 @@ export class WebScope extends CoreScope {
       const i = list?.indexOf(this) ?? -1;
       i >= 0 && list!.splice(i, 1);
       // off first, in every case: what the mode wrote is the mode's, and if
-      // nobody says otherwise the attribute existed only because it did
-      this.dom.removeAttribute(key.slice(key.indexOf('$') + 1));
+      // nobody says otherwise it was there only because the mode was
+      const name = key.slice(key.indexOf('$') + 1);
+      if (key.startsWith(RT_STYLE_VALUE_PREFIX)) {
+        this.styleOn?.delete(name);
+        this.styleApplied?.delete(name);
+        this.dom.style.setProperty(name, null);
+        // and the owner's record of having written it, or its re-say lands on
+        // a diff that says nothing changed -- true of what it last APPLIED,
+        // and not of the element, which no longer has the property at all
+        owner?.styleApplied?.delete(name);
+      } else {
+        this.dom.removeAttribute(name);
+      }
       // the next claim down, if a lower-ranked mode was waiting under this
       // one, and the element's own declaration otherwise
       const next = list?.[0];

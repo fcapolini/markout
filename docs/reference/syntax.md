@@ -1028,8 +1028,8 @@ stays the error it has always been.
 
 ### `<:mode>` — a scope on its parent's element
 
-**Partly built: everything but `:style-`**, which is refused with a message
-saying so. See
+**Built**, apart from `:prop-` and static plain attributes, which are refused
+for reasons given below. See
 [conditional scopes](../design/conditional-scopes.md) for the whole design.
 
 A `<:logic>` has no element and wants none. A **mode** has none of its own and
@@ -1125,9 +1125,14 @@ Absent is the rank every mode shares, and it has to be a **number written
 there**: one worked out while the page runs could tie, and the error this
 exists to give would arrive as a silent last-write-wins instead.
 
-What it takes today: `:on-`, `:class-`, `:attr-`, plain attributes written as
-expressions, children, values of its own, the lifecycle callbacks, a condition,
-and `:aka`. What it refuses:
+A **style property** works the same way and for the same reason — it is one
+answer to one question, so it has an owner, and `:style-color` on a mode
+overrides the element's while the modality is on and hands it back when it
+goes.
+
+What it takes: `:on-`, `:class-`, `:style-`, `:attr-`, plain attributes written
+as expressions, children, values of its own, the lifecycle callbacks, a
+condition, `:priority`, and `:aka`. What it refuses:
 
 | | |
 | --- | --- |
@@ -1140,9 +1145,9 @@ resolved by position among siblings and a mode's condition becomes an arity.
 | `:prop-` | a DOM property is state on the element itself, so there is nothing underneath to hand it back to |
 | a *static* plain attribute | a mode has no markup of its own for one to be written in — `title=${…}` sets it on the element |
 
-And what is **not built yet**: `:style-`, whose machinery diffs a base the way
-classes do and wants the same empty-base treatment first. Until then, put a
-style on the element itself with an expression that reads the same condition.
+A mode's classes and styles both start from **nothing** rather than from what
+the element is already wearing, which is what keeps the two apart: a mode can
+neither claim the element's own nor lose them.
 
 ### A base tag is a real element
 

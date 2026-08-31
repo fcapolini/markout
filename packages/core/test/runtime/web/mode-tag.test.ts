@@ -118,14 +118,10 @@ describe('<:mode>', () => {
     );
   });
 
-  it('says what is not built yet as that, rather than as a rule', () => {
-    // each of these has a decided answer in the design and no code behind it.
-    // Saying "not yet" is the difference between a tag that is unfinished and
-    // one that is quietly wrong
+  it('refuses what it cannot hand back, and says which is which', () => {
     const cases: [string, RegExp][] = [
-      [':style-color=${"red"}', /does not take ":style-color" yet/],
-      // not "yet": a DOM property is state on the element itself, so there is
-      // no declaration underneath for a mode to hand it back to
+      // a DOM property is state on the element itself, so there is no
+      // declaration underneath for a mode to hand it back to
       [':prop-value=${1}', /nothing underneath to hand it back to/],
       // and a static plain attribute would be written nowhere at all
       ['title="t"', /needs "title" to be an expression/],
@@ -285,6 +281,45 @@ describe('<:mode>', () => {
         '<:mode :if=${b} :class-busy />x</div></body></html>'
     );
     expect(page.errors).toStrictEqual([]);
+  });
+
+  it('styles the borrowed element without disturbing its own', () => {
+    const r = live(
+      '<html :on=${false} :c=${"red"}><body>' +
+        '<div :style-color=${c}>' +
+        '<:mode :if=${on} :style-opacity=${"0.5"} />x</div></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    const css = () => find((r.doc as any).documentElement, 'DIV').style.cssText;
+    expect(css()).toBe('color: red;');
+
+    r.ctx!.root.proxy.on = true;
+    expect(css()).toBe('color: red; opacity: 0.5;');
+
+    r.ctx!.root.proxy.on = false;
+    expect(css()).toBe('color: red;');
+
+    // and the element's own declaration is still live afterwards
+    r.ctx!.root.proxy.c = 'blue';
+    expect(css()).toBe('color: blue;');
+  });
+
+  it('hands a style property back to the element that declared it', () => {
+    // the one that needs the owner's record of having applied it cleared as
+    // well: its re-say would otherwise diff against what it last wrote, which
+    // is true of that and not of the element, no longer having the property
+    const r = live(
+      '<html :on=${false} :c=${"red"}><body>' +
+        '<div :style-color=${c}>' +
+        '<:mode :if=${on} :style-color=${"green"} />x</div></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    const css = () => find((r.doc as any).documentElement, 'DIV').style.cssText;
+    expect(css()).toBe('color: red;');
+    r.ctx!.root.proxy.on = true;
+    expect(css()).toBe('color: green;');
+    r.ctx!.root.proxy.on = false;
+    expect(css()).toBe('color: red;');
   });
 
   it('builds and destroys its children, rather than parking them', () => {

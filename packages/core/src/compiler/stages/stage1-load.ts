@@ -1054,13 +1054,7 @@ const MODE_FORBIDDEN_ATTRS: [string, string][] = [
   [SLOT_TARGET_ATTR, 'has no markup to put in a slot'],
 ];
 /** and what is merely not built yet, said as that rather than as a rule */
-const MODE_UNBUILT_PREFIXES: [string, string][] = [
-  // `:style-` is the attribute question wearing different punctuation -- two
-  // declarations of `color` need an owner, where two of `:class-x` simply both
-  // add -- and the style machinery diffs a base the way the class one does, so
-  // it wants the same empty-base treatment before it can be handed back
-  [STYLE_VALUE_ATTR_PREFIX, 'a style property has one owner at a time and handing it back is not built'],
-];
+const MODE_UNBUILT_PREFIXES: [string, string][] = [];
 /**
  * And what a mode refuses for good: a DOM property is state on an element
  * INSTANCE, so there is no declaration underneath to hand it back to and no
@@ -1221,10 +1215,13 @@ function refuseModeOverlap(page: Page, e: ServerElement, ranks: Map<ServerElemen
     const el = child as ServerElement;
     if (el.tagName !== MODE_DIRECTIVE_TAG) continue;
     for (const name of el.getAttributeNames()) {
+      // `:class-` is deliberately absent: a class list is a set, so two modes
+      // adding one are not answering the same question twice
+      const marked = [PRESENCE_VALUE_ATTR_PREFIX, STYLE_VALUE_ATTR_PREFIX]
+        .map(p => `${SPECIAL_ATTR_PREFIX}${p}`)
+        .find(p => name.startsWith(p));
       const single = name.startsWith(SPECIAL_ATTR_PREFIX)
-        ? name.startsWith(`${SPECIAL_ATTR_PREFIX}${PRESENCE_VALUE_ATTR_PREFIX}`)
-          ? name.slice(`${SPECIAL_ATTR_PREFIX}${PRESENCE_VALUE_ATTR_PREFIX}`.length)
-          : undefined
+        ? marked && name.slice(marked.length)
         : name;
       if (!single) continue;
       const rank = ranks.get(el) ?? 0;
