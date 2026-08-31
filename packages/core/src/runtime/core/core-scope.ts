@@ -121,6 +121,16 @@ export interface CoreScopeProps {
    * will never have one.
    */
   elementless?: boolean;
+  /**
+   * A `<:mode>`: elementless like the above, and acting on the nearest
+   * element ABOVE it, which it borrows.
+   *
+   * Borrowed is the operative word everywhere it is read. The element is
+   * someone else's: a mode binds to it and paints on it, and must never move
+   * it, hide it or remove it -- which is exactly what a scope does to an
+   * element it owns.
+   */
+  mode?: boolean;
   /** markup written at a usage site and slotted into the instance: it lives
    * here but resolves names from outside (see lexicalParent()) */
   slotted?: boolean;
@@ -333,6 +343,7 @@ export class CoreScope {
     if (this.isStencil()) return;
     if (!this.inited) {
       this.inited = true;
+      this.lifetimeBegun();
       this.fire(RT_DID_INIT_VALUE);
     }
     this.attachSelf();
@@ -342,6 +353,18 @@ export class CoreScope {
   protected domAttached(): boolean {
     return false;
   }
+
+  /**
+   * What a scope puts on somebody else's element, put back and taken away
+   * as its own lifetime begins and ends.
+   *
+   * Only a `<:mode>` has any, and only in the browser. They are separate from
+   * the callbacks either side of them because those are the page's business
+   * and these are the runtime's: a mode that declares no `:did-init` still
+   * has to bind and unbind what it declared.
+   */
+  protected lifetimeBegun(): void {}
+  protected lifetimeEnded(): void {}
 
   /**
    * Whether this scope's lifetime IS its presence.
@@ -386,6 +409,8 @@ export class CoreScope {
     if (this.elementless() && this.inited) {
       this.inited = false;
       this.fire(RT_WILL_DISPOSE_VALUE);
+      // after the callback, which may still want what the delta put there
+      this.lifetimeEnded();
     }
     if (!this.attached) return;
     this.attached = false;

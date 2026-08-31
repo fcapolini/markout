@@ -903,6 +903,7 @@ function resolveChain(
 function elementlessScope(scope: Scope, page: Page): boolean {
   return (
     page.logicScopes.has(scope) ||
+    page.modeScopes.has(scope) ||
     (!!scope.usesTag && page.elementlessTags.has(scope.usesTag))
   );
 }

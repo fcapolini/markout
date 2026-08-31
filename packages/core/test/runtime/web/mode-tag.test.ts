@@ -1,0 +1,145 @@
+import { describe, expect, it } from 'vitest';
+import { Page } from '../../../src/compiler/ir/Page';
+import { stage1load } from '../../../src/compiler/stages/stage1-load';
+import { stage2validate } from '../../../src/compiler/stages/stage2-validate';
+import { stage3qualify } from '../../../src/compiler/stages/stage3-qualify';
+import { stage4resolve } from '../../../src/compiler/stages/stage4-resolve';
+import { stage7generate } from '../../../src/compiler/stages/stage7-generate';
+import { parse } from '../../../src/html/parser';
+import { WebContext } from '../../../src/runtime/web/web-context';
+import { loadProps } from '../../../src/render/props';
+
+/**
+ * `<:mode>` — a scope with no element of its own, acting on its parent's.
+ *
+ * Rule 3 of docs/design/conditional-scopes.md, first slice: handlers only.
+ * A mode's whole point is the delta going on and coming off while the element
+ * STAYS, which is what separates it from `:if` on the element (that takes the
+ * markup away) and from a handler bound once and guarded from inside (which
+ * goes on firing).
+ *
+ * Handlers first because they need no ownership model: binding and unbinding
+ * are unambiguous. Paint and attributes are a set the element's own scope is
+ * already diffing, and sharing that is the next slice — refused here in so
+ * many words rather than half-done.
+ */
+function compile(html: string) {
+  const page = new Page(parse(html, 'mode.html'));
+  stage1load(page);
+  stage2validate(page);
+  stage3qualify(page);
+  stage4resolve(page);
+  return page;
+}
+
+function live(html: string) {
+  const page = compile(html);
+  const errors = page.errors.map(e => e.msg);
+  if (errors.length) {
+    return { errors, ctx: undefined, doc: undefined };
+  }
+  stage7generate(page);
+  const ctx = new WebContext({
+    ...loadProps(page.props!),
+    doc: page.source.doc,
+    onError: () => {
+      /* the cases here have none, and a thrown one would fail louder */
+    },
+  }).refresh();
+  return { errors, ctx, doc: page.source.doc };
+}
+
+/** the server DOM has no querySelector, and one tag is all these need */
+function find(node: any, tag: string): any {
+  if (node?.tagName === tag) return node;
+  for (const child of node?.childNodes ?? []) {
+    const found = find(child, tag);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+describe('<:mode>', () => {
+  it('binds its handler to the element above it, and lets go on the way out', () => {
+    const r = live(
+      '<html :on=${true}><body><div id="p">' +
+        '<:mode :if=${on} :on-ping=${() => 1} />x</div></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    const el = find((r.doc as any).documentElement, 'DIV');
+
+    // `addEventListener` is a no-op on the server DOM, so the calls are what
+    // there is to observe -- and they are the whole behaviour anyway
+    const log: string[] = [];
+    el.addEventListener = (type: string) => log.push(`add ${type}`);
+    el.removeEventListener = (type: string) => log.push(`remove ${type}`);
+
+    r.ctx!.root.proxy.on = false;
+    expect(log).toStrictEqual(['remove ping']);
+
+    log.length = 0;
+    r.ctx!.root.proxy.on = true;
+    // re-added rather than rebuilt: the value that first bound it is
+    // re-evaluated on the way back, and the branch that calls
+    // `addEventListener` runs once, when a value is constructed
+    expect(log).toStrictEqual(['add ping']);
+  });
+
+  it('leaves the element it borrowed exactly where it was', () => {
+    // the failure this guards is severe and quiet: everything that disposes a
+    // scope removes the DOM that scope owns, and a mode owns none of it
+    const r = live(
+      '<html :on=${true}><body><div id="p">' +
+        '<:mode :if=${on} :on-ping=${() => 1} />x</div></body></html>'
+    );
+    r.ctx!.root.proxy.on = false;
+    expect(find((r.doc as any).documentElement, 'DIV')).toBeTruthy();
+    r.ctx!.root.proxy.on = true;
+    expect(find((r.doc as any).documentElement, 'DIV')).toBeTruthy();
+  });
+
+  it('gives its parent element a scope, so it acts on the right one', () => {
+    // a plain <div> needs no scope of its own, and without one the mode would
+    // borrow whatever scoped ancestor came next -- painting <body> instead
+    const r = live(
+      '<html><body><div id="p"><:mode :on-ping=${() => 1} />x</div></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    const el = find((r.doc as any).documentElement, 'DIV');
+    expect(el.getAttribute('data-markout')).toBeTruthy();
+  });
+
+  it('refuses replication, which is an arity it has no answer for', () => {
+    const page = compile(
+      '<html><body><div><:mode :for-each=${[1, 2]} /></div></body></html>'
+    );
+    expect(page.errors.map(e => e.msg).join()).toMatch(
+      /is one delta on one element, so there is nothing to replicate/
+    );
+  });
+
+  it('says what is not built yet as that, rather than as a rule', () => {
+    // each of these has a decided answer in the design and no code behind it.
+    // Saying "not yet" is the difference between a tag that is unfinished and
+    // one that is quietly wrong
+    const cases: [string, RegExp][] = [
+      [':attr-open=${true}', /does not take ":attr-open" yet/],
+      [':prop-value=${1}', /does not take ":prop-value" yet/],
+      [':class-editing', /does not take ":class-editing" yet/],
+      [':style-color=${"red"}', /does not take ":style-color" yet/],
+      ['title="t"', /does not take the plain attribute "title" yet/],
+    ];
+    for (const [attr, message] of cases) {
+      const page = compile(`<html><body><div><:mode ${attr} /></div></body></html>`);
+      expect(page.errors.map(e => e.msg).join(), attr).toMatch(message);
+    }
+  });
+
+  it('refuses content, naming the shape that works today', () => {
+    const page = compile(
+      '<html><body><div><:mode><b>x</b></:mode></div></body></html>'
+    );
+    expect(page.errors.map(e => e.msg).join()).toMatch(/does not take content yet/);
+    expect(page.errors.map(e => e.msg).join()).toMatch(/<:group>/);
+  });
+});

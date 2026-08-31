@@ -231,6 +231,19 @@ export const LOGIC_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'LOGIC';
  * today instead of quietly meaning something new.
  */
 export const LOGIC_BASE_TAG = 'logic';
+/**
+ * `<:mode>`: a scope with no element of its own, on its PARENT's.
+ *
+ * `<:logic>` has no element and wants none. A mode has none of its own and
+ * borrows the nearest one above it, which is what lets it carry the families
+ * that need an element -- `:on-`, `:class-`, `:style-` -- and take them all
+ * back when its condition goes false. The element itself never moves: what
+ * comes and goes is the delta, which is the whole difference from `:if`,
+ * and from a handler that is always bound and guarded from inside.
+ *
+ * See docs/design/conditional-scopes.md.
+ */
+export const MODE_DIRECTIVE_TAG = DIRECTIVE_TAG_PREFIX + 'MODE';
 // `<:slot name="header">`; a slot with no name is the default one, taking
 // everything a usage site doesn't address to another
 export const SLOT_NAME_ATTR = 'name';
@@ -357,6 +370,9 @@ export class Page {
    * until every `<:define>` on the page has been read.
    */
   logicScopes: Map<Scope, string[]>;
+  /** every `<:mode>` scope: elementless like a `<:logic>`, but acting on the
+   * nearest element above it rather than on nothing */
+  modeScopes: Set<Scope>;
   /** custom tags declared `tag="x:logic"`: their instances have no element,
    *  so no stencil is emitted and no usage marker is left for one */
   elementlessTags: Set<string>;
@@ -504,6 +520,7 @@ export class Page {
     this.slottedInto = new Map();
     this.definitionScopes = new Set();
     this.logicScopes = new Map();
+    this.modeScopes = new Set();
     this.elementlessTags = new Set();
     this.usedTags = new Set();
     this.tagUses = new Map();

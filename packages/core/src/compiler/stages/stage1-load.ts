@@ -55,6 +55,7 @@ import {
   DEFINE_DIRECTIVE_TAG,
   LOGIC_DIRECTIVE_TAG,
   LOGIC_BASE_TAG,
+  MODE_DIRECTIVE_TAG,
   DEFINE_TAG_ATTR,
   DEFINE_NAME_MARKER,
   REGION_STENCIL_MARKER,
@@ -640,6 +641,12 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
         separated = false;
         continue;
       }
+      if (childEl.tagName === MODE_DIRECTIVE_TAG) {
+        loadMode(page, scope, childEl);
+        previous = undefined;
+        separated = false;
+        continue;
+      }
       if (childEl.tagName === DEFINE_DIRECTIVE_TAG) {
         // <:define> never itself becomes a live scope; expandDefine() moves
         // its content into an inert <template> stencil and returns the
@@ -719,6 +726,13 @@ function load(page: Page, parent: Scope, e: ServerElement, name?: string): Scope
 }
 
 function needsScope(e: ServerElement): boolean {
+  // A `<:mode>` acts on the nearest element ABOVE it, so that element has to
+  // have a scope for the mode to find at runtime -- and a plain `<div>` would
+  // not otherwise get one, leaving the mode borrowing whatever scoped
+  // ancestor came next and painting the wrong element
+  for (const child of e.childNodes) {
+    if ((child as ServerElement).tagName === MODE_DIRECTIVE_TAG) return true;
+  }
   for (const attr of e.attributes as ServerAttribute[]) {
     // `:slot` only says where this element goes, and `:when-used` only
     // whether it survives compilation; on their own neither is a reason to
@@ -1005,6 +1019,25 @@ const LOGIC_FORBIDDEN_PREFIXES: [string, string][] = [
   [PRESENCE_VALUE_ATTR_PREFIX, 'an attribute to set'],
   [PROP_VALUE_ATTR_PREFIX, 'a DOM property to set'],
 ];
+/** what a mode refuses outright: the same arity objection `<:logic>` has */
+const MODE_FORBIDDEN_ATTRS: [string, string][] = [
+  [FOR_EACH_ATTR, 'is one delta on one element, so there is nothing to replicate'],
+  [FOR_AS_ATTR, 'is one delta on one element, so there is nothing to replicate'],
+  [FOR_KEY_ATTR, 'is one delta on one element, so there is nothing to replicate'],
+  [SLOT_TARGET_ATTR, 'has no markup to put in a slot'],
+];
+/** and what is merely not built yet, said as that rather than as a rule */
+const MODE_UNBUILT_PREFIXES: [string, string][] = [
+  [PRESENCE_VALUE_ATTR_PREFIX, 'an attribute has one owner at a time and handing it back is not built'],
+  [PROP_VALUE_ATTR_PREFIX, 'a DOM property has one owner at a time and handing it back is not built'],
+  // Paint needs the same ownership answer and does not have it yet. A class
+  // is a SET, and the element's set is already being diffed by whoever owns
+  // the element -- two scopes computing a want-set for one classList is the
+  // question slice 3 is about, not something to guess at here
+  [CLASS_VALUE_ATTR_PREFIX, 'a class is a set the element\'s own scope already diffs, and sharing it is not built'],
+  [STYLE_VALUE_ATTR_PREFIX, 'a style is a set the element\'s own scope already diffs, and sharing it is not built'],
+];
+
 const LOGIC_FORBIDDEN_ATTRS: [string, string][] = [
   // `:for-each` stays refused, and not for want of a lifetime: the objection
   // is arity. A name that means as many scopes as there are items is not
@@ -1030,6 +1063,55 @@ const LOGIC_FORBIDDEN_ATTRS: [string, string][] = [
  * behaviour rather than of data, and a block that starts a timer or reacts
  * to a value elsewhere has no reason to be referred to by anyone.
  */
+/**
+ * `<:mode>`: the delta an element would have had, if it were a different
+ * element in this modality.
+ *
+ * Loaded almost exactly like a `<:logic>` -- a scope, its values, and then
+ * the tag goes -- and different in the one way that matters: it keeps the
+ * families that need an element, because it acts on the nearest element
+ * ABOVE it rather than on nothing. The runtime borrows that element; the
+ * element itself never moves.
+ *
+ * What it refuses here is what is not built yet rather than what is
+ * unsound, and each message says so, because a tag that quietly does half
+ * of what it reads as doing is the failure this repository hunts.
+ */
+function loadMode(page: Page, parent: Scope, e: ServerElement): void {
+  const what = `<${MODE_DIRECTIVE_TAG.toLowerCase()}>`;
+  for (const [attr, why] of MODE_FORBIDDEN_ATTRS) {
+    hasAttr(e, attr) && addError(page, `${what} ${why}`, e.loc);
+  }
+  for (const [prefix, why] of MODE_UNBUILT_PREFIXES) {
+    const found = e.getAttributeNames().find(n => n.startsWith(`${SPECIAL_ATTR_PREFIX}${prefix}`));
+    found && addError(page, `${what} does not take "${found}" yet: ${why}`, e.loc);
+  }
+  // A plain attribute is the same question as `:attr-`, and gets the same
+  // answer while ownership is unbuilt
+  for (const name of e.getAttributeNames()) {
+    if (name.startsWith(SPECIAL_ATTR_PREFIX)) continue;
+    addError(
+      page,
+      `${what} does not take the plain attribute "${name}" yet: an attribute ` +
+        `has one owner at a time and handing it back is not built`,
+      e.loc
+    );
+  }
+  if (e.childNodes.length) {
+    addError(
+      page,
+      `${what} does not take content yet: its children are built and destroyed ` +
+        `with it, which is the one thing here that is not a region -- write ` +
+        `them in a "<:group>" beside it for now`,
+      e.loc
+    );
+  }
+  const scope = new Scope(page, parent, e);
+  page.modeScopes.add(scope);
+  extractValues(page, scope, e);
+  e.parentElement?.removeChild(e);
+}
+
 function loadLogic(page: Page, parent: Scope, e: ServerElement): void {
   rejectElementish(page, e, `<${LOGIC_DIRECTIVE_TAG.toLowerCase()}>`);
   const scope = new Scope(page, parent, e);

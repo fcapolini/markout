@@ -121,7 +121,9 @@ export class WebScope extends CoreScope {
     const templateId = this.props.template;
     const parentDom =
       this.parent instanceof WebScope ? this.parent.childContainer() : undefined;
-    const view = this.props.group
+    const view = this.props.mode
+      ? this.borrowedDom()
+      : this.props.group
       ? undefined
       : this.cloned
       ? (this.parent as WebScope)?.pendingCloneDom
@@ -599,6 +601,13 @@ export class WebScope extends CoreScope {
       this.dom?.removeEventListener(name, listener);
     });
     this.domListeners = [];
+    // Listeners go, the element stays. Everything below removes the DOM a
+    // scope OWNS, and a mode owns none of it -- running that here would take
+    // the parent's element out of the page on the way past
+    if (this.props.mode) {
+      super.dispose();
+      return;
+    }
     if (this.props.group) {
       // markers included: they carry this replica's id, and a pair left
       // behind would be found again by whatever takes that id next
@@ -933,6 +942,8 @@ export class WebScope extends CoreScope {
    * counts what its author wrote and nothing else.
    */
   override showView(): void {
+    // borrowed: the element is someone else's and was never taken out
+    if (this.props.mode) return;
     if (this.props.group) {
       // insertBefore takes them one at a time, which is what keeps their
       // order: the holder is emptied from the front as they go
@@ -960,6 +971,7 @@ export class WebScope extends CoreScope {
    * ever needed.
    */
   override hideView(): void {
+    if (this.props.mode) return;
     if (this.props.group) {
       // back into the holder rather than dropped, for the reason the
       // element form gives below: what comes back has to be what went away
@@ -972,6 +984,44 @@ export class WebScope extends CoreScope {
     }
     const dom = this.dom as unknown as { parentNode?: { removeChild(n: unknown): void } };
     dom?.parentNode?.removeChild(this.dom);
+  }
+
+  /**
+   * The nearest element above this scope: what a `<:mode>` acts on.
+   *
+   * Walked rather than taken from the immediate parent, because the scope
+   * above may have no element of its own -- another mode, or a `<:logic>` --
+   * and a modality is about the nearest real element either way.
+   */
+  /**
+   * A mode's handlers go on with it and come off with it.
+   *
+   * The list is kept rather than emptied, because the values that built it
+   * are not rebuilt when the mode returns -- they are re-evaluated, and the
+   * branch that calls `addEventListener` runs once, when a value is first
+   * constructed. So re-arming re-adds what is already known instead of
+   * waiting for a construction that will not happen again.
+   */
+  protected override lifetimeBegun(): void {
+    if (!this.props.mode) return;
+    this.domListeners?.forEach(({ name, listener }) =>
+      this.dom?.addEventListener(name, listener)
+    );
+  }
+
+  protected override lifetimeEnded(): void {
+    if (!this.props.mode) return;
+    this.domListeners?.forEach(({ name, listener }) =>
+      this.dom?.removeEventListener(name, listener)
+    );
+  }
+
+  private borrowedDom(): Element | undefined {
+    for (let s = this.parent; s; s = s.parent) {
+      const dom = (s as WebScope).dom;
+      if (dom) return dom;
+    }
+    return undefined;
   }
 
   /**

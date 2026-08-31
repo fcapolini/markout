@@ -795,6 +795,9 @@ interface ScopeData {
   /** a `<:logic>`, or an instance of a `tag="x:logic"`: a scope with no
    * element of ITS OWN, which is what gives it a lifetime rather than a view */
   elementless?: true;
+  /** a `<:mode>`: elementless, but acting on the nearest element above it,
+   * which the runtime borrows and must never move */
+  mode?: true;
   slotted?: true;
   slottedText?: true;
   elseOf?: string;
@@ -894,8 +897,12 @@ function generateScope(
     // shows and hides is the run of nodes between this region's two markers
     props.group = true;
   }
+  if (scope.page.modeScopes.has(scope)) {
+    props.mode = true;
+  }
   if (
     scope.page.logicScopes.has(scope) ||
+    scope.page.modeScopes.has(scope) ||
     (scope.usesTag && scope.page.elementlessTags.has(scope.usesTag))
   ) {
     // said here rather than inferred from there being no DOM: the runtime

@@ -1,6 +1,6 @@
 # Conditional scopes, and modes on an element
 
-Status: **rules 1 and 2 built; rule 3 designed, not built.** One crash found
+Status: **rules 1 and 2 built; rule 3 begun — handlers only.** One crash found
 while checking them and fixed on the way (`cae581a`). Prompted by asking what
 markout misses next to OpenLaszlo's `<state>` tag — the answer is *not that
 tag*.
@@ -150,6 +150,9 @@ segment, `app?.foo`, which is the `at === 0` path — the one that threw
 it. See *What the crash was* below.
 
 ### 3. `<:mode>` — a scope on its parent's element
+
+*Begun. The tag exists and carries handlers; paint, attributes, children and
+`:priority` are refused in so many words — see* What slice 1 built.
 
 `<:logic>` is a scope with **no** element. A mode is a scope whose element is
 **its parent's**, so it can carry the families that need one and take them all
@@ -445,6 +448,41 @@ before printing the message it had ready.
 Fixed by a `via` fragment that is empty at the first segment, so the two
 wordings differ only in naming a crossing that exists; the named-host wording
 is byte-identical. Four cases in `name-resolution.test.ts` cover it.
+
+## What slice 1 built
+
+`<:mode>` is a tag, it borrows the nearest element above it, and its `:on-`
+handlers go on and come off as its condition moves. That is the gap this
+document opened with, and it is closed: a `pointermove` handler can now exist
+only while a drag is happening, on an element that never re-renders.
+
+**Handlers first because they need no ownership model.** Binding and unbinding
+are unambiguous, where a class is a set the element's own scope is already
+diffing — `applyClasses` computes a want-set from what it last applied — and
+two scopes diffing one `classList` is the question the next slice is about.
+Attributes are the same question. So `:class-`, `:style-`, `:attr-`, `:prop-`
+and plain attributes are all refused *as not built yet*, each saying which,
+rather than half-applied.
+
+Three things it needed that were not obvious:
+
+- **The parent element has to be given a scope.** A plain `<div>` needs none of
+  its own, so a mode inside one would have borrowed whatever scoped ancestor
+  came next and painted `<body>`. `needsScope` now looks for a `<:mode>` child.
+- **Everything that disposes a scope removes the DOM that scope owns**, and a
+  mode owns none of it — so `dispose`, `showView` and `hideView` all return
+  early for one. Getting this wrong takes the parent's element out of the page,
+  quietly, on the way past.
+- **Re-arming re-adds rather than rebuilds.** A value binds its listener in the
+  branch that runs when the value is first *constructed*, and a mode coming
+  back re-evaluates its values rather than rebuilding them. So the list is kept
+  and re-added, which is why `lifetimeBegun`/`lifetimeEnded` exist beside the
+  callbacks rather than inside them: what a mode declared has to be bound
+  whether or not the page declared a `:did-init`.
+
+Rules 1 and 2 carried more of this than expected. A mode is marked
+`elementless`, so its lifetime already follows its condition and its name is
+already absent while it is off, with the reader wiring that goes with that.
 
 ## What is still open
 
