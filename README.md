@@ -737,9 +737,11 @@ somebody using it.
 Reactivity arrived in the browser as something you bolt onto HTML with
 JavaScript. A framework takes the page over, the markup becomes its output
 rather than the document, and every page pays for a runtime, a build step and
-a mental model before it can react to anything. I kept wondering what the
-other order would look like — reactivity in the markup itself, so that a page
-stays a page and gains the two things a static document cannot do for itself.
+a mental model before it can react to anything.
+
+I kept wondering what the other order would look like — reactivity in the
+markup itself, so that a page stays a page and gains the two things a static
+document cannot do for itself.
 
 The idea is not mine. OpenLaszlo had it in the 2000s: attributes that stated a
 relationship and stayed true, instead of state pushed into a view by hand. The
@@ -748,8 +750,8 @@ and I think threw out the baby with the bathwater. I waited a long time for
 someone to bring that vision up to date. Nobody did.
 
 This is what it looks like with no plugin, no proprietary runtime and no
-language of its own: HTML is the syntax, and JavaScript is the expression
-language.
+language of its own: HTML is the syntax, the DOM is the scope chain, and
+JavaScript is the expression language.
 
 ## How it's built
 
