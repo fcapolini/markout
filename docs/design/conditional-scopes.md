@@ -309,12 +309,25 @@ dies with the edit, and a mode that came back holding the last one would be the
 surprising thing. And the alternative is a construct that parks its markup
 while unbinding its listeners, which is two lifetimes in one tag.
 
-So the shape to build against is **not `<:group :if>` but a `:for-each` replica
-of arity zero-or-one**. That distinction is already drawn in the runtime, in
-`regionHost`'s own comment: a replica *is built when it exists and disposed when
-it does not, so there is no scope sitting there answering for markup that is
-away* — which is exactly what a mode wants, and exactly what an `:if` region is
-built not to do. Both paths exist; this one is the other one.
+**Arity is not the axis; lifetime is.** `:for-data` is already zero-or-one and
+is *not* what a mode wants: `fordataCB` calls the same `toggle` an `:if` does,
+`regionHost` counts it among the regions, and a test pins it — *detaches and
+attaches a `:for-data` region without ever disposing it*. It parks, like
+everything else that shows and hides.
+
+What markout has today is one axis crossed with the other, and one empty cell:
+
+| | parks | builds and destroys |
+| --- | --- | --- |
+| **zero or one** | `:if`, `:for-data` | *— a mode* |
+| **many** | — | `:for-each` |
+
+So a mode wants `:for-each`'s lifetime at `:for-data`'s arity, and no directive
+spells that combination. What it does not want is new machinery: a `:for-each`
+over a list of zero or one items is exactly build-and-destroy at arity
+zero-or-one, and it already works — a dropped replica detaches and then
+disposes, which has a test of its own. The cell is empty in the language, not
+in the runtime.
 
 The cost is that a mode wrapping a `<video>` or a deeply scrolled list rebuilds
 it on the way back. That is the rarer case, and `:if` on the element is still
