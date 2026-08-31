@@ -210,6 +210,20 @@ statically detectable. Give them different priorities and the higher one owns
 the attribute while both are on, with the lower resuming when it leaves, which
 is the layering rule again one step along.
 
+```html
+<div class="panel">
+  <edit :if=${editing} />
+  <drag :if=${dragging} :priority=${1} />   <!-- drag's disabled wins -->
+</div>
+```
+
+**A number, and a higher one wins.** Absent is the shared default, which
+compares as zero, so an unranked mode ties with another unranked one and is
+beaten by any positive rank. It has to be a **compile-time constant**, or the
+conflict check stops being one: a rank that is an expression could tie at
+runtime, and the error this exists to give would arrive as a silent
+last-write-wins instead.
+
 **Opt-in is what makes a number acceptable here.** The objection to priorities
 is the arms race that ends at 9999, and it applies to systems where every
 participant must pick one to be heard. Nothing needs a priority to work; it
@@ -218,12 +232,22 @@ exactly where the author has something to say that the language cannot infer.
 The safe answer stays the default and the escape is explicit — the shape
 `class+=` and `class!=` already have.
 
-**The priority has to be a compile-time constant**, or the conflict check stops
-being one. A rank that is an expression could tie at runtime, and the error
-this exists to give would arrive as a silent last-write-wins instead.
+And the parties are few. Two modes on one element are written by one page
+author, or come from one kit; a number needs coordinating when strangers pick
+from a shared scale, which is not this. *Higher wins* is the whole rule, and
+it does not need a table of conventional values to go with it.
 
-**Nesting was the alternative and is wrong**, which is worth recording because
-it looks elegant: a mode's element is its nearest element *ancestor*, so a mode
+**A relational spelling was the alternative** — `<drag :over="edit" />`, naming
+the mode outranked rather than a position on a scale, with cycles refused at
+compile time. It has a real property: it is available exactly where precedence
+is needed, since component modes are tags and have names, while two anonymous
+inline modes are both the page's own and want merging into one expression
+rather than ranking. It was not taken because a number is plainer at the point
+of use and the coordination problem it avoids is one this construct does not
+really have.
+
+**Nesting was the other candidate, and it is not merely worse but wrong** —
+worth recording because it looks like the elegant answer: a mode's element is its nearest element *ancestor*, so a mode
 could sit inside another and let innermost-win do the work with no new concept.
 It fails on something rules 1 and 2 just established. **Nesting already means
 lifetime containment** — a scope inside a conditional scope is disposed when
