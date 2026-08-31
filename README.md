@@ -740,7 +740,7 @@ rather than the document, and every page pays for a runtime, a build step and
 a mental model before it can react to anything.
 
 I kept wondering what the other order would look like — reactivity in the
-markup itself, so that a page stays a page and gains the two things a static
+markup itself, so that a page stays a page and gains the things a static
 document cannot do for itself.
 
 The idea is not mine. OpenLaszlo had it in the 2000s: attributes that stated a
