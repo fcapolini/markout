@@ -913,6 +913,18 @@
               extent is found by <em>parsing</em> it — so HTML's rules stop at
               the <code class="rule-code">${</code>.
             </p>
+
+            <p class="fs-5 mb-0">
+              What that adds up to is <strong>reactive JavaScript</strong> in
+              an HTML-shaped syntax, with one assumption removed: that an
+              object's properties are <strong>passive</strong> — that assigning
+              to one tells nobody. Here everything reading it follows, which is
+              why there's no <code class="rule-code">useState</code> and no
+              dependency array to write. Nothing announces it, either: no
+              <code class="rule-code">signal()</code>, no
+              <code class="rule-code">ref()</code>. The minimalism is exactly
+              why it's worth pointing&nbsp;out.
+            </p>
           </div>
         </div>
 

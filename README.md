@@ -115,7 +115,27 @@ would make it part of the interface. This is how the kits are written —
 [`bs-input`](kits/bootstrap-kit/parts/input.htm) groups its parameters, its
 derived state and its public `valid` exactly this way, and
 [`std-data`](kits/std-kit/parts/data.htm) holds a whole fetch lifecycle
-inline. See [values](docs/concepts/values.md) and the [syntax
+inline.
+
+The minimalism hides this, which is why it is worth saying plainly. What the
+syntax buys is not expressions in HTML: it is **reactive JavaScript**, written
+in an HTML-shaped syntax, with one of the language's assumptions removed.
+Nothing marks the moment a value becomes reactive — no `signal()`, no `ref()`,
+no annotation of any kind — so `:count=${0}` reads like an attribute with a
+number in it, and what it actually declares is left for the reader to notice.
+
+The assumption removed is that **an object's properties are passive**. In
+plain JavaScript one holds what was last assigned to it, assigning to it tells
+nobody, and every consequence of that assignment is work somebody does by hand
+or hands to a library. `_count` above is not passive. It is a statement of
+what something *is*, and `value`, the text in the element, and anything else
+that reads it re-derive when it moves — because the compiler found that graph
+in the expressions themselves.
+
+That is what is missing from the list of things you don't write here: no
+`useState`, no dependency array, no `computed` against `watch`. Those exist to
+put back, in a language of passive properties, what removing the assumption
+gives for nothing. See [values](docs/concepts/values.md) and the [syntax
 reference](docs/reference/syntax.md).
 
 ## Design philosophy
