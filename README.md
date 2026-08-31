@@ -732,6 +732,23 @@ Node](docs/design/without-node.md) is why it is shaped this way, and
 [the sidebar](docs/reference/vscode-extension-sidebar.md) is the page for
 somebody using it.
 
+## Motivation
+
+Reactivity arrived in the browser as something you bolt onto HTML with
+JavaScript. A framework takes the page over, the markup becomes its output
+rather than the document, and every page pays for a runtime, a build step and
+a mental model before it can react to anything. I kept wondering what the
+other order would look like — reactivity in the markup itself, so that a page
+stays a page and gains the two things a static document cannot do for itself.
+
+The idea is not mine. OpenLaszlo had it in the 2000s: attributes that stated a
+relationship and stayed true, instead of state pushed into a view by hand. The
+JavaScript frameworks that followed, from React onwards, went the other way,
+and I think threw out the baby with the bathwater. I waited a long time for
+someone to bring that vision up to date, and eventually wrote it myself. This
+is what it looks like with no plugin, no proprietary runtime and no language
+of its own: HTML is the syntax, and JavaScript is the expression language.
+
 ## How it's built
 
 A TypeScript monorepo on npm workspaces, MIT licensed.
@@ -745,7 +762,7 @@ A TypeScript monorepo on npm workspaces, MIT licensed.
 | [`kits/`](kits/) | `bootstrap-kit` (every component on Bootstrap's 5.3 cheatsheet, one file each) and `std-kit`, both written in Markout rather than in TypeScript |
 | [`sites/site`](sites/site/) | markout.dev and its demos, written in Markout and served by the Express package |
 
-2,696 tests across 134 files, with coverage and CodeQL on every push.
+2,867 tests across 145 files, with coverage and CodeQL on every push.
 
 Three decisions, rather than the rest of the inventory:
 

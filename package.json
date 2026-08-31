@@ -19,6 +19,7 @@
     "version-packages": "changeset version && npm install --package-lock-only && npm run lockfile",
     "release": "npm run build && changeset publish",
     "lockfile": "node scripts/lockfile.mjs",
+    "test-count": "node scripts/test-count.mjs",
     "pretest-coverage": "npm run build",
     "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
     "dev": "npm run dev -w @markout-lang/site",
