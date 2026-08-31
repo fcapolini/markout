@@ -167,7 +167,8 @@ back when its condition goes false:
 ```
 
 **The element stays.** That is the whole difference from `:if` on the element,
-and from a guard inside the handler.
+and from a guard inside the handler. What comes and goes is the delta — and,
+where a mode has children, the run of markup it brought with it.
 
 Three things follow, and the third is the one that earns the feature:
 
@@ -269,10 +270,53 @@ warns, and `class!=` is the spelling that says the replacement is meant. A mode
 taking over an attribute its parent declares is the same event one level in,
 and should say so the same way.
 
-None of this makes a mode into `<state>` again. `<state>` bundled markup,
-attributes, handlers and paint into one togglable container; a mode carries no
-markup — `:if` and `<:group>` already own that question — and what it does
-carry it owns openly rather than patching.
+**A mode takes children, the way `<:group>` does.** An earlier draft refused
+them on the grounds that markup in the same container is what made `<state>`
+`<state>`. That was wrong, and the mistake is worth naming: the principle this
+language actually holds is that *two intents get two spellings* — it disambiguates
+declarations, it does not forbid one construct from carrying several kinds.
+An element already carries attributes, handlers, classes and children at once.
+A mode is the delta an element would have had if it were a different element in
+this modality, so it carries what an element carries.
+
+The concrete case is the one that decides it. Editing a panel adds a Save and a
+Cancel button as surely as it adds an Escape handler:
+
+```html
+<div class="panel">
+  <:mode :if=${editing} :_draft=${text} :on-keydown=${…} :class-editing>
+    <button :on-click=${() => save(_draft)}>Save</button>
+    <button :on-click=${() => editing = false}>Cancel</button>
+  </:mode>
+  <p>${text}</p>
+</div>
+```
+
+Without children that is a `<:mode>` and a `<:group :if=${editing}>` side by
+side, with **the same condition written twice** and free to drift apart. One
+modality is one fact and should be one declaration.
+
+Mechanically it is close to free: a mode with children is a
+[group region](group-regions.md) — a marker at each end, its run of nodes
+rendered where the tag was written — plus a delta on the enclosing element.
+That machinery is built.
+
+**And it forces one decision the childless form did not: park or dispose.**
+Rule 1 disposes an elementless scope on the grounds that it has no DOM state to
+preserve, which stops being true the moment a mode has children — there could
+be a focused input or a scroll offset among them. The answer is still
+**dispose**, for two reasons. A mode's state is meant to be transient: the
+draft dies with the edit, and a mode that came back holding the last draft
+would be the surprising one. And the alternative is a construct that parks its
+markup while unbinding its listeners, which is two lifetimes in one tag.
+
+The cost is a mode that wraps a `<video>` or a deeply scrolled list rebuilds it
+on the way back. That is the rarer case, and `:if` on the element is still
+there for it.
+
+So a mode is not `<state>` for a different reason than the one first given:
+not because it carries less, but because what it carries it **owns openly and
+hands back**, where `<state>` patched and remembered.
 
 **The name.** `<:state>` is the worst of the candidates: values already *are*
 state, and every page has them. `<:mixin>` and `<:addon>` suggest composition
