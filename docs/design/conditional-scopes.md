@@ -484,6 +484,47 @@ Rules 1 and 2 carried more of this than expected. A mode is marked
 `elementless`, so its lifetime already follows its condition and its name is
 already absent while it is off, with the reader wiring that goes with that.
 
+## What slice 2 tried, and what stopped it
+
+Children were attempted and reverted. The tree is at slice 1; this is what the
+attempt established, so the next one starts further along.
+
+**Most of it works, and is not the hard part.** A `<:mode>` with children wants
+to be structurally a `<:group>` — a run of nodes between two markers, the tag
+serializing to nothing — and the group's special cases are centralised enough
+that one `isRegionTag` predicate covers them. A mode then needs one exemption
+from the group's own rules, and it is the interesting one: `resolveActiveGroups`
+refuses `:on-` and friends on a group *because it has no element*, which is
+exactly the premise a mode denies. With that exemption the children rendered at
+the written position and vanished on the way out, on the first try.
+
+**What stopped it is that the vanishing was a park, not a destroy.** Every
+region in this runtime preserves — that is what `toggle` is — so the children
+came back and so did the mode's state, with the draft the last modality left in
+them. The lifecycle callbacks *did* fire, because rule 1's elementless path
+fires them, which makes the failure worse rather than better: a tag saying
+`:will-dispose` while keeping everything it had is the shape this document
+exists to refuse.
+
+**The route to destroy is the replica path, and the way in is a desugar.**
+`:if=${c}` on a mode with children becomes `:for-each=${(c) ? [0] : []}`, after
+which every existing piece does the right thing: a replica is built when it
+exists and disposed when it does not, its values are its own, and `clone()` is
+the DOM-creating primitive that a rebuild needs and a park never did. The
+attempt failed on a detail rather than on the idea — reading the condition's
+source text back off the element, to rewrite it — and that is worth knowing
+before someone concludes the approach was wrong.
+
+Two smaller things it turned up:
+
+- **`elementless` cannot be decided by counting child scopes.** A mode whose
+  children are plain markup has no child *scopes* — their text values land on
+  the mode's own — so "has children" has to be asked of the markup.
+- **A mode with children needs its range moved and its element left alone**,
+  which are two branches of the same method. Slice 1 returns early for a mode
+  in `showView`/`hideView`; that early return has to move below the group
+  branch rather than above it.
+
 ## What is still open
 
 These are implementation questions. None of them changes a rule above.
