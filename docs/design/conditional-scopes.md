@@ -202,10 +202,42 @@ is a layering rule rather than a composition rule, and it is the right shape
 for single-valued things. `:class-` and `:style-` keep composing as sets, since
 add-and-remove is what they already mean.
 
-**Two modes on the same element declaring the same attribute is the case that
-stays refused**, and it is statically detectable — same parent element, same
-name. Precedence between siblings is a rule nobody could guess, so it is a
-compile error rather than an order-of-appearance answer.
+**Two modes contending for one attribute: equal ranks refuse, declared ranks
+decide.** A mode may carry `:priority`, and leaving it off is the default that
+every mode shares. Two modes at the same priority declaring the same
+single-valued attribute is a compile error — same element, same name,
+statically detectable. Give them different priorities and the higher one owns
+the attribute while both are on, with the lower resuming when it leaves, which
+is the layering rule again one step along.
+
+**Opt-in is what makes a number acceptable here.** The objection to priorities
+is the arms race that ends at 9999, and it applies to systems where every
+participant must pick one to be heard. Nothing needs a priority to work; it
+exists only where two modalities genuinely overlap, which is rare and is
+exactly where the author has something to say that the language cannot infer.
+The safe answer stays the default and the escape is explicit — the shape
+`class+=` and `class!=` already have.
+
+**The priority has to be a compile-time constant**, or the conflict check stops
+being one. A rank that is an expression could tie at runtime, and the error
+this exists to give would arrive as a silent last-write-wins instead.
+
+**Nesting was the alternative and is wrong**, which is worth recording because
+it looks elegant: a mode's element is its nearest element *ancestor*, so a mode
+could sit inside another and let innermost-win do the work with no new concept.
+It fails on something rules 1 and 2 just established. **Nesting already means
+lifetime containment** — a scope inside a conditional scope is disposed when
+that condition goes false. So writing `<edit><drag /></edit>` to say *drag
+outranks edit* would also say *drag exists only while editing*, which is not
+what was meant and would be discovered as a bug rather than read as one.
+Precedence and lifetime need different spellings because they are different
+questions.
+
+The case that made this worth solving at all is **component modes**: where
+`<drag>` and `<edit>` come out of a kit, the page owns neither definition, so
+"merge the declarations into one expression" is advice it cannot take.
+`:priority` is written at the usage site, which is the one place the page does
+control.
 
 **Overriding the parent is worth being told about**, and there is a precedent
 for exactly that: a usage site whose `class` would replace a component's own
@@ -332,32 +364,38 @@ is byte-identical. Four cases in `name-resolution.test.ts` cover it.
 These are implementation questions. None of them changes a rule above.
 
 1. **What two modes on one element do about a `:class-` they both set.** A set
-   union with removal on the last leaver is the obvious answer and is not
-   obviously the right one. Single-valued families avoid the question by
-   refusing the overlap outright, which a set cannot do — `class` composing is
-   the whole point of it. This moves from theoretical to likely now that page
-   code is the audience: a panel being edited *and* dragged is ordinary, where
-   a kit's modalities would more often be designed not to overlap.
+   union with removal on the last leaver is the obvious answer, and is probably
+   right here where it was not for attributes: two modes adding a class are not
+   in conflict, so there is nothing for a priority to arbitrate and nothing to
+   refuse. What wants checking is the removal — a class both of them add, and
+   one of them leaves.
 
-2. **What the override signal is, exactly.** A mode taking an attribute its
+2. **A priority is per mode, and a conflict is per attribute.** One number
+   cannot say that `<edit>` should win `disabled` while `<drag>` wins
+   `aria-grabbed`. That is probably a design smell rather than a case to
+   support — a modality that outranks another on one attribute and loses on
+   the next is two modalities wearing one name — but it is an assumption, and
+   the first page that wants it will say whether it was right.
+
+3. **What the override signal is, exactly.** A mode taking an attribute its
    parent declares is legitimate and worth saying, on the `class!=` precedent —
    but whether that is a warning, a spelling, or both is not settled, and the
    answer wants to be the same one `class!=` gives rather than a second
    dialect.
 
-3. **What exactly a mode's element is.** Its nearest element ancestor, which
+4. **What exactly a mode's element is.** Its nearest element ancestor, which
    makes `<:mode>` at the page root an error with nothing to attach to.
    Whether it reaches through a `<:group>`, and what it means inside a
    `<:define>` whose instances each have their own element, both need saying
    before anything is written.
 
-4. **`:did-init` running more than once.** Today it is *once, when this scope
+5. **`:did-init` running more than once.** Today it is *once, when this scope
    has come up*, guarded by an `inited` flag that is never cleared. The rule is
    unchanged — once per lifetime — but lifetimes start multiplying, and
    `inited` has to be reset on dispose. Any `:handle-` on the same scope
    re-runs with it, since it fires once at start.
 
-5. **A mode on the server.** A modality true at render time should arrive
+6. **A mode on the server.** A modality true at render time should arrive
    painted — its `:class-` in the markup — while its listeners stay
    browser-only like every other callback family. That is the existing split,
    but a mode is the first construct where both halves sit in one declaration.
