@@ -127,16 +127,26 @@ labelled with ordinary `//` comments, which are stripped at parse time:
 <:define tag="my-counter:div"
 
   // parameters
+
   ::start=${0}
   ::step=${1}
 
   // private
+
   :_count=${start}
 
   // read from outside
-  :value=${_count}
 
-  :bump=${() => _count += step}
+  :value=${_count}
+  :bump=${() => {
+    /*
+     since properties are reactive,
+     this assignment transparently updates all
+     dependents of `_count`
+    */
+    _count += step;
+  }}
+
 >${_count}</:define>
 ```
 

@@ -569,14 +569,23 @@ describe('docs/concepts/kits.md', () => {
       parse(
         '<html><body>' +
           '<:define tag="my-counter:div"\n' +
-          '  // parameters\n' +
+          '  // parameters\n\n' +
           '  ::start=${0}\n' +
           '  ::step=${1}\n' +
-          '  // private\n' +
+          '  // private\n\n' +
           '  :_count=${start}\n' +
-          '  // read from outside\n' +
+          '  // read from outside\n\n' +
           '  :value=${_count}\n' +
-          '  :bump=${() => _count += step}\n' +
+          // the block body and the comment inside it are the point: this is
+          // the form the docs show, so it is the form that gets compiled
+          '  :bump=${() => {\n' +
+          '    /*\n' +
+          '     since properties are reactive,\n' +
+          '     this assignment transparently updates all\n' +
+          '     dependents of `_count`\n' +
+          '    */\n' +
+          '    _count += step;\n' +
+          '  }}\n' +
           '>${_count}</:define>' +
           '<my-counter :aka="c" ::start=${5} ::step=${2} />' +
           '<p>${c.value}</p>' +
