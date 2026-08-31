@@ -324,9 +324,12 @@ describe(':else-if / :else', () => {
     ).toMatch(/Cannot use ":else" with ":for-data"/);
   });
 
-  it('cannot go on <:logic>, which has nothing to show or hide', () => {
+  it('goes on <:logic>, where it decides a lifetime rather than a view', () => {
+    // it was refused for having "nothing to show or hide", which was true and
+    // was not the point: a scope with no element still has a lifetime, and a
+    // branch is now what decides it. docs/design/conditional-scopes.md
     expect(run('<html><body><p :if=${1}>a</p><:logic :else /></body></html>').errors.join())
-      .toMatch(/<:logic> has no element, so ":else" has nothing to show or hide/);
+      .not.toMatch(/show or hide/);
   });
 
   it('cannot be declared as a value, which is why the names were free', () => {

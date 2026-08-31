@@ -358,6 +358,23 @@ describe('a name inside a region', () => {
     expect(r.read()).toBe('RIGHT');
   });
 
+  /**
+   * A conditional `<:logic>` is a region HOST, so the exemption below covers
+   * it: the scope is there whether or not its condition holds, and its values
+   * go on answering. Only its LIFETIME callbacks follow the condition -- see
+   * lifecycle.test.ts, and docs/design/conditional-scopes.md, which wants the
+   * scope itself to go away and records what that would still take.
+   */
+  it('reads a conditional <:logic> unguarded, host that it is', () => {
+    const r = live(
+      '<html :on=${false}><body><:logic :aka="app" :if=${on} :foo=${"RIGHT"} />' +
+        '<i>${app.foo}</i></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    expect(r.runtime).toStrictEqual([]);
+    expect(r.read()).toBe('RIGHT');
+  });
+
   it('needs no guard for a value ON the region host', () => {
     reaches(
       '<html :on=${true}><body>' +

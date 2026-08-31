@@ -1006,13 +1006,12 @@ const LOGIC_FORBIDDEN_PREFIXES: [string, string][] = [
   [PROP_VALUE_ATTR_PREFIX, 'a DOM property to set'],
 ];
 const LOGIC_FORBIDDEN_ATTRS: [string, string][] = [
+  // `:for-each` stays refused, and not for want of a lifetime: the objection
+  // is arity. A name that means as many scopes as there are items is not
+  // fixed by knowing when each of them ends -- see conditional-scopes.md.
   [FOR_EACH_ATTR, 'nothing to replicate'],
-  [FOR_DATA_ATTR, 'nothing to show or hide'],
   [FOR_AS_ATTR, 'nothing to replicate'],
   [FOR_KEY_ATTR, 'nothing to replicate'],
-  [IF_ATTR, 'nothing to show or hide'],
-  [ELSE_IF_ATTR, 'nothing to show or hide'],
-  [ELSE_ATTR, 'nothing to show or hide'],
   [SLOT_TARGET_ATTR, 'no markup to put in a slot'],
   [WHEN_USED_ATTR, 'nothing to keep or drop'],
 ];

@@ -1,10 +1,13 @@
 # Conditional scopes, and modes on an element
 
-Status: **designed, not built.** Three rules, decided. One crash found while
-checking them and fixed on the way (`cae581a`); everything else here is a
-proposal with nothing written. Prompted by asking what markout misses next to
-OpenLaszlo's `<state>` tag — the answer is *not that tag*, and the document
-ends somewhere more useful than it started.
+Status: **rule 1 built in part; rules 2 and 3 designed, not built.** One crash
+found while checking them and fixed on the way (`cae581a`). Prompted by asking
+what markout misses next to OpenLaszlo's `<state>` tag — the answer is *not
+that tag*.
+
+What rule 1 turned out to be on contact with the runtime, and what that costs
+rule 2, is in *What building rule 1 found*. Read it before rule 2, which reads
+as ready to build and is not.
 
 ## The gap
 
@@ -42,17 +45,18 @@ Four of the five are covered, and the lifecycle pair goes further than
 separates a scope's lifetime from its markup's presence. Everything below turns
 on that separation.
 
-## What happens today, measured
+## What it did before rule 1, measured
 
-Not argued from the code — run.
+Not argued from the code — run. This is the state the rules were written
+against; rule 1 has since changed the first and third of these.
 
-**A bare `<:logic>` refuses a condition, correctly:**
+**A bare `<:logic>` refused a condition:**
 
 ```
 <:logic> has no element, so ":if" has nothing to show or hide
 ```
 
-`:if`, `:else-if`, `:else`, `:for-each` and `:for-data` are in
+`:if`, `:else-if`, `:else`, `:for-each` and `:for-data` were all in
 `LOGIC_FORBIDDEN_ATTRS` in
 [stage1-load.ts](../../packages/core/src/compiler/stages/stage1-load.ts); `:on-`
 is in the neighbouring prefix list with *an element to listen to*. A `<:logic>`
@@ -96,10 +100,14 @@ is treated as *never present*, so neither pair has anything to say about it.
 
 ### 1. `<:logic>` takes conditionals, and disposes
 
+*Built as far as the lifecycle callbacks; see* What building rule 1 found.
+
 `:if`, `:else-if`, `:else` and `:for-data` are accepted on a `<:logic>`,
-**named or anonymous alike**, and a conditional one genuinely **disposes and
-re-inits** as its condition moves. `:did-init` and `:will-dispose` then bracket
-what they always bracket — the scope's lifetime, which is now the condition's.
+**named or anonymous alike**, and a conditional one **disposes and re-inits**
+as its condition moves. `:did-init` and `:will-dispose` then bracket what they
+always bracket — the scope's lifetime, which is now the condition's. *Built at
+the callback level only: the scope itself stays. See* What building rule 1
+found.
 
 The same rule closes the silent case: an elementless scope goes away when it
 leaves the page and comes back new, whether the condition is written *on* it or
@@ -212,6 +220,50 @@ single tag.
 What `<state>` had that markout lacks is not the bundle but the *target* — a
 delta applied to something that already exists. Rule 3 takes that and leaves
 the rest.
+
+## What building rule 1 found
+
+The compiler half was three entries leaving `LOGIC_FORBIDDEN_ATTRS`, and the
+runtime half is smaller than expected: `showView` and `hideView` already guard
+on `this.dom`, and `init` already returns early with no view, so an elementless
+region no-ops through all of the machinery that moves markup. What was missing
+was only that nothing announced the change, and that is now
+`detachSubtree` disposing a scope whose lifetime is its presence, with
+`settle` re-initing it when it returns. The reported hole is closed: a timer
+opened in `:did-init` is told to stop.
+
+**What is not closed is the scope going away.** A conditional `<:logic>` is a
+region **host**, and a host is present whether or not it is showing — the
+scope object stays in its parent, keeps its name registered, and its values go
+on answering with what they last held. Measured, on a `<:logic :aka="app"
+:if=${on} :foo=${5} />` that has never shown: `showing` false, `isStencil`
+true, `inited` false, and `app.foo` reads `5`.
+
+That is not a bug in the change. It is how region hosts already work, and
+`reachable` documents the same fact as the reason a value **on** a host needs
+no guard — a rule with a test of its own.
+
+**So rule 1 as built is lifecycle-level, not existence-level**, and the two
+come apart:
+
+| | built | not built |
+| --- | --- | --- |
+| `:did-init` / `:will-dispose` follow the condition | yes | |
+| the scope leaves its parent, unregisters its name, stops answering | | no |
+
+**And that is what rule 2 was resting on.** A guard is the page saying a name
+may be absent; while the scope is present and answering, demanding `?.` would
+be requiring a check against something that cannot happen, and the message
+saying so would be false. Rule 2 is therefore **not built**, and is blocked on
+existence-level disposal rather than on any difficulty of its own — the walk
+change is four lines and was written and reverted.
+
+Existence-level disposal is the larger piece: removing the scope from
+`parent.children`, clearing the name off its host, and rebuilding it on the
+way back — which lands in the territory
+[re-initializing a value](../explorations/value-reinitialization.md) is parked
+on, since a rebuilt scope has to decide what its values start as. That is the
+next decision, and it is a real one rather than a chore.
 
 ## What the crash was
 

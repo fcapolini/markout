@@ -108,6 +108,75 @@ describe('lifecycle callbacks', () => {
     expect(log).toStrictEqual(['detach r', 'attach r']);
   });
 
+  /**
+   * A scope with no element of its own is the case neither pair could speak
+   * for. `attachSelf` is gated on the DOM and there is none, so it was
+   * treated as never present and heard nothing when the region around it came
+   * and went -- a timer opened in `:did-init` went on running while the
+   * region was hidden, with no callback that could close it.
+   *
+   * So its LIFETIME is its presence: leaving the page is ceasing to be. That
+   * is safe here for the reason it would be wrong for markup -- there is no
+   * focus, scroll offset or playing video to preserve.
+   * docs/design/conditional-scopes.md
+   */
+  const LOGIC_PROBE =
+    '<:define tag="my-logic:logic" ::tag=${""} ' +
+    `:did-init=${NOTE('init')} :will-dispose=${NOTE('dispose')} />`;
+
+  it('disposes an elementless scope when its region goes, and re-inits it', async () => {
+    const { ctx, log } = await run(
+      `<html :on=${'${true}'}><head>${LOGIC_PROBE}</head>` +
+        '<body><div :if=${on}><my-logic ::tag="L" /></div></body></html>'
+    );
+    expect(log).toStrictEqual(['init L']);
+
+    log.length = 0;
+    ctx!.root.proxy.on = false;
+    expect(log).toStrictEqual(['dispose L']);
+
+    ctx!.root.proxy.on = true;
+    // a new lifetime, not the old one resumed
+    expect(log).toStrictEqual(['dispose L', 'init L']);
+  });
+
+  it('does the same for a condition written on the <:logic> itself', async () => {
+    // a bare `<:logic>` names no `tag`, so these say it themselves
+    const say = (what: string) =>
+      `\${() => { globalThis.LIFECYCLE_LOG.push("${what} L"); }}`;
+    const { errors, ctx, log } = await run(
+      `<html :on=${'${true}'}><body><:logic :if=${'${on}'} ` +
+        `:did-init=${say('init')} :will-dispose=${say('dispose')} />` +
+        '</body></html>'
+    );
+    expect(errors).toStrictEqual([]);
+    expect(log).toStrictEqual(['init L']);
+
+    log.length = 0;
+    ctx!.root.proxy.on = false;
+    expect(log).toStrictEqual(['dispose L']);
+
+    ctx!.root.proxy.on = true;
+    expect(log).toStrictEqual(['dispose L', 'init L']);
+  });
+
+  it('leaves a region with MARKUP detaching, which is the case it is for', async () => {
+    // the guard on the rule above: an element region parks its node and keeps
+    // its scope, so it must go on reporting detach and never dispose
+    const { ctx, log } = await run(
+      `<html :on=${'${true}'}><head>${PROBE}</head>` +
+        '<body><div :if=${on}><my-probe ::tag="r" /></div></body></html>'
+    );
+    expect(log).toStrictEqual(['init r', 'attach r']);
+
+    log.length = 0;
+    ctx!.root.proxy.on = false;
+    expect(log).toStrictEqual(['detach r']);
+
+    ctx!.root.proxy.on = true;
+    expect(log).toStrictEqual(['detach r', 'attach r']);
+  });
+
   it('says nothing at all for a stencil', async () => {
     // a `:for-each` host is a prototype, not a rendering. It evaluates none
     // of its values, and for the same reason reports none of its lifetime

@@ -74,8 +74,6 @@ describe('<:logic>', () => {
       ['a style', ':style-color=${"red"}', /":style-color" has a style to put it on/],
       ['a handler', ':on-click=${() => 1}', /":on-click" has an element to listen to/],
       [':for-each', ':for-each=${[1, 2]}', /nothing to replicate/],
-      [':for-data', ':for-data=${1}', /nothing to show or hide/],
-      [':if', ':if=${true}', /nothing to show or hide/],
       [':slot', ':slot="x"', /no markup to put in a slot/],
     ];
     for (const [what, attr, message] of cases) {
@@ -84,6 +82,26 @@ describe('<:logic>', () => {
         expect(page.errors.map(e => e.msg).join()).toMatch(message);
       });
     }
+
+    /**
+     * `:if` and `:for-data` used to be on the list above, refused for having
+     * "nothing to show or hide". They are accepted now, and what they mean is
+     * a LIFETIME rather than a view: the scope is disposed when the condition
+     * goes false and inited again when it comes back. See
+     * docs/design/conditional-scopes.md.
+     *
+     * `:for-each` stays refused, and the reason is why these two could move:
+     * the objection there was never lifetime but arity -- a name that means
+     * as many scopes as there are items is not fixed by knowing when each of
+     * them ends.
+     */
+    it('but takes a condition, which is a lifetime rather than a view', () => {
+      for (const attr of [':if=${true}', ':else', ':for-data=${1}']) {
+        const before = attr === ':else' ? '<p :if=${1}>a</p>' : '';
+        const page = compile(`<html><body>${before}<:logic :aka="a" ${attr} /></body></html>`);
+        expect(page.errors.map(e => e.msg).join()).not.toMatch(/show or hide/);
+      }
+    });
 
     it('a plain attribute', () => {
       const page = compile('<html><body><:logic class="x" :aka="a" /></body></html>');

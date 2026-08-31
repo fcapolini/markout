@@ -333,6 +333,28 @@ export class CoreScope {
     return false;
   }
 
+  /**
+   * Whether this scope's lifetime IS its presence.
+   *
+   * True for a scope with no element of its own -- a `<:logic>`, or an
+   * instance of a `tag="x:logic"` component. The second pair can never speak
+   * for one: `attachSelf` is gated on the DOM and there is none, so it is
+   * treated as never present and hears nothing when the region around it
+   * comes and goes. What it declares is behaviour, and behaviour that
+   * acquired something in `:did-init` has to give it back when the region
+   * goes away rather than at a teardown that may never arrive.
+   *
+   * A region holding MARKUP is the opposite case and must not do this:
+   * hiding parks the element and preserves what the DOM was holding -- focus,
+   * a scroll offset, a playing video -- which is why `toggle` detaches rather
+   * than disposes. There is none of that to preserve here.
+   *
+   * See docs/design/conditional-scopes.md.
+   */
+  protected elementless(): boolean {
+    return false;
+  }
+
   private attachSelf(): void {
     if (this.attached || !this.domAttached()) return;
     this.attached = true;
@@ -348,6 +370,13 @@ export class CoreScope {
   /** children first, in the order things are taken apart */
   detachSubtree(): void {
     this.children.forEach(c => c.detachSubtree());
+    // Its lifetime is its presence, so leaving the page IS ceasing to be.
+    // `disposeSubtree` guards on the same flag, so a scope taken apart for
+    // real announces it once, here, rather than twice
+    if (this.elementless() && this.inited) {
+      this.inited = false;
+      this.fire(RT_WILL_DISPOSE_VALUE);
+    }
     if (!this.attached) return;
     this.attached = false;
     this.fire(RT_WILL_DETACH_VALUE);
