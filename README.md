@@ -745,9 +745,11 @@ The idea is not mine. OpenLaszlo had it in the 2000s: attributes that stated a
 relationship and stayed true, instead of state pushed into a view by hand. The
 JavaScript frameworks that followed, from React onwards, went the other way,
 and I think threw out the baby with the bathwater. I waited a long time for
-someone to bring that vision up to date, and eventually wrote it myself. This
-is what it looks like with no plugin, no proprietary runtime and no language
-of its own: HTML is the syntax, and JavaScript is the expression language.
+someone to bring that vision up to date. Nobody did.
+
+This is what it looks like with no plugin, no proprietary runtime and no
+language of its own: HTML is the syntax, and JavaScript is the expression
+language.
 
 ## How it's built
 
