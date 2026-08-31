@@ -1028,8 +1028,8 @@ stays the error it has always been.
 
 ### `<:mode>` — a scope on its parent's element
 
-**Partly built: handlers and children.** Paint and attributes are refused with
-a message saying so. See
+**Partly built: handlers, children and classes.** Styles and attributes are
+refused with a message saying so. See
 [conditional scopes](../design/conditional-scopes.md) for the whole design.
 
 A `<:logic>` has no element and wants none. A **mode** has none of its own and
@@ -1079,8 +1079,21 @@ starts clean:
 The buttons appear where the tag is written, and `_draft` starts from `text`
 every time the edit begins rather than resuming the last one.
 
-What it takes today: `:on-`, children, values of its own, the lifecycle
-callbacks, a condition, and `:aka`. What it refuses:
+**Its classes are its own.** A mode's class set starts EMPTY rather than from
+what the element is already wearing, so it can neither claim the element's own
+classes nor lose them:
+
+```html
+<div class="card" :class-selected=${chosen}>
+  <:mode :if=${dragging} :class-dragging />
+</div>
+```
+
+`dragging` arrives and leaves with the modality; `card` and `selected` are the
+element's own throughout, and go on changing while the mode is applied.
+
+What it takes today: `:on-`, `:class-`, children, values of its own, the
+lifecycle callbacks, a condition, and `:aka`. What it refuses:
 
 | | |
 | --- | --- |
@@ -1091,10 +1104,11 @@ callbacks, a condition, and `:aka`. What it refuses:
 resolved by position among siblings and a mode's condition becomes an arity.
 
 And what is **not built yet**, each refused in those words rather than
-half-applied: `:class-`, `:style-`, `:attr-`, `:prop-` and plain attributes.
-They all need one answer — an attribute or a class has one owner at a time,
-and handing it back is the part that is not written. Until it is, put the paint
-on the element itself with an expression that reads the same condition.
+half-applied: `:style-`, `:attr-`, `:prop-` and plain attributes. All four are
+single-valued, so two declarations of one of them need an *owner* — which is
+what `:class-` did not, two modes adding a class being no conflict at all.
+Until that is written, put those on the element itself with an expression that
+reads the same condition.
 
 ### A base tag is a real element
 

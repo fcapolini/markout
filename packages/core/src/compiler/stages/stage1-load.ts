@@ -1047,12 +1047,10 @@ const MODE_FORBIDDEN_ATTRS: [string, string][] = [
 const MODE_UNBUILT_PREFIXES: [string, string][] = [
   [PRESENCE_VALUE_ATTR_PREFIX, 'an attribute has one owner at a time and handing it back is not built'],
   [PROP_VALUE_ATTR_PREFIX, 'a DOM property has one owner at a time and handing it back is not built'],
-  // Paint needs the same ownership answer and does not have it yet. A class
-  // is a SET, and the element's set is already being diffed by whoever owns
-  // the element -- two scopes computing a want-set for one classList is the
-  // question slice 3 is about, not something to guess at here
-  [CLASS_VALUE_ATTR_PREFIX, 'a class is a set the element\'s own scope already diffs, and sharing it is not built'],
-  [STYLE_VALUE_ATTR_PREFIX, 'a style is a set the element\'s own scope already diffs, and sharing it is not built'],
+  // `:style-` is single-valued per property, so it is the attribute question
+  // wearing different punctuation: two declarations of `color` need an owner,
+  // where two of `:class-x` simply both add. Classes are built; this waits
+  [STYLE_VALUE_ATTR_PREFIX, 'a style property has one owner at a time and handing it back is not built'],
 ];
 
 const LOGIC_FORBIDDEN_ATTRS: [string, string][] = [

@@ -125,7 +125,6 @@ describe('<:mode>', () => {
     const cases: [string, RegExp][] = [
       [':attr-open=${true}', /does not take ":attr-open" yet/],
       [':prop-value=${1}', /does not take ":prop-value" yet/],
-      [':class-editing', /does not take ":class-editing" yet/],
       [':style-color=${"red"}', /does not take ":style-color" yet/],
       ['title="t"', /does not take the plain attribute "title" yet/],
     ];
@@ -133,6 +132,60 @@ describe('<:mode>', () => {
       const page = compile(`<html><body><div><:mode ${attr} /></div></body></html>`);
       expect(page.errors.map(e => e.msg).join(), attr).toMatch(message);
     }
+  });
+
+  /** the class of the one <div> these cases paint */
+  const painted = (r: { doc: any }) =>
+    find((r.doc as any).documentElement, 'DIV').className;
+
+  it('paints the borrowed element, and takes it back off', () => {
+    const r = live(
+      '<html :on=${false}><body><div class="card">' +
+        '<:mode :if=${on} :class-dragging />x</div></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    expect(painted(r as any)).toBe('card');
+    r.ctx!.root.proxy.on = true;
+    expect(painted(r as any)).toBe('card dragging');
+    r.ctx!.root.proxy.on = false;
+    expect(painted(r as any)).toBe('card');
+  });
+
+  it('claims none of the element own classes, and loses none of them', () => {
+    // the reason a mode's base is EMPTY where an element's own scope starts
+    // from what the markup wrote: everything already on a borrowed element
+    // belongs to whoever owns it, and a mode that took that as its base would
+    // adopt those classes and then hand them back as its own set moved
+    const r = live(
+      '<html :on=${true} :big=${false}><body>' +
+        '<div class="card" :class-big=${big}>' +
+        '<:mode :if=${on} :class-dragging />x</div></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    expect(painted(r as any)).toBe('card dragging');
+
+    // the element's OWN scope changes its class while the mode is on
+    r.ctx!.root.proxy.big = true;
+    expect(painted(r as any)).toBe('card dragging big');
+
+    // and the mode leaving takes exactly its own with it
+    r.ctx!.root.proxy.on = false;
+    expect(painted(r as any)).toBe('card big');
+  });
+
+  it('takes its paint off when it has children too', () => {
+    // with children a mode is a replica and is DISPOSED rather than disarmed,
+    // so the paint has to come off there as well -- everything else that
+    // disposes removes the element and takes its classes with it
+    const r = live(
+      '<html :on=${false}><body><div class="card">' +
+        '<:mode :if=${on} :class-dragging><b>k</b></:mode></div></body></html>'
+    );
+    expect(r.errors).toStrictEqual([]);
+    r.ctx!.root.proxy.on = true;
+    expect(painted(r as any)).toBe('card dragging');
+    r.ctx!.root.proxy.on = false;
+    expect(painted(r as any)).toBe('card');
   });
 
   it('builds and destroys its children, rather than parking them', () => {

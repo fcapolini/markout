@@ -607,6 +607,13 @@ export class WebScope extends CoreScope {
       this.dom?.removeEventListener(name, listener);
     });
     this.domListeners = [];
+    // A mode is disposed rather than disarmed when it has children, since
+    // then it is a replica and goes away outright -- so the paint has to come
+    // off here as well as in `lifetimeEnded`, or a modality with markup
+    // leaves its class behind on an element it no longer has anything to do
+    // with. Everything else removes the element itself and takes its classes
+    // with it
+    this.props.mode && this.withdrawPaint();
     if (this.props.group) {
       // markers included: they carry this replica's id, and a pair left
       // behind would be found again by whatever takes that id next
@@ -849,6 +856,11 @@ export class WebScope extends CoreScope {
    * definition it is arguing with. A falsy `:class-x` is a removal like any
    * other, which is what it always was.
    */
+  /** `applyClasses` without a value to blame an unbound element on */
+  private applyClassesFor(value: CoreValue<any> | undefined): void {
+    value ? this.applyClasses(value) : this.dom && this.applyClasses(undefined as never);
+  }
+
   private applyClasses(value: CoreValue<any>): void {
     if (!this.dom) return this.unbound(value, 'no element to set classes on');
     if (this.classPending) return;
@@ -862,8 +874,14 @@ export class WebScope extends CoreScope {
     // whole point: a class this scope never put on -- Bootstrap's `show` on a
     // modal it was handed -- is in neither set and so is never touched.
     const on = tokens(this.dom.className);
-    const had = this.classApplied ?? new Set(on);
-    this.classBase ??= on;
+    const had = this.classApplied ?? new Set(this.props.mode ? [] : on);
+    // A mode's base is EMPTY, where an element's own scope starts from what
+    // the markup wrote. The element is borrowed: everything already on it
+    // belongs to whoever owns it, so a mode that took it as a base would
+    // adopt those classes -- and then hand them back or take them away as its
+    // own set moved. Starting from nothing, its want-set is exactly what it
+    // declared, and it can neither claim nor lose anybody else's
+    this.classBase ??= this.props.mode ? [] : on;
     const want = new Set(this.classBase);
     this.classAdd?.forEach(n => want.add(n));
     this.classOn?.forEach((yes, n) => yes && want.add(n));
@@ -1022,6 +1040,15 @@ export class WebScope extends CoreScope {
    * constructed. So re-arming re-adds what is already known instead of
    * waiting for a construction that will not happen again.
    */
+  /** what a mode painted on somebody else's element, taken back off it */
+  private withdrawPaint(): void {
+    if (!this.dom || !this.classApplied?.size) return;
+    this.classApplied.forEach(n => this.dom.classList.remove(n));
+    // not cleared: `applyClasses` diffs against it, and the modality coming
+    // back wants the same difference it made last time
+    this.classApplied = new Set();
+  }
+
   protected override lifetimeBegun(): void {
     // Only what this actually took off. A mode with CHILDREN is a replica,
     // rebuilt from scratch each time its condition comes back, so its values
@@ -1035,6 +1062,7 @@ export class WebScope extends CoreScope {
     this.domListeners?.forEach(({ name, listener }) =>
       this.dom?.addEventListener(name, listener)
     );
+    this.classOn?.size && this.applyClassesFor(undefined);
   }
 
   protected override lifetimeEnded(): void {
@@ -1043,6 +1071,7 @@ export class WebScope extends CoreScope {
     this.domListeners?.forEach(({ name, listener }) =>
       this.dom?.removeEventListener(name, listener)
     );
+    this.withdrawPaint();
   }
 
   /** whether `lifetimeEnded` took this mode's handlers off the element */

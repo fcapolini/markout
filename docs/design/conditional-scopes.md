@@ -1,6 +1,6 @@
 # Conditional scopes, and modes on an element
 
-Status: **rules 1 and 2 built; rule 3 begun — handlers and children.** One crash found
+Status: **rules 1 and 2 built; rule 3 begun — handlers, children, classes.** One crash found
 while checking them and fixed on the way (`cae581a`). Prompted by asking what
 markout misses next to OpenLaszlo's `<state>` tag — the answer is *not that
 tag*.
@@ -151,9 +151,9 @@ it. See *What the crash was* below.
 
 ### 3. `<:mode>` — a scope on its parent's element
 
-*Begun. The tag exists and carries handlers and children; paint, attributes
-and `:priority` are refused in so many words — see* What slice 1 built *and*
-What slice 2 needed.
+*Begun. The tag carries handlers, children and classes; styles, attributes and
+`:priority` are refused in so many words — see* What slice 1 built, What slice
+2 needed *and* What classes settled.
 
 `<:logic>` is a scope with **no** element. A mode is a scope whose element is
 **its parent's**, so it can carry the families that need one and take them all
@@ -525,6 +525,32 @@ decided by markup children, not by child scopes. A mode whose children are
 plain markup has no child scopes at all — their text values land on the mode's
 own — so counting scopes called it elementless and gave it a second lifetime it
 did not need.
+
+## What classes settled
+
+`:class-` works, and it turned out to need none of the ownership machinery the
+rest of the paint does. Two modes adding a class are not in conflict, and a
+mode adding one to an element that has its own is not either — a class list is
+a set, and sets compose.
+
+**The whole of it is that a mode's base is empty.** `applyClasses` computes a
+want-set and diffs it against what the scope last applied, starting from what
+the markup wrote. For a borrowed element that start is wrong: everything
+already on it belongs to whoever owns it, so a mode taking it as a base would
+adopt those classes and then hand them back or take them away as its own set
+moved. Starting from nothing, a mode's want-set is exactly what it declared,
+and the element's own scope goes on diffing its own — the two never meet.
+
+**Withdrawing has two sites, because a mode has two ways to end.** Childless,
+it is disarmed and `lifetimeEnded` takes the paint off; with children it is a
+replica and is disposed outright, so `dispose` has to as well. Everything else
+that disposes removes the element and takes its classes with it, which is why
+that second site did not already exist.
+
+This is also why `:style-` did not come with it. A style property is
+single-valued: two declarations of `color` need an owner in a way two
+declarations of a class never do, so it belongs with the attributes rather than
+with the classes it is spelled like.
 
 ## What is still open
 
