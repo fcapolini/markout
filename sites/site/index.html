@@ -885,6 +885,117 @@
       </div>
     </section>
 
+    <!---
+      The misconception, answered where the reader has just seen the evidence
+      for it. The component above is already written this way -- grouped,
+      commented, multiline -- and nothing on the page said that was allowed.
+    -->
+
+    <section id="attributes"
+             class="py-5 bg-body-tertiary">
+      <div class="container py-lg-4">
+
+        <div class="row justify-content-center text-center mb-5">
+          <div class="col-lg-8">
+            <h2 class="display-6 fw-bold mb-3">
+              Those aren't HTML attributes
+            </h2>
+
+            <p class="lead text-body-secondary">
+              Logic written in attributes usually means one line, no comments,
+              and quoting by&nbsp;luck. That is the assumption markout
+              invites&nbsp;— and&nbsp;it&nbsp;is&nbsp;wrong.
+            </p>
+
+            <p class="fs-5">
+              A scope is a JavaScript object. What a tag declares are its
+              <strong>properties and methods</strong>, and an expression's
+              extent is found by <em>parsing</em> it — so HTML's rules stop at
+              the <code class="rule-code">${</code>.
+            </p>
+          </div>
+        </div>
+
+        <div class="row justify-content-center g-4 align-items-start">
+
+          <div class="col-lg-7">
+            <code-card ::title="A component, written as a declaration"
+                       ::mono=${false}
+                       ::label="the shape"
+                       ::variant="primary"
+                       class+="h-100"
+                       ::note>
+<pre class="mb-0"><code data-lang="html">&lt;:define tag="my-counter:div"
+
+  // parameters
+  ::start=${0}
+  ::step=${1}
+
+  // private
+  :_count=${start}
+
+  // read from outside
+  :value=${_count}
+  :bump=${() =&gt; _count += step}
+&gt;${_count}&lt;/:define&gt;
+
+&lt;my-counter :aka="clicks" ::start=${5} ::step=${2} /&gt;
+&lt;button :on-click=${() =&gt; clicks.bump()}&gt;Bump&lt;/button&gt;
+&lt;p&gt;Now at ${clicks.value}.&lt;/p&gt;</code></pre>
+              <p :slot="note"
+                 class="mb-0">
+                <code class="rule-code">bump</code> is a method — a value
+                holding a function, called by name from anywhere that can see
+                the instance. <code class="rule-code">_count</code> is private
+                because it lacks the <code class="rule-code">::</code> that
+                would put it in the interface.
+              </p>
+            </code-card>
+          </div>
+
+          <div class="col-lg-5">
+            <div class="d-flex flex-column gap-4">
+
+              <div>
+                <h3 class="h5">Parsed, not guessed at</h3>
+                <p class="text-body-secondary mb-0">
+                  <code class="rule-code">&gt;</code> inside an expression
+                  doesn't close the tag, a quote doesn't end the value, and
+                  strings, template literals and nested
+                  <code class="rule-code">${...}</code> end where JavaScript
+                  says they do.
+                </p>
+              </div>
+
+              <div>
+                <h3 class="h5">Grouped and commented</h3>
+                <p class="text-body-secondary mb-0">
+                  Attributes span lines, and
+                  <code class="rule-code">//</code> and
+                  <code class="rule-code">/* ... */</code> between them are
+                  stripped at parse time. A component stops being a long line
+                  and becomes something closer to a class body.
+                </p>
+              </div>
+
+              <div>
+                <h3 class="h5">So the logic can be real</h3>
+                <p class="text-body-secondary mb-0">
+                  The kits are written this way:
+                  <code class="rule-code">bs-input</code> above, and
+                  <code class="rule-code">std-data</code> in the standard kit,
+                  which holds a whole fetch lifecycle inline.
+                </p>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
     <!--- Conditionals -->
 
     <section id="conditionals"

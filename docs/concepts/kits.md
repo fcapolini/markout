@@ -79,6 +79,36 @@ element](../reference/syntax.md#a-usage-site-is-a-call-and-an-element).
 Plain attributes work the same way as before — `<my-card class="card wide" />`
 replaces the definition's `class`.
 
+## A definition reads as a class body
+
+Because an attribute holds JavaScript rather than an HTML value, a definition
+carrying real logic is not a long line. Its parameters, its private derived
+state and the values it means to be read from outside can be grouped and
+labelled with ordinary `//` comments, which are stripped at parse time:
+
+```html
+<:define tag="my-counter:div"
+
+  // parameters
+  ::start=${0}
+  ::step=${1}
+
+  // private
+  :_count=${start}
+
+  // read from outside
+  :value=${_count}
+
+  :bump=${() => _count += step}
+>${_count}</:define>
+```
+
+`bump` is a method: a usage site naming the instance with `:aka` can call it,
+and nothing about the syntax stops the body from being as long as it needs to
+be. The kits are written this way — `bs-input` in the Bootstrap kit groups its
+parameters, its derived state and its public `:valid` exactly like this, and
+`std-data` in the standard kit holds a whole fetch lifecycle inline.
+
 ## Content
 
 `<:slot>` marks where a definition takes the children written at a usage site.

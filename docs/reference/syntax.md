@@ -11,6 +11,19 @@ the module and composition tags, and the names the runtime supplies.
 | `${expr}` in CSS | Reactive stylesheet content — the whole sheet is one binding, so see below. |
 | `attr=${expr}` | Reactive plain attribute; no `:` needed. `null`/`undefined` removes it. |
 
+### An attribute holds JavaScript
+
+An interpolation's extent is found by parsing it, so HTML's rules for
+attribute values stop applying inside one. `>` does not close the tag, a
+quote does not end the value, and strings, template literals, object literals
+and nested `${...}` end where JavaScript says they end. Attributes may also
+span lines, with [comments between them](#comments-inside-a-tag).
+
+So what a tag declares are the properties and methods of a scope — a
+JavaScript object — rather than strings in an attribute, and a definition
+holding real logic reads as a unit instead of as a long line. The two sections
+below give the details.
+
 ### A stylesheet is one binding
 
 `<style>`, `<title>` and `<textarea>` hold text rather than markup, and an
@@ -611,6 +624,32 @@ it differs:
 ```html
 <textarea :on-input=${(ev) => draft = ev.target.value}>${draft}</textarea>
 ```
+
+### `<code>` is left alone
+
+`<code>` goes further: its content is not parsed at all. Everything between
+the tags is text until the closing `</code>`, so an interpolation stays as the
+characters you typed and markup inside it is content rather than elements —
+which is what makes a page able to show markout source without escaping every
+`${...}` in it:
+
+```html
+<pre><code>&lt;div :count=${0}&gt;${count}&lt;/div&gt;</code></pre>
+```
+
+That renders as written. `<script>` is treated the same way, for the reason it
+always has been.
+
+Three things follow, and the third is the one that surprises:
+
+- The tag's **own attributes are ordinary** — `<code class="lang-${lang}" :if=${shown}>`
+  interpolates and binds like any element. It is the content that is skipped,
+  not the element.
+- `<pre>` is **not** in this set. `<pre>${x}</pre>` interpolates normally, so a
+  sample belongs in the `<code>` inside it.
+- `<code>` **cannot nest**. The first `</code>` ends the content whatever came
+  before it, so `<code>a <code>b</code> c</code>` fails as a tag that never
+  closed rather than as anything about nesting.
 
 ## Replication
 

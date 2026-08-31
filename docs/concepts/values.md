@@ -3,6 +3,31 @@
 Values are the reactive pieces inside a scope. A value can be either static or
 computed from an expression.
 
+## Properties and methods, not attributes
+
+A scope is a JavaScript object, and what a tag declares are its members:
+`:name=${expr}` is a property, and a property holding a function is a method.
+The tag is where they are *written*; it is not what they are limited to.
+
+Worth saying plainly, because the syntax invites the opposite assumption —
+that logic written in attributes inherits HTML's rules for attributes, one
+line and no comments and quoting by luck. It does not. An interpolation's
+extent is found by parsing it as JavaScript, so:
+
+- `>` inside an expression does not close the tag, and `=>` is just an arrow;
+- a quote inside an expression does not end the attribute;
+- strings, template literals, object literals and nested `${...}` end where
+  JavaScript says they end;
+- attributes span lines, and `//` and `/* ... */` between them are stripped at
+  parse time.
+
+Which is what makes a scope's declarations readable as a unit rather than as a
+long line: see [attribute values and
+quoting](../reference/syntax.md#attribute-values-and-quoting) and [comments
+inside a tag](../reference/syntax.md#comments-inside-a-tag) for the details,
+and [a value that holds a function](#a-value-that-holds-a-function) below for
+what a method costs in dependency terms.
+
 ## Declaring values
 
 Use `:name=${expr}` on an element to declare a value on that element's scope.

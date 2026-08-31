@@ -10,7 +10,7 @@ always have their own (see [the page](page.md#default-scopes)).
 
 ## What a scope contains
 
-A scope owns reactive values, a parent link, and child scopes. When a value is
+A scope owns reactive values, a parent link, and child scopes. In JavaScript terms it is an object with state and behaviour: the values a tag declares are its properties, and one holding a function is a method — see [properties and methods, not attributes](values.md#properties-and-methods-not-attributes). When a value is
 referenced, Markout searches upward through the scope tree until it finds the
 nearest matching value.
 

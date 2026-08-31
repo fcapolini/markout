@@ -71,6 +71,53 @@ than a language feature.
 </html>
 ```
 
+## Attributes are properties and methods, not strings
+
+The most common thing people assume about markout, and the one worth
+correcting first: expressing logic in attributes does **not** mean inheriting
+HTML's rules for attributes. A scope is a JavaScript object, what a tag
+declares are its properties and methods, and an interpolation's extent is
+found by parsing it as JavaScript rather than by a lexer guessing. So `>`
+inside an expression does not close the tag, a quote inside one does not end
+the value, attributes span lines, and `//` and `/* … */` between them are
+stripped at parse time.
+
+Which means a component holding real logic reads as a declaration, not as a
+long line:
+
+```html
+<html>
+  <body>
+    <:define tag="my-counter:div"
+
+      // parameters
+      ::start=${0}
+      ::step=${1}
+
+      // private
+      :_count=${start}
+
+      // read from outside
+      :value=${_count}
+      :bump=${() => _count += step}
+    >${_count}</:define>
+
+    <my-counter :aka="clicks" ::start=${5} ::step=${2} />
+    <button :on-click=${() => clicks.bump()}>Bump</button>
+    <p>Now at ${clicks.value}.</p>
+  </body>
+</html>
+```
+
+`bump` is a method: a value holding a function, called by name from anywhere
+that can see the instance. `_count` is private because it lacks the `::` that
+would make it part of the interface. This is how the kits are written —
+[`bs-input`](kits/bootstrap-kit/parts/input.htm) groups its parameters, its
+derived state and its public `valid` exactly this way, and
+[`std-data`](kits/std-kit/parts/data.htm) holds a whole fetch lifecycle
+inline. See [values](docs/concepts/values.md) and the [syntax
+reference](docs/reference/syntax.md).
+
 ## Design philosophy
 
 The objective is to remove as much needless complexity as possible from

@@ -31,8 +31,9 @@ calls that out explicitly.
   scopes it already has, and how a page is split across files.
 - [Scopes](concepts/scope.md) - where values live, and how lexical visibility
   maps onto the DOM tree.
-- [Values](concepts/values.md) - reactive slots, expressions, and what happens
-  when one changes.
+- [Values](concepts/values.md) - a scope's properties and methods, why an
+  attribute holds JavaScript rather than an HTML value, and what happens when
+  one changes.
 - [Directives](concepts/directives.md) - the `:family-name` system: what an
   attribute does, what an element listens to, and how many times markup
   renders.
@@ -118,7 +119,9 @@ It stays intentionally small:
   reactive — text, CSS, and plain attributes alike.
 - `:` names the things HTML has no name for: scope values, class and style
   toggles, events, lifecycle, replication.
-- Scopes nest lexically, like variables in code.
+- Scopes nest lexically, like variables in code, and a scope is a JavaScript
+  object: what a tag declares are its properties and methods, written with
+  none of HTML's limits on what an attribute may hold.
 - The compiler discovers dependencies once; the runtime executes them.
 
 The README in the repository root shows the main language examples, and the

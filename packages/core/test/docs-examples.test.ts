@@ -229,6 +229,52 @@ describe('docs/reference/syntax.md', () => {
     );
     expect(source.errors.map(e => e.msg)).toStrictEqual(['Unterminated tag DIV']);
   });
+
+  // "`<code>` is left alone". The site's homepage depends on every one of
+  // these: it shows markout source inside <code> without escaping a single
+  // `${...}`, and a change here would silently interpolate the samples
+  // rather than fail anything.
+  it('leaves the content of <code> unparsed', async () => {
+    const result = await render(
+      '<html :count=${0}><body>' +
+        '<pre><code>&lt;div :count=${0}&gt;${count}&lt;/div&gt;</code></pre>' +
+        '</body></html>'
+    );
+
+    expectClean(result);
+    // as typed: the interpolations are characters, not bindings
+    expect(result.body).toContain('&lt;div :count=${0}&gt;${count}&lt;/div&gt;');
+  });
+
+  it('still binds the attributes of the <code> tag itself', async () => {
+    const result = await render(
+      '<html :lang=${"html"} :shown=${true}><body>' +
+        '<code class="lang-${lang}" :if=${shown}>${lang}</code>' +
+        '</body></html>'
+    );
+
+    expectClean(result);
+    expect(result.body).toContain('class="lang-html"');
+    // the content stayed put even though the attribute did not
+    expect(result.body).toContain('>${lang}</code>');
+  });
+
+  it('interpolates inside <pre>, which is not in that set', async () => {
+    const result = await render('<html :x=${2}><body><pre>${x}</pre></body></html>');
+
+    expectClean(result);
+    expect(result.body).toContain('<pre>2</pre>');
+  });
+
+  it('ends <code> at the first close tag, so it cannot nest', () => {
+    const source = parse(
+      '<html><body><code>a <code>b</code> c</code></body></html>',
+      'docs.html'
+    );
+    expect(source.errors.map(e => e.msg)).toStrictEqual([
+      'Found </CODE> instead of </BODY>',
+    ]);
+  });
 });
 
 describe('docs/concepts/values.md — how far a change travels', () => {
@@ -425,6 +471,57 @@ describe('docs/concepts/kits.md', () => {
     expectClean(result);
     expect(result.body).toContain('page');
     expect(result.body).not.toContain('definition');
+  });
+
+  // The "a definition reads as a class body" example: the point of it is that
+  // a definition holds grouped, commented, multiline declarations AND that
+  // `:bump` is a method a usage site can call by name. Rendering it would
+  // check the first half only, so this one drives the second.
+  it('calls a definition\'s method through the name a usage site gave it', () => {
+    const page = new Page(
+      parse(
+        '<html><body>' +
+          '<:define tag="my-counter:div"\n' +
+          '  // parameters\n' +
+          '  ::start=${0}\n' +
+          '  ::step=${1}\n' +
+          '  // private\n' +
+          '  :_count=${start}\n' +
+          '  // read from outside\n' +
+          '  :value=${_count}\n' +
+          '  :bump=${() => _count += step}\n' +
+          '>${_count}</:define>' +
+          '<my-counter :aka="c" ::start=${5} ::step=${2} />' +
+          '<p>${c.value}</p>' +
+          '</body></html>',
+        'kits.html'
+      )
+    );
+    stage1load(page);
+    stage2validate(page);
+    stage3qualify(page);
+    stage4resolve(page);
+    stage7generate(page);
+    expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+
+    const errors: string[] = [];
+    const ctx = new WebContext({
+      ...loadProps(page.props!),
+      doc: page.source.doc,
+      onError: e => errors.push(e.message),
+    }).refresh();
+    const shown = () => {
+      const m = page.source.doc.toString().replace(/<!--.*?-->/g, '');
+      return /<p>([^<]*)<\/p>/.exec(m.slice(m.indexOf('<body')))?.[1];
+    };
+
+    expect(shown()).toBe('5');
+    const body = ctx.root.children[1] as { proxy: Record<string, any> };
+    body.proxy['c'].bump();
+    expect(shown()).toBe('7');
+    body.proxy['c'].bump();
+    expect(shown()).toBe('9');
+    expect(errors).toStrictEqual([]);
   });
 });
 
