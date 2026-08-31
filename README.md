@@ -766,7 +766,7 @@ A TypeScript monorepo on npm workspaces, MIT licensed.
 | [`kits/`](kits/) | `bootstrap-kit` (every component on Bootstrap's 5.3 cheatsheet, one file each) and `std-kit`, both written in Markout rather than in TypeScript |
 | [`sites/site`](sites/site/) | markout.dev and its demos, written in Markout and served by the Express package |
 
-2,871 tests across 146 files, with coverage and CodeQL on every push.
+2,876 tests across 147 files, with coverage and CodeQL on every push.
 
 Three decisions, rather than the rest of the inventory:
 

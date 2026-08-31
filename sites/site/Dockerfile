@@ -93,7 +93,8 @@ COPY --from=build /app/sites/site/dist sites/site/
 # -- so a deployment that keeps its code outside one cannot serve its own
 # source, its manifests or its configuration by accident, whatever gets added
 # to the tree later.
-COPY sites/site/index.html sites/site/robots.txt sites/site/sitemap.xml ./public/
+COPY sites/site/index.html sites/site/about.html ./public/
+COPY sites/site/robots.txt sites/site/sitemap.xml ./public/
 COPY sites/site/favicon.ico sites/site/favicon.svg sites/site/logo-small-plain.svg ./public/
 COPY sites/site/social-card.png ./public/
 COPY sites/site/parts ./public/parts
