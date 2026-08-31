@@ -198,13 +198,37 @@ state, and every page has them. `<:mixin>` and `<:addon>` suggest composition
 that happens once, which is the opposite of a modality. `<:mode>` says the
 thing — something an element is in, and can leave.
 
-**A mode can be a component**, and this is the payoff.
-`<:define tag="drag:mode">` makes a modality a tag, so a kit ships `<drag>`,
-`<sortable>` or `<hover-card>` as declarations that attach behaviour to whoever
-contains them. That is [the framework layer living in kits](../concepts/kits.md),
-where this repository has already decided it belongs — and it is reachable no
-other way, because no kit can add a directive family or bind a listener
-conditionally.
+**Page code wants this at least as much as a kit does**, and an earlier draft
+of this document had it the other way round — worth correcting rather than
+quietly fixing, because the mistake had a shape.
+
+The ordinary case is a panel that can be edited. While editing it wants a
+click-outside listener and an Escape handler, a class, and two values that
+belong to the edit and nothing else: the draft, and the original to restore.
+Today all four live on the panel, and ending the edit means remembering to null
+each one by hand — the bug everybody writes once, and the reason mode-scoped
+state is the argument rather than the listener. A kit author writing a
+`<:define>` already has a unit to put that in. A page author has none, so the
+construct is worth *more* to the page, not less.
+
+**A mode can also be a component**, which is the further payoff rather than the
+justification. `<:define tag="drag:mode">` makes a modality a tag, so a kit
+ships `<drag>`, `<sortable>` or `<hover-card>` as declarations that attach
+behaviour to whoever contains them — [the framework layer living in
+kits](../concepts/kits.md), where this repository has already decided it
+belongs.
+
+**The gate this replaces was unsatisfiable**, which is what made it wrong
+rather than merely cautious. "Build it when a kit asks" wanted a signal from
+the one direction that structurally cannot send one: no kit can add a directive
+family or bind a listener conditionally, so a kit cannot demonstrate the need
+by hitting it. The signal can only arrive as page-level pain, and waiting for
+it to come from kits was waiting for a letter nobody can post.
+
+Most page-level modes will be **anonymous**, which is a happy consequence: no
+name to reach, so rule 2 never comes up. A named one — `<:mode :aka="edit">`
+with the page reading `edit?.draft` — is a conditional scope like any other,
+and is already covered by rules 1 and 2 as built.
 
 ## Why not `<state>`
 
@@ -284,7 +308,10 @@ These are implementation questions. None of them changes a rule above.
 
 1. **What two modes on one element do about a `:class-` they both set.** A set
    union with removal on the last leaver is the obvious answer and is not
-   obviously the right one.
+   obviously the right one. This moves from theoretical to likely now that page
+   code is the audience: a panel being edited *and* dragged is an ordinary
+   thing to write, where a kit's modalities would more often be designed not to
+   overlap.
 
 2. **What exactly a mode's element is.** Its nearest element ancestor, which
    makes `<:mode>` at the page root an error with nothing to attach to.
@@ -317,7 +344,13 @@ These are implementation questions. None of them changes a rule above.
 2. **Rule 1**, which is the `inited` reset, lifting two entries out of
    `LOGIC_FORBIDDEN_ATTRS`, and disposal on hide for scopes with no `dom`.
    Closes the silent case as a side effect.
-3. **Rule 3**, which is a new tag, a new base tag, and the additive-only
-   refusal list. Worth starting when a kit asks for it rather than on one
-   imagined drag handler — the argument about what a mode may carry will
-   outlast the implementation.
+3. **Rule 3**, which is a smaller delta than when this was written. A mode is a
+   conditional scope that borrows its parent's element, and conditional scopes
+   are done: lifetime, disposal, name absence and reader wiring all arrive from
+   rules 1 and 2. What is left is the tag and its base tag, binding the
+   element-needing families to the parent's element, taking them back on
+   dispose, and the refusal list.
+
+   No longer gated on a kit asking, for the reason under rule 3. What to settle
+   first is not scheduling but scope: what a mode may carry, and what two of
+   them on one element do about it.
