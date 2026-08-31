@@ -61,6 +61,17 @@ ships rather than after:
 
 ## Open
 
+- **A write to a parameter that the caller expects to see.** A usage site
+  passes an initial value, not a binding, so a component assigning to its own
+  parameter changes only its instance — `<my-dial ::value=${amount} />` leaves
+  `amount` where it was, with nothing reported, because nothing went wrong.
+  Every neighbour binds both ways through this spelling (`v-model`, `bind:`,
+  `[(ngModel)]`), so the assumption arrives with the reader. Now stated in
+  [kits](../concepts/kits.md), along with reading the state back through
+  `:aka`, which is what the kitchen sink already did without saying why.
+  Documented rather than closed: the page is still wrong quietly, and what
+  would close it is a diagnostic — a write to a parameter whose call site
+  passed a bare name is the shape that could be recognised.
 - **A component parameter shadowed by a caller value of the same name.**
   `<mk-pager :pages=${pages}>` where `pages` is both the caller's value and
   the component's parameter self-references, and fails at runtime with

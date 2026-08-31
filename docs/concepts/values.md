@@ -193,6 +193,12 @@ tells no one — Markout sees a value being assigned, not a member of one
 being written. `count++` works because `count` is the value; `src.b = 3`
 does not because `src` is. Assign the whole thing, as above.
 
+The instance of this that catches people is an array behind a `:for-each`:
+`rows.push(row)` renders nothing, and neither does `rows.sort()` or
+`rows[0] = x`. It is the same rule — `rows` is the value, and none of those
+assign it — so hand back a new one, `rows = [...rows, row]`, and the loop
+follows.
+
 ### A value that holds a function
 
 A helper can live in a value and be called from anywhere that can see it:

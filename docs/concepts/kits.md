@@ -79,6 +79,43 @@ element](../reference/syntax.md#a-usage-site-is-a-call-and-an-element).
 Plain attributes work the same way as before — `<my-card class="card wide" />`
 replaces the definition's `class`.
 
+## A parameter goes in, and does not come back
+
+What a usage site passes is an **initial value, not a binding**. A component
+may write to its own parameter — `bs-input` assigns `value` on every
+keystroke — and that write stays inside the instance. The expression at the
+call site is not assigned back to:
+
+```html
+<html :amount=${1}>
+  <body>
+    <:define tag="my-dial:div" ::value=${0}
+      :bump=${() => value += 1}>${value}</:define>
+
+    <my-dial :aka="dial" ::value=${amount} />
+    <button :on-click=${() => dial.bump()}>More</button>
+
+    <p>the instance: ${dial.value}, the page's own: ${amount}</p>
+  </body>
+</html>
+```
+
+After a click the instance reads 2 and `amount` still reads 1. Nothing is
+reported, because nothing went wrong: `::value=${amount}` says what the dial
+starts at, and `amount` is a value of the page's that the dial was never
+given a way to reach.
+
+**Read it back through the instance instead.** `:aka` names the usage site,
+and its state is then available like any other scoped value — which is why
+the kitchen sink writes `<bs-range :aka="budget2" ::value=${amount} />` and
+then `<bs-progress ::value=${budget2.value} />` rather than reading `amount`
+a second time.
+
+This is worth stating because the neighbours do it the other way:
+`v-model`, `bind:` and `[(ngModel)]` all assign back through the same
+spelling that passes in. Here the two directions have two spellings, for the
+reason [two intents always get two](directives.md).
+
 ## A definition reads as a class body
 
 Because an attribute holds JavaScript rather than an HTML value, a definition

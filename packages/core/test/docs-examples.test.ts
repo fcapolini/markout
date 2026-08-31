@@ -473,6 +473,48 @@ describe('docs/concepts/kits.md', () => {
     expect(result.body).not.toContain('definition');
   });
 
+  // "A parameter goes in, and does not come back": the doc states two numbers
+  // after the click -- the instance at 2, the page's own value still at 1 --
+  // and the whole point of the section is that nothing reports the second.
+  // A rendering check would see neither.
+  it('does not write a parameter back to the caller', () => {
+    const page = new Page(
+      parse(
+        '<html :amount=${1}><body>' +
+          '<:define tag="my-dial:div" ::value=${0}' +
+          ' :bump=${() => value += 1}>${value}</:define>' +
+          '<my-dial :aka="dial" ::value=${amount} />' +
+          '<p>${dial.value}|${amount}</p>' +
+          '</body></html>',
+        'kits.html'
+      )
+    );
+    stage1load(page);
+    stage2validate(page);
+    stage3qualify(page);
+    stage4resolve(page);
+    stage7generate(page);
+    expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+
+    const errors: string[] = [];
+    const ctx = new WebContext({
+      ...loadProps(page.props!),
+      doc: page.source.doc,
+      onError: e => errors.push(e.message),
+    }).refresh();
+    const shown = () => {
+      const m = page.source.doc.toString().replace(/<!--.*?-->/g, '');
+      return /<p>([^<]*)<\/p>/.exec(m.slice(m.indexOf('<body')))?.[1];
+    };
+
+    expect(shown()).toBe('1|1');
+    const body = ctx.root.children[1] as { proxy: Record<string, any> };
+    body.proxy['dial'].bump();
+    expect(shown()).toBe('2|1');
+    // and the silence is the finding, so it is asserted rather than assumed
+    expect(errors).toStrictEqual([]);
+  });
+
   // The "a definition reads as a class body" example: the point of it is that
   // a definition holds grouped, commented, multiline declarations AND that
   // `:bump` is a method a usage site can call by name. Rendering it would
