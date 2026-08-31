@@ -78,14 +78,50 @@ limit above, since a `:const-` value cannot take part in runtime theming.
 
 ## Static vs. reactive
 
-Markout treats a value as either:
+A value is one of two things:
 
-- a static value, set once or updated manually; or
-- a reactive expression that is re-evaluated when one of its dependencies
-  changes.
+- **static** — set once, and changed only by being assigned;
+- **reactive** — an expression re-evaluated whenever something it reads moves.
 
-The compiler is responsible for discovering those dependencies. The runtime does
-not infer them from the expression body.
+The compiler discovers those dependencies. The runtime does not infer them
+from the expression body.
+
+Which of the two a value is, though, is not settled by how it was written.
+
+### An expression is a starting point, and an assignment ends it
+
+`:n=${start * 2}` follows `start` for as long as nothing assigns `n`. The
+first assignment ends that, for good:
+
+```html
+<body :start=${5} :n=${start * 2}>
+```
+
+`n` reads 10, and reads 200 once `start` becomes 100. Assign `n = 999` in a
+handler and it holds 999 — `start` moving afterwards no longer reaches it.
+
+**The rule in one sentence: a value follows its expression until something
+assigns it, and is whatever it was assigned from then on.**
+
+That is what makes the commonest thing a component does work at all — private
+state seeded from a parameter, which has no other spelling:
+
+```html
+<:define tag="my-counter:div" ::start=${0}
+  :_count=${start}
+  :bump=${() => _count += 1}>${_count}</:define>
+```
+
+`_count` begins where the caller said, and is the component's own from the
+first click onwards.
+
+The cost is that a declaration does not say which state it is in, and the
+assignment that decides can be anywhere — a handler further down, or markup
+this element does not contain. Two rules of thumb keep it legible: a value
+meant to go on deriving should have nothing assigning it, and a value meant as
+a starting point reads better when its expression is a bare parameter than
+when it is a calculation. `:_count=${start}` looks like a seed;
+`:_invalid=${_empty ? required : !check(value)}` looks like a rule, and is one.
 
 ## Expression semantics
 

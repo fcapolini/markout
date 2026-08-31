@@ -277,6 +277,51 @@ describe('docs/reference/syntax.md', () => {
   });
 });
 
+describe('docs/concepts/values.md — an expression is a starting point', () => {
+  // The rule the section states: a value follows its expression until
+  // something assigns it, and is what it was assigned from then on. Both
+  // halves are asserted, because documenting only the first would describe a
+  // language markout isn't, and only the second one it isn't either.
+  function values(html: string) {
+    const page = new Page(parse(html, 'values.html'));
+    stage1load(page);
+    stage2validate(page);
+    stage3qualify(page);
+    stage4resolve(page);
+    stage7generate(page);
+    expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+    const ctx = new WebContext({
+      ...loadProps(page.props!),
+      doc: page.source.doc,
+      server: true,
+      onError: e => {
+        throw new Error(e.message);
+      },
+    }).refresh();
+    return {
+      html: ctx.root.proxy as Record<string, any>,
+      body: (ctx.root.children[1] as { proxy: Record<string, any> }).proxy,
+    };
+  }
+
+  const PAGE = '<html :start=${5}><body :n=${start * 2}></body></html>';
+
+  it('follows its expression while nothing has assigned it', () => {
+    const v = values(PAGE);
+    expect(v.body['n']).toBe(10);
+    v.html['start'] = 100;
+    expect(v.body['n']).toBe(200);
+  });
+
+  it('holds what it was assigned, and stops following', () => {
+    const v = values(PAGE);
+    expect(v.body['n']).toBe(10);
+    v.body['n'] = 999;
+    v.html['start'] = 100;
+    expect(v.body['n']).toBe(999);
+  });
+});
+
 describe('docs/concepts/values.md — how far a change travels', () => {
   // the behaviour these examples describe is pinned in
   // reactivity-pitfalls.test.ts, which drives the propagation; what is
