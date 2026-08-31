@@ -1,0 +1,164 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+  <:import src="/npm/@markout-lang/bootstrap-kit/all.htm" />
+
+  <title>Why Markout exists</title>
+  <meta name="description"
+        content="Reactivity arrived in the browser as something you bolt onto HTML with JavaScript. Markout is what the other order looks like — and what a 2000s framework got right before the JS ones went the other way.">
+
+  <!-- Its own canonical and its own title; the card is the site's. See index.html. -->
+  <link rel="canonical" href="https://markout.dev/about.html">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Markout">
+  <meta property="og:url" content="https://markout.dev/about.html">
+  <meta property="og:title" content="Why Markout exists">
+  <meta property="og:description"
+        content="Reactivity arrived in the browser as something you bolt onto HTML with JavaScript. Markout is what the other order looks like.">
+  <meta property="og:image" content="https://markout.dev/social-card.png">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <:include src="/parts/analytics.htm" />
+</head>
+
+<!---
+  The story, kept off the homepage on purpose.
+
+  A visitor to markout.dev decides in seconds whether this is worth an
+  afternoon, and provenance is what somebody reads AFTER they are interested,
+  not instead of being interested. Naming a 2000s framework on a landing page
+  also invites the reading the whole positioning is arranged to avoid -- a
+  revival of something Flash-era -- before the sentence that answers it has
+  been reached.
+
+  So it lives here, one link away in the footer, where the people who want it
+  can find it, a launch thread can point at it, and nobody else pays for it.
+  The README carries the short version.
+-->
+<body>
+
+  <bs-navbar ::brand="/"
+             ::items=${[
+               { name: 'Home', link: '/' },
+               { name: 'Demos', link: '/demos/' },
+               { name: 'Why', link: '/about.html', active: true },
+             ]}>
+    Markout
+    <bs-theme-toggle :slot="end" />
+  </bs-navbar>
+
+  <main class="container py-5">
+
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+
+        <h1 class="display-5 fw-bold mb-4">Why Markout exists</h1>
+
+        <p class="lead text-body-secondary">
+          Reactivity arrived in the browser as something you bolt onto HTML
+          with JavaScript. A framework takes the page over, the markup becomes
+          its output rather than the document, and every page pays for a
+          runtime, a build step and a mental model before it can react to
+          anything.
+        </p>
+
+        <p class="fs-5">
+          I kept wondering what the other order would look like — reactivity
+          in the markup itself, so that a page stays a page and gains the two
+          things a static document cannot do for itself: recurring markup
+          becoming a tag you name once, and the page keeping itself in step
+          with its own data.
+        </p>
+
+        <h2 class="h3 mt-5 mb-3">What the 2000s got right</h2>
+
+        <p>
+          The idea is not mine. <a href="https://en.wikipedia.org/wiki/OpenLaszlo">OpenLaszlo</a>
+          had it in the 2000s, and the part worth inheriting was not its
+          syntax or its runtime — both of which belong to their decade — but
+          what an attribute was allowed to mean. An attribute stated a
+          <strong>relationship</strong>, and the relationship stayed true.
+          You did not write what to do when something changed; you wrote what
+          was the case, and the framework's job was to keep it so.
+        </p>
+
+        <p>
+          That is a smaller idea than a framework and a larger one than a
+          feature. It says a property is not a box holding whatever was last
+          put in it — the assumption plain JavaScript entails and almost
+          everything since has kept, hedged with a
+          <code class="rule-code">signal()</code>, a
+          <code class="rule-code">ref()</code> or a dependency array to
+          re-introduce by hand what the assumption removed.
+        </p>
+
+        <p>
+          The JavaScript frameworks that followed, from React onwards, went
+          the other way. They got a great deal right — components, one-way
+          data flow, an ecosystem — and I think threw out the baby with the
+          bathwater. I waited a long time for someone to bring that vision up
+          to date. Nobody did.
+        </p>
+
+        <h2 class="h3 mt-5 mb-3">What is different now</h2>
+
+        <p>
+          Everything that dated OpenLaszlo is gone, and none of it was the
+          idea. There is no plugin, because the browser is the runtime it
+          needed. There is no proprietary player and no XML dialect to learn,
+          because the platform grew into the job: <strong>HTML is the
+          syntax</strong>, <strong>the DOM is the scope chain</strong>, and
+          <strong>JavaScript is the expression language</strong>. Nothing here
+          is a language of its own.
+        </p>
+
+        <p>
+          The scope chain is the part people find surprising, and it is the
+          one that needs no invention at all. A value declared on an element
+          is visible to everything inside it, because that is what nesting
+          already means — so there is no
+          <code class="rule-code">provide</code>/<code class="rule-code">inject</code>,
+          no <code class="rule-code">Context</code>, and nothing to wire.
+          The document tree was a scoping model the whole time.
+        </p>
+
+        <p>
+          And because the whole of it compiles ahead of the browser, the same
+          page renders on the server and comes alive in the browser from the
+          same source — which is the third thing the original vision wanted
+          and the decade could not give it.
+        </p>
+
+        <h2 class="h3 mt-5 mb-3">What it is not</h2>
+
+        <p>
+          It is not an application framework, and the distance matters.
+          Markout is the presentation layer: the DOM is the view, your data is
+          the model, and Markout is the logic between them. Anything
+          framework-shaped — a datasource, a router, a theme switcher — is
+          written <em>in</em> Markout as a kit rather than built into the
+          language, which is what lets the language stay
+          <a href="/#language">a handful of rules</a>.
+        </p>
+
+        <p class="mt-5">
+          <a class="btn btn-primary btn-lg" href="/#start">Try it</a>
+          <a class="btn btn-outline-secondary btn-lg ms-2" href="/demos/">See it running</a>
+        </p>
+
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="border-top py-4">
+    <div class="container small text-body-secondary">
+      <a href="/">Markout</a> — an HTML extension that adds modularity,
+      reactivity and isomorphism to plain HTML.
+    </div>
+  </footer>
+</body>
+
+</html>
