@@ -1,5 +1,265 @@
 # @markout-lang/core
 
+## 0.9.0
+
+### Minor Changes
+
+- 18cb4af: `class!=` and `style!=`: replacing what a component composed, said on
+  purpose.
+  
+  A `class` written at a usage site replaces the one the component derived for
+  itself. That is the rule and it is the right one, but from a component that
+  derives its own classes it is almost never what was meant, so it warns — and
+  the only answers the warning had were `class+=`, which means something else
+  entirely, and silence. A warning nobody can answer is a warning people learn
+  to scroll past.
+  
+  This is the answer that agrees with it:
+  
+  ```html
+  <bs-alert ::variant="warning" class!="my-own-alert">Nothing of the kit's</bs-alert>
+  ```
+  
+  It compiles to exactly what `class=` compiles to — the same value under the
+  same name, nothing downstream aware the spelling exists. All it adds is the
+  statement, which the compiler accepts as its answer and stops asking, and
+  which the next reader gets for free: a plain `class` on a component is
+  ambiguous between "I meant this" and "I did not know", and this one is not.
+  
+  **`!` because it is not a set operation.** `+=` and `-=` say what happens to
+  the set; this says what the author intends about a collision. CSS spells that
+  same idea `!important`.
+  
+  **It expects something to replace.** On a plain element, or on a component
+  that sets no `class` of its own, there is nobody it can be addressing — which
+  it says, while going on working, since it is a `class` either way. That is
+  what catches the stale one: a component that stops setting a class leaves
+  every `class!=` aimed at it saying something no longer true.
+  
+  The warning it answers now names it:
+  
+  ```
+  warning: <bs-alert> sets "class" itself, and a "class" here replaces it -- did you mean "class+=", or "class!=" if you meant to replace it?
+  ```
+- f2a480c: A `<:define>` can carry its own `<style>`, served once and dropped with the
+  definition — and treeshaking now follows the usage graph rather than a flat
+  set of mentions.
+  
+  **A component's stylesheet.** A `<style>` written as a direct child of a
+  `<:define>` is that component's, structurally rather than by an author's
+  say-so:
+  
+  ```html
+  <:define tag="x-card:div" class="card">
+    <style>.card { border: 1px solid }</style>
+    <:slot />
+  </:define>
+  ```
+  
+  It is lifted out of the stencil and served **once**, and it goes when the
+  definition does. That is the whole difference from `:when-used`, which is an
+  assertion an author can get wrong: nobody claims this stylesheet belongs to
+  the component, it was *written inside* it.
+  
+  Left in place it was copied per instance — the definition's stencil held one
+  and every usage site given content cloned another, so three instances shipped
+  four copies of the same rules and mounted one apiece. That cost is why the
+  pattern was unwritable.
+  
+  **Where it lands is part of the promise:** immediately before the definition,
+  not appended to `<head>`. A stencil is inert and a stylesheet cascades, so
+  appending would put every component's rules after the page's own and let a
+  component win an equal-specificity tie it should lose. In place, cascade order
+  is import order, which is the order the fragments were written.
+  
+  Two cases are deliberately left alone. A `<style>` that interpolates a value
+  renders once per instance with its own text, so there is no single copy to
+  hoist. One nested deeper — inside an `:if` or a `:for-each` — is conditional
+  markup, which is the author having already answered this question differently.
+  A definition in `<body>` cannot carry one at all: lifted out it would be
+  invalid markup where it stands and would land somewhere else if moved, so it
+  is refused rather than guessed at.
+  
+  **Treeshaking follows the graph.** A definition is kept when the page can
+  *reach* it: the tags the page writes itself, then the tags those definitions'
+  bodies write, and so on. One reachable only through a definition that is
+  itself unused now goes with it.
+  
+  The flat set was wrong in a way that cost more than it looked. A `dash-stat`
+  whose body writes `<dash-chart>` kept the chart's stencil on a page writing
+  neither — kept it, in fact, on the strength of a mention inside a definition
+  the same pass had just deleted. For a kit whose components compose, which is
+  the ordinary kind, that is not a corner case. On a page importing a four-
+  component set and writing one of them: 10821 bytes to 10120, and 4093 to 3924
+  gzipped. Every page of the site renders identically — body, props and CSS byte
+  for byte — and only unreachable stencils went.
+  
+  **A borrowed class is reported.** Class names stay global: nothing is
+  rewritten or hashed, so a page may wear `.card` without ever writing
+  `<x-card>`. Do both and the rules are deleted out from under markup that
+  stayed. The compiler now says so:
+  
+  ```
+  warning: <x-card> is never used, so its <style> went with it -- but "card"
+  is still applied by markup that stayed, which now renders unstyled.
+  Write <x-card>, or move those rules out of the definition
+  ```
+  
+  It fires only when it has actually happened — the definition gone *and* a
+  surviving element still applying the class — so a page that wears `.card` and
+  also writes `<x-card>` hears nothing. Both static `class` and `:class-`
+  toggles count as applying it, and only the text before each `{` is read for
+  class names, so `url(logo.card)` in a declaration is not mistaken for a
+  selector.
+- 1d1d9ca: A scope can have a condition for a lifetime, and `<:mode>` can put one on
+  somebody else's element.
+  
+  Three things arrive together, because the first two turned out not to be
+  separable and the third is built on them. The design is in
+  `docs/design/conditional-scopes.md`.
+  
+  **`<:logic>` takes a condition.** `:if`, `:else-if`, `:else` and `:for-data`
+  are accepted, and what they decide is whether the scope exists at all — so
+  `:did-init` runs when the condition becomes true and `:will-dispose` when it
+  stops being, once per lifetime as always, with lifetimes now able to repeat:
+  
+  ```html
+  <:logic :if=${dragging}
+          :_move=${(e) => track(e)}
+          :did-init=${() => window.addEventListener('pointermove', _move)}
+          :will-dispose=${() => window.removeEventListener('pointermove', _move)} />
+  ```
+  
+  `:for-each` stays refused, and the difference is the point: that objection was
+  never lifetime but arity. A name meaning as many scopes as there are items is
+  not fixed by knowing when each of them ends.
+  
+  This also closes a silent one. A `tag="x:logic"` instance inside a region
+  compiled cleanly and then reported `init` once and nothing ever again — so a
+  timer opened there ran on while the region was hidden, with no callback able
+  to stop it.
+  
+  **A conditional scope's readers are checked**, which is the half that cannot
+  be left out. `${app.foo}` where `app` may be gone is refused, and `${app?.foo}`
+  is the spelling that works. The guard is not only a check: classifying a read
+  as guarded is what registers the reader as a *maybe*, and maybes are what get
+  re-linked when a region comes back. Called plain, the read is evaluated once
+  against a name that is not there yet and never asked again.
+  
+  **`<:mode>` is a scope on its parent's element**, borrowing the nearest one
+  above it so that a modality can arrive and leave without the element moving:
+  
+  ```html
+  <div class="card">
+    <:mode :if=${editing} :_draft=${text} :class-editing :attr-contenteditable=${true}>
+      <button :on-click=${() => { text = _draft; editing = false }}>Save</button>
+    </:mode>
+    <p>${text}</p>
+  </div>
+  ```
+  
+  **The element stays**, which is the difference from `:if` on it — that takes
+  the markup away and loses focus, scroll position and whatever else the DOM was
+  holding — and from a handler bound once and guarded from inside, which goes on
+  firing for every `pointermove` to decide it has nothing to do.
+  
+  **And `_draft` belongs to the edit rather than to the card**, so it is gone
+  when the edit is. That is the argument for the tag more than the listener is:
+  without it a modality's state lives on the element and has to be cleared by
+  hand, which is the bug everybody writes once.
+  
+  A mode carries handlers, classes, styles, attributes, children and values of
+  its own, and takes all of them back. Its children are **built and destroyed**
+  rather than parked, which is the one place it departs from the region
+  machinery instead of reusing it — every region here preserves, so a hide keeps
+  focus and a playing video, and a modality wants the opposite.
+  
+  Nothing is remembered: what an element's `title` is, is whatever the innermost
+  live declaration says, and handing it back is asking the one underneath to say
+  again. Where two modes want one attribute, `:priority` decides — higher owns
+  it while both are on, and hands it down the stack rather than to the element.
+  Equal ranks are a compile error, since precedence between siblings is a rule
+  nobody could guess.
+  
+  Two things it refuses on purpose: `:prop-`, a DOM property being state on the
+  element instance with no declaration underneath to hand back to, and a
+  *static* plain attribute, which a mode has no markup of its own to write.
+  
+  **A compiler crash went with it.** Reading a name declared inside a region
+  whose host is unnamed — `${field.text}`, where every existing case reached
+  `panel.field.text` — threw `TypeError: Cannot read properties of undefined`
+  instead of reporting anything, and threw for `${field?.text}` too, so the
+  crash landed on the one spelling the rule exists to accept.
+- 11ca8f0: Two copies of one kit: the nearer one wins, instead of both being refused.
+  
+  Every other refusal in kit discovery is `ln -s` failing because the name is
+  taken, and holds. This one was different and it took a while to see: there is
+  one thing to link and only the question of which copy of it, so the link
+  succeeds whichever you pick. The refusal was answering a question nobody had
+  asked, and it refused the whole build.
+  
+  **Nearer** means the walk that already exists — `.markout/kits` then
+  `node_modules`, at the docroot and at every directory above it, and after all
+  of those the private tree of each kit those rungs yielded. That last clause is
+  the part with teeth: a kit's own dependencies are appended to the queue rather
+  than descended into as it is accepted, so a hoisted copy beats a nested one
+  however the directories happen to sort. Which of the two won used to be
+  whichever `readdir` reached first.
+  
+  **When the two versions differ, it says so** — on a channel of its own,
+  `Discovery.shadowed`, printed by the CLI and logged by the middleware at
+  startup, failing nothing:
+  
+  ```
+  markout: kit "@markout-lang/std-kit" 0.4.0 at "~/.markout/kits/@markout-lang/std-kit"
+    is not used: 0.3.0 at "/app/node_modules/@markout-lang/std-kit" is nearer the docroot
+  ```
+  
+  Two copies at one version pass without a word, that being what an npm tree
+  looks like on any ordinary day.
+  
+  **What sent us here.** `markout add` run in a home directory leaves a
+  `~/.markout/kits`, and the walk runs from the docroot to `/` — so that
+  directory is a rung for every project on the machine, and every one of them
+  that had installed the same kit with npm refused to build. The rung is
+  per-project by design; nothing stops one being created above every project at
+  once.
+  
+  Two kits claiming one root is unchanged, and so is the `alsoFrom` gate: a tree
+  **above the project** is on the docroot's own walk and falls back per kit,
+  while the **compiler's own** install tree stays all-or-nothing. That tree
+  belongs to whoever installed the compiler rather than to the project, and
+  taking it always would let a docroot built by a CLI inside a monorepo silently
+  gain that monorepo's kits.
+
+### Patch Changes
+
+- 19ca252: A usage site's `style` replaces a definition's, as the rule has always said
+  it does.
+  
+  `class` and `style` are kept as element PROPERTIES rather than attribute
+  nodes. Writing a class went to the property and replaced it; writing a style
+  fell through to the generic path, landed in an attribute node BESIDE the
+  property, and was merged with it on the way out:
+  
+  ```html
+  <:define tag="my-box:div" style="gap: 1rem"><:slot /></:define>
+  <my-box style="color: red">hi</my-box>
+  ```
+  
+  served `style="color: red; gap: 1rem;"` where the same page's `class` would
+  have replaced. One rule, two behaviours, decided by which of the two
+  composite attributes it was — and the compiler warns about that `style`
+  precisely on the grounds that it replaces.
+  
+  **It was also a difference between the server and the browser.** A real DOM's
+  `setAttribute("style", ...)` replaces, so the instance built during a render
+  and the instance built on hydration disagreed about what the element wore.
+  
+  Nothing in the demos or the kits writes a literal `style` at a usage site, so
+  no built page changes. `style+=` and `style-=` are unaffected: those compose,
+  and always went through the property.
+
 ## 0.8.0
 
 ### Minor Changes

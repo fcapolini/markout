@@ -1,5 +1,17 @@
 # markout-vscode
 
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies [18cb4af]
+- Updated dependencies [f2a480c]
+- Updated dependencies [1d1d9ca]
+- Updated dependencies [11ca8f0]
+- Updated dependencies [19ca252]
+  - @markout-lang/core@0.9.0
+  - @markout-lang/cli@0.8.1
+
 ## 0.7.0
 
 ### Minor Changes
