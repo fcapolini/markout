@@ -1,8 +1,28 @@
 <!---
   Umami's tracking tag, in one file because a website id is one setting and
-  twelve pages carry it. Eleven of them include this; the twelfth is
+  fourteen pages carry it. Thirteen of them include this; the fourteenth is
   `demos/bootstrap/index-plain.html`, which writes the tag out by hand along
   with everything else it writes out by hand.
+
+  Six of the site's twenty pages deliberately do NOT carry it, and both
+  reasons are the same reason: their source is the thing being read, so a
+  line of analytics in it is a line in somebody's sample.
+
+  `examples/counter.html`, `examples/validation.html` and
+  `examples/design-system.html` are printed verbatim on the homepage --
+  `<:include ... as="code" escaping />` -- and an include written here would
+  be an include shown there, in a card whose whole claim is that this is the
+  entire file. They are also what `code-preview` frames, so tagging them
+  would post three pageviews every time the homepage is scrolled through and
+  attribute a reader of the homepage to pages nobody navigated to. The
+  "open the page" link beside each frame does go somewhere untracked; that
+  is the price, and it is smaller than the noise.
+
+  `demos/readme/modularity.html`, `reactivity.html` and `replication.html`
+  are the README's own blocks kept runnable, character for character, which
+  `test/readme-demos.test.ts` asserts -- adding the include fails it, and the
+  alternative is an analytics tag in the README. `replication.html` has no
+  `<head>` at all, and that it still renders is the point it makes.
 
   `<:include>` rather than `<:import>`: this is an instance, not a definition.
   A definition arrives once per page however often it is named; a tag that has
