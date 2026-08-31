@@ -106,8 +106,8 @@ chosen; these say what was considered and why it is still sitting there.
   tokens would live, and the costs that are left once it does.
 - [Re-initializing a value](explorations/value-reinitialization.md) - putting
   a value back to following an expression, why re-attaching to the same one is
-  nearly free and a new dependency list is not, and the one language question
-  that decides the rest.
+  nearly free and a new dependency list is not, where a replacement resolves,
+  and what disposing a borrowed scope would have to mean.
 
 ## Mental model
 

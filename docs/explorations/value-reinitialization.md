@@ -49,17 +49,40 @@ steps against structure that exists.
 
 ## The five that decide what it costs
 
-1. **Which scope does the replacement expression resolve against?** The
-   language question, and the one to answer first. A reinitialization written
-   in a handler in one scope targets a value in another; the compiled function
-   takes the scope as an argument, and it matters greatly whether it is handed
-   the value's scope or the site's. The value's is consistent with "an
-   expression resolves where it was written" — but it was written somewhere
-   else, and its author will read its names as local. The site's means one
-   value now has two expressions resolving in two different scopes. This is
-   the seam `hostFor`, `callSite` and `detachedUsageSite` already sit on in
-   [stage4](../../packages/core/src/compiler/stages/stage4-resolve.ts), whose
-   comments record it landing one scope off and staying quietly wrong.
+1. **Which scope does the replacement expression resolve against?**
+   *Decided: where it is written*, like every other expression. That is not a
+   new rule but the existing one declining an exception — choosing the target
+   value's scope would make an expression's meaning depend on which value it
+   happened to land on, which the language does nowhere else. The precedent is
+   already running: a usage site's `:edits=${0}` resolves in the caller's
+   scope while acting on the instance, which is this shape exactly, and is
+   what `resolvesFrom`/`callSiteScope` in
+   [stage4](../../packages/core/src/compiler/stages/stage4-resolve.ts)
+   implement. It is also the cheaper half: expressions are qualified against
+   the scope they sit in as a matter of course, so a replacement written in a
+   handler needs no special casing, where the other choice would need
+   deliberate re-resolution against a different scope — the manoeuvre whose
+   comments there record it landing one scope off and staying quiet.
+
+   It is the useful answer as well, and that is the stronger argument. A
+   replacement resolved at the target could only ever recombine names the
+   original declaration already saw, which makes the whole variant list
+   close to vacuous. The case that motivates the feature runs the other way:
+   a handler inside a replica saying *track this item from now on*, where the
+   per-item binding exists at the handler and nowhere near the value being
+   reinitialized.
+
+   **What it leaves open** is lifetime. A replacement captures the scope it
+   was written in, and the useful case is exactly the one where that scope is
+   a region's — so the region goes away and an outer value is left holding an
+   expression that resolves into a scope nothing else references. Refusing a
+   reinit that crosses a region boundary would forbid the motivating case to
+   keep the edge case, so that is not the way out. The proposal instead:
+   **disposing a scope turns any expression borrowed from it back into a
+   static value, at whatever it last held.** That is not a new rule either —
+   it is "a value follows its expression until something ends the following",
+   with disposal as one more thing that ends it. Untested, and the one part
+   of this entry that is a suggestion rather than a decision.
 2. **Hydration has to know which variant is live.** Which expression a value
    is on is runtime state, and nothing in a served page encodes it today. The
    browser would recompute from the first variant and disagree with what was
@@ -107,6 +130,7 @@ commit that documented the rule instead.
 
 ## Where this leaves it
 
-Nothing to build. The order, if it is ever picked up: decide (1), because it
-is a language question wearing an implementation's clothes, and every other
-line here is straightforward once it is answered.
+Nothing to build. (1) is answered, which was the part worth answering early,
+and it answered itself once the question was put as "what can a replacement
+usefully say" rather than "which scope is tidier". What is left is the
+lifetime rule under it, and four pieces of ordinary work.
