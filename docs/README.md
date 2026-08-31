@@ -94,6 +94,16 @@ pages above — what was chosen, what was rejected, and why.
   kept together because a comment reaches the line it sits on and not the next
   package to hit the same thing.
 
+## Explorations
+
+Open questions, thought through and not decided. A design note says what was
+chosen; these say what was considered and why it is still sitting there.
+
+- [Authoring web components](explorations/web-components-authoring.md) - what
+  it would take for a `<:define>` to compile into a registered custom element,
+  why the scoping objection dissolves on inspection, where a library's design
+  tokens would live, and the costs that are left once it does.
+
 ## Mental model
 
 Markout is the presentation layer: the DOM is the view, the application's
