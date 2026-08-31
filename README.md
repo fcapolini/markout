@@ -50,6 +50,10 @@ than a language feature.
 
 ## Reactivity, in the page itself
 
+Values are declared on the element they belong to, and `<html>` has a scope of
+its own — so a value declared there is visible to the whole page, stylesheet
+included. Anything that reads one re-renders when it changes.
+
 ```html
 <html :count=${0} :light=${true}>
   <head>
@@ -196,6 +200,18 @@ behavior that depends on context.
 
 ## Source level modularity
 
+A fragment is a file that gives a name to a piece of markup, and a page
+imports it. Two things about scopes make the example below work, and both are
+easier to read before it than after.
+
+`<html>`, `<head>` and `<body>` always have scopes of their own, named `page`,
+`head` and `body`. A fragment's root attributes land on the `<head>` that
+imports it, unless that `<head>` declares them itself — so the fragment's
+`:light` below becomes `head.light`, a default the importing page can override
+by declaring the same name. `<:import>` is allowed only in a page's `<head>`,
+or recursively inside another fragment, which is what lets a fragment rely on
+that.
+
 ```html
 <!-- lib.htm -->
 <lib :light=${true}>
@@ -230,13 +246,9 @@ behavior that depends on context.
 </html>
 ```
 
-NOTE: root level attributes in imported fragments (`*.htm` files) are applied to `<:import>`'s container tag unless they are already defined there: this allows defaults and override.
-
-NOTE: `<html>`, `<head>`, and `<body>` always have their own scopes and by default they are named `page`, `head`, and `body` respectively: that's why, combined with NOTE above, `head.light = !head.light` works
-
-NOTE: `:class-` prefixes "class attributes", which dynamically add/remove a CSS class name depending on their value (if a value is unspecified as in this example, it's taken as `true`)
-
-NOTE: `<:import>` is only allowed in page `<head>` (or recursively in imported fragments), so imported fragments can rely on their root attributes being available as `head` scope values
+`:class-theme-switcher` is the class-toggling form: `:class-x` adds or removes
+the CSS class `x` as its value changes, and one written bare, with no value of
+its own, is `true`.
 
 ## Two decisions, not one
 
@@ -667,10 +679,27 @@ projects adopt Markout without moving off the stack they already run.
 
 ## CLI
 
-Serve a directory of Markout HTML files:
+From nothing to a running page, in three steps. Install the CLI and make a
+directory for the site:
 
 ```sh
 npm i -g @markout-lang/cli
+mkdir site
+```
+
+Put this in `site/index.html`:
+
+```html
+<html>
+  <body :count=${0}>
+    <button :on-click=${() => count++}>Clicked ${count} times</button>
+  </body>
+</html>
+```
+
+And serve it:
+
+```sh
 markout ./site
 ```
 
@@ -766,7 +795,7 @@ A TypeScript monorepo on npm workspaces, MIT licensed.
 | [`kits/`](kits/) | `bootstrap-kit` (every component on Bootstrap's 5.3 cheatsheet, one file each) and `std-kit`, both written in Markout rather than in TypeScript |
 | [`sites/site`](sites/site/) | markout.dev and its demos, written in Markout and served by the Express package |
 
-2,883 tests across 147 files, with coverage and CodeQL on every push.
+2,884 tests across 147 files, with coverage and CodeQL on every push.
 
 Three decisions, rather than the rest of the inventory:
 
