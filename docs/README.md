@@ -91,9 +91,10 @@ pages above — what was chosen, what was rejected, and why.
   page to be wrong without saying so, what closed each one, and what is still
   open. The compile-time-safety claim, audited rather than asserted.
 - [Conditional scopes, and modes on an element](design/conditional-scopes.md) -
-  what a `<:logic>` under a condition should do, why its readers need `?.` and
-  where that is already enforced, and `<:mode>`: a scope on its parent's
-  element, carrying only the deltas it can take back.
+  a `<:logic>` whose condition is its lifetime, why its readers need `?.` and
+  why that guard is what wires them to the toggle rather than merely checking
+  them, and `<:mode>`: a scope on its parent's element, carrying what it can
+  hand back. Built, with what each step cost recorded beside it.
 - [What the platform actually does](design/platform-notes.md) - facts about
   Node, Bootstrap and Volar that each cost a debugging session to establish,
   kept together because a comment reaches the line it sits on and not the next

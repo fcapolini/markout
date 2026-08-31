@@ -37,28 +37,44 @@ as guarded is what registers the reader as a *maybe*, and maybes are what get
 re-linked when a region comes back. Called plain, the read is evaluated once
 against a name that is not there yet and never asked again.
 
-**`<:mode>` is a scope on its parent's element** — partly built, handlers
-only, with everything else refused in so many words:
+**`<:mode>` is a scope on its parent's element**, borrowing the nearest one
+above it so that a modality can arrive and leave without the element moving:
 
 ```html
 <div class="card">
-  <:mode :if=${dragging} :_from=${null} :on-pointermove=${(e) => track(e)} />
-  …the card, which never re-renders…
+  <:mode :if=${editing} :_draft=${text} :class-editing :attr-contenteditable=${true}>
+    <button :on-click=${() => { text = _draft; editing = false }}>Save</button>
+  </:mode>
+  <p>${text}</p>
 </div>
 ```
 
-The element stays, which is the difference from `:if` on it — that takes the
-markup away and loses focus, scroll position and whatever else the DOM was
+**The element stays**, which is the difference from `:if` on it — that takes
+the markup away and loses focus, scroll position and whatever else the DOM was
 holding — and from a handler bound once and guarded from inside, which goes on
-firing for every `pointermove` to decide it has nothing to do. And `_from`
-belongs to the drag rather than to the card, so it is gone when the drag is;
-that is the argument for the tag more than the listener is.
+firing for every `pointermove` to decide it has nothing to do.
 
-`:class-`, `:style-`, `:attr-`, `:prop-`, plain attributes and content are
-refused **as not built yet**. They need one answer — an attribute or a class
-has one owner at a time, and handing it back is the part not written — and a
-tag that quietly does half of what it reads as doing is worse than one that
-says which half.
+**And `_draft` belongs to the edit rather than to the card**, so it is gone
+when the edit is. That is the argument for the tag more than the listener is:
+without it a modality's state lives on the element and has to be cleared by
+hand, which is the bug everybody writes once.
+
+A mode carries handlers, classes, styles, attributes, children and values of
+its own, and takes all of them back. Its children are **built and destroyed**
+rather than parked, which is the one place it departs from the region
+machinery instead of reusing it — every region here preserves, so a hide keeps
+focus and a playing video, and a modality wants the opposite.
+
+Nothing is remembered: what an element's `title` is, is whatever the innermost
+live declaration says, and handing it back is asking the one underneath to say
+again. Where two modes want one attribute, `:priority` decides — higher owns
+it while both are on, and hands it down the stack rather than to the element.
+Equal ranks are a compile error, since precedence between siblings is a rule
+nobody could guess.
+
+Two things it refuses on purpose: `:prop-`, a DOM property being state on the
+element instance with no declaration underneath to hand back to, and a
+*static* plain attribute, which a mode has no markup of its own to write.
 
 **A compiler crash went with it.** Reading a name declared inside a region
 whose host is unnamed — `${field.text}`, where every existing case reached

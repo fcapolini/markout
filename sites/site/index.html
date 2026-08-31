@@ -1100,6 +1100,102 @@
       </div>
     </section>
 
+    <!---
+      Modes. Placed straight after the conditionals section on purpose: that
+      one ends on "the element is parked, not rebuilt", and this is the case
+      where you do not want the element touched at all.
+    -->
+
+    <section id="modes"
+             class="py-5 bg-body-tertiary">
+      <div class="container py-lg-4">
+
+        <div class="row justify-content-center text-center mb-5">
+          <div class="col-lg-8">
+            <h2 class="display-6 fw-bold mb-3">
+              A mode an element is&nbsp;in
+            </h2>
+
+            <p class="lead text-body-secondary">
+              Sometimes nothing should appear or disappear. The same card is
+              simply <em>being dragged</em> now — and everything that means
+              arrives together, and&nbsp;leaves&nbsp;together.
+            </p>
+          </div>
+        </div>
+
+        <div class="row g-4 align-items-start justify-content-center">
+
+          <div class="col-lg-6">
+            <code-card ::title="a panel that can be edited"
+                       class+="h-100"
+                       ::note>
+<pre class="mb-0"><code data-lang="html">&lt;div class="panel"&gt;
+
+  &lt;:mode :if=${editing}
+         :_draft=${text}
+         :class-editing
+         :attr-contenteditable=${true}&gt;
+
+    &lt;button :on-click=${() =&gt; {
+      text = _draft; editing = false;
+    }}&gt;Save&lt;/button&gt;
+
+  &lt;/:mode&gt;
+
+  &lt;p&gt;${text}&lt;/p&gt;
+&lt;/div&gt;</code></pre>
+              <p :slot="note"
+                 class="mb-0">
+                The class, the attribute, the button and the draft are one
+                declaration, because they are one fact: this panel is being
+                edited. End the edit and all four go.
+              </p>
+            </code-card>
+          </div>
+
+          <div class="col-lg-5">
+            <h3 class="h5">The element never moves</h3>
+            <p class="text-body-secondary">
+              A <code class="rule-code">&lt;:mode&gt;</code> has no element of
+              its own and borrows the one above it. That is the difference from
+              putting <code class="rule-code">:if</code> on the panel, which
+              would take it out of the page and lose the caret, the scroll
+              position and anything else the DOM was holding.
+            </p>
+
+            <h3 class="h5 mt-4">The state belongs to the mode</h3>
+            <p class="text-body-secondary">
+              <code class="rule-code">_draft</code> is the edit's, not the
+              panel's, so it is gone when the edit is. Without somewhere for it
+              to live it goes on the panel and has to be cleared by hand — the
+              bug everybody writes once.
+            </p>
+
+            <h3 class="h5 mt-4">And it hands everything back</h3>
+            <p class="text-body-secondary">
+              Nothing is remembered. What an element's
+              <code class="rule-code">title</code> is, is whatever the innermost
+              live declaration says — so a mode giving one up is the panel's own
+              expression being asked again, still live the whole time and simply
+              not the one writing.
+            </p>
+
+            <h3 class="h5 mt-4">A listener that is not there</h3>
+            <p class="text-body-secondary">
+              The other half is what a mode does <em>not</em> do. A
+              <code class="rule-code">pointermove</code> handler declared in a
+              drag mode is bound when the drag starts and unbound when it ends,
+              rather than firing hundreds of times a second to decide it has
+              nothing to&nbsp;do.
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
     <!--- App-specific kits -->
 
     <section id="design-system"
