@@ -123,50 +123,26 @@ reference](docs/reference/syntax.md).
 The objective is to remove as much needless complexity as possible from
 reactive web development. The whole language is a handful of rules:
 
-- HTML is the syntax. Anything without a `${...}` or a `:` is plain markup
-  and stays plain markup.
-- `${...}` is the only expression syntax — plain JavaScript, in text,
-  attributes and CSS, with no separate expression language to learn.
-  Anything holding one is reactive, so `href=${data.link}` needs no
-  further marking.
-- `:` names what HTML has no name for, always in the same `:family-name`
-  shape: `:class-`, `:style-`, `:attr-`, `:prop-`, `:on-`, `:did-`/`:will-`,
-  `:for-`, `:handle-`, `:server-`, `:slot` — plus `:name=${...}` to declare a
-  value, `:const-name` to declare one the compiler works out and drops, and `:aka`
-  to name a scope.
-- `::name` is the one mark that is about a name rather than a value: a
-  component's **interface**. A `<:define>` declares its parameters with it
-  and a usage site passes them with it, which is what tells "this is for the
-  component" from "this is mine" at a glance — see [a usage site is a call,
-  and an element](docs/reference/syntax.md#a-usage-site-is-a-call-and-an-element).
-- A **modifier** is not a family. `:const-` and `:server-` mark an ordinary
-  value rather than naming something in another world, so neither is part of
-  what that value is *called*: `:const-accent` is read as plain `${accent}`.
-  Which is what lets a page take a kit's constant and make it live by
-  declaring that name plainly — the kit goes on writing `${accent}`, and
-  only the page that asked for a binding pays for one.
-- `class+=` and `class-=` — and `style+=`, `style-=` — contribute to an
-  attribute instead of replacing it, and are not `:` names for the reason
-  the rest are: `:` names what HTML has no name for, and `class` has a name.
-  What is new is the **operation**. Only those two attributes have them,
-  being the two HTML gives a *set* rather than a value; a literal is read
-  the way HTML spells that attribute, an expression carries the value
-  itself.
-- A few directives take a reserved word rather than a prefix — `:if`,
-  `:else-if`, `:else` — and can, because a value has to be something an
-  expression can say: `${if}` does not parse, so no page could ever have
-  declared one by that name. A word you could not have used is a word a
-  directive can take with no prefix and no possibility of collision.
-- Scopes nest lexically, like variables: a value is visible to every
-  descendant with no separate wiring — no `provide`/`inject`, no `Context`.
-- An expression resolves where it was *written*. A custom tag's body sees
-  the scope it was defined in; what you pass at a usage site sees yours.
-  That is what lets a component be moved without its meaning changing — and
-  a usage site can hold state of its own, `:count=${0}` on a `<my-row>`
-  meaning exactly what it means on a `<span>`.
-- Two intents get two spellings rather than one guessing from the shape of
-  a value: `title=${v}` sets an attribute's value, `:attr-title=${v}` sets
-  whether it is there at all.
+- **HTML is the syntax.** Anything without a `${...}` or a `:` is plain
+  markup, and stays plain markup.
+- **One expression syntax.** `${...}` is plain JavaScript — in text,
+  attributes and CSS alike — and whatever holds one is reactive, so
+  `href=${data.link}` needs no further marking.
+- **One prefix for everything else.** `:` names what HTML has no name for,
+  always as `:family-name`: `:class-`, `:attr-`, `:on-`, `:for-` and the
+  rest — see [directives](docs/concepts/directives.md).
+- **Scopes nest lexically.** A value is visible to every descendant with no
+  separate wiring — no `provide`/`inject`, no `Context` — and an expression
+  resolves where it was *written*, which is what lets a component be moved
+  without its meaning changing. See [scopes](docs/concepts/scope.md).
+- **A component says what it takes.** `::` marks the interface: declared on
+  the `<:define>`, passed at the usage site. Everything else on that tag is a
+  plain `:` and stays yours — see [a usage site is a call, and an
+  element](docs/reference/syntax.md#a-usage-site-is-a-call-and-an-element).
+- **Adding is its own spelling.** `class=` replaces, the way every attribute
+  does; `class+=` adds, `class-=` takes away, and `style` has the same pair.
+  Nothing merges behind your back — see [a composite attribute is added to,
+  not replaced](docs/reference/syntax.md#a-composite-attribute-is-added-to-not-replaced).
 
 The full syntax is a single page: **[syntax
 reference](docs/reference/syntax.md)**. The reasoning behind each part is in
@@ -181,11 +157,11 @@ No rule above has a "convenient" exception (e.g. `class`/`style` silently
 merging instead of overriding when re-assigned — `class=` replaces
 everywhere, and adding is the other spelling rather than the same one
 behaving differently in context — or a callback attribute accepting a bare
-expression sometimes and requiring a function other times). A shortcut that only saves a few characters at the call site but
-requires every future reader to remember a special case isn't a
-simplification, it's deferred, compounding complexity: better to always
-type a couple more characters than to hide behavior that depends on
-context.
+expression sometimes and requiring a function other times). A shortcut that
+only saves a few characters at the call site but requires every future reader
+to remember a special case isn't a simplification, it's deferred, compounding
+complexity: better to always type a couple more characters than to hide
+behavior that depends on context.
 
 ## Source level modularity
 
