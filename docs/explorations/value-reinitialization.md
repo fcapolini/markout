@@ -72,17 +72,15 @@ steps against structure that exists.
    per-item binding exists at the handler and nowhere near the value being
    reinitialized.
 
-   **What it leaves open** is lifetime. A replacement captures the scope it
-   was written in, and the useful case is exactly the one where that scope is
-   a region's — so the region goes away and an outer value is left holding an
-   expression that resolves into a scope nothing else references. Refusing a
-   reinit that crosses a region boundary would forbid the motivating case to
-   keep the edge case, so that is not the way out. The proposal instead:
-   **disposing a scope turns any expression borrowed from it back into a
-   static value, at whatever it last held.** That is not a new rule either —
-   it is "a value follows its expression until something ends the following",
-   with disposal as one more thing that ends it. Untested, and the one part
-   of this entry that is a suggestion rather than a decision.
+   **What follows from it** is a lifetime rule. A replacement captures the
+   scope it was written in, so a reinitialization has to be **checked against
+   that scope's lifespan and rejected when the check fails**: a value may not
+   be given an expression borrowed from a scope shorter-lived than itself.
+   That is better than defining what disposal does to a borrowed expression,
+   because it means no value can ever come to hold one — the situation is
+   refused rather than handled. What it costs is nothing, for the reason the
+   next section gives.
+
 2. **Hydration has to know which variant is live.** Which expression a value
    is on is runtime state, and nothing in a served page encodes it today. The
    browser would recompute from the first variant and disagree with what was
@@ -103,6 +101,36 @@ And one constraint that comes free if it is taken early: **handlers only**, so
 a swap never happens while propagation is walking the graph. The comment on
 `CoreValue.dirty` is a fair warning about that path — a spurious
 re-evaluation there once cost 59 seconds on a sort of 10k rows.
+
+## What it actually buys, which is narrower than it looks
+
+A conditional expression already says "derive from this, and then from that",
+and says it correctly:
+
+```html
+<body :n=${mode === 'a' ? a : b}>
+```
+
+That value carries **three** dependencies — `mode`, `a` and `b`, the union of
+both branches. Move `b` while the first branch is taken and `n` keeps the
+right answer; flip `mode` and it follows the other source. Every switching
+case anyone has wanted so far is writable today, declaratively, with the
+alternatives in view.
+
+What it does *not* do is stop depending on `b` while `b` is unused. The value
+stays subscribed and re-evaluates whenever the branch nobody is reading moves.
+
+So a reinitialization with a different dependency list buys **dependency-set
+narrowing** and not expressiveness — dropping edges the declarative form has
+to keep, because it cannot know which branch is live until it runs. That is a
+real thing to want on a page where the unused source moves often and the
+derived value is expensive, and it is a much smaller claim than
+"re-initialize".
+
+Two things follow. It lowers the priority: a performance option waits for a
+page that measures badly, not for a design. And it is why the lifetime check
+above costs nothing — a replacement that would outlive its scope can always be
+written as a branch instead, so refusing it removes no capability.
 
 ## How big is it, really
 
@@ -130,7 +158,14 @@ commit that documented the rule instead.
 
 ## Where this leaves it
 
-Nothing to build. (1) is answered, which was the part worth answering early,
-and it answered itself once the question was put as "what can a replacement
-usefully say" rather than "which scope is tidier". What is left is the
-lifetime rule under it, and four pieces of ordinary work.
+Nothing to build, and less reason to than when this entry was started. (1) is
+answered, and answered itself once the question was put as "what can a
+replacement usefully say" rather than "which scope is tidier". The lifetime
+rule under it is answered too: rejected at the check rather than handled at
+disposal.
+
+What changed the entry's weight is the section above. A conditional expression
+already covers the switching cases, so this is an optimisation — narrowing a
+dependency set — rather than a capability. It should wait for a page that
+measures badly, and the four remaining pieces are ordinary work when one
+turns up.
