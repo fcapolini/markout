@@ -296,22 +296,28 @@ Without children that is a `<:mode>` and a `<:group :if=${editing}>` side by
 side, with **the same condition written twice** and free to drift apart. One
 modality is one fact and should be one declaration.
 
-Mechanically it is close to free: a mode with children is a
-[group region](group-regions.md) — a marker at each end, its run of nodes
-rendered where the tag was written — plus a delta on the enclosing element.
-That machinery is built.
+**Its children are built and destroyed, not parked** — and that is the one
+place a mode departs from the region machinery rather than reusing it. Every
+region markout has today *preserves*: `toggle` moves the element between the
+document and its stencil precisely so that a hide keeps focus, a scroll offset,
+a playing video. A mode wants the other answer.
 
-**And it forces one decision the childless form did not: park or dispose.**
 Rule 1 disposes an elementless scope on the grounds that it has no DOM state to
-preserve, which stops being true the moment a mode has children — there could
-be a focused input or a scroll offset among them. The answer is still
-**dispose**, for two reasons. A mode's state is meant to be transient: the
-draft dies with the edit, and a mode that came back holding the last draft
-would be the surprising one. And the alternative is a construct that parks its
-markup while unbinding its listeners, which is two lifetimes in one tag.
+preserve, which stops being true the moment a mode has children. **Dispose
+anyway**, for two reasons. A mode's state is meant to be transient: the draft
+dies with the edit, and a mode that came back holding the last one would be the
+surprising thing. And the alternative is a construct that parks its markup
+while unbinding its listeners, which is two lifetimes in one tag.
 
-The cost is a mode that wraps a `<video>` or a deeply scrolled list rebuilds it
-on the way back. That is the rarer case, and `:if` on the element is still
+So the shape to build against is **not `<:group :if>` but a `:for-each` replica
+of arity zero-or-one**. That distinction is already drawn in the runtime, in
+`regionHost`'s own comment: a replica *is built when it exists and disposed when
+it does not, so there is no scope sitting there answering for markup that is
+away* — which is exactly what a mode wants, and exactly what an `:if` region is
+built not to do. Both paths exist; this one is the other one.
+
+The cost is that a mode wrapping a `<video>` or a deeply scrolled list rebuilds
+it on the way back. That is the rarer case, and `:if` on the element is still
 there for it.
 
 So a mode is not `<state>` for a different reason than the one first given:
