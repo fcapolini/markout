@@ -1,6 +1,5 @@
 <!---
-  Wider lateral gutters on a phone, for every page that carries the site's
-  own chrome.
+  Wider lateral gutters on a phone, for the pages a visitor actually reads.
 
   Bootstrap's `.container` is 100% wide below `sm` and pads itself with half
   of `--bs-gutter-x`, which is 1.5rem. Below 576px that padding is the whole
@@ -26,9 +25,17 @@
   where the page imports it, at the top of `<head>`, and this file is
   imported after -- so an equally specific rule later in the cascade wins.
 
-  The demos are deliberately not on this list. Their source is the thing
-  being read, and an import that exists to nudge padding is a line somebody
-  has to skip past to get to the point they came for.
+  Imported by the three pages carrying the site's chrome, and by the two
+  demos most likely to be opened on a phone: the kitchen sink, which is the
+  kit's own shop window, and the Markout half of the before/after pair. That
+  pair's hand-written twin restates the rule in `index-plain.css` instead --
+  an import would put markout into the page whose claim is that it has none,
+  and the comparison only means anything while both halves render the same.
+
+  The rest of the demos stay off the list on purpose. Their source is the
+  thing being read -- the README's blocks kept runnable, the pages the
+  homepage prints verbatim -- and an import that exists to nudge padding is a
+  line somebody has to skip past to get to the point they came for.
 -->
 <lib>
   <style>

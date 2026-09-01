@@ -1,3 +1,22 @@
+/*
+  The wider phone gutter, written out by hand like everything else here.
+
+  Its twin next door imports /parts/gutters.htm, which is the comparison this
+  demo exists to make: the same rule, reached by naming the file that holds it
+  instead of restating it. Bringing that import in here would put markout into
+  the page whose claim is that it has none, so the rule is copied rather than
+  shared -- and if the value ever moves, this is the copy that has to be moved
+  with it, by somebody who remembers it is here.
+
+  Both halves need it or neither does. The demo is one page written twice, and
+  it stops being that the moment the two render differently on a phone.
+*/
+@media (max-width: 575.98px) {
+  .container {
+    padding-inline: 1.25rem;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   :root { color-scheme: dark; }
 
