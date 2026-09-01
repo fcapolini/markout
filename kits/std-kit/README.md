@@ -232,6 +232,14 @@ same route. There is no second branch in the component — the multi-page mode
 is what happens when nothing intercepts. Back and forward stay the browser's
 throughout, and a reload is left alone rather than intercepted.
 
+**Only navigations that stay in this document.** `canIntercept` is true for
+any same-origin navigation, another page included, and cancelling one of those
+strands the reader: the address moves, no route here answers to it, and
+nothing loads until a manual reload. A link to a different pathname is a
+round trip by design, and the router leaves it to the browser — which is the
+division the whole part rests on. The pathname decides where a round trip is
+unavoidable; the query decides everything inside one.
+
 `$url` is what the router reads, and the runtime is what keeps `$url` on the
 document's address. So the router holds no copy of it, and every other
 expression on the page sees the same address it does.

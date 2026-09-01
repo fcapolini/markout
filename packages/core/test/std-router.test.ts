@@ -529,12 +529,27 @@ describe('what std-router hands to the Navigation API', () => {
     expect(p.errors).toStrictEqual([]);
   });
 
+  it('leaves a navigation to another document alone', async () => {
+    // `canIntercept` is true for any same-origin navigation, another PAGE
+    // included -- and cancelling that one strands the page: the address moves,
+    // no route here answers to it, and nothing loads until a manual reload.
+    // The pathname is the seam a round trip belongs at
+    const p = await withNavigation('http://x.test/index.html?about');
+    expect(p.nav.navigate({}, 'http://x.test/other.html')).toBe(false);
+    expect(p.nav.navigate({}, 'http://x.test/sub/index.html?about')).toBe(false);
+    expect(p.nav.navigate({}, 'http://other.test/index.html?about')).toBe(false);
+    // the same document with a different query is the case that IS ours
+    expect(p.nav.navigate({}, 'http://x.test/index.html?index')).toBe(true);
+    expect(p.nav.navigate({}, 'http://x.test/index.html?about/team')).toBe(true);
+    expect(p.errors).toStrictEqual([]);
+  });
+
   it('cancels the load without claiming to handle it', async () => {
     // no handler passed to intercept(): the router's whole job is stopping
     // the document load, and `$url` moves on `navigatesuccess` afterwards
     const p = await withNavigation();
     let arg: unknown = 'not called';
-    p.nav.navigate({ intercept: (a: unknown) => (arg = a) });
+    p.nav.navigate({ intercept: (a: unknown) => (arg = a) }, 'http://x.test/index.html?x');
     expect(arg).toBe(undefined);
   });
 });

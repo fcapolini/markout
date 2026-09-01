@@ -65,6 +65,12 @@ same file, so a host that serves static files already serves every route:
 no rewrite rule, no catch-all, nothing to configure. Drop the page anywhere
 and every address works.
 
+The two levels compose rather than compete, and the address says which is
+which: a link to a different **pathname** is a round trip, and the router
+leaves it to the browser; a link that only changes the **query** stays in the
+document. Level 1 decides where a fresh document is the right answer, level 2
+covers everything inside one.
+
 The same markup is then a single-page app or a multi-page one depending only
 on the browser. Where the Navigation API exists the router cancels the
 document load and the screen switches in place; where it does not, the click

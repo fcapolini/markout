@@ -160,6 +160,24 @@
           return;
         }
         /*
+          A different document is a different document.
+
+          `canIntercept` is true for any same-origin navigation, including one
+          to another PAGE -- and intercepting that cancels the load of a
+          document this router knows nothing about. The address bar moves, no
+          route here answers to it, and the page sits there until someone
+          reloads by hand.
+
+          The pathname is where a round trip is meant to happen, which is the
+          whole division this part rests on: the pathname decides where one is
+          unavoidable, the query decides everything inside one. So only a
+          navigation staying in this document is ours to cancel.
+        */
+        const to = new URL(ev.destination.url);
+        if (!$url || to.origin !== $url.origin || to.pathname !== $url.pathname) {
+          return;
+        }
+        /*
           No handler, because there is no work to do. intercept() is what
           cancels the real navigation: the URL and the history entry update
           and no document load happens, then `navigatesuccess` fires and the
