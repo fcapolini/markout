@@ -130,15 +130,20 @@
           the route that encloses the inner router, and stays put while the
           screens beside it change.
         -->
-        <std-router :aka="guide" ::defaultPage="intro">
-          <div class="row g-4">
+        <std-router ::defaultPage="intro">
+          <!---
+            `$host` is the router this markup was slotted INTO, so the sidebar
+            asks the level it belongs to which screen is showing, rather than
+            reaching for it by name from outside.
+          -->
+          <div class="row g-4" :here=${$host.page}>
             <div class="col-md-4">
               <bs-nav ::vertical=${true}
                       ::variant="pills"
                       ::items=${[
-                        { name: 'Introduction', link: '?guide/intro', active: app.guide.page === 'intro' },
-                        { name: 'Install', link: '?guide/install', active: app.guide.page === 'install' },
-                        { name: 'Deploy', link: '?guide/deploy', active: app.guide.page === 'deploy' },
+                        { name: 'Introduction', link: '?guide/intro', active: here === 'intro' },
+                        { name: 'Install', link: '?guide/install', active: here === 'install' },
+                        { name: 'Deploy', link: '?guide/deploy', active: here === 'deploy' },
                       ]} />
             </div>
             <div class="col-md-8">
