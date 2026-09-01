@@ -230,9 +230,10 @@
 
     /*
       The closing band is a dark slab in light mode. In dark mode that slab
-      would land on exactly the same value as the section above it, so it
-      switches to the tertiary surface — the alternate the other sections
-      already use — and the boundary stays visible.
+      would land on exactly the same value as the body — and so as the footer
+      below it — so it switches to the secondary surface: one step lighter than
+      the tertiary section above and one step above the footer, which is the
+      only neutral left that has an edge on both sides.
 
       Keyed off the page theme on the root element, because the band itself
       carries `data-bs-theme="dark"` for the benefit of its own contents.
@@ -248,12 +249,12 @@
     }
 
     /*
-      Dark mode: the band is just another tertiary section, so its text drops
-      to the same ink every other heading and lead on the page uses — white
-      would read brighter here than any other heading.
+      Dark mode: the band is a raised neutral rather than a dark slab, so its
+      text drops to the same ink every other heading and lead on the page uses
+      — white would read brighter here than any other heading.
     */
     html[data-bs-theme="dark"] .cta-band {
-      background-color: var(--bs-tertiary-bg);
+      background-color: var(--bs-secondary-bg);
       color: var(--bs-body-color);
     }
 
@@ -1612,7 +1613,7 @@
     -->
 
     <section id="tailwind"
-             class="py-5 bg-body-tertiary">
+             class="py-5">
       <div class="container py-lg-4">
 
         <div class="row align-items-center gy-5 gx-0 gx-sm-5">
@@ -1727,7 +1728,7 @@
 
         <div class="row justify-content-center mt-5">
           <div class="col-lg-10">
-            <bs-card class+="bg-body-secondary"
+            <bs-card class+="bg-body-tertiary"
                      ::bodyExtra="p-4">
               <p class="fw-semibold mb-3">
                 And the one thing a scanner cannot see.
@@ -1786,7 +1787,7 @@
     -->
 
     <section id="web-components"
-             class="py-5">
+             class="py-5 bg-body-tertiary">
       <div class="container py-lg-4">
 
         <div class="row align-items-center gy-5 gx-0 gx-sm-5">
@@ -1893,7 +1894,7 @@
     <!--- Compared to what you'd otherwise reach for -->
 
     <section id="compared"
-             class="py-5 bg-body-tertiary">
+             class="py-5">
       <div class="container py-lg-4">
 
         <div class="row justify-content-center text-center mb-5">
@@ -2045,7 +2046,7 @@
               </table>
             </div>
 
-            <bs-card class+="bg-body-secondary mt-4"
+            <bs-card class+="bg-body-tertiary mt-4"
                      ::bodyExtra="p-4">
               <p class="fw-semibold mb-3">And the honest costs.</p>
 
@@ -2074,7 +2075,7 @@
     <!--- Editor support -->
 
     <section id="editor"
-             class="py-5">
+             class="py-5 bg-body-tertiary">
       <div class="container py-lg-4">
 
         <div class="row justify-content-center text-center mb-5">
