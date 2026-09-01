@@ -30,6 +30,18 @@ export type ValueCallback<T> = (s: CoreScope, v: T | undefined) => void;
 
 /** the scope property a dependency may legitimately arrive nowhere through */
 const RT_HOST_KEY = '$host';
+const RT_OUTER_PREFIX = '$outer:';
+
+/**
+ * A segment that navigates the scope tree rather than reading a name.
+ *
+ * Both legitimately arrive nowhere -- a component standing on its own has no
+ * enclosing instance, and none of a given tag either -- so the walk tolerates
+ * a gap here where an ordinary name would be a compiler bug.
+ */
+function structural(segment: string): boolean {
+  return segment === RT_HOST_KEY || segment.startsWith(RT_OUTER_PREFIX);
+}
 
 export interface CoreValueProps<T> {
   val?: T;
@@ -221,10 +233,10 @@ export class CoreValue<T = any> {
     const last = dep.length - 1;
     let scope: any = this.scope.proxy;
     for (let i = 0; i < last && scope != null; i++) {
-      scope = maybe || dep[i] === RT_HOST_KEY ? scope?.[dep[i]] : scope[dep[i]];
+      scope = maybe || structural(dep[i]) ? scope?.[dep[i]] : scope[dep[i]];
     }
     const found = scope?.$value(dep[last]);
-    return !found && !maybe && dep.indexOf(RT_HOST_KEY) >= 0
+    return !found && !maybe && dep.findIndex(structural) >= 0
       ? (this.scope.proxy as any).$value(RT_HOST_KEY)
       : found;
   }

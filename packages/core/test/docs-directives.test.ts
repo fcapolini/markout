@@ -670,6 +670,22 @@ const CASES: Record<string, Case> = {
       expect(p.body()).toContain('none');
     },
   },
+  '$outer("my-tag")': {
+    works: async () => {
+      // the nearest enclosing instance of a NAMED tag, however far up: past
+      // the `d-box` between them, and past nothing at all at the top level
+      const p = await run(
+        '<html><head>' +
+          '<:define tag="d-lvl:div" ::depth=${($outer("d-lvl")?.depth ?? -1) + 1}>' +
+          '<:slot />${depth}</:define>' +
+          '<:define tag="d-box:div"><:slot /></:define></head>' +
+          '<body><d-lvl><d-box><d-lvl /></d-box></d-lvl></body></html>'
+      );
+      // the outer answers 0 having found none, the inner 1 having found it
+      expect(p.body()).toContain('1');
+      expect(p.body()).toContain('0');
+    },
+  },
   '$value("key")': {
     works: async () => {
       const p = await run('<html :v=${"A"}><body><i>${$value("v").get()}</i></body></html>');

@@ -26,6 +26,16 @@ export const RT_PARENT_VALUE_KEY = '$parent';
 /** this scope's own compiler-assigned id, e.g. `s4` (`s4-0` for a replica) */
 export const RT_ID_VALUE_KEY = '$id';
 export const RT_HOST_VALUE_KEY = '$host';
+/**
+ * `$outer('x')`, compiled to the key `$outer:x`.
+ *
+ * A call in the source and a plain member access by the time it gets here,
+ * because a lookup performed per read emits no dependency: the reader would
+ * never recompute when the scope it found moves. As a key it is an ordinary
+ * segment of a dependency path, resolved when the scope links and re-resolved
+ * on relink -- which is what a replica or a returning region needs anyway.
+ */
+export const RT_OUTER_VALUE_PREFIX = '$outer:';
 // The four lifecycle callbacks, in two pairs answering different questions.
 // `did$init`/`will$dispose` bracket the SCOPE: what it set up when it came
 // into being and has to let go of when it stops existing -- a timer, a
@@ -89,6 +99,17 @@ export interface CoreScopeProps {
   /** a custom-tag usage instance: the id of the <:define> scope/template it
    * instantiates its DOM from -- DOM-specific, so only WebScope acts on it */
   template?: string;
+  /**
+   * The custom tag this scope is an instance OF, for `$outer(tag)`.
+   *
+   * Per definition rather than per usage, which `template` is not: two
+   * instances of one tag carry different template ids, and the question
+   * `$outer` asks is which TAG encloses this scope. Emitted only on scopes
+   * that are instances, and only when some expression in the page actually
+   * asks for that tag -- nothing else has any use for it, and it is a string
+   * on every instance in the payload otherwise.
+   */
+  tag?: string;
   /**
    * This scope is an `:else`/`:else-if`: the id of the branch before it in
    * the chain, and (on every branch but the last) the one after.
@@ -697,6 +718,26 @@ export class CoreScope {
     return scope;
   }
 
+  /**
+   * The nearest enclosing instance of a given tag, for `$outer(tag)`.
+   *
+   * The same walk `enclosingInstance` makes, carried on past instances of
+   * other tags instead of stopping at the first one. A route is not the
+   * parent of the route inside it -- an `:if` region, a `:for-each` or a
+   * `<div>` carrying a value each add a link -- so the enclosing instance of
+   * a tag is reliably an ancestor and never reliably the parent, which is
+   * what makes this a walk rather than a hop.
+   *
+   * Excludes itself, or a definition's own default would find the instance
+   * it is defaulting: `$outer('x')` written inside `x` means the `x` outside
+   * this one.
+   */
+  private enclosingTag(tag: string): CoreScope | undefined {
+    let scope = this.enclosingInstance();
+    while (scope && scope.props.tag !== tag) scope = scope.enclosingInstance();
+    return scope;
+  }
+
   private rootScope(): CoreScope | undefined {
     let scope: CoreScope | undefined = this;
     while (scope.parent && scope.parent !== this.ctx.global) {
@@ -727,6 +768,14 @@ export class CoreScope {
     // a scope that has deliberately given one up, so it falls through to
     // where it does mean something -- see UsageSiteScope
     if (this.noBuiltin?.has(key)) return undefined;
+    if (key.startsWith(RT_OUTER_VALUE_PREFIX)) {
+      // fixed once linked, like `$host`, and undefined when there is no such
+      // tag above -- a component standing outside the thing it would compose
+      // with, which is a fact about the page rather than a fault
+      return (this.values[key] = this.newValue(key, {
+        val: this.enclosingTag(key.slice(RT_OUTER_VALUE_PREFIX.length))?.proxy,
+      }));
+    }
     switch (key) {
       case RT_HOST_VALUE_KEY:
         // fixed once linked; undefined outside any instance, which is what

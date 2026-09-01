@@ -9,6 +9,9 @@ import type { Scope } from '../ir/Scope';
 import type { Value } from '../ir/Value';
 
 const RT_PARENT_VALUE_KEY = '$parent';
+/** `$outer('x')` in the source; `$outer:x` by the time anything else sees it */
+const RT_OUTER_FN = '$outer';
+const RT_OUTER_VALUE_PREFIX = '$outer:';
 
 /**
  * The name a compiled expression reaches its scope through.
@@ -42,12 +45,12 @@ export function stage3qualify(page: Page) {
   // see stage4-resolve: `page.main` is already among `page.global`'s children,
   // so walking it separately just qualified everything twice
   for (const child of page.global.children) {
-    qualifyScope(child);
+    qualifyScope(child, page);
   }
   return page;
 }
 
-function qualifyScope(scope: Scope) {
+function qualifyScope(scope: Scope, page: Page) {
   // `usageValues` alongside the rest: they are declared at the usage site
   // rather than held by the instance, and an expression is qualified the same
   // way wherever it was written
@@ -63,15 +66,16 @@ function qualifyScope(scope: Scope) {
     // runtime and rendered blank, for the most natural thing to write.
     qualifyValue(
       scope.callSiteValues?.has(name) ? '' : shadowKeyFor(scope, name),
-      value
+      value,
+      page
     );
   }
   for (const [name, value] of scope.textValues) {
-    qualifyValue(name, value);
+    qualifyValue(name, value, page);
   }
 
   for (const child of scope.children) {
-    qualifyScope(child);
+    qualifyScope(child, page);
   }
 }
 
@@ -90,7 +94,7 @@ function shadowKeyFor(scope: Scope, name: string): string {
   return name;
 }
 
-function qualifyValue(name: string, value: Value) {
+function qualifyValue(name: string, value: Value, page: Page) {
   const expression = value.value;
   // a plain (non-`${}`) string is a static literal, not an expression to
   // qualify; only already-parsed `${...}` expressions need qualifying
@@ -98,7 +102,7 @@ function qualifyValue(name: string, value: Value) {
     return;
   }
 
-  const qualified = qualifyExpression(name, expression as unknown as Node);
+  const qualified = qualifyExpression(name, expression as unknown as Node, value, page);
   if (value.node.nodeType === NodeType.ATTRIBUTE) {
     (value.node as ServerAttribute).value = qualified as unknown as acorn.Expression;
   } else if (value.node.nodeType === NodeType.TEXT) {
@@ -106,11 +110,53 @@ function qualifyValue(name: string, value: Value) {
   }
 }
 
-function qualifyExpression(key: string, expression: Node) {
+function qualifyExpression(key: string, expression: Node, value: Value, page: Page) {
   const stack: Node[] = [];
   return estraverse.replace(expression, {
     enter(node: Node, parent: Node | null | undefined) {
       stack.push(node);
+      /*
+        `$outer('x')` becomes the key `$outer:x`, read as an ordinary segment
+        of a dependency path.
+
+        A call in the source because that is what it reads as, and not one by
+        the time dependencies are collected: a lookup performed per read emits
+        no dependency, so whatever asked would never recompute when the scope
+        it found moves -- which is the case an intercepted navigation is. As a
+        key it resolves when the scope links, and re-resolves on relink, which
+        is what a replica or a returning region needs anyway.
+
+        The tag has to be a literal for the same reason. One computed per read
+        is the shape that cannot carry a dependency at all.
+      */
+      if (
+        node.type === 'CallExpression' &&
+        node.callee.type === 'Identifier' &&
+        node.callee.name === RT_OUTER_FN &&
+        !isLocalAccess(node.callee as Node, stack)
+      ) {
+        const arg = node.arguments.length === 1 ? node.arguments[0] : undefined;
+        const tag =
+          arg?.type === 'Literal' && typeof arg.value === 'string' ? arg.value : undefined;
+        if (!tag) {
+          page.errors.push({
+            type: 'error',
+            msg:
+              `${RT_OUTER_FN}() takes one tag name, written out: ` +
+              `${RT_OUTER_FN}('my-tag'). A tag worked out while the page runs ` +
+              `could not be depended on, so it would answer once and never again`,
+            loc: value.node.loc,
+          });
+          return;
+        }
+        return {
+          type: 'MemberExpression',
+          object: { type: 'Identifier', name: RT_SCOPE_PARAM },
+          property: { type: 'Literal', value: `${RT_OUTER_VALUE_PREFIX}${tag}` },
+          computed: true,
+          optional: false,
+        };
+      }
       if (node.type !== 'Identifier') {
         return;
       }

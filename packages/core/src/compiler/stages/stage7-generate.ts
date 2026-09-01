@@ -34,6 +34,8 @@ import {
   DOM_USE_MARKER,
 } from '../../runtime/web/web-context';
 import type { CompiledProps, Page } from '../ir/Page';
+/** `$outer('x')`, as stage3 keyed it and stage4 recorded it */
+const RT_OUTER_VALUE_PREFIX = '$outer:';
 import type { Scope } from '../ir/Scope';
 import { RT_SCOPE_PARAM } from './stage3-qualify';
 import type { Value, ValueDepRef } from '../ir/Value';
@@ -805,6 +807,7 @@ interface ScopeData {
   elseOf?: string;
   elseNext?: string;
   template?: string;
+  tag?: string;
   attributes?: { [name: string]: string };
   values?: { [key: string]: ValueData };
   /** what a custom-tag usage site DECLARED rather than passed -- built on the
@@ -949,6 +952,13 @@ function generateScope(
     // named <:define> stencil if no already-rendered element is found
     props.template = scope.usesTemplate;
   }
+  // What `$outer(tag)` walks for. Only tags something in this page actually
+  // asks for: `template` cannot answer the question -- it is per usage site,
+  // so two instances of one tag carry different ids -- and a string on every
+  // instance in the payload, for a name nobody reads, is what this avoids
+  if (scope.usesTag && outerTags(scope.page).has(scope.usesTag)) {
+    props.tag = scope.usesTag;
+  }
   if (scope.attributes?.size) {
     props.attributes = Object.fromEntries(
       [...scope.attributes].map(([name, value]) => [name, value ?? ''])
@@ -1045,6 +1055,37 @@ function tokens(s: string): string[] {
  * to while the region it reaches into is away. `$host` keeps its fallback,
  * which moved to the runtime with the walk.
  */
+/**
+ * The tags `$outer(...)` names anywhere in this page.
+ *
+ * Read off the dependency paths rather than the source, because that is
+ * where the answer is by now: stage3 turned each call into a `$outer:` key
+ * and stage4 recorded it as a segment like any other. Memoised per page --
+ * every instance scope asks, and the answer cannot change while one page is
+ * being generated.
+ */
+const OUTER_TAGS = new WeakMap<object, Set<string>>();
+
+function outerTags(page: Page): Set<string> {
+  const already = OUTER_TAGS.get(page);
+  if (already) return already;
+  const tags = new Set<string>();
+  const visit = (scope: Scope) => {
+    for (const value of [...scope.values.values(), ...scope.textValues.values()]) {
+      for (const dep of value.deps ?? []) {
+        for (const segment of makeDep(dep)) {
+          segment.startsWith(RT_OUTER_VALUE_PREFIX) &&
+            tags.add(segment.slice(RT_OUTER_VALUE_PREFIX.length));
+        }
+      }
+    }
+    scope.children.forEach(visit);
+  };
+  visit(page.global);
+  OUTER_TAGS.set(page, tags);
+  return tags;
+}
+
 function makeDep(dep: ValueDepRef): string[] {
   return [...(dep.via ?? []), dep.key];
 }

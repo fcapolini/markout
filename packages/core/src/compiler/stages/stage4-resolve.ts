@@ -26,6 +26,9 @@ const RT_SET_FN_KEY = '$set';
 const RT_ID_VALUE_KEY = '$id';
 // the enclosing custom-tag instance, structurally -- see CoreScope's copy
 const RT_HOST_VALUE_KEY = '$host';
+/** `$outer('x')`, which stage3 has already turned into this key */
+const RT_OUTER_VALUE_PREFIX = '$outer:';
+const isOuterKey = (name: string) => name.startsWith(RT_OUTER_VALUE_PREFIX);
 // DOM-side, but the resolver only needs to know it is always there
 const RT_DOM_VALUE_KEY = '$dom';
 
@@ -478,6 +481,12 @@ const SYSTEM_VALUES: Visible[] = [
     detail: 'the custom-tag instance this markup is inside, if any',
   },
   {
+    name: '$outer',
+    kind: 'system',
+    call: true,
+    detail: '$outer("my-tag") -- the nearest enclosing instance of a tag',
+  },
+  {
     name: RT_VALUE_FN_KEY,
     kind: 'system',
     call: true,
@@ -776,6 +785,20 @@ function chainSegments(node: Node): Segment[] | undefined {
   const segments: Segment[] = [];
   let n: Node = node;
   while (n.type === 'MemberExpression') {
+    // `$outer('x')` is compiled to `$['$outer:x']`, which is computed and
+    // still perfectly followable: the property is a literal stage3 wrote, so
+    // it names one thing for the life of the page. No other computed access
+    // is -- see dynamicScopeAccess, which reports those rather than recording
+    // a dependency that could never fire
+    const outer =
+      n.computed && n.property.type === 'Literal' && typeof n.property.value === 'string'
+        ? n.property.value
+        : undefined;
+    if (outer !== undefined && isOuterKey(outer)) {
+      segments.unshift({ name: outer, optional: !!n.optional });
+      n = n.object as Node;
+      continue;
+    }
     if (n.computed || n.property.type !== 'Identifier') {
       return undefined;
     }
@@ -1029,7 +1052,8 @@ function validated(
     key !== RT_VALUE_FN_KEY &&
     key !== RT_ID_VALUE_KEY &&
     key !== RT_HOST_VALUE_KEY &&
-    key !== RT_DOM_VALUE_KEY
+    key !== RT_DOM_VALUE_KEY &&
+    !isOuterKey(key)
   ) {
     const resolved = lookup(target, key, via.length > 0);
     // noted as this stage walks -- which is the only walk that sees inside a
@@ -1191,6 +1215,14 @@ function navigate(
 ): { isNavigation: boolean; scope?: Scope; dynamic?: boolean } {
   if (name === RT_PARENT_VALUE_KEY) {
     return { isNavigation: true, scope: scope.lexical() };
+  }
+  if (isOuterKey(name)) {
+    // The same trade `$host` makes below, and for the same reason: which
+    // instance of a tag encloses a definition's values is a property of each
+    // usage, not of the definition, so this stage cannot say what is on the
+    // other end. The chain is recorded so that what it reads still triggers
+    // an update.
+    return { isNavigation: true, dynamic: true };
   }
   if (name === RT_HOST_VALUE_KEY) {
     // Structural rather than lexical, and that is what puts it out of this

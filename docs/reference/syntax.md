@@ -1380,9 +1380,37 @@ Available on every scope; not declared, and reserved from user code.
 | `$id` | This scope's identifier, unique in the page. For building HTML ids. |
 | `$parent` | The enclosing scope — where this markup was WRITTEN. |
 | `$host` | The custom-tag instance this markup ended up INSIDE, or nothing outside any. |
+| `$outer("my-tag")` | The nearest enclosing instance of that tag, or nothing. Excludes this scope. |
 | `$value("key")` | Looks a value up by key. |
 | `$set("key", v)` | Assigns to a value by name, and answers whether it landed. For writing where `=` cannot go — see below. |
 | `$dom` | This scope's own element, or nothing if it has none. Browser-only. |
+
+### `$outer`
+
+`$host` is the instance immediately enclosing this markup; `$outer` is the
+nearest one of a **named tag**, however far up it is:
+
+```html
+<:define tag="my-level:div" ::depth=${($outer('my-level')?.depth ?? -1) + 1}>
+  <:slot />
+</:define>
+```
+
+Each instance asks the nearest one above it and adds one, so nesting composes
+without any level being told its own ancestry.
+
+A walk rather than a parent, because the enclosing instance is reliably an
+ancestor and never reliably the parent: a region, a `:for-each` or a `<div>`
+carrying a value each add a scope in between. **It excludes itself**, or the
+default above would be defined in terms of the instance it is defaulting.
+It answers nothing when there is no such tag above, which is a component
+standing on its own rather than a fault.
+
+The tag is written out, and has to be. It resolves when the scope links, so
+what it finds is an ordinary dependency and a reader re-runs when that scope
+moves — a tag worked out while the page runs could not be depended on, so it
+would answer once and never again. `$outer(someName)` is refused for that
+reason rather than silently doing the weaker thing.
 
 ### `$parent` and `$host`
 
