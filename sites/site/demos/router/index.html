@@ -47,6 +47,14 @@
 -->
 <body :server-servedAt=${new Date().toISOString().slice(11, 19)}>
 
+  <!---
+    The address's parameters, read once for the whole page. Written outside
+    the router on purpose: what the query carries besides the page has
+    nothing to do with which screen is showing, and every link below builds
+    its href through this.
+  -->
+  <std-params :aka="q" />
+
   <bs-navbar ::brand="/"
              ::expand="sm"
              ::items=${[
@@ -97,9 +105,10 @@
       <bs-nav ::variant="pills"
               class+="mb-4"
               ::items=${[
-                { name: 'Overview', link: '?overview', active: app.page === 'overview' },
-                { name: 'Guide', link: '?guide', active: app.page === 'guide' },
-                { name: 'FAQ', link: '?faq', active: app.page === 'faq' },
+                { name: 'Overview', link: q.href({}, 'overview'), active: app.page === 'overview' },
+                { name: 'Guide', link: q.href({}, 'guide'), active: app.page === 'guide' },
+                { name: 'FAQ', link: q.href({}, 'faq'), active: app.page === 'faq' },
+                { name: 'Parameters', link: q.href({}, 'params'), active: app.page === 'params' },
               ]} />
 
       <std-route ::page="overview">
@@ -141,9 +150,9 @@
               <bs-nav ::vertical=${true}
                       ::variant="pills"
                       ::items=${[
-                        { name: 'Introduction', link: '?guide/intro', active: here === 'intro' },
-                        { name: 'Install', link: '?guide/install', active: here === 'install' },
-                        { name: 'Deploy', link: '?guide/deploy', active: here === 'deploy' },
+                        { name: 'Introduction', link: q.href({}, 'guide/intro'), active: here === 'intro' },
+                        { name: 'Install', link: q.href({}, 'guide/install'), active: here === 'install' },
+                        { name: 'Deploy', link: q.href({}, 'guide/deploy'), active: here === 'deploy' },
                       ]} />
             </div>
             <div class="col-md-8">
@@ -176,6 +185,63 @@
             </div>
           </div>
         </std-router>
+      </std-route>
+
+      <!---
+        The other half of the address. The screens above are the path; these
+        are what it carries beside it -- and the two do not interfere, which
+        is the thing to notice rather than to be told.
+      -->
+      <std-route ::page="params">
+        <h2 class="h4">What the address carries besides the page</h2>
+        <p>
+          The query has two parts. Its leading segment is the page path, and
+          anything carrying <code>=</code> is a parameter — so
+          <code>?params&amp;sort=name</code> is this screen with a parameter
+          beside it, and <code>?sort=name</code> alone names no screen at all.
+        </p>
+
+        <div class="row g-4">
+          <div class="col-md-5">
+            <bs-card ::title="Carried right now">
+              <ul class="list-unstyled mb-0 font-monospace"
+                  :if=${Object.keys(q.data).length}>
+                <li :for-each=${Object.entries(q.data)} :for-as="entry">
+                  ${entry[0]} = ${entry[1]}
+                </li>
+              </ul>
+              <p class="text-body-secondary mb-0"
+                 :if=${!Object.keys(q.data).length}>
+                Nothing yet — add one.
+              </p>
+            </bs-card>
+          </div>
+
+          <div class="col-md-7">
+            <p class="mb-2">Every link here is <code>q.href(…)</code>:</p>
+            <p class="mb-3 d-flex flex-wrap gap-2">
+              <bs-link ::href=${q.href({ sort: 'name' })}
+                       ::variant="outline-primary"
+                       ::size="sm">sort=name</bs-link>
+              <bs-link ::href=${q.href({ sort: 'date' })}
+                       ::variant="outline-primary"
+                       ::size="sm">sort=date</bs-link>
+              <bs-link ::href=${q.href({ page: Number(q.data.page ?? 1) + 1 })}
+                       ::variant="outline-primary"
+                       ::size="sm">next page</bs-link>
+              <bs-link ::href=${q.href({ sort: null, page: null })}
+                       ::variant="outline-secondary"
+                       ::size="sm">clear</bs-link>
+            </p>
+            <p class="mb-0">
+              Now switch screens with the pills above and come back. The
+              parameters are still here: those links are built with
+              <code>href({}, 'overview')</code>, which moves the page and
+              keeps everything else. A bare <code>?overview</code> would have
+              dropped them — which is the choice, not the default.
+            </p>
+          </div>
+        </div>
       </std-route>
 
       <std-route ::page="faq">
