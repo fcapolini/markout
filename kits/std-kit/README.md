@@ -262,11 +262,18 @@ the served markup already shows the right page.
 
 ### What it does not do
 
-Route names are flat — there is no `?about/team` and no nesting, so screens
-wanting a shared sub-layout compose it by hand. One router per page. And a
-route must be written inside its `<std-router>` with only plain markup in
-between: wrapped in another component it fails loudly, because `$host` is
-then that component and has no `add` to call.
+Route names are flat: there is no `?about/team`, so screens wanting a shared
+sub-layout compose it by hand.
+
+A page may hold more than one router, including one written inside a route,
+and they work independently — but every one of them reads the same query
+token. So a second router is another view of the same route rather than a
+nested level: nesting only starts to mean something once an address carries a
+segment for each level to own, which `?about` does not.
+
+A route must be written inside its `<std-router>` with only plain markup in
+between. Wrapped in another component it fails loudly, because `$host` is then
+that component and has no `add` to call.
 
 For the path, nesting and parameters, see
 [advanced-router-kit.md](../../docs/design/advanced-router-kit.md) — a

@@ -1676,20 +1676,24 @@ function expandCustomTagUsages(page: Page): void {
     // inherits that, so its usage-site values keep resolving out there
     // rather than against the instance it happens to sit inside.
     //
-    // Only when it sits DIRECTLY in that slot, though -- `scope.parent`
-    // is the host itself exactly when nothing in between has a scope of its
-    // own. Slotted content is a whole subtree, and a scope inside it is
-    // already relocated (see slotUsage), so a usage nested under one resolves
-    // against THAT, normally. Marking it slotted too made it skip straight
-    // past to the outer call site, losing everything the slotted markup
-    // declared on the way -- `<my-box><div :total=${x}><my-probe
-    // :count=${total}/></div></my-box>` compiled clean and then failed to
-    // link `total` at runtime
+    // Only when it sits DIRECTLY in that slot, though. Slotted content is a
+    // whole subtree, and a scope inside it is already relocated (see
+    // slotUsage), so a usage nested under one resolves against THAT,
+    // normally. Marking it slotted too made it skip straight past to the
+    // outer call site, losing everything the slotted markup declared on the
+    // way -- `<my-box><div :total=${x}><my-probe :count=${total}/></div>
+    // </my-box>` compiled clean and then failed to link `total` at runtime.
+    //
+    // "Directly" is a walk rather than `scope.parent === host`, because what
+    // lies between can be the DEFINITION's own scope: a slot inside a region
+    // puts the caller's markup inside that region, so the parent is the
+    // region and the host is one step further out. Only a scope from the
+    // CALLER's markup ends the walk, which is what `slotted` marks.
     const host = slottedHost(page, usageEl);
     if (loadedUsageScope?.slotted) {
       scope.slotted = true;
       scope.lexicalParent = loadedUsageScope.lexicalParent;
-    } else if (host && scope.parent === host) {
+    } else if (host && inSlotOf(scope.parent, host)) {
       scope.slotted = true;
       scope.lexicalParent = host.slotted ? host.lexicalParent : host.parent;
     }
@@ -2432,6 +2436,23 @@ function descendantsOf(nodes: ServerNode[]): Set<object> {
  * `:for-each`'s own scope rather than escaping to the page root.
  */
 /** the custom-tag instance whose slot this element was moved into, if any */
+/**
+ * Whether `from` sits in `host`'s slot with nothing of the caller's between.
+ *
+ * The definition's own scopes are stepped over -- a region holding the slot
+ * is the reason this is a walk at all -- and a scope belonging to the slotted
+ * markup ends it, since anything under that resolves against it instead.
+ */
+function inSlotOf(from: Scope | undefined, host: Scope): boolean {
+  let s = from;
+  while (s) {
+    if (s === host) return true;
+    if (s.slotted) return false;
+    s = s.parent;
+  }
+  return false;
+}
+
 function slottedHost(page: Page, e: ServerElement): Scope | undefined {
   let n: ServerElement | null = e;
   while (n) {
@@ -2449,20 +2470,36 @@ function enclosingScope(
 ): Scope {
   if (loadedUsageScope?.parent) return loadedUsageScope.parent;
   let e: ServerElement | null = usageEl;
+  let host: Scope | undefined;
   while (e) {
     const scope = e !== usageEl ? findScopeForElement(page.main, e) : undefined;
     if (scope) return scope;
-    // after the scope lookup, not before it: a slotted element can have a
-    // scope of its own (`<my-box><div :total=${x}>...`), and that scope is
-    // the enclosing one for anything under it. Falling back to the host
-    // instead skipped it entirely. Still needed as a fallback, since a node
-    // with no scope of its own now lives in a stencil clone that no scope's
-    // element points at, so the lookup above can't reach it
-    const host = page.slottedInto.get(e);
-    if (host) return host;
+    /*
+      Remembered rather than returned, which is the whole of it.
+
+      The instance a usage was slotted into is the right answer only when
+      nothing between here and it has a scope of its own -- and this is
+      registered on the slotted node itself, so returning it on sight ended
+      the walk at the first step and never looked at what the markup was
+      actually moved inside of.
+
+      Invisible until that is a REGION. Filling a slot moves the caller's
+      markup into the element holding it, so a slot inside `<div :if>` puts
+      the caller inside the region; a scope parented past the region is then
+      bound to DOM the region owns and shows only when it chooses to. It
+      rendered nothing and reported nothing, so a component written inside a
+      `<std-route>` -- or anything else wrapping its slot in an `:if` -- was
+      simply absent from the page. An instance carrying `:aka` was unaffected,
+      having a `loadedUsageScope` and returning above.
+
+      Still needed as the fallback it now is: a node with no scope of its own
+      lives in a stencil clone that no scope's element points at, so the
+      lookup above cannot reach one and the instance is where it belongs.
+    */
+    host ??= page.slottedInto.get(e);
     e = e.parentElement;
   }
-  return page.main!;
+  return host ?? page.main!;
 }
 
 function findScopeForElement(scope: Scope | undefined, e: ServerElement): Scope | undefined {
