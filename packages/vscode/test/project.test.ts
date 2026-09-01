@@ -232,11 +232,15 @@ describe('this repository', () => {
       .map(f => path.basename(f));
     // the only ones that should miss are the pages that hold no markout at
     // all: the hand-written twin the bootstrap demo is compared against, and
-    // the `<lib>` wrappers that carry only meta tags
+    // the `<lib>` wrappers whose whole content is static -- meta tags, or a
+    // style block. `<lib>` is not itself a directive tag, and the gate reads
+    // syntax rather than root elements, so a wrapper that declares nothing
+    // reads as the plain HTML it is
     expect(missed.sort()).toStrictEqual([
       'base.htm',
       'base.htm',
       'base.htm',
+      'gutters.htm',
       'index-plain.html',
     ]);
   });
