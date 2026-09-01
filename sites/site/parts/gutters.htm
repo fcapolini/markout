@@ -1,0 +1,41 @@
+<!---
+  Wider lateral gutters on a phone, for every page that carries the site's
+  own chrome.
+
+  Bootstrap's `.container` is 100% wide below `sm` and pads itself with half
+  of `--bs-gutter-x`, which is 1.5rem. Below 576px that padding is the whole
+  inset: text ran to within 12px of the screen edge. Above it the container
+  caps at a max-width and the centring margin does most of the work, so the
+  same 12px sits inside a much larger gap -- measured edge to text, 30px at
+  576, 36px at `md`, 28px at its tightest around `lg`, 52px on a wide
+  desktop. Mobile was not merely the narrowest of a range; it was the one
+  width where the inset is a declared value rather than what a max-width
+  leaves over, and it had been declared less than half of anything else.
+
+  1.25rem brings the phone to 20px, which is the same order as the rest
+  without spending a sixth of a 360px screen on margins. The step at `sm`
+  now reads 20 -> 30 instead of 12 -> 30.
+
+  Written as padding rather than by overriding `--bs-gutter-x`, because that
+  variable inherits: raising it on `.container` would also reach any `.col-`
+  that isn't wrapped in a `.row` of its own, which redeclares it. A property
+  that says what it changes is worth more here than a variable that says it
+  in Bootstrap's terms and carries further than it means to.
+
+  Ordinary specificity is enough. The kit's `<link>` to Bootstrap is emitted
+  where the page imports it, at the top of `<head>`, and this file is
+  imported after -- so an equally specific rule later in the cascade wins.
+
+  The demos are deliberately not on this list. Their source is the thing
+  being read, and an import that exists to nudge padding is a line somebody
+  has to skip past to get to the point they came for.
+-->
+<lib>
+  <style>
+    @media (max-width: 575.98px) {
+      .container {
+        padding-inline: 1.25rem;
+      }
+    }
+  </style>
+</lib>

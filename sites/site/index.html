@@ -9,8 +9,13 @@
     about. `home.htm` imports the kit as well, since a definition has to see
     the tags it is written with; a file is imported once per page however
     many times it is named.
+
+    `gutters.htm` is the one thing between the two that belongs to neither:
+    a lateral padding the site sets on a phone, on every page that carries
+    the navbar and footer rather than on this one alone.
   -->
   <:import src="/npm/@markout-lang/bootstrap-kit/all.htm" />
+  <:import src="/parts/gutters.htm" />
   <:import src="/parts/home.htm" />
 
   <!---
