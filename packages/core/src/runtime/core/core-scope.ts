@@ -858,6 +858,25 @@ export class CoreScope {
   }
 
   /**
+   * Walks again to carry what the last pass moved -- see CoreContext.refresh().
+   *
+   * The same walk as `updateValues`, minus the part that makes it a walk:
+   * that one forces `dirty` on everything with sources, meaning "recompute".
+   * Here only what a change actually marked is recomputed, and the rest is a
+   * cycle check that answers from cache.
+   *
+   * The difference is not an optimisation, it is the whole thing working: an
+   * expression that builds a fresh array or arrow is a NEW value every time
+   * it runs, so a pass that re-evaluated everything would report a change on
+   * every pass and never settle.
+   */
+  carryValues(recur = true) {
+    this.eachUsageValue((value) => value.get());
+    this.liveKeys().forEach((key) => this.values[key].get());
+    recur && this.children.forEach((scope) => scope.carryValues());
+  }
+
+  /**
    * Unlinks what this scope has just stopped evaluating, and only that.
    *
    * A `:for-data` going away keeps the one value that decides whether it

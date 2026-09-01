@@ -292,7 +292,12 @@ export class CoreValue<T = any> {
     this.src.clear();
     this.value = value;
     if (old == null ? value != null : value !== old) {
-      this.cb && this.scope.ctx.pending.add(this);
+      const ctx = this.scope.ctx;
+      // a write made WHILE rendering reaches whatever the pass has not
+      // visited yet and nothing it already has, so the refresh is told to
+      // walk again -- see CoreContext.refresh()
+      ctx.refreshLevel > 0 && ctx.renderWrites++;
+      this.cb && ctx.pending.add(this);
       this.markDirty();
       this.propagate();
     }
@@ -337,12 +342,16 @@ export class CoreValue<T = any> {
       this.scope.ctx.onError('update', err, this);
     }
     if (old == null ? this.value != null : this.value !== old) {
-      this.cb && this.scope.ctx.pending.add(this);
+      const ctx = this.scope.ctx;
+      // counted so a refresh knows its pass moved something and the readers
+      // it already walked past may still be carrying the old answer
+      ctx.refreshLevel > 0 && ctx.renderChanges++;
+      this.cb && ctx.pending.add(this);
       // marked even when the propagation below is suppressed: a refresh
       // drives its own subtree by traversal, but a reader OUTSIDE it only
       // ever learns through this flag
       this.markDirty();
-      this.dst.size && this.scope.ctx.refreshLevel < 1 && this.propagate();
+      this.dst.size && ctx.refreshLevel < 1 && this.propagate();
     }
   }
 

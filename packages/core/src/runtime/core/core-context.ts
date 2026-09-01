@@ -220,6 +220,35 @@ export class CoreContext {
     this.root = this.newScope(props.root, this, this.global);
   }
 
+  /**
+   * Imperative writes made while a refresh was running -- see `refresh()`.
+   *
+   * Counted rather than flagged so a pass can ask whether anything was
+   * written DURING it, which a flag cleared at the top could not answer for
+   * a nested refresh.
+   */
+  renderWrites = 0;
+
+  /**
+   * Values that changed during the pass now running.
+   *
+   * A write is what STARTS a carry; this is what keeps one going. A pass
+   * that moves a value marks its readers dirty but cannot evaluate the ones
+   * it has already walked past, so the carry is finished only by a pass
+   * that changes nothing.
+   */
+  renderChanges = 0;
+
+  /**
+   * How many times a refresh re-walks before it gives up.
+   *
+   * A page settles in two: one pass to render, one to carry whatever that
+   * pass wrote. More than that is a value writing something new every time
+   * it is evaluated, which is a page that never settles rather than one
+   * that settles slowly.
+   */
+  static readonly MAX_PASSES = 8;
+
   refresh(scope?: CoreScope, nextCycle = true): this {
     scope || (scope = this.root);
     this.refreshLevel++;
@@ -229,6 +258,40 @@ export class CoreContext {
       scope.unlinkValues();
       scope.linkValues();
       scope.updateValues();
+      // A scope's own values are evaluated before its children exist, so
+      // anything a child writes to its `$host` while rendering lands after
+      // the pass has already gone by -- and the readers it should have
+      // moved keep the answer they were given. They ARE marked dirty, so
+      // walking again is all it takes; without that, one render can leave
+      // two readers of the same value disagreeing.
+      //
+      // Only the outermost refresh does this, and only when a write
+      // actually happened: an ordinary render walks once, as before.
+      if (this.refreshLevel === 1) {
+        let carry = this.renderWrites;
+        for (let pass = 1; carry; pass++) {
+          if (pass >= CoreContext.MAX_PASSES) {
+            this.onError(
+              'refresh',
+              new Error(
+                `this page is still changing after ${CoreContext.MAX_PASSES} ` +
+                  `render passes, so it does not settle. Something reached by ` +
+                  `the render writes a new value every time it is evaluated -- ` +
+                  `an object or an array literal assigned to a scope is the ` +
+                  `usual one`
+              )
+            );
+            break;
+          }
+          this.renderWrites = 0;
+          this.renderChanges = 0;
+          this.cycle++;
+          scope.carryValues();
+          carry = this.renderWrites + this.renderChanges;
+        }
+        this.renderWrites = 0;
+        this.renderChanges = 0;
+      }
     } catch (err) {
       this.onError('refresh', err);
     }
