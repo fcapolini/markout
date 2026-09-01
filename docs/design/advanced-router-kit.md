@@ -168,6 +168,14 @@ runtime one is not.
 itself, with an interned tag per instance emitted only for tags a page
 actually asks for. See `docs/reference/syntax.md`.
 
+One thing to know before writing the example above: it answers from where the
+expression is EVALUATED, and a component's arguments are evaluated at the call
+site. So `<rt-data ::url="${$outer('rt-route').param}" />` written in a page's
+slotted content reaches nothing, while the same expression on an element
+(`<div :u=${$outer('rt-route').param}>`) reaches. `$host` has always behaved
+this way; it is a property of where a value lives rather than of `$outer`, and
+the idiom above needs restating with that in mind.
+
 A route composes its path onto its parent's, and a definition cannot see
 the instance enclosing it. Without this the author restates the nesting in
 an argument at every level.

@@ -1406,6 +1406,24 @@ default above would be defined in terms of the instance it is defaulting.
 It answers nothing when there is no such tag above, which is a component
 standing on its own rather than a fault.
 
+**Both answer from where the expression is evaluated**, which for most markup
+is where it sits — but a component's *arguments* and slotted *text* are
+evaluated at the call site, by the rule that makes `::title=${title}` mean
+"the title from out here" rather than the instance's own. Structure follows
+names there, since one expression runs against one scope:
+
+```html
+<my-box>
+  <b :x=${$outer('my-box')}>…</b>        <!-- finds it: an element's own value -->
+  <other-tag ::what=${$outer('my-box')}/> <!-- nothing: an argument, evaluated out there -->
+  ${$outer('my-box')}                     <!-- nothing: slotted text, likewise -->
+</my-box>
+```
+
+Put it on an element rather than in an argument, and it reaches. The same is
+true of `$host`, which has always worked this way — this is a property of
+where a value lives, not of these two names.
+
 The tag is written out, and has to be. It resolves when the scope links, so
 what it finds is an ordinary dependency and a reader re-runs when that scope
 moves — a tag worked out while the page runs could not be depended on, so it

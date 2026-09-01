@@ -32,6 +32,14 @@ afterAll(() => {
   fs.rmSync(docroot, { recursive: true, force: true });
 });
 
+const POS = [
+  '<:define tag="p-box:div" ::who="BOX"><:slot/></:define>',
+  '<:define tag="p-wrap:div"><:slot/></:define>',
+  '<:define tag="p-show:div" ::what="">[${what}]</:define>',
+  // a component whose OWN markup passes the argument, rather than a page's
+  '<:define tag="p-def:div"><p-show ::what=${$outer("p-box")?.who ?? "none"} /></:define>',
+].join('\n');
+
 const DEFS = [
   // depth counted through whatever lies between: each asks the nearest one
   // above it and adds one, which is the whole of what nesting needs
@@ -66,6 +74,82 @@ async function render(body: string) {
     .trim();
   return { errors, out, page };
 }
+
+/**
+ * Where an expression is EVALUATED, which is what these two builtins answer
+ * from.
+ *
+ * `$host` and `$outer` navigate structure, and a value's structure is the
+ * scope its expression runs against. For most markup that is where it sits.
+ * For a component's arguments and for slotted text it is the CALL SITE, by
+ * the rule that makes `::title=${title}` mean "the title from out here"
+ * rather than the instance's own -- and structure follows names there, since
+ * one expression is evaluated against one scope.
+ *
+ * So the two agree everywhere, and the workaround where they answer nothing
+ * is to put the expression on an element instead of in an argument.
+ */
+describe('what $host and $outer answer from', () => {
+  /** `[what, markup, $host answers, $outer("p-box") answers]` */
+  const cases: [string, string, string, string][] = [
+    ['an element in slotted markup', '<b :x=${WHO}>${x}</b>', 'BOX', 'BOX'],
+    ['an element deeper in slotted markup', '<div><b :x=${WHO}>${x}</b></div>', 'BOX', 'BOX'],
+    // the case the two answer differently, which is the whole reason $outer
+    // exists: `$host` stops at `p-wrap`, which has no `who` of its own
+    ['an element under a second component', '<p-wrap><b :x=${WHO}>${x}</b></p-wrap>', 'none', 'BOX'],
+    // and the cases where neither reaches: an argument belongs to the call,
+    // and so does the scope it is evaluated in
+    ['an argument in slotted markup', '<p-show ::what=${WHO} />', '[none]', '[none]'],
+    ['an argument under a second component', '<p-wrap><p-show ::what=${WHO} /></p-wrap>', '[none]', '[none]'],
+    ['slotted text', '<b>${WHO}</b>', 'none', 'none'],
+  ];
+
+  async function answer(nav: string, markup: string) {
+    const body = `<p-box>${markup.replace(/WHO/g, `${nav}?.who ?? "none"`)}</p-box>`;
+    const name = `w${seq++}.html`;
+    fs.writeFileSync(
+      path.join(docroot, name),
+      `<html><head>${POS}</head><body>${body}</body></html>`
+    );
+    const page = await new Compiler({ docroot }).compile(`/${name}`);
+    expect([nav, page.errors.map(e => e.msg)]).toStrictEqual([nav, []]);
+    expect(await renderPage(page, { url: 'http://x.test/p' })).toStrictEqual([]);
+    return (
+      /<body[^>]*>([\s\S]*?)(<script|<\/body)/.exec(page.source.doc.toString())?.[1] ?? ''
+    )
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/<template[\s\S]*?<\/template>/g, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  for (const [what, markup, host, outer] of cases) {
+    it(`answers from ${what}`, async () => {
+      expect(['$host', await answer('$host', markup)]).toStrictEqual(['$host', host]);
+      expect(['$outer', await answer('$outer("p-box")', markup)]).toStrictEqual([
+        '$outer',
+        outer,
+      ]);
+    });
+  }
+
+  it('reaches the enclosing tag from an argument a DEFINITION passes', async () => {
+    // the same argument, written in a definition's own markup rather than in
+    // a page's slotted content, is evaluated where it sits -- so it reaches.
+    // Which is what says the limit above is about the call site rather than
+    // about arguments
+    const name = `w${seq++}.html`;
+    fs.writeFileSync(
+      path.join(docroot, name),
+      `<html><head>${POS}</head><body><p-box><p-def /></p-box></body></html>`
+    );
+    const page = await new Compiler({ docroot }).compile(`/${name}`);
+    expect(page.errors.map(e => e.msg)).toStrictEqual([]);
+    expect(await renderPage(page, { url: 'http://x.test/p' })).toStrictEqual([]);
+    expect(page.source.doc.toString().replace(/<!--[\s\S]*?-->/g, '')).toContain('[BOX]');
+  });
+});
 
 describe('$outer(tag)', () => {
   it('finds nothing when there is nothing to find', async () => {
