@@ -308,6 +308,32 @@ describe('when the address names no route', () => {
     expect(body).not.toContain('about us');
   });
 
+  it('sends an unknown page to ::defaultPage when no 404 is named', async () => {
+    // the trap the router demo found: a front door that is not called
+    // "index", `::defaultPage` set and `::fallback` left alone, and an
+    // address naming nothing real resolving to a route that does not exist
+    const named = `
+      <std-router ::defaultPage="overview">
+        <std-route data-route ::page="overview"><i>the overview</i></std-route>
+        <std-route data-route ::page="about"><i>about us</i></std-route>
+      </std-router>`;
+    expect(
+      (await mounted(named, 'http://x.test/index.html?utm_source=nl')).shown()
+    ).toStrictEqual(['the overview']);
+    expect((await mounted(named, 'http://x.test/index.html?abuot')).shown()).toStrictEqual(
+      ['the overview']
+    );
+    // and a 404 screen still wins when one is actually named
+    expect(
+      (
+        await mounted(
+          named.replace('::defaultPage="overview"', '::defaultPage="overview" ::fallback="about"'),
+          'http://x.test/index.html?abuot'
+        )
+      ).shown()
+    ).toStrictEqual(['about us']);
+  });
+
   it('publishes ::selected, which a page reads for itself', async () => {
     const p = await mounted(
       `<std-router>

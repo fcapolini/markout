@@ -1,0 +1,217 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+  <:import src="/npm/@markout-lang/bootstrap-kit/all.htm" />
+  <:import src="/parts/gutters.htm" />
+
+  <title>Two kinds of navigation — Markout demos</title>
+  <meta name="description"
+        content="The pathname decides where a round trip is unavoidable; the query string decides everything inside one. std-router, nested, deep-linkable, and correct in the response.">
+
+  <:include src="/parts/analytics.htm" />
+</head>
+
+<!---
+  The router demo, and the claim it exists to make.
+
+  **The pathname is the physical seam.** `/demos/router/` and
+  `/demos/router/reference.html` are two files, and moving between them is a
+  round trip because there is a different document at the other end. That is
+  level 1, and it is not a cost to be engineered away: it is where you decide
+  a fresh document is the right answer.
+
+  **The query string is the logical navigation inside one.** `?guide/install`
+  is the same file as `?overview`, so the server needs nothing configured to
+  serve it, and every one of these addresses is a real address: paste it, link
+  it, unfurl it, `curl` it, and the response is already the right screen.
+
+  Which is the whole difference from a fragment. `#guide` never reaches the
+  server, so a fragment-routed page can only ever answer with its default and
+  correct itself once JavaScript arrives. `?guide` is sent, so there is
+  nothing to correct.
+
+  **The stamp below is the demonstration rather than a decoration.** It is a
+  `:server-` value, computed while the page renders and carried into the
+  markup frozen, so it says when THIS DOCUMENT was made. Move around inside
+  the app and it does not move: no document was fetched. Cross to the
+  reference page and it changes: one was. Nothing on this page is measuring
+  anything — the number simply cannot change without a round trip.
+
+  With the Navigation API the router cancels those loads and the screen
+  switches in place. Without it, every link here is an ordinary link and the
+  browser fetches the same file with a different query, landing on the same
+  screen a beat later. There is no second code path in the component for
+  that; it is what happens when nothing intercepts.
+-->
+<body :server-servedAt=${new Date().toISOString().slice(11, 19)}>
+
+  <bs-navbar ::brand="/"
+             ::expand="sm"
+             ::items=${[
+               { name: 'Home', link: '/' },
+               { name: 'Demos', link: '/demos/', active: true },
+               { name: 'Motivation', link: '/about.html' },
+             ]}>
+    Markout
+    <bs-theme-toggle :slot="end" />
+  </bs-navbar>
+
+  <main class="container py-5">
+
+    <h1 class="display-6">Two kinds of navigation</h1>
+
+    <p class="lead mb-4">
+      The <strong>pathname</strong> decides where a round trip is unavoidable.
+      The <strong>query string</strong> decides everything inside one.
+    </p>
+
+    <!---
+      Two facts side by side, and the point is that the first one only
+      changes when the second one crosses a file boundary.
+    -->
+    <div class="row g-3 mb-5">
+      <div class="col-sm-6">
+        <bs-card ::title="This document was served at">
+          <p class="fs-3 mb-1 font-monospace">${servedAt}</p>
+          <p class="text-body-secondary mb-0 small">
+            A <code>:server-</code> value, frozen into the markup. It can only
+            change if a document was fetched.
+          </p>
+        </bs-card>
+      </div>
+      <div class="col-sm-6">
+        <bs-card ::title="The address is asking for">
+          <p class="fs-3 mb-1 font-monospace">${$url?.search || '(nothing)'}</p>
+          <p class="text-body-secondary mb-0 small">
+            Sent to the server, unlike a <code>#fragment</code> — so the
+            response is already this screen.
+          </p>
+        </bs-card>
+      </div>
+    </div>
+
+    <std-router :aka="app" ::defaultPage="overview">
+
+      <bs-nav ::variant="pills"
+              class+="mb-4"
+              ::items=${[
+                { name: 'Overview', link: '?overview', active: app.page === 'overview' },
+                { name: 'Guide', link: '?guide', active: app.page === 'guide' },
+                { name: 'FAQ', link: '?faq', active: app.page === 'faq' },
+              ]} />
+
+      <std-route ::page="overview">
+        <h2 class="h4">One file, three screens</h2>
+        <p>
+          Every link above is the same file with a different query. The server
+          renders the screen the query names, so this page is correct in the
+          response before any JavaScript runs — which is what makes these
+          addresses worth pasting into a chat window.
+        </p>
+        <p class="mb-0">
+          Watch the stamp while you move between them. It does not change,
+          because nothing was fetched.
+        </p>
+      </std-route>
+
+      <std-route ::page="guide">
+        <h2 class="h4">A section with screens of its own</h2>
+        <p>
+          This route holds a router of its own, so the address grows a second
+          segment: <code>?guide/install</code>. Neither level was told its own
+          depth — each asks the nearest router above it, through
+          <code>$outer</code>.
+        </p>
+
+        <!---
+          The layout the nesting exists for: this sidebar is written once, in
+          the route that encloses the inner router, and stays put while the
+          screens beside it change.
+        -->
+        <std-router :aka="guide" ::defaultPage="intro">
+          <div class="row g-4">
+            <div class="col-md-4">
+              <bs-nav ::vertical=${true}
+                      ::variant="pills"
+                      ::items=${[
+                        { name: 'Introduction', link: '?guide/intro', active: app.guide.page === 'intro' },
+                        { name: 'Install', link: '?guide/install', active: app.guide.page === 'install' },
+                        { name: 'Deploy', link: '?guide/deploy', active: app.guide.page === 'deploy' },
+                      ]} />
+            </div>
+            <div class="col-md-8">
+              <std-route ::page="intro">
+                <h3 class="h5">Introduction</h3>
+                <p class="mb-0">
+                  The sidebar beside this text belongs to the enclosing route.
+                  It is rendered once and left alone while these panels change,
+                  which is the thing nesting is for.
+                </p>
+              </std-route>
+              <std-route ::page="install">
+                <h3 class="h5">Install</h3>
+                <p class="mb-0">
+                  The address now reads <code>?guide/install</code>. Reload the
+                  page on it: the stamp changes, because that is a round trip —
+                  and this exact panel comes back, because the server can read
+                  the query.
+                </p>
+              </std-route>
+              <std-route ::page="deploy">
+                <h3 class="h5">Deploy</h3>
+                <p class="mb-0">
+                  Nothing here needs configuring on the host.
+                  <code>?guide/deploy</code> and <code>?overview</code> are the
+                  same file, so anything that serves static files already
+                  serves every screen.
+                </p>
+              </std-route>
+            </div>
+          </div>
+        </std-router>
+      </std-route>
+
+      <std-route ::page="faq">
+        <h2 class="h4">What happens without the Navigation API</h2>
+        <p>
+          Every link on this page is an ordinary <code>&lt;a href&gt;</code>.
+          A browser that can intercept keeps the document and swaps the screen;
+          one that cannot fetches the same file with a different query and
+          arrives at the same screen. The markup is identical either way — the
+          fallback is not a code path, it is what happens when nothing
+          intercepts.
+        </p>
+        <p class="mb-0">
+          An address naming no screen lands on
+          <code>::defaultPage</code>, so <code>?utm_source=nl</code> on a link
+          to this page shows the overview rather than a blank frame.
+        </p>
+      </std-route>
+    </std-router>
+
+    <!---
+      The seam, made obvious. This is the one link on the page that is meant
+      to cost a round trip, and the stamp is what shows that it did.
+    -->
+    <hr class="my-5">
+
+    <bs-alert ::variant="warning" ::heading="Now cross a seam">
+      <p>
+        <a href="/demos/router/reference.html">The reference page</a> is a
+        different file, so opening it is a round trip by design — and the
+        stamp on the other side will say so. That is the choice the pathname
+        makes: not a limitation to route around, but where you decided a fresh
+        document was the right answer.
+      </p>
+      <p class="mb-0 small">
+        Source:
+        <a href="https://github.com/fcapolini/markout/tree/main/sites/site/demos/router">demos/router</a>
+      </p>
+    </bs-alert>
+
+  </main>
+</body>
+
+</html>

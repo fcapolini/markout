@@ -1,0 +1,124 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+  <:import src="/npm/@markout-lang/bootstrap-kit/all.htm" />
+  <:import src="/parts/gutters.htm" />
+
+  <title>Across the seam — Markout demos</title>
+  <meta name="description"
+        content="The other side of a pathname boundary: a second document, with logical navigation of its own.">
+
+  <:include src="/parts/analytics.htm" />
+</head>
+
+<!---
+  The other side of a seam.
+
+  A second file, and so a second document: getting here cost a round trip,
+  which the stamp shows by being a different one. Everything else about this
+  page is the same as the first — its own `<std-router>`, its own screens on
+  the query string, and no configuration on the host, because these are all
+  one file too.
+
+  Which is the point of having two pages rather than one. A pathname
+  boundary is a decision, not a defeat: this document has its own `<head>`,
+  its own title, its own metadata, and nothing on it was paid for by the page
+  next door. The query string is what stops that decision from being forced
+  on every screen inside it.
+-->
+<body :server-servedAt=${new Date().toISOString().slice(11, 19)}>
+
+  <bs-navbar ::brand="/"
+             ::expand="sm"
+             ::items=${[
+               { name: 'Home', link: '/' },
+               { name: 'Demos', link: '/demos/', active: true },
+               { name: 'Motivation', link: '/about.html' },
+             ]}>
+    Markout
+    <bs-theme-toggle :slot="end" />
+  </bs-navbar>
+
+  <main class="container py-5">
+
+    <h1 class="display-6">Across the seam</h1>
+
+    <p class="lead mb-4">
+      A different file, so a different document. The stamp changed.
+    </p>
+
+    <div class="row g-3 mb-5">
+      <div class="col-sm-6">
+        <bs-card ::title="This document was served at">
+          <p class="fs-3 mb-1 font-monospace">${servedAt}</p>
+          <p class="text-body-secondary mb-0 small">
+            Not the stamp on the other page: this one was rendered by the
+            request that brought you here.
+          </p>
+        </bs-card>
+      </div>
+      <div class="col-sm-6">
+        <bs-card ::title="The address is asking for">
+          <p class="fs-3 mb-1 font-monospace">${$url?.search || '(nothing)'}</p>
+          <p class="text-body-secondary mb-0 small">
+            A router of its own, on the same query string, needing nothing
+            from the host.
+          </p>
+        </bs-card>
+      </div>
+    </div>
+
+    <std-router :aka="ref" ::defaultPage="tags">
+
+      <bs-nav ::variant="underline"
+              class+="mb-4"
+              ::items=${[
+                { name: 'Tags', link: '?tags', active: ref.page === 'tags' },
+                { name: 'Parameters', link: '?params', active: ref.page === 'params' },
+              ]} />
+
+      <std-route ::page="tags">
+        <h2 class="h4">The two tags</h2>
+        <p>
+          <code>&lt;std-router&gt;</code> holds a
+          <code>&lt;std-route&gt;</code> per screen and reads the query. Put a
+          router inside a route and it owns the next segment of the path.
+        </p>
+        <p class="mb-0">
+          A route publishes <code>::selected</code>, which is what every nav on
+          these two pages reads to mark its active link.
+        </p>
+      </std-route>
+
+      <std-route ::page="params">
+        <h2 class="h4">The two questions an address can fail</h2>
+        <p>
+          An address can name <em>no</em> screen — a bare
+          <code>/</code> — which is the front door, and resolves to
+          <code>::defaultPage</code>. Or it can name one that does not exist,
+          which is the 404, and resolves to <code>::fallback</code>.
+        </p>
+        <p class="mb-0">
+          They are separate parameters so that a visible “no such page” does
+          not end up answering the front door. Both default to
+          <code>index</code>.
+        </p>
+      </std-route>
+    </std-router>
+
+    <hr class="my-5">
+
+    <bs-alert ::variant="secondary">
+      <p class="mb-0">
+        <a href="/demos/router/">Back to the first page</a> — another round
+        trip, and another new stamp. Inside either one, nothing is fetched at
+        all.
+      </p>
+    </bs-alert>
+
+  </main>
+</body>
+
+</html>

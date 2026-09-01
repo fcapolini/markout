@@ -78,8 +78,9 @@ An address can fail to name a page two ways, and they are different
 questions. **It can name none** — a bare `/` — which is the front door, and
 resolves to `::defaultPage`. **It can name one that does not exist** —
 `?abuot`, or `?utm_source=nl` where the query was never a route name — which
-is the 404, and resolves to `::fallback`. Both are `index` unless you say
-otherwise, so a site wanting neither distinction writes neither:
+is the 404, and resolves to `::fallback` — which follows `::defaultPage`
+unless you give it one of its own, so a site with no 404 screen never names
+it twice:
 
 ```html
 <std-router ::defaultPage="home" ::fallback="notfound">

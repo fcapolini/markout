@@ -243,11 +243,13 @@ expression on the page sees the same address it does.
 | | default | |
 | --- | --- | --- |
 | `::defaultPage` | `"index"` | the page to show when the address names none — a bare `/`, or a page built with no address at all |
-| `::fallback` | `"index"` | the page to show when the address names one that does not exist |
+| `::fallback` | `::defaultPage` | the page to show when the address names one that does not exist |
 | `::page` | derived | the route now showing. Read it; it follows the address |
 
 They are two parameters because they answer different questions, and folding
-them together would put a visible 404 at the front door.
+them together would put a visible 404 at the front door. A site with no 404
+screen names neither and gets `index`, or names `::defaultPage` alone and gets
+that — `::fallback` follows it until you give it one of its own.
 
 `std-route`:
 

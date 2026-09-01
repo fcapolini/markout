@@ -87,11 +87,18 @@
 
       Kept apart because folding them together puts the wrong page at the
       front door: with one parameter, `::fallback="notfound"` would answer a
-      bare `/` with the 404. Both default to `index`, so a site that wants
-      neither distinction writes neither.
+      bare `/` with the 404.
+
+      `fallback` follows `defaultPage` unless it is given one of its own,
+      which is the answer a site without a 404 screen wants and the one it
+      would otherwise have to say twice. Defaulting it to the literal `index`
+      instead was a trap the router demo walked into on its first run: a page
+      whose front door is `overview` set `defaultPage` alone, and an address
+      naming nothing real -- `?utm_source=nl` -- resolved to an `index` route
+      that did not exist and rendered a blank frame.
     */
     ::defaultPage="index"
-    ::fallback="index"
+    ::fallback=${defaultPage}
 
     /*
       How many routers this one is inside, and so which segment of the path
