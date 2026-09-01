@@ -24,48 +24,94 @@ the real page, because there is nothing to run.
 
 This is the right level for most sites, and it is where a site should start.
 
-## Level 2 — one page, routed by its fragment
+## Level 2 — one page, routed by its query
 
-A page can read its own address through [`$url`](../reference/syntax.md#origin-and-url),
-which is live: a fragment link changes it, and every expression that read it
-re-runs. So a `<:group>` carrying an `:if` is a route:
+`std-kit` ships the router. `<std-router>` holds a `<std-route>` per screen,
+and the query string says which one shows:
 
 ```html
-<html :route=${$url?.hash.slice(1) || 'home'}>
-  <head><title>${route} — site</title></head>
+<html>
   <body>
-    <nav>
-      <a href="#home" :class-active=${route === 'home'}>Home</a>
-      <a href="#about" :class-active=${route === 'about'}>About</a>
-    </nav>
+    <std-router>
+      <nav>
+        <a href="?index" :class-active=${home.selected}>Home</a>
+        <a href="?about" :class-active=${about.selected}>About</a>
+      </nav>
 
-    <:group :if=${route === 'home'}>
-      <h1>Home</h1>
-      <p>Welcome.</p>
-    </:group>
+      <std-route :aka="home" ::page="index">
+        <h1>Home</h1>
+        <p>Welcome.</p>
+      </std-route>
 
-    <:group :if=${route === 'about'}>
-      <h1>About</h1>
-      <p>Us.</p>
-    </:group>
+      <std-route :aka="about" ::page="about">
+        <h1>About</h1>
+        <p>Us.</p>
+      </std-route>
+    </std-router>
   </body>
 </html>
 ```
 
-The route is named once, on the root tag, because that is the one scope
-both `<head>` and `<body>` are inside — so the title, the nav's active
-link and the branches all read the same value rather than repeating the
-expression that computes it.
+**The query is the whole point, and it is what a fragment could not do.** A
+browser never sends `#about` to the server, so a fragment-routed page can
+only ever respond with its default route and correct itself on arrival —
+which a person with JavaScript hardly notices and a link unfurler, an RSS
+reader, `curl` or a crawler never gets past. `?about` *is* sent. The server
+renders the asked-for route into the response, so everything that reads the
+response and stops reads the real page.
 
-Note the `?.`. `$url` is `undefined` wherever there is no address to read:
-a page compiled ahead of time with nothing to be relative to, which is
-`markout build` without `--origin`. A page whose whole shape is decided by
-its address should say what it is when it has none — here, `home`.
+It costs nothing on the server to get that. `?about` and `?index` are the
+same file, so a host that serves static files already serves every route:
+no rewrite rule, no catch-all, nothing to configure. Drop the page anywhere
+and every address works.
 
-The address is supplied rather than guessed, for the same reason the origin
-is: a build that invented one would be deciding where your pages live. So
-`markout build` says when a page reads `$url` and has no address to give
-it, naming the page and what it will render instead:
+The same markup is then a single-page app or a multi-page one depending only
+on the browser. Where the Navigation API exists the router cancels the
+document load and the screen switches in place; where it does not, the click
+is an ordinary link and the browser fetches the same file with a different
+query, landing on the same route. That is not a fallback path in the
+component — there is no second branch — it is what happens when nothing
+intercepts. Back and forward work throughout, because they stay the
+browser's.
+
+An address can fail to name a page two ways, and they are different
+questions. **It can name none** — a bare `/` — which is the front door, and
+resolves to `::defaultPage`. **It can name one that does not exist** —
+`?abuot`, or `?utm_source=nl` where the query was never a route name — which
+is the 404, and resolves to `::fallback`. Both are `index` unless you say
+otherwise, so a site wanting neither distinction writes neither:
+
+```html
+<std-router ::defaultPage="home" ::fallback="notfound">
+```
+
+They are separate so that a visible 404 does not end up at the front door,
+which one parameter for both would do. Either way it resolves *while
+rendering*, so `?utm_source=nl` on a link to your home page serves the home
+page rather than a blank one.
+
+A route publishes `::selected`, which is what the nav above reads, and the
+router finds its routes itself — the names are written once, on the routes.
+
+Note what is *not* here. `std-router` is a kit component, not a language
+feature: nothing in the compiler knows what a route is, and the same is true
+of `std-data` beside it — see
+[why anything framework-shaped belongs in a kit](kits.md).
+
+### Two things worth knowing
+
+**`<head>` is outside the router.** `:aka` names resolve where they are
+written, so `<head>` cannot read the router's `page`; a `<title>` that
+follows the route reads `$url` itself. Nothing else about the head changes —
+per-page metadata still needs no API of its own, because a `<title>` is a
+value like any other.
+
+**A built page has no address.** `$url` is `undefined` wherever there is
+none — `markout build` without `--origin` — so nothing names a page and the
+router renders `::defaultPage`, the same answer a bare `/` gets. The address is supplied rather than guessed, for the same
+reason the origin is: a build that invented one would be deciding where your
+pages live. So `markout build` says so, naming the page and what it renders
+instead:
 
 ```
 route.html: warning: this page reads $url and there is no address to read:
@@ -74,48 +120,15 @@ page derives from it renders as the no-address case. Pass --origin <url> to
 say where these pages will live
 ```
 
-Which for a fragment-routed page means every built address is the default
-route — true of any fragment SPA, and worth being told at build time rather
-than found in a browser.
+### What level 2 costs
 
-Nothing in that page is a routing feature. `$url` is a global,
-[`<:group>`](directives.md#when-the-unit-is-not-an-element) is a region over
-several nodes, and `<a href="#about">` is a link the browser
-follows on its own — no interception, no library, no router. Back and
-forward work because they are the browser's. The `<title>` follows because
-it is a value like any other, which is why per-page metadata needs no API of
-its own.
+One file carries every route's markup, so a large content site pays for all
+of it on the first load — level 1 is the answer there, not a bigger router.
+Route names are flat: there is no `?about/team` and no nesting, so screens
+that want a shared sub-layout have to compose it by hand. And addresses read
+`?about` rather than `/about`. Those are level 3's business.
 
-Deep links work too, with the qualification in the next section: arriving at
-`/page#about` shows About.
-
-### What level 2 costs, and it is one thing
-
-**A fragment never reaches the server.** Browsers do not send it. So the
-response is always whatever the fragment-less address renders — the default
-route — and the browser corrects the page on arrival.
-
-For a person with JavaScript that correction is invisible enough. For
-anything that reads the response and stops, it is the whole story:
-
-| reads the response | sees |
-| --- | --- |
-| a browser | the default route, corrected to the right one on arrival |
-| a link unfurler (Slack, Twitter, iMessage) | the default route, always |
-| an RSS reader, `curl`, a JS-less reader | the default route, always |
-| a search crawler | usually the right one, after it renders — later, and not guaranteed |
-
-So level 2 suits an *application* — a dashboard, a console, a tool — where
-every address is behind a login anyway and nobody is unfurling it. It is
-the wrong choice for content that gets linked to: a blog, docs, a product
-page. Those want level 1, where the response is already right.
-
-One sharp edge worth knowing: `#about` is also an anchor. The browser will
-try to scroll to `id="about"` on arrival, before the page has swapped
-routes. Fragment-as-route and fragment-as-anchor are competing for the same
-string.
-
-## Level 3 — a router kit
+## Level 3 — the advanced router kit
 
 Routes in the *path* rather than the fragment, so the server sees which one
 was asked for: nested routes composing layouts, parameters (`/user/42`),
@@ -129,8 +142,10 @@ page with that status and `:server-redirect` answers in its place — see
 [the middleware options](../reference/cli.md). A route that turns out not to
 exist is a 404 today, without a router.
 
-**It is not built, and that is deliberate rather than pending.** The design
-is written down in [router-kit.md](../design/router-kit.md), along with the
+**It is not built, and that is deliberate rather than pending.** Level 2
+covers what most sites want from routing, and what remains here is the path,
+the nesting and the parameters. The design is written down in
+[advanced-router-kit.md](../design/advanced-router-kit.md), along with the
 five additions to the language it needs — two of which now exist, because
 they turned out to be worth having on their own terms: a live `$url`, and
 `<:group>` regions.
@@ -138,16 +153,18 @@ they turned out to be worth having on their own terms: a live `$url`, and
 The reason to stop here rather than push on is that routing is a design
 *space* — exact versus pattern matching, nested versus flat, ranking,
 guards, scroll restoration — and every framework that guessed at it early
-rewrote it later. What exists today carries no such guesses: a fragment-
-routed page works and nothing in the compiler knows what a route is. When
-an application needs level 3, it will say what shape it should be, and the
-primitives are there to build it with.
+rewrote it later. What exists today carries no such guesses: level 2 works
+and nothing in the compiler knows what a route is. When an application needs
+level 3, it will say what shape it should be, and the primitives are there to
+build it with.
 
 ## Choosing
 
-- **Content anyone might link to** — level 1. The response is the page.
-- **An application behind a login** — level 2, if a reload between screens
-  is the wrong shape. Everything a browser sees is correct.
-- **Both at once** — level 1 for the pages that get linked to, level 2
-  inside the ones that are really one screen. They are not exclusive: a
-  fragment-routed page is still a page, and still served like one.
+- **A site of pages** — level 1. The response is the page, and there is
+  nothing to learn.
+- **One screen with several states** — level 2. A dashboard, a console, a
+  tool, a small site: the response is still correct, so this is no longer a
+  choice against being linked to.
+- **Both at once** — level 1 for the pages, level 2 inside the ones that are
+  really one screen. They are not exclusive: a routed page is still a page,
+  and still served like one.

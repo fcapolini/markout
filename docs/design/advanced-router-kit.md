@@ -1,6 +1,13 @@
-# router-kit — design notes
+# advanced router-kit — design notes
 
-**Status: exploratory.** Nothing here is implemented. Routing is a **kit** —
+**Status: exploratory.** Nothing here is implemented, and it is the
+*advanced* design rather than the only one: `std-kit` ships a basic router
+(`std-router` / `std-route`) that routes on the query string — one file, no
+server configuration, and the served response is already the right route.
+What this document adds beyond it is routes in the path, nesting that
+composes layouts, parameters, and a page prerendered per address. The two
+are alternatives, not stages: a site wanting none of that wants the basic
+one. Routing is a **kit** —
 nested components, plus five additions to the language, none of which
 mentions routing. This records the design, the reasoning where it is not
 obvious, and what is still open; the open questions are as much the point

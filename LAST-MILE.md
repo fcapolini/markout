@@ -317,7 +317,7 @@ The language looked done and the host adapter did not, which is a better
 place to be than the reverse but was invisible from inside: both of the
 gaps left in "markout is complete enough for real use" turned out to be the
 seam between a page and the response it is part of -- where
-[docs/design/router-kit.md](docs/design/router-kit.md)'s open questions 4
+[docs/design/advanced-router-kit.md](docs/design/advanced-router-kit.md)'s open questions 4
 and 5 already sat.
 
 **What this request knows.** `globals` was built once per application, which

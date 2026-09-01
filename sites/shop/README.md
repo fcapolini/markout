@@ -49,7 +49,7 @@ it is display-ready — prices formatted, links built, the 404 already decided
 | `cart.html` | server-rendered from what this request knows, and `<:group :for-each>` over a pair of `<tr>`s, which no wrapper element could hold |
 | `checkout.html` | `:server-redirect` — an empty cart has no checkout, so the page says where to go instead |
 | `thanks.html` | the same shape as the product page, for an order |
-| `product.html` tabs | the one fragment-routed part: `$url.hash` over a plain `:if`, so the branches the server did not show still travel and the browser switches without asking. [Level 2](../../docs/concepts/navigation.md#level-2--one-page-routed-by-its-fragment) inside a level 1 site, which is what the navigation doc recommends |
+| `product.html` tabs | the one part the browser switches: `$url.hash` over a plain `:if`, so the branches the server did not show still travel and switching asks nothing of the server. The [level 2](../../docs/concepts/navigation.md#level-2--one-page-routed-by-its-query) idea inside a level 1 site — by hand rather than with `std-router`, since two tabs on one product are not routes and a fragment is the right thing for an anchor |
 | `parts/shell.htm` | an `<:include>` in `<head>`, so its root attributes become design tokens on the head scope, where the stylesheet reads them |
 
 ## What it deliberately does not do
@@ -61,7 +61,7 @@ than a feature it is missing. There is a JSON API, but no page uses it.
 
 **No router.** Products are `?id=…` rather than `/product/plane`, because
 routing over a path is
-[level 3](../../docs/concepts/navigation.md#level-3--a-router-kit) and is not
+[level 3](../../docs/concepts/navigation.md#level-3--the-advanced-router-kit) and is not
 built. A shop is exactly the application that would want it, so this is the
 honest shape of what markout does today rather than a demonstration that the
 gap does not matter.

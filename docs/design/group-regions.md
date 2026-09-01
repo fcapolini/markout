@@ -20,7 +20,7 @@ is not merely ugly but wrong:
   changes the layout. The workaround is `display: contents`, which has
   known accessibility bugs;
 - a component that renders a region per level pays an element per level —
-  [router-kit](router-kit.md) is the current example.
+  [advanced router-kit](advanced-router-kit.md) is the current example.
 
 Every other template language answers this: React's `<>`, Vue's
 `<template v-if>`, Svelte's `{#if}`. markout has the tag already and

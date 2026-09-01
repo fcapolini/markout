@@ -7,8 +7,9 @@ the system parts of a page rather than a design system, which is what shows
 that the mechanism is "define tags" rather than "wrap a CSS framework".
 
 They matter more than their size suggests. Anything framework-shaped belongs
-in a kit rather than in the language — a datasource, a theme switcher, a
-validating input — which is what lets the language stay the small thing it
+in a kit rather than in the language — a datasource, a router, a theme
+switcher, a validating input — which is what lets the language stay the small
+thing it
 is. See [kits from npm packages](../design/npm-kits.md) for how an installed
 one is addressed.
 
