@@ -1,0 +1,194 @@
+<lib>
+
+  <!---
+    An app router: the query string says which page, and the same markup
+    is a single-page app or a multi-page one depending only on what the
+    browser can do.
+
+    The page name is the query string -- `?about` -- rather than a path
+    segment, and that is the whole reason this needs nothing from a server.
+    `/index.html?about` and `/index.html?index` are the same FILE, so a host
+    that serves static files already serves every route correctly. There is
+    no rewrite rule, no catch-all, no 404 fallback to configure; drop the
+    page anywhere and every route is already reachable.
+
+    That is what makes the fallback honest rather than a degradation. In a
+    browser with the Navigation API the router cancels the document load and
+    the page switches in place. In one without it, the click is an ordinary
+    link: the browser fetches the same file again with a different query,
+    and the page comes up on the route the query names. Same markup, same
+    URLs, same result -- one of them just costs a roundtrip.
+
+    Which page the address is asking for is derived from `$url` and nothing
+    else. The router does NOT track the address itself: the runtime already
+    does, and `navigatesuccess` -- the one signal that hears an interception
+    at all -- is why `intercept()` below has no handler to run. Cancelling
+    the load is the entire job; `$url` follows on its own, here and in every
+    other expression on the page, which is what keeps the two from
+    disagreeing. See docs/design/value-transfer.md and WebContext.
+    followAddress().
+
+    example:
+    ```
+    <html lang="en">
+
+    <body style="padding: 1rem">
+      <std-router>
+        <std-route ::page="index">
+          index!
+          <a href="?about">go to about</a>
+        </std-route>
+        <std-route ::page="about">
+          about!
+          <a href="?index">go to index</a>
+        </std-route>
+      </std-router>
+    </body>
+
+    </html>
+    ```
+  -->
+  <:define tag="std-router:div"
+
+    /*
+      The names the routes answer to.
+
+      Discovered, not declared: a route CALLS `add`, so the write happens in
+      the router's own scope and the route never reads the registry -- which
+      is what keeps it from re-running itself. Assigning `$host._names` from
+      a route would, and pushing into it would notify nobody.
+
+      This needs a render that settles. A scope's own values are evaluated
+      before its children exist, so every name arrives after `page` below has
+      already been computed once; `page` is marked dirty by the write and the
+      refresh walks again to carry it. See CoreContext.refresh() -- before
+      that, this shape rendered two routes at once on first paint and only
+      agreed with itself after a navigation.
+
+      Nothing here reads whether a PEER matched, which is the rule that keeps
+      ranking from being mutually recursive -- see docs/design/advanced-router-kit.md.
+    */
+    :_names=${[]}
+    ::add=${(n) => { _names.includes(n) || (_names = [..._names, n]); }}
+
+    /*
+      The two ways an address can fail to name a page, which are different
+      questions and want different answers.
+
+      `defaultPage` is what to show when the address names NO page: a bare
+      `/`, and a page rendered with no address at all -- `markout build`
+      without an `--origin`, where `$url` is undefined. Both mean nobody
+      said which page, and the answer is the site's front door.
+
+      `fallback` is what to show when the address names a page that does not
+      exist -- `?abuot`, or `?utm_source=nl` where the query was never a
+      route name at all. That is the 404 question, and a site that wants a
+      visible one points this at a route of its own.
+
+      Kept apart because folding them together puts the wrong page at the
+      front door: with one parameter, `::fallback="notfound"` would answer a
+      bare `/` with the 404. Both default to `index`, so a site that wants
+      neither distinction writes neither.
+    */
+    ::defaultPage="index"
+    ::fallback="index"
+
+    /*
+      The query up to its first separator, so `?about` names a page and
+      `?about&x=1` names the same one, falling to `defaultPage` when there
+      is no query to read.
+
+      Guarded because a page can be rendered with no address at all, and
+      `$url` is undefined there. Unguarded this threw twice and took the
+      whole render with it, which would rule out the one deployment this
+      part is most for: a statically built page, served as files, routed
+      entirely in the browser.
+    */
+    :_search=${($url?.search ?? '').replace(/^\?/, '')}
+    :_asked=${_search.replace(/[&;=].*$/, '') || defaultPage}
+
+    /*
+      An address naming no route resolves to the fallback, and it resolves
+      there while RENDERING -- so the served markup already shows the right
+      page and a browser with no Navigation API needs nothing further.
+    */
+    ::page=${_names.includes(_asked) ? _asked : fallback}
+
+    :_handler=${null}
+
+    /*
+      Browser-only, and absent where the Navigation API is: `navigation`
+      is read off `globalThis` with `?.`, so a browser without it simply
+      never registers and every link stays an ordinary link. That IS the
+      multi-page mode -- there is no second code path for it.
+    */
+    :did-init=${() => {
+      _handler = (ev) => {
+        /*
+          Let the browser handle anything we can't or shouldn't take over.
+          `reload` is the one that is easy to miss and the most annoying to
+          get wrong: a reload fires `navigate` like anything else and CAN be
+          intercepted, and intercepting it means the document is never
+          refetched -- so the user presses reload and watches the page
+          re-render the bytes it already had.
+        */
+        if (
+          !ev.canIntercept
+          || ev.hashChange
+          || ev.downloadRequest !== null
+          || ev.formData
+          || ev.navigationType === 'reload'
+        ) {
+          return;
+        }
+        /*
+          No handler, because there is no work to do. intercept() is what
+          cancels the real navigation: the URL and the history entry update
+          and no document load happens, then `navigatesuccess` fires and the
+          runtime moves `$url` -- which is what `page` above is reading.
+        */
+        ev.intercept();
+      };
+      globalThis?.navigation?.addEventListener("navigate", _handler);
+    }}
+
+    :will-dispose=${() => {
+      globalThis?.navigation?.removeEventListener("navigate", _handler);
+    }}
+  >
+    <:slot/>
+  </:define>
+
+  <!---
+    One route's content, shown while the router is on it.
+
+    `$host` is the custom-tag instance this one is structurally inside, so a
+    route must be written directly within its `<std-router>` -- plain markup
+    in between is fine, another COMPONENT is not. Wrapped in one, `$host` is
+    that component instead, and factoring a route into a layout component is
+    the everyday way to do that by accident.
+
+    It says so rather than going quiet, and registering is what buys that:
+    `$host.add` is not a function on anything but a router, so a route that
+    ended up inside the wrong one fails where it is written. Before there was
+    a registry to call, this same mistake left a route that simply never
+    matched, with nothing rendered and nothing reported.
+  -->
+  <:define tag="std-route:div"
+    ::page="index"
+
+    /*
+      Says this route's name, so the router knows it exists whether or not
+      it is the one showing. It reads the route's OWN `page`, never the
+      router's, so registering cannot re-trigger registering.
+    */
+    :_reg=${$host.add(page)}
+
+    :_routerPage=${$host.page}
+
+    // public because a page wants it: `${home.selected}` on a nav link
+    ::selected=${_routerPage === page}>
+    <div :if=${selected}><:slot/></div>
+  </:define>
+
+</lib>

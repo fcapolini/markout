@@ -175,7 +175,7 @@ to avoid. When a page does want fresh data, it asks:
 A browser fetch wins over the served one from then on, being the newer of the
 two.
 
-## Notes on the awkward corners
+## Notes on `std-data`'s awkward corners
 
 - **`:handle-`, not `:did-init`.** The browser fetch hangs off a `:handle-`
   on the resolved URL rather than an init callback, so a `::url` that changes
@@ -188,3 +188,86 @@ two.
   had the component carrying its own payload in its root element. It doesn't
   need to: the result travels in the page's state, so the root is a plain
   hidden `<span>` and the component has no markup contract at all.
+
+## `std-router`
+
+Routing for a page that is one screen with several states. `<std-router>`
+holds a `<std-route>` per screen, and the query string says which one shows:
+
+```html
+<std-router>
+  <nav>
+    <a href="?index" :class-active=${home.selected}>Home</a>
+    <a href="?about" :class-active=${about.selected}>About</a>
+  </nav>
+
+  <std-route :aka="home" ::page="index">
+    <h1>Home</h1>
+  </std-route>
+
+  <std-route :aka="about" ::page="about">
+    <h1>About</h1>
+  </std-route>
+</std-router>
+```
+
+### The query, not the fragment
+
+A browser never sends `#about` to the server, so a fragment-routed page can
+only ever respond with its default route and correct itself on arrival —
+which a person with JavaScript hardly notices and a link unfurler, an RSS
+reader, `curl` or a crawler never gets past. `?about` *is* sent, so the
+server renders the asked-for route into the response.
+
+It costs nothing to get that. `?about` and `?index` are the same file, so a
+host serving static files already serves every route: no rewrite rule, no
+catch-all, nothing to configure.
+
+### One markup, both modes
+
+Where the Navigation API exists the router cancels the document load and the
+screen switches in place. Where it does not, the click is an ordinary link
+and the browser fetches the same file with a different query, landing on the
+same route. There is no second branch in the component — the multi-page mode
+is what happens when nothing intercepts. Back and forward stay the browser's
+throughout, and a reload is left alone rather than intercepted.
+
+`$url` is what the router reads, and the runtime is what keeps `$url` on the
+document's address. So the router holds no copy of it, and every other
+expression on the page sees the same address it does.
+
+### Parameters
+
+`std-router`:
+
+| | default | |
+| --- | --- | --- |
+| `::defaultPage` | `"index"` | the page to show when the address names none — a bare `/`, or a page built with no address at all |
+| `::fallback` | `"index"` | the page to show when the address names one that does not exist |
+| `::page` | derived | the route now showing. Read it; it follows the address |
+
+They are two parameters because they answer different questions, and folding
+them together would put a visible 404 at the front door.
+
+`std-route`:
+
+| | default | |
+| --- | --- | --- |
+| `::page` | `"index"` | the name this route answers to |
+| `::selected` | derived | whether it is the one showing — what a nav link reads |
+
+The router finds its routes itself: the names are written once, on the
+routes, and an address naming none of them resolves while *rendering*, so
+the served markup already shows the right page.
+
+### What it does not do
+
+Route names are flat — there is no `?about/team` and no nesting, so screens
+wanting a shared sub-layout compose it by hand. One router per page. And a
+route must be written inside its `<std-router>` with only plain markup in
+between: wrapped in another component it fails loudly, because `$host` is
+then that component and has no `add` to call.
+
+For the path, nesting and parameters, see
+[advanced-router-kit.md](../../docs/design/advanced-router-kit.md) — a
+separate design, and an alternative to this rather than a later stage of it.
