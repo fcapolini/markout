@@ -1,7 +1,7 @@
 {
   "name": "@markout-lang/std-kit",
   "version": "0.3.0",
-  "description": "The system parts of a Markout page -- data sources, routing and the outside world -- written with the language rather than built into it",
+  "description": "The system parts of a Markout page -- data sources, routing, the address and the outside world -- written with the language rather than built into it",
   "repository": {
     "type": "git",
     "url": "https://github.com/fcapolini/markout.git",

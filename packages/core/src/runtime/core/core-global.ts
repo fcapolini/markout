@@ -87,6 +87,7 @@ export const GLOBAL_NAMES = [
   'String',
   'Symbol',
   'URL',
+  'URLSearchParams',
   'WeakMap',
   'WeakSet',
   'clearInterval',

@@ -293,3 +293,61 @@ that component and has no `add` to call.
 For the path, nesting and parameters, see
 [advanced-router-kit.md](../../docs/design/advanced-router-kit.md) — a
 separate design, and an alternative to this rather than a later stage of it.
+
+## `std-params`
+
+The query's parameters: what the address carries besides which page.
+
+A datasource whose source is the address, and shaped like one on purpose —
+`std-data` fetches and hands the page `data`, this reads `$url` and hands the
+page `data`. Nothing is fetched and nothing can fail, so there is no `error`
+and no `loading`; it is reactive for the same reason `std-data` is, because
+`$url` is.
+
+```html
+<std-params :aka="q" />
+
+<p>Showing page ${q.data.page ?? 1}</p>
+<a href=${q.href({ page: 2 })}>Next</a>
+<a href=${q.href({ sort: 'name', page: null })}>By name</a>
+```
+
+### Where the page ends and the parameters begin
+
+The query's leading segment is the page path — `?about/team` — and a segment
+carrying `=` is a parameter, never a page:
+
+| address | page | parameters |
+| --- | --- | --- |
+| `?about/team&id=42` | `about/team` | `id=42` |
+| `?about` | `about` | — |
+| `?id=42` | — | `id=42` |
+| `?user=42` | — | `user=42` |
+
+`std-router` reads the same line, and the two have to agree: otherwise
+`?user=42` would select a route called `user` *and* be a parameter.
+
+That division is what keeps them independent. Adding a parameter never
+changes which screen shows, and adding a level of nesting never disturbs a
+parameter — positional where position means something, named where it does
+not. It is also why parameters are not path segments: `?user/42` would make
+`42` a route name to match, which is patterns, then ranking, then the whole
+design space this router does not enter.
+
+### Parameters
+
+| | | |
+| --- | --- | --- |
+| `::data` | derived | the parameters as a plain object; a repeated name keeps its last value |
+| `::href(changes, page?)` | | a relative URL for this page with `changes` merged in |
+
+`null` or `undefined` removes a parameter; anything else is stringified. The
+second argument moves the page and keeps the parameters: `href({}, 'about')`.
+
+`href` is the reason this is more than `$url.searchParams`. Round-tripping a
+query through `URLSearchParams` does not survive: the page path arrives as a
+valueless key and comes back as `user%2Forders=`, which no router recognises.
+So the path is kept verbatim and only the parameters are rebuilt. The result
+is relative, keeping the pathname — because the pathname is where a round
+trip lives, and a link that only changes the query is one the page answers
+itself.

@@ -109,11 +109,17 @@
     ::depth=${($outer('std-router')?.depth ?? -1) + 1}
 
     /*
-      The query up to its first separator, split on `/` so one address can
-      name a page at every level: `?about` names a page, `?about&x=1` names
-      the same one, and `?about/team` names `about` out here and `team` to a
-      router nested inside it. A level the address says nothing about falls
-      to `defaultPage`, which is what `?about` gives a router below it.
+      The leading query segment, split on `/` so one address can name a page
+      at every level: `?about` names a page, `?about&x=1` names the same one
+      and carries a param beside it, and `?about/team` names `about` out here
+      and `team` to a router nested inside it. A level the address says
+      nothing about falls to `defaultPage`, which is what `?about` gives a
+      router below it.
+
+      A segment carrying `=` is a PARAMETER and never a page, so
+      `?utm_source=nl` names nothing rather than a page called `utm_source`.
+      That is the line `std-params` reads too, and the two have to agree or
+      `?user=42` would be a page to one and a param to the other.
 
       Guarded because a page can be rendered with no address at all, and
       `$url` is undefined there. Unguarded this threw twice and took the
@@ -122,7 +128,8 @@
       entirely in the browser.
     */
     :_search=${($url?.search ?? '').replace(/^\?/, '')}
-    :_path=${_search.replace(/[&;=].*$/, '')}
+    :_first=${_search.split(/[&;]/)[0]}
+    :_path=${_first.includes('=') ? '' : _first}
     :_asked=${_path.split('/')[depth] || defaultPage}
 
     /*

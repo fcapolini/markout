@@ -1,0 +1,80 @@
+<lib>
+
+  <!---
+    The query's parameters: what the address is carrying besides which page.
+
+    A datasource whose source is the address, and shaped like one on purpose:
+    `std-data` fetches and hands the page `data`, this reads `$url` and hands
+    the page `data`. Nothing is fetched and nothing can fail, so there is no
+    `error` and no `loading` — but a page reads it the same way, and it is
+    reactive for the same reason, because `$url` is.
+
+    ```html
+    <std-params :aka="q" />
+
+    <p>Showing page ${q.data.page ?? 1}</p>
+    <a href=${q.href({ page: 2 })}>Next</a>
+    <a href=${q.href({ sort: 'name', page: null })}>By name</a>
+    ```
+
+    **Where the page ends and the parameters begin.** The query's leading
+    segment is the page path — `?about/team` — and a segment carrying `=` is
+    a parameter, never a page. So `?about/team&id=42` is the page `about/team`
+    with `id=42` beside it, and `?id=42` is no page at all. `std-router` reads
+    the same line; the two have to agree, or `?user=42` would be a page to one
+    and a parameter to the other.
+
+    That division is what makes the two independent: adding a parameter never
+    changes which screen shows, and adding a level of nesting never disturbs a
+    parameter. Positional where position means something, named where it does
+    not.
+
+    **`href` keeps the page and merges the rest**, which is the whole reason
+    this is more than `$url.searchParams`. Round-tripping the query through
+    `URLSearchParams` does not work: the page path arrives as a valueless key
+    and comes back as `user%2Forders=`, which no router recognises. So the
+    path is kept verbatim and only the parameters are rebuilt.
+
+    A `null` or `undefined` value removes a parameter; anything else is
+    stringified. Pass a second argument to change the page as well, keeping
+    the parameters: `href({}, 'about')`.
+
+    Renders nothing, and has no element to render: `:logic` as a base tag
+    means an instance is a scope and nothing more.
+  -->
+  <:define tag="std-params:logic"
+
+    :_search=${($url?.search ?? '').replace(/^\?/, '')}
+    :_first=${_search.split(/[&;]/)[0]}
+    // the page path, or nothing when the query opens with a parameter
+    :_path=${_first.includes('=') ? '' : _first}
+    // everything after it, which is the parameters and only them
+    :_rest=${_path ? _search.slice(_path.length).replace(/^[&;]/, '') : _search}
+
+    /*
+      The parameters as a plain object, so a page reads `${q.data.id}` rather
+      than calling a getter. A repeated name keeps its last value, which is
+      what `Object.fromEntries` does with a duplicate key and what a page
+      wanting every value should use `$url.searchParams.getAll` for.
+    */
+    ::data=${Object.fromEntries(new URLSearchParams(_rest))}
+
+    /*
+      A URL for this page with `changes` merged into its parameters. Relative,
+      so it keeps the pathname: the pathname is where a round trip lives, and
+      a link that only changes the query is one this page answers itself.
+    */
+    ::href=${(changes, page) => {
+      const params = new URLSearchParams(_rest);
+      Object.entries(changes ?? {}).forEach(([name, value]) => {
+        value === null || value === undefined
+          ? params.delete(name)
+          : params.set(name, `${value}`);
+      });
+      const path = page ?? _path;
+      const rest = `${params}`;
+      return `?${path}${path && rest ? '&' : ''}${rest}`;
+    }}
+  />
+
+</lib>
