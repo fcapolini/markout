@@ -1,5 +1,15 @@
 # @markout-lang/site
 
+## 0.5.4
+
+### Patch Changes
+
+- Updated dependencies [8d121f7]
+- Updated dependencies [46c3cf1]
+- Updated dependencies [48599d0]
+  - @markout-lang/std-kit@0.4.0
+  - @markout-lang/express@0.8.2
+
 ## 0.5.3
 
 ### Patch Changes

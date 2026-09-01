@@ -1,5 +1,68 @@
 # @markout-lang/core
 
+## 0.10.0
+
+### Minor Changes
+
+- ae71663: `$outer("my-tag")`: the nearest enclosing instance of a tag, or nothing.
+  
+  `$host` answers what a scope is immediately inside; this answers what it is
+  inside *of a given kind*, however far up that is. A walk rather than a parent
+  hop, because a region, a `:for-each` or an element carrying a value each add a
+  scope in between, so the enclosing instance is reliably an ancestor and never
+  reliably the parent. It excludes itself, or a definition's own default would
+  find the instance it is defaulting.
+  
+  The tag is written out, and has to be: a call in the source, it is a plain
+  dependency segment by the time anything runs, resolved when the scope links.
+  A lookup performed per read would emit no dependency, so whatever asked would
+  answer once and never again — exactly the case this exists for. `$outer(x)`
+  with a computed tag is refused rather than silently doing the weaker thing.
+  
+  Costs nothing where it is unused: the tag each instance carries is emitted
+  only for tags some expression in that page names.
+
+### Patch Changes
+
+- 48599d0: `URLSearchParams` joins the globals an expression can use, beside `URL`.
+  
+  `$url.searchParams` already hands pages one, so the type was in the language's
+  surface and only the constructor was missing — which is what a page needs to
+  build a query rather than merely read one.
+- d97da3b: A render now settles instead of answering with whatever it happened to see.
+  
+  A scope's own values are evaluated before its children exist, so anything a
+  child wrote to its `$host` while rendering landed after the pass had already
+  walked the readers that should have moved. Those readers were marked dirty but
+  nothing walked them again, so the write reached its direct readers and nothing
+  derived from them — leaving a page that could contradict itself in a single
+  render, with two readers of one value disagreeing.
+  
+  `refresh()` now walks again to carry a mid-render write, and keeps walking
+  until a pass changes nothing. Only when something was actually written: a
+  render nobody writes to during costs exactly the one walk it always did. A page
+  that never settles reports it after 8 passes rather than hanging.
+- 9c5c577: A component written inside a component whose slot sits in a region renders,
+  instead of silently vanishing.
+  
+  Filling a slot moves the caller's markup into the element holding it, so a
+  slot inside a region — `<div :if>`, or a `<:group>` — puts that markup inside
+  the region. The scope did not follow: `enclosingScope` consulted the instance
+  a node was slotted into before walking up to see what the markup had actually
+  been moved inside of, and returned it on sight. Parented past the region, the
+  instance was bound to DOM the region owns and only shows when it chooses to,
+  so it rendered nothing and reported nothing.
+  
+  The slot's host is now the fallback it was documented to be rather than a
+  first hit, taken only when nothing between the usage and it has a scope of its
+  own. "Nothing in between" became a walk for the same reason: what lies between
+  can be the definition's own region, and only a scope belonging to the caller's
+  markup ends it.
+- Updated dependencies [8d121f7]
+- Updated dependencies [46c3cf1]
+- Updated dependencies [48599d0]
+  - @markout-lang/std-kit@0.4.0
+
 ## 0.9.0
 
 ### Minor Changes

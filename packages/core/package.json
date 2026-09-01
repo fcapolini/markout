@@ -1,6 +1,6 @@
 {
   "name": "@markout-lang/core",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Markout's compiler and isomorphic runtime: lexically scoped values on the DOM tree, compile-time dependency extraction, and server-side rendering. No HTTP.",
   "repository": {
     "type": "git",
@@ -59,7 +59,7 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "@markout-lang/std-kit": "^0.3.0",
+    "@markout-lang/std-kit": "^0.4.0",
     "acorn": "^8.18.0",
     "entities": "^7.0.1",
     "escodegen": "^2.1.0",

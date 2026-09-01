@@ -1,5 +1,16 @@
 # @markout-lang/cli
 
+## 0.8.2
+
+### Patch Changes
+
+- Updated dependencies [48599d0]
+- Updated dependencies [d97da3b]
+- Updated dependencies [9c5c577]
+- Updated dependencies [ae71663]
+  - @markout-lang/core@0.10.0
+  - @markout-lang/express@0.8.2
+
 ## 0.8.1
 
 ### Patch Changes
