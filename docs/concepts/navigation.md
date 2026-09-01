@@ -124,16 +124,16 @@ say where these pages will live
 
 One file carries every route's markup, so a large content site pays for all
 of it on the first load — level 1 is the answer there, not a bigger router.
-Route names are flat: there is no `?about/team` and no nesting, so screens
-that want a shared sub-layout have to compose it by hand. And addresses read
-`?about` rather than `/about`. Those are level 3's business.
+Addresses read `?about/team` rather than `/about/team`. And matching is by
+exact name: routers nest, so a section's screens can share a layout, but
+there are no parameters, no patterns and no ranking. `/user/42` is level 3's
+business.
 
 ## Level 3 — the advanced router kit
 
-Routes in the *path* rather than the fragment, so the server sees which one
-was asked for: nested routes composing layouts, parameters (`/user/42`),
-prerendering a page per address, and navigation kept in the document with
-the Navigation API. That is a kit, not a language feature — see
+Routes in the *path* rather than the query, so an address reads `/user/42`:
+parameters and pattern matching, ranking between routes that both match, and
+a page prerendered per address. That is a kit, not a language feature — see
 [why anything framework-shaped belongs in a kit](kits.md).
 
 One thing level 3 will not have to invent: a page can already say what its
@@ -143,12 +143,13 @@ page with that status and `:server-redirect` answers in its place — see
 exist is a 404 today, without a router.
 
 **It is not built, and that is deliberate rather than pending.** Level 2
-covers what most sites want from routing, and what remains here is the path,
-the nesting and the parameters. The design is written down in
+covers what most sites want from routing, nested routes included, and what
+remains here is the path itself, parameters, ranking and a page prerendered
+per address. The design is written down in
 [advanced-router-kit.md](../design/advanced-router-kit.md), along with the
-five additions to the language it needs — two of which now exist, because
-they turned out to be worth having on their own terms: a live `$url`, and
-`<:group>` regions.
+five additions to the language it needs — three of which now exist, because
+they turned out to be worth having on their own terms: a live `$url`,
+`<:group>` regions, and `$outer`.
 
 The reason to stop here rather than push on is that routing is a design
 *space* — exact versus pattern matching, nested versus flat, ranking,

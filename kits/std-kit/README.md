@@ -262,17 +262,22 @@ the served markup already shows the right page.
 
 ### What it does not do
 
-Route names are flat: there is no `?about/team`, so screens wanting a shared
-sub-layout compose it by hand.
+Routers nest. A `<std-router>` written inside a route owns the next segment
+of the path — `?about/team` is `about` outside and `team` within — and each
+level asks the nearest router above it which segment is its own, so no level
+is told its own ancestry. A level the address says nothing about falls to its
+own `::defaultPage`, so `?about` shows that section's index.
 
-A page may hold more than one router, including one written inside a route,
-and they work independently — but every one of them reads the same query
-token. So a second router is another view of the same route rather than a
-nested level: nesting only starts to mean something once an address carries a
-segment for each level to own, which `?about` does not.
+Links are written whole, from the root: `<a href="?about/team">`. There is no
+relative form, so a nested link spells its ancestors out.
+
+What is still missing is matching that is not by exact name: no parameters
+(`?user/42` selects a route called `42`, not a `:id`), no patterns, no
+ranking.
 
 A route must be written inside its `<std-router>` with only plain markup in
-between. Wrapped in another component it fails loudly, because `$host` is then
+between — plain markup and other components are fine, another `<std-router>`
+starts a new level. Wrapped in another component it fails loudly, because `$host` is then
 that component and has no `add` to call.
 
 For the path, nesting and parameters, see

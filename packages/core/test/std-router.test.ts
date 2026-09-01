@@ -84,6 +84,12 @@ async function mounted(body: string, url = 'http://x.test/index.html') {
     window,
     served,
     shown: () => shown(window),
+    // every rendered leaf, in document order: a nested route sits INSIDE its
+    // outer route's element, so the outer one's text contains the inner
+    items: () =>
+      [...(window.document.querySelectorAll('i') as any)].map((e: { textContent: string }) =>
+        e.textContent.trim()
+      ),
   };
 }
 
@@ -315,6 +321,68 @@ describe('when the address names no route', () => {
     expect(flags()).toBe('false|true');
     p.ctx.adoptUrl('http://x.test/index.html?index');
     expect(flags()).toBe('true|false');
+  });
+});
+
+describe('routers inside routes', () => {
+  const NESTED = `
+    <std-router>
+      <std-route data-route ::page="index"><i>home</i></std-route>
+      <std-route data-route ::page="about"><i>about</i>
+        <std-router>
+          <std-route data-route ::page="index"><i>about index</i></std-route>
+          <std-route data-route ::page="team"><i>the team</i></std-route>
+        </std-router>
+      </std-route>
+    </std-router>`;
+
+  it('gives each level its own segment of the address', async () => {
+    // `$outer` is what makes this work: the inner router asks the nearest
+    // router above it for its depth, walking past the <std-route> between
+    for (const [q, want] of [
+      ['', ['home']],
+      ['?about', ['about', 'about index']],
+      ['?about/team', ['about', 'the team']],
+      ['?about/', ['about', 'about index']],
+    ] as [string, string[]][]) {
+      const p = await mounted(NESTED, `http://x.test/index.html${q}`);
+      expect([q, p.items(), p.errors]).toStrictEqual([q, want, []]);
+    }
+  });
+
+  it('serves the nested route too, so the no-JS half still answers', async () => {
+    const p = await mounted(NESTED, 'http://x.test/index.html?about/team');
+    const body = p.served
+      .replace(/<template[\s\S]*?<\/template>/g, '')
+      .replace(/<script[\s\S]*?<\/script>/g, '');
+    expect(body).toContain('the team');
+    expect(body).not.toContain('about index');
+  });
+
+  it('moves between levels as the address does', async () => {
+    const p = await mounted(NESTED, 'http://x.test/index.html?about/team');
+    expect(p.items()).toStrictEqual(['about', 'the team']);
+    p.ctx.adoptUrl('http://x.test/index.html?about');
+    expect(p.items()).toStrictEqual(['about', 'about index']);
+    p.ctx.adoptUrl('http://x.test/index.html?index');
+    expect(p.items()).toStrictEqual(['home']);
+    p.ctx.adoptUrl('http://x.test/index.html?about/team');
+    expect(p.items()).toStrictEqual(['about', 'the team']);
+    expect(p.errors).toStrictEqual([]);
+  });
+
+  it('sends an unknown inner segment to the inner fallback', async () => {
+    const p = await mounted(
+      NESTED.replace('<std-router>\n          <std-route data-route ::page="index">',
+        '<std-router ::fallback="index">\n          <std-route data-route ::page="index">'),
+      'http://x.test/index.html?about/nope'
+    );
+    expect(p.items()).toStrictEqual(['about', 'about index']);
+  });
+
+  it('keeps a query string beside the path', async () => {
+    const p = await mounted(NESTED, 'http://x.test/index.html?about/team&ref=nl');
+    expect(p.items()).toStrictEqual(['about', 'the team']);
   });
 });
 

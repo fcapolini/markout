@@ -1,17 +1,20 @@
 # advanced router-kit — design notes
 
-**Status: exploratory.** Nothing here is implemented, and it is the
-*advanced* design rather than the only one: `std-kit` ships a basic router
-(`std-router` / `std-route`) that routes on the query string — one file, no
-server configuration, and the served response is already the right route.
-What this document adds beyond it is routes in the path, nesting that
-composes layouts, parameters, and a page prerendered per address. The two
-are alternatives, not stages: a site wanting none of that wants the basic
-one. Routing is a **kit** —
-nested components, plus five additions to the language, none of which
-mentions routing. This records the design, the reasoning where it is not
-obvious, and what is still open; the open questions are as much the point
-of the document as the decisions.
+**Status: exploratory, and partly overtaken.** `$outer` (§4) is built, and
+`std-kit`'s `std-router` uses it to nest: routes compose layouts today, on a
+query-string path (`?about/team`), one file, no server configuration, and the
+served response already the right route.
+
+What is left to this document is the part that was never about nesting:
+routes in the URL path rather than the query, parameters and pattern
+matching, ranking between routes that both match, and a page prerendered per
+address. The two remain alternatives rather than stages — a site wanting
+none of that wants the basic router, which is most sites.
+
+Routing is a **kit** — nested components, plus five additions to the
+language, none of which mentions routing. This records the design, the
+reasoning where it is not obvious, and what is still open; the open questions
+are as much the point of the document as the decisions.
 
 Claims marked **(verified)** were run against the compiler at `ce9cd96`
 rather than reasoned about, as throwaway suites using the recipe in
@@ -160,6 +163,10 @@ is constant for the life of the page, which a build-bound `$url` is and a
 runtime one is not.
 
 ### 4. `$outer(tag)` — the nearest enclosing instance of a tag
+
+**Built**, as described here: a walk, resolved at link time, excluding
+itself, with an interned tag per instance emitted only for tags a page
+actually asks for. See `docs/reference/syntax.md`.
 
 A route composes its path onto its parent's, and a definition cannot see
 the instance enclosing it. Without this the author restates the nesting in

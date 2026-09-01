@@ -94,9 +94,19 @@
     ::fallback="index"
 
     /*
-      The query up to its first separator, so `?about` names a page and
-      `?about&x=1` names the same one, falling to `defaultPage` when there
-      is no query to read.
+      How many routers this one is inside, and so which segment of the path
+      it owns. Each asks the nearest router above it and adds one, so no
+      router knows its ancestry beyond that one step -- and `$outer` is a
+      walk, which is what lets it see past the `<std-route>` in between.
+    */
+    ::depth=${($outer('std-router')?.depth ?? -1) + 1}
+
+    /*
+      The query up to its first separator, split on `/` so one address can
+      name a page at every level: `?about` names a page, `?about&x=1` names
+      the same one, and `?about/team` names `about` out here and `team` to a
+      router nested inside it. A level the address says nothing about falls
+      to `defaultPage`, which is what `?about` gives a router below it.
 
       Guarded because a page can be rendered with no address at all, and
       `$url` is undefined there. Unguarded this threw twice and took the
@@ -105,7 +115,8 @@
       entirely in the browser.
     */
     :_search=${($url?.search ?? '').replace(/^\?/, '')}
-    :_asked=${_search.replace(/[&;=].*$/, '') || defaultPage}
+    :_path=${_search.replace(/[&;=].*$/, '')}
+    :_asked=${_path.split('/')[depth] || defaultPage}
 
     /*
       An address naming no route resolves to the fallback, and it resolves
