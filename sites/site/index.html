@@ -1501,6 +1501,107 @@
       </div>
     </section>
 
+    <!--- std Kit -->
+
+    <!---
+      The other kind of kit, and the reason the positioning claim is not just
+      a slogan.
+
+      The Bootstrap section above shows a kit wrapping a design system. This
+      one shows a kit being the framework layer itself: a datasource and a
+      router, the two things every framework builds IN, written with the
+      language instead. It sits after "isomorphic by design" because both
+      parts are what that claim buys -- one fetches while rendering and ships
+      the answer, the other answers the address in the response -- and
+      neither could be written this way if the model did not run in both
+      places.
+
+      Two cards rather than a code tour: the demos are one click away and do
+      the tour properly.
+    -->
+    <section id="std-kit"
+             class="py-5 bg-body-tertiary">
+      <div class="container py-lg-4">
+
+        <div class="row gy-5 gx-0 gx-sm-5">
+
+          <div class="col-lg-5">
+            <page-eyebrow ::variant="success"
+                          class+="mb-3">std Kit</page-eyebrow>
+
+            <h2 class="display-6 fw-bold mb-3">
+              The framework layer, written in the language
+            </h2>
+
+            <p class="lead text-body-secondary">
+              Data and routing are the two things a framework is usually built
+              <em>in</em>. Here they are components, and nothing in the
+              compiler knows what a fetch or a route is.
+            </p>
+
+            <p>
+              It ships with the compiler, so a page has it already — no
+              install, and no import unless you would rather say it out loud.
+            </p>
+
+            <p class="mb-4">
+              Which is the claim the whole design rests on: if the system
+              parts of a page can be written with the language, the language
+              does not have to grow them.
+            </p>
+
+            <bs-link ::href="/demos/router/"
+                     ::variant="primary"
+                     ::size="lg">See the router running</bs-link>
+            <bs-link ::href="/demos/std/index.html"
+                     ::variant="link">…and the datasource</bs-link>
+          </div>
+
+          <div class="col-lg-7">
+
+            <div class="mb-4">
+              <code-card ::title="A datasource"
+                         ::mono=${false}
+                         ::label="std-data"
+                         ::note>
+<pre class="mb-0"><code data-lang="html">&lt;std-data :aka="people" ::url="/api/people" /&gt;
+
+&lt;li :for-each=${people.data}&gt;${name}&lt;/li&gt;</code></pre>
+                <p :slot="note"
+                   class="mb-0">
+                  Fetched while the page renders, and in the markup as it
+                  arrives — so the browser asks for nothing and there is no
+                  flash. <code class="rule-code">reload()</code> refetches
+                  when a page wants fresh data.
+                </p>
+              </code-card>
+            </div>
+
+            <code-card ::title="A router"
+                       ::mono=${false}
+                       ::label="std-router"
+                       ::note>
+<pre class="mb-0"><code data-lang="html">&lt;std-router&gt;
+  &lt;std-route ::page="index"&gt;…&lt;/std-route&gt;
+  &lt;std-route ::page="about"&gt;…&lt;/std-route&gt;
+&lt;/std-router&gt;</code></pre>
+              <p :slot="note"
+                 class="mb-0">
+                The query string says which screen — <code
+                class="rule-code">?about</code> — so the server sees it and
+                the response is already the right one. Routers nest, and a
+                browser without the Navigation API just reloads the same file
+                and lands in the same place.
+              </p>
+            </code-card>
+
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
     <!--- Tailwind -->
 
     <!---
