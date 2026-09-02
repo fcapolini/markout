@@ -55,7 +55,9 @@
   -->
   <std-params :aka="q" />
 
-  <bs-navbar ::brand="/"
+  <bs-navbar ::sticky
+             ::brand="/"
+             class+="border-bottom"
              ::expand="sm"
              ::items=${[
                { name: 'Home', link: '/' },

@@ -30,7 +30,9 @@
 -->
 <body :server-servedAt=${new Date().toISOString().slice(11, 19)}>
 
-  <bs-navbar ::brand="/"
+  <bs-navbar ::sticky
+             ::brand="/"
+             class+="border-bottom"
              ::expand="sm"
              ::items=${[
                { name: 'Home', link: '/' },
