@@ -1,12 +1,19 @@
-<lib :const-bsBtnRadius="2rem"
-  :const-appAccent="#6f42c1">
+<lib :const-bsRadius="2rem"
+  :const-appAccent="#6f42c1"
+  :const-appAccentDark="#59359a">
 
   <:import src="/npm/@markout-lang/bootstrap-kit/all.htm" />
 
   <style>
     .btn-primary {
-      background-color: ${appAccent};
-      border-color: ${appAccent};
+      --bs-btn-bg: ${appAccent};
+      --bs-btn-border-color: ${appAccent};
+      --bs-btn-disabled-bg: ${appAccent};
+      --bs-btn-disabled-border-color: ${appAccent};
+      --bs-btn-hover-bg: ${appAccentDark};
+      --bs-btn-hover-border-color: ${appAccentDark};
+      --bs-btn-active-bg: ${appAccentDark};
+      --bs-btn-active-border-color: ${appAccentDark};
     }
   </style>
 
