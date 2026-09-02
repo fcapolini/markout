@@ -40,7 +40,9 @@
 -->
 <body>
 
-  <bs-navbar ::brand="/"
+  <bs-navbar ::sticky
+             ::brand="/"
+             class+="border-bottom"
              ::expand="sm"
              ::items=${[
                { name: 'Home', link: '/' },
@@ -131,6 +133,25 @@
           page renders on the server and comes alive in the browser from the
           same source — which is the third thing the original vision wanted
           and the decade could not give it.
+        </p>
+
+        <h2 class="h3 mt-5 mb-3">What it should add up to</h2>
+
+        <p>
+          What that buys, at the top of an app, is a page written in its own
+          nouns. <code class="rule-code">&lt;product-cart&gt;</code> rather than
+          the markup a cart happens to be made of, and the constraints between
+          its parts stated as rules —
+          <code class="rule-code">:total=${price * (1 - discount)}</code> —
+          rather than as the code that has to run when either one changes.
+        </p>
+
+        <p>
+          A main page that reads that way is a map of the application: what it
+          is made of and what has to stay true of it, with every detail of how
+          delegated to the fragments it imports. The nouns are yours, and that
+          is the point — the language gives you naming and rules, not a
+          vocabulary of its own.
         </p>
 
         <h2 class="h3 mt-5 mb-3">What it is not</h2>
