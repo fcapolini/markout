@@ -477,3 +477,7 @@
   - And the qualification is worth having for a second reason, which generalises past this component: **the head is the kit's shelf and the body is the app's.** An app's own values are declared in the body and below, so a kit value that only answers to `head.` cannot be shadowed by one of them -- where a `:aka` at the top of the body can be, silently, by any nested `:width` on any element in between, for that subtree only. It also keeps the two namespaces legible in the source: a bare name is something this page declared, a `head.` name is something a kit supplies. Worth stating as a kit convention rather than as a fact about this one tag, since `bs-theme-auto` holds no value today only because nothing has needed one yet, and that is where its mode should land the day something does. Not enforced, and deliberately: a component that checked where it had been written would be the language knowing about a kit's convention, which is the coupling this whole item avoided by making the tier a component instead of a global. A documented best practice, and the failure mode for ignoring it is an unresolved `head.width` -- which names the thing that is missing rather than silently resolving to something else.
 
 - [ ] add "show dependencies" and "show dependents" to logic value's contextual menu (or vscode equivalent)
+
+- [ ] vscode extension: extract jsdoc from attribute /** ... */ comments
+
+- [ ] function values shouldn't re-trigger because they're redefined upon dependencies changes, to save resources they should retrigger without being redefined
