@@ -1,13 +1,12 @@
 /**
  * A shop: a catalog, a cart, and a purchase that goes through.
  *
- * The worked example of the arrangement `@markout-lang/express` is for, with
- * an application shaped like an application rather than like a demo. Its
- * routes come FIRST, markout answers what is left, and static files last --
- * an order that is a requirement rather than a preference, since a path with
- * no extension is a page request and markout will answer it.
- *
- *     npm run dev -w @markout-lang/shop
+ * The fixture `test/server/shop.test.ts` drives, and an application shaped
+ * like an application rather than like a demo: it is here because a suite of
+ * unit-sized pages cannot show the arrangement `@markout-lang/express` is
+ * for. Its routes come FIRST, markout answers what is left, and static files
+ * last -- an order that is a requirement rather than a preference, since a
+ * path with no extension is a page request and markout will answer it.
  *
  * **One object holds the shop's rules**, and everything here is a way in to
  * it. `Shop` (shop.ts) answers a page's questions with a view it can render
@@ -40,7 +39,6 @@ import { Shop } from './shop';
 
 export interface ShopProps {
   docroot: string;
-  dev?: boolean;
 }
 
 /**
@@ -52,10 +50,17 @@ export interface ShopProps {
  * taken only when it is a path on this site. Anything else, a `//host` or a
  * `https://` among them, is somebody else's page wearing our redirect, and
  * gets the fallback instead.
+ *
+ * The second character is the whole question, and a backslash counts. This
+ * read `!to.startsWith('//')`, which is the check everyone writes and is one
+ * character short: a browser parsing `http(s):` normalizes `\` to `/` before
+ * it looks for an authority, so `/\host` is `//host` by the time it matters
+ * and the visitor lands off-site. So: a leading slash followed by anything
+ * that is not another separator, or the site root on its own.
  */
 function backTo(value: unknown, fallback: string): string {
   const to = `${value ?? ''}`;
-  return to.startsWith('/') && !to.startsWith('//') ? to : fallback;
+  return to === '/' || /^\/[^/\\]/.test(to) ? to : fallback;
 }
 
 export function createShop(props: ShopProps): Express {
@@ -104,7 +109,6 @@ export function createShop(props: ShopProps): Express {
   app.use(
     markout({
       docroot: props.docroot,
-      dev: props.dev,
       requestGlobals: {
         shop: req => Shop.forRequest(catalog, carts, req),
       },
@@ -114,36 +118,4 @@ export function createShop(props: ShopProps): Express {
   // -------------------------------------------------------------- the assets
   app.use(express.static(props.docroot, { index: false }));
   return app;
-}
-
-if (process.argv[1]?.endsWith('server.ts')) {
-  const port = Number(process.env.PORT) || 3001;
-  const server = createShop({ docroot: import.meta.dirname, dev: true }).listen(
-    port,
-    () => {
-      console.log(`the bench     http://127.0.0.1:${port}/`);
-      console.log(`a product     http://127.0.0.1:${port}/product.html?id=saw`);
-      console.log(`the cart      http://127.0.0.1:${port}/cart.html`);
-    }
-  );
-
-  // Ctrl-C is a SIGINT, and node's own answer to it is to die at once with
-  // 130 -- mid-response for whoever was mid-request, and a failed script as
-  // far as npm is concerned, which prints a page of error for an ordinary
-  // stop. Closing the server refuses new connections and lets the answers
-  // in flight finish, then exits 0.
-  //
-  // The idle keep-alive connections have to be closed by hand: they hold
-  // nothing, but `close` waits for them, so without this the process sits
-  // there until the last browser loses interest. The timer is the backstop
-  // for a request that never ends, unref'd so it is not itself a reason to
-  // stay up. The same block sites/site/server.ts carries, for the same
-  // reasons.
-  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
-    process.once(signal, () => {
-      server.close(() => process.exit(0));
-      server.closeIdleConnections();
-      setTimeout(() => process.exit(0), 10_000).unref();
-    });
-  }
 }

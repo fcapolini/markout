@@ -21,10 +21,11 @@ import { renderPage } from '../../src/render/render';
  * standing and adopted it, and `s4-1` onward belonged to nobody -- so a
  * shorter array than last time left the difference in the page.
  *
- * Found by building an application (sites/shop): a filtered catalog showed
- * the ten items of the request before it, two of them right. In a catalog
- * that is a wrong count; keyed to a person it is one visitor's rows in
- * another's page, and nothing about it is loud.
+ * Found by building an application (the shop fixture the CLI's suite
+ * drives): a filtered catalog showed the ten items of the request before
+ * it, two of them right. In a catalog that is a wrong count; keyed to a
+ * person it is one visitor's rows in another's page, and nothing about it
+ * is loud.
  */
 let docroot: string;
 beforeAll(() => {
@@ -120,7 +121,7 @@ describe('a list that is shorter than it was last time', () => {
    * sweep found nothing, concluded there was nothing left, and stopped --
    * on the first replica it was meant to remove.
    *
-   * Also found by using sites/shop: a cart with two lines in it, one line
+   * Also found by using that same shop: a cart with two lines in it, one line
    * removed, served two lines with the survivor printed twice.
    */
   it('leaves nothing of a group replica either', async () => {

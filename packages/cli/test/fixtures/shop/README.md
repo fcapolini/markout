@@ -1,18 +1,15 @@
-# The Bench — a shop, as evidence
+# The Bench — a shop, as a fixture
 
 A catalog, a cart and a purchase that goes through, written in Markout and
-served by `@markout-lang/express`.
+served by `@markout-lang/express`. It is not a site and is not published:
+it exists to be driven by
+[`test/server/shop.test.ts`](../../server/shop.test.ts) — catalog, filter,
+product, 404, cart across requests, checkout, order, and one visitor not
+seeing another's cart.
 
-```sh
-npm run dev -w @markout-lang/shop     # http://localhost:3001
-```
-
-It exists because every design note in this repository ends the same way:
-*nothing real has been built on this yet.* This is the something. It is
-driven end to end by
-[`packages/cli/test/server/shop.test.ts`](../../packages/cli/test/server/shop.test.ts)
-— catalog, filter, product, 404, cart across requests, checkout, order,
-and one visitor not seeing another's cart.
+It stays whole rather than being cut down to per-assertion snippets because
+half of what is under test is the *arrangement*: application routes first,
+markout next, static files last, with one object holding the rules.
 
 ## How it is put together
 
@@ -33,8 +30,7 @@ over REST shows up in a page rendered for the same visitor, and back again.
 
 The pages do **not** go through REST. A page rendering on the server calls
 the object directly; asking itself over HTTP would buy a loopback request
-and a round of JSON for an answer it already holds. REST is for the clients
-that are not this server.
+and a round of JSON for an answer it already holds.
 
 **A page declares one value: the view it is about to render.** Everything in
 it is display-ready — prices formatted, links built, the 404 already decided
@@ -49,32 +45,17 @@ it is display-ready — prices formatted, links built, the 404 already decided
 | `cart.html` | server-rendered from what this request knows, and `<:group :for-each>` over a pair of `<tr>`s, which no wrapper element could hold |
 | `checkout.html` | `:server-redirect` — an empty cart has no checkout, so the page says where to go instead |
 | `thanks.html` | the same shape as the product page, for an order |
-| `product.html` tabs | the one part the browser switches: `$url.hash` over a plain `:if`, so the branches the server did not show still travel and switching asks nothing of the server. The [level 2](../../docs/concepts/navigation.md#level-2--one-page-routed-by-its-query) idea inside a level 1 site — by hand rather than with `std-router`, since two tabs on one product are not routes and a fragment is the right thing for an anchor |
+| `product.html` tabs | the one part the browser switches: `$url.hash` over a plain `:if`, so the branches the server did not show still travel and switching asks nothing of the server. The [level 2](../../../../../docs/concepts/navigation.md#level-2--one-page-routed-by-its-query) idea inside a level 1 site |
 | `parts/shell.htm` | an `<:include>` in `<head>`, so its root attributes become design tokens on the head scope, where the stylesheet reads them |
-
-## What it deliberately does not do
-
-**No client-side state, and the pages fetch nothing.** Every write a page
-makes is an ordinary `POST` answered with a redirect, so the whole workflow
-works with scripting off — which is the position this project takes rather
-than a feature it is missing. There is a JSON API, but no page uses it.
-
-**No router.** Products are `?id=…` rather than `/product/plane`, because
-routing over a path is
-[level 3](../../docs/concepts/navigation.md#level-3--the-advanced-router-kit) and is not
-built. A shop is exactly the application that would want it, so this is the
-honest shape of what markout does today rather than a demonstration that the
-gap does not matter.
 
 **No database.** [`catalog.ts`](catalog.ts) is a dozen products in memory,
 and [`cart.ts`](cart.ts) is a Map keyed by a cookie. What is under test is
-the seam between a page and the application it belongs to; a real store would
-answer none of those questions differently.
+the seam between a page and the application it belongs to.
 
 ## What building it found
 
-Two things, both in code written the same week and neither visible from the
-design side:
+The reason it is worth keeping. None of these were visible from the design
+side:
 
 - **`<:group :server-if>` was refused.** A group's attributes are classified
   before anything else sees them, and the marked spelling of a branch was
@@ -87,7 +68,7 @@ design side:
   listing, showed ten items with two of them right. Here it is a wrong
   count; keyed to a person it is one visitor's rows in another's page.
   Fixed in `render.ts` (`dropStaleReplicas`), with the general case pinned
-  in `packages/core/test/render/rerender.test.ts`.
+  in [`rerender.test.ts`](../../../../core/test/render/rerender.test.ts).
 - **`hydrate()` did not follow the address.** Only the browser's own boot
   path attached the listeners, so a page mounted any other way answered
   with the address it was handed, forever — the product tabs switched on a

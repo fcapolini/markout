@@ -2,10 +2,10 @@ import path from 'path';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { Window } from 'happy-dom';
-import { Carts } from '../../../../sites/shop/cart';
-import { Catalog } from '../../../../sites/shop/catalog';
-import { Shop } from '../../../../sites/shop/shop';
-import { createShop } from '../../../../sites/shop/server';
+import { Carts } from '../fixtures/shop/cart';
+import { Catalog } from '../fixtures/shop/catalog';
+import { Shop } from '../fixtures/shop/shop';
+import { createShop } from '../fixtures/shop/server';
 import { Compiler, hydrate, renderPage } from '@markout-lang/core';
 
 /**
@@ -24,7 +24,7 @@ import { Compiler, hydrate, renderPage } from '@markout-lang/core';
  * request knows.
  */
 function shop() {
-  return createShop({ docroot: path.resolve(__dirname, '../../../../sites/shop') });
+  return createShop({ docroot: path.resolve(__dirname, '../fixtures/shop') });
 }
 
 /** the served markup with the runtime's own comments out of the way */
@@ -211,10 +211,27 @@ describe('a shop, from the catalog to the order', () => {
     expect(added.headers.location).toBe('/?tag=book');
 
     // that field arrives from whoever posted it, so it is a path here or
-    // it is the fallback -- a redirect off-site is not ours to offer
-    for (const hostile of ['//evil.example.com', 'https://evil.example.com', 'javascript:alert(1)']) {
+    // it is the fallback -- a redirect off-site is not ours to offer. The
+    // backslash is the one that looks like a path and is not: a browser
+    // normalizes it to a slash before it goes looking for a host, so
+    // `/\evil.example.com` leaves the site exactly as `//` does
+    const hostiles = [
+      '//evil.example.com',
+      '/\\evil.example.com',
+      '/\\/evil.example.com',
+      'https://evil.example.com',
+      'javascript:alert(1)',
+    ];
+    for (const hostile of hostiles) {
       const res = await request(app).post('/cart/add').type('form').send({ id: 'saw', back: hostile });
       expect(res.headers.location).toBe('/cart.html');
+    }
+
+    // and the shapes that are ordinary addresses still go through, the bare
+    // root among them -- it is what the unfiltered catalog puts in the field
+    for (const ours of ['/', '/cart.html', '/?tag=book']) {
+      const res = await request(app).post('/cart/add').type('form').send({ id: 'saw', back: ours });
+      expect(res.headers.location).toBe(ours);
     }
   });
 
@@ -294,7 +311,7 @@ describe('a shop, from the catalog to the order', () => {
  * application actually has: decided-once and live, in one page.
  */
 describe('the product page tabs', () => {
-  const docroot = path.resolve(__dirname, '../../../../sites/shop');
+  const docroot = path.resolve(__dirname, '../fixtures/shop');
 
   async function product(hash: string) {
     // the one name a page is given: this visitor's shop, which is what the
