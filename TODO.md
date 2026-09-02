@@ -289,7 +289,7 @@
   - Speculative until a kit ships per-component styles, and the Bootstrap kit never will: it wraps a monolithic framework, so the CSS is one CDN file behind `k_bsCssUrl` and `base.htm`'s own `<style>` is six lines of theme tokens written into Bootstrap's variables. Nothing there to split.
   - Where it pays off is a kit whose components bring their own presentation. The nearest one is Orbit's `dash-*` set, whose rules currently sit in `orbit/components.htm`'s static block mixed with the page's own; making those four reusable would give each its own stylesheet, and a page wanting only `dash-stat` would stop shipping the chart and dot CSS. Same for anything built ON the Bootstrap kit rather than wrapping it.
 
-- [ ] The CLI joins the docroot onto cwd, so absolute paths don't work
+- [x] The CLI joins the docroot onto cwd, so absolute paths don't work -- **done.** Every entry point now calls `path.resolve(process.cwd(), pathname)`, which returns an absolute path unchanged; `cli.ts` carries the note at the `serve` call site explaining that `markout /srv/site` used to watch and serve `$PWD/srv/site` and answer 404 for everything in it. Verified 2026-09-02 from a foreign cwd: an absolute docroot compiles, renders and writes.
 
 - [ ] Remove classic functions limitation: let's use a `$this` argument of execution function and qualify value references with that instead of `this`
 
@@ -340,7 +340,7 @@
 
 - [x] related, found while fixing the above (2026-08-13) -- FIXED at some point since, confirmed 2026-08-19 by running the exact markup below: it compiles, links clean, and `${q.t}` reads 1. Pinned now by test/name-resolution.test.ts, which is what should have caught it going green. The original report follows. A NAMED scope declared inside slotted content is reachable from neither side. `<mk-box><i :aka="q" :t=${1}/></mk-box><p>${q.t}</p>` is `Unknown reference: "q"`, though the identical nesting without the slot resolves fine. The invisible-from-inside-the-definition half is correct and must stay (the definition must not read its caller's names), but the call site wrote that `:aka` and should see it. `CoreScope.link()` registers a scope's name in its STRUCTURAL parent, which for slotted markup is the instance -- so the name lands in exactly the one place that must not have it, and nowhere else. Fixing it means publishing the name at `callSiteScope()` instead, with a matching walk on the compiler side (`stage4-resolve`'s `findNavigableScope` checks `s.children.some(c => c.name === key)` against the same structural tree). Lower urgency than the dependency bug above: this one is a clean compile error, not a silent non-update.
 
-- [ ] found 2026-08-25 while building the benchmark ports: the HTML parser refuses `@`-prefixed attribute names. `<button @click="x()">hi</button>` fails with `Unterminated tag BUTTON` at the column of the `@`; `:on-click=${...}` and `data-x="y"` on the same markup are fine. `@` is a legal attribute-name character per the HTML spec -- the production forbids only space, `"`, `'`, `>`, `/`, `=` and controls -- so this is us being stricter than HTML, not the page being wrong.
+- [ ] found 2026-08-25 while building the benchmark ports: the HTML parser refuses `@`-prefixed attribute names -- filed as [#45](https://github.com/fcapolini/markout/issues/45), which found it is every character outside `skipName`'s allowlist, not just `@`. `<button @click="x()">hi</button>` fails with `Unterminated tag BUTTON` at the column of the `@`; `:on-click=${...}` and `data-x="y"` on the same markup are fine. `@` is a legal attribute-name character per the HTML spec -- the production forbids only space, `"`, `'`, `>`, `/`, `=` and controls -- so this is us being stricter than HTML, not the page being wrong.
   - It surfaced from `markout build ./bench`, which walks the whole docroot and so tried to compile `bench/alpine-catalog/index.html`. That is the shape that makes it worth fixing rather than a curiosity: an Alpine or Vue page sitting anywhere under a served or built docroot fails the build, and the message names an unterminated tag rather than the attribute the parser actually choked on. A user with one legacy Alpine page in their tree gets an error that does not point at the cause.
   - Two things to decide: whether to accept the full HTML attribute-name production, and what such an attribute should compile to. Accepting it as a plain pass-through attribute seems right -- markout claims `:` as its own prefix precisely so everything else stays ordinary HTML, and `@` belongs to other tools.
 
@@ -478,6 +478,6 @@
 
 - [ ] add "show dependencies" and "show dependents" to logic value's contextual menu (or vscode equivalent)
 
-- [ ] vscode extension: extract jsdoc from attribute /** ... */ comments
+- [ ] vscode extension: extract jsdoc from attribute /** ... */ comments -- filed as [#44](https://github.com/fcapolini/markout/issues/44)
 
 - [ ] function values shouldn't re-trigger because they're redefined upon dependencies changes, to save resources they should retrigger without being redefined
