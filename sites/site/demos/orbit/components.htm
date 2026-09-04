@@ -231,6 +231,24 @@
     }
 
     /*
+      A finished task is struck through, and until now it was not.
+
+      `text-decoration-line-through` goes on the `bs-check` itself, which is
+      the only element the call site has -- the component owns the label
+      inside it and takes no class for it. A decoration set on a block
+      normally draws through every inline descendant, but not into an atomic
+      one, and `.form-check-label` is `display: inline-block`: the line was
+      being drawn across an empty box beside the text rather than across the
+      text.
+
+      `inherit` takes the parent's computed value, so the label is struck
+      exactly when the task is done and the class is there to inherit from.
+    */
+    .text-decoration-line-through > .form-check-label {
+      text-decoration-line: inherit;
+    }
+
+    /*
       ---------------------------------------------------- contrast
 
       Five of Bootstrap's default colours are under 4.5:1 as body text on the
