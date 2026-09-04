@@ -202,6 +202,86 @@
     .dash-rows > * + * {
       margin-top: var(--dash-gutter);
     }
+
+    /*
+      ---------------------------------------------------- contrast
+
+      Five of Bootstrap's default colours are under 4.5:1 as body text on the
+      surfaces this page paints, and the dashboard uses all five. They are
+      re-pointed here rather than avoided in the markup, because what fails is
+      the token every one of them resolves -- `.nav-pills` links, breadcrumbs,
+      the footer link and `.link-primary` are one colour between them, and
+      naming a different class at each call site would be four ways of saying
+      the same thing.
+
+      Redefining the token the utility reads, rather than setting `color`:
+      `.text-success` and `.link-primary` are `!important` declarations that a
+      plain `color` cannot outrank, and the value they read off the element
+      beats the one inherited from `:root` without a fight.
+    */
+
+    /*
+      The link blue is `$primary` itself, #0d6efd: 4.27:1 on the
+      `bg-body-tertiary` this page's body carries. #0a58ca is Bootstrap's own
+      `$link-hover-color`, and hover moves on to #084298 so the two states
+      still differ. `--bs-code-color` is the same story one hue over -- #d63384
+      is 4.27:1 on the same ground.
+
+      Dark mode is left alone: there Bootstrap lightens both tokens itself.
+      `html:not([data-bs-theme="dark"])` rather than `[data-bs-theme="light"]`
+      because the pre-paint script has not stamped the attribute on the first
+      frame.
+    */
+    html:not([data-bs-theme="dark"]) {
+      --bs-link-color: #0a58ca;
+      --bs-link-color-rgb: 10, 88, 202;
+      --bs-link-hover-color: #084298;
+      --bs-link-hover-color-rgb: 8, 66, 152;
+      --bs-code-color: #ab296a;
+    }
+
+    /*
+      `.link-primary` is the one link helper that does NOT follow the colour
+      mode: it reads `--bs-primary-rgb`, which Bootstrap leaves at #0d6efd in
+      both. Pointing it at the link colour is what the class already means,
+      and it inherits the light-mode value above for free.
+    */
+    .link-primary {
+      --bs-primary-rgb: var(--bs-link-color-rgb);
+    }
+
+    /*
+      `--bs-secondary` is a fixed brand grey and `--bs-secondary-color` is the
+      token that moves with the mode; `btn-outline-secondary` paints its label
+      with the first, which is 4.45:1 on the body and 2.84:1 on a dark card.
+      One letter apart in the name. The site's homepage carries this same
+      re-pointing, in a file this demo does not import.
+    */
+    .btn-outline-secondary {
+      --bs-btn-color: var(--bs-secondary-color);
+    }
+
+    [data-bs-theme="dark"] .btn-outline-secondary {
+      --bs-btn-border-color: var(--bs-border-color);
+      --bs-btn-hover-color: var(--bs-emphasis-color);
+      --bs-btn-hover-bg: var(--bs-secondary-bg);
+      --bs-btn-hover-border-color: var(--bs-secondary-color);
+    }
+
+    /*
+      `.text-success` reads `--bs-success-rgb`, which is #198754 in both modes
+      -- 4.30:1 on the body and 2.94:1 on a card in dark. Both values here are
+      Bootstrap's: #146c43 is `$success` shaded 20%, and #75b798 is exactly
+      what `--bs-success-text-emphasis` already holds in dark. The word still
+      reads as green, which is the whole job it has.
+    */
+    html:not([data-bs-theme="dark"]) .text-success {
+      --bs-success-rgb: 20, 108, 67;
+    }
+
+    [data-bs-theme="dark"] .text-success {
+      --bs-success-rgb: 117, 183, 152;
+    }
   </style>
 
 <!---

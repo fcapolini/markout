@@ -845,7 +845,7 @@
             <div class="d-flex justify-content-between align-items-center gap-2">
               <bs-check ::label=${task.text}
                 ::checked=${task.done}
-                class+=${task.done ? ['text-decoration-line-through', 'opacity-50'] : []}
+                class+=${task.done ? ['text-decoration-line-through', 'opacity-75'] : []}
                 :on-change=${ev => setTodos(todos.map(t =>
                   t.id === task.id ? { ...t, done: ev.target.checked } : t))} />
               <bs-badge ::variant=${task.due === 'today' ? 'warning' : 'secondary'}
