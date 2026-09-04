@@ -98,43 +98,43 @@
 
   <div class="mx-auto max-w-5xl px-6 py-16">
 
-    <header class="flex flex-wrap items-end justify-between gap-8">
-      <div>
-        <p class="text-sm font-semibold uppercase tracking-widest text-brand-600">Pricing</p>
-        <h1 class="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">Pick a plan.</h1>
-        <p class="mt-4 max-w-lg text-slate-600">
-          One Tailwind stylesheet, built ahead of time and never regenerated.
-          Everything that moves below is a Markout value.
-        </p>
-      </div>
-
-      <!---
-        The accent control. `--color-brand-*` is a real custom property in
-        the built sheet, so this slider is retuning every `brand` utility on
-        the page at once -- cards, ring, badge, links and the header word
-        above it.
-
-        `ev.target.value` rather than `$dom`: a handler is given its event,
-        and a range input reports a string, so `+` is doing the only
-        conversion on the page.
-      -->
-      <label class="flex items-center gap-3 rounded-xl bg-white px-4 py-3 ring-1 ring-slate-200">
-        <span class="text-sm font-medium text-slate-600">Accent</span>
-        <input type="range" min="0" max="360" step="1"
-               value=${hue}
-               :on-input=${(ev) => hue = +ev.target.value}
-               class="h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600">
-        <!---
-          A <span> and not a <code>, which is the one markout gotcha on this
-          page that has nothing to do with Tailwind: `<code>` is a
-          skip-content tag, so `${hue}` inside one is shown rather than read.
-          That is what lets a page about this language print its own syntax.
-        -->
-        <span class="w-12 text-right font-mono text-sm tabular-nums text-slate-500">${hue}°</span>
-      </label>
-    </header>
-
     <main>
+      <header class="flex flex-wrap items-end justify-between gap-8">
+        <div>
+          <p class="text-sm font-semibold uppercase tracking-widest text-brand-600">Pricing</p>
+          <h1 class="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">Pick a plan.</h1>
+          <p class="mt-4 max-w-lg text-slate-600">
+            One Tailwind stylesheet, built ahead of time and never regenerated.
+            Everything that moves below is a Markout value.
+          </p>
+        </div>
+
+        <!---
+          The accent control. `--color-brand-*` is a real custom property in
+          the built sheet, so this slider is retuning every `brand` utility on
+          the page at once -- cards, ring, badge, links and the header word
+          above it.
+
+          `ev.target.value` rather than `$dom`: a handler is given its event,
+          and a range input reports a string, so `+` is doing the only
+          conversion on the page.
+        -->
+        <label class="flex items-center gap-3 rounded-xl bg-white px-4 py-3 ring-1 ring-slate-200">
+          <span class="text-sm font-medium text-slate-600">Accent</span>
+          <input type="range" min="0" max="360" step="1"
+                 value=${hue}
+                 :on-input=${(ev) => hue = +ev.target.value}
+                 class="h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-slate-200 accent-brand-600">
+          <!---
+            A <span> and not a <code>, which is the one markout gotcha on this
+            page that has nothing to do with Tailwind: `<code>` is a
+            skip-content tag, so `${hue}` inside one is shown rather than read.
+            That is what lets a page about this language print its own syntax.
+          -->
+          <span class="w-12 text-right font-mono text-sm tabular-nums text-slate-500">${hue}°</span>
+        </label>
+      </header>
+
       <!---
         The billing switch, and the shape to reach for first on a Tailwind
         page: a ternary of LITERAL class strings, interpolated into an

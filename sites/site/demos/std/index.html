@@ -22,60 +22,62 @@
     <:include src="/parts/analytics.htm" />
   </head>
   <body>
-    <h1>std-kit</h1>
+    <main>
+      <h1>std-kit</h1>
 
-    <!---
-      Fetched during the render, and in the page as it arrives. The URL is
-      page-relative in both modes: the component resolves it against
-      `$origin`, which the server takes from the request and the browser from
-      `location`, so the two always agree.
-    -->
-    <std-data :aka="people" ::url=${'/demos/std/index-data' + which + '.json'} />
+      <!---
+        Fetched during the render, and in the page as it arrives. The URL is
+        page-relative in both modes: the component resolves it against
+        `$origin`, which the server takes from the request and the browser from
+        `location`, so the two always agree.
+      -->
+      <std-data :aka="people" ::url=${'/demos/std/index-data' + which + '.json'} />
 
-    <h2>${people.data?.title ?? 'Loading…'}</h2>
-    <p class="note">Fetched by ${people.data?.fetchedBy ?? '—'}.</p>
+      <h2>${people.data?.title ?? 'Loading…'}</h2>
+      <p class="note">Fetched by ${people.data?.fetchedBy ?? '—'}.</p>
 
-    <p class="error" :for-data=${people.error}>Could not load: ${data}</p>
+      <p class="error" :for-data=${people.error}>Could not load: ${data}</p>
 
-    <!--- `:for-as` names each binding, so the nested one doesn't shadow. -->
-    <table :for-data=${people.data} :for-as="payload">
-      <tr><th>Name</th><th>Role</th></tr>
-      <tr :for-each=${payload.rows} :for-as="person" :for-key=${person.id}>
-        <td>${person.name}</td>
-        <td>${person.role}</td>
-      </tr>
-    </table>
+      <!--- `:for-as` names each binding, so the nested one doesn't shadow. -->
+      <table :for-data=${people.data} :for-as="payload">
+        <tr><th>Name</th><th>Role</th></tr>
+        <tr :for-each=${payload.rows} :for-as="person" :for-key=${person.id}>
+          <td>${person.name}</td>
+          <td>${person.role}</td>
+        </tr>
+      </table>
 
-    <p>
-      <button :on-click=${() => { which = which === 1 ? 2 : 1; }}
-              :attr-disabled=${people.loading}>
-        ${people.loading ? 'Loading…' : 'Switch source'}
-      </button>
-      <span class="note">
-        A URL that changes refetches — in the browser, since that is where the
-        click happened. The heading says which file answered.
-      </span>
-    </p>
+      <p>
+        <button :on-click=${() => { which = which === 1 ? 2 : 1; }}
+                :attr-disabled=${people.loading}>
+          ${people.loading ? 'Loading…' : 'Switch source'}
+        </button>
+        <span class="note">
+          A URL that changes refetches — in the browser, since that is where the
+          click happened. The heading says which file answered.
+        </span>
+      </p>
 
-    <p>
-      <button :on-click=${() => people.reload()} :attr-disabled=${people.loading}>
-        ${people.loading ? 'Reloading…' : 'Reload'}
-      </button>
-      <span class="note">
-        The page never needed this. It is here because a served datasource
-        should still be refreshable on demand — nothing refetches on arrival.
-      </span>
-    </p>
+      <p>
+        <button :on-click=${() => people.reload()} :attr-disabled=${people.loading}>
+          ${people.loading ? 'Reloading…' : 'Reload'}
+        </button>
+        <span class="note">
+          The page never needed this. It is here because a served datasource
+          should still be refreshable on demand — nothing refetches on arrival.
+        </span>
+      </p>
 
-    <h2>Fetched in the browser instead</h2>
-    <p class="note">
-      <code>:client</code> leaves the render alone and fetches on arrival, so
-      nothing appears in the served HTML. That is what to use for anything the
-      page should not publish — a served result is written into the source in
-      plain text.
-    </p>
+      <h2>Fetched in the browser instead</h2>
+      <p class="note">
+        <code>:client</code> leaves the render alone and fetches on arrival, so
+        nothing appears in the served HTML. That is what to use for anything the
+        page should not publish — a served result is written into the source in
+        plain text.
+      </p>
 
-    <std-data :aka="late" ::client ::url="/demos/std/index-data2.json" />
-    <p>${late.loading ? 'Loading…' : (late.error ?? late.data?.title ?? '—')}</p>
+      <std-data :aka="late" ::client ::url="/demos/std/index-data2.json" />
+      <p>${late.loading ? 'Loading…' : (late.error ?? late.data?.title ?? '—')}</p>
+    </main>
   </body>
 </html>
