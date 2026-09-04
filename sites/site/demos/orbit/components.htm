@@ -110,9 +110,36 @@
       background-color: var(--bs-nav-pills-link-active-bg);
     }
 
-    /* the accent, applied where Bootstrap's own variants don't reach */
+    /*
+      The accent, applied where Bootstrap's own variants don't reach -- and
+      clamped in lightness, because a swatch chosen to look good on a chart
+      is not automatically readable as a word.
+
+      Three of the five fail as text on one navbar or the other: #6f42c1 is
+      2.37:1 on the dark one, #20c997 2.13:1 and #fd7e14 2.57:1 on the light.
+      Clamping is what keeps this a floor rather than a repaint -- `min`/`max`
+      move a colour only in the direction it is short, so #20c997 and #fd7e14
+      are untouched in dark and #6f42c1 is untouched in light. Every swatch
+      clears 3:1 in both modes, the worst of them at 4.86.
+
+      `oklch(from ...)` reads the colour the page is already using and changes
+      one channel of it, keeping chroma and hue: the brand stays the swatch
+      that was picked rather than becoming a colour chosen here. Lightness is
+      perceptual in OKLCH, which is why one number works across five hues.
+
+      The plain declaration below it is the fallback, and it is what every
+      browser did before: an engine without relative colour syntax drops the
+      line it cannot parse and keeps this one. The stroke on a chart reads
+      `--dash-accent` directly and is deliberately not clamped -- it is a
+      graphic, not a word, and it is drawn on a card rather than the navbar.
+    */
     .dash-accent {
       color: var(--dash-accent);
+      color: oklch(from var(--dash-accent) min(l, 0.52) c h);
+    }
+
+    [data-bs-theme="dark"] .dash-accent {
+      color: oklch(from var(--dash-accent) max(l, 0.72) c h);
     }
 
     .dash-stat .card-body {
