@@ -758,7 +758,18 @@
             ::height=${170}
             ::smooth
             class+="border rounded p-3">
-            <h6 id="dash-run-rollback">Roll back</h6>
+            <!---
+              `h3` wearing `.h6`, rather than the `h6` these were. The last
+              heading above them on the page is the accordion's, which
+              Bootstrap fixes at `h2` -- so an `h6` here skipped three levels
+              and said the runbook sits four deep under an incident. A panel
+              heading is a `<span>` in `dash-panel`, so there is nothing
+              between the two to hang the missing levels on.
+
+              The class is Bootstrap's, and gives an element the size and
+              weight of the tag it names: these read exactly as they did.
+            -->
+            <h3 class="h6" id="dash-run-rollback">Roll back</h3>
             <p class="small text-body-secondary">
               Find the last deployment with a <code>shipped</code> status for
               the service, then redeploy its commit. The table above is
@@ -766,14 +777,14 @@
               green row down.
             </p>
 
-            <h6 id="dash-run-drain">Drain a region</h6>
+            <h3 class="h6" id="dash-run-drain">Drain a region</h3>
             <p class="small text-body-secondary">
               Move the region's share to its neighbours before taking any
               node out. The stacked bar under "Traffic by region" is the
               share being moved.
             </p>
 
-            <h6 id="dash-run-page">Page the owner</h6>
+            <h3 class="h6" id="dash-run-page">Page the owner</h3>
             <p class="small text-body-secondary mb-0">
               Every service has an owning team in the services table. Page
               the team, not the person: the rota is what answers.
