@@ -292,6 +292,32 @@
     }
 
     /*
+      Bootstrap's link blue is `$primary` itself, #0d6efd, and in light mode
+      it does not reach AA as body-sized text: 4.42:1 on white and 4.27:1 on
+      the `bg-body-tertiary` the alternating sections are painted with, both
+      short of 4.5. It is the ordinary link colour, so it is every `<a>` the
+      prose contains and every `.btn-link` beside a call to action.
+
+      #0a58ca is not a new colour: it is Bootstrap's own `$link-hover-color`,
+      primary shaded 20%, and it measures 6.09:1 on tertiary. Hover then
+      moves down to #084298 — shaded 40%, and `$blue-800` in the same
+      palette — so the two still read as different states.
+
+      Dark mode is already fine and is left alone: there Bootstrap lightens
+      the token to #6ea8fe, which measures 5.51:1 on the same surface.
+      `html:not([data-bs-theme="dark"])` rather than `[data-bs-theme="light"]`
+      for the reason the card chrome above uses it — the pre-paint script has
+      not stamped the attribute yet on the first frame, and a page that never
+      runs it is a light page with no attribute at all.
+    */
+    html:not([data-bs-theme="dark"]) {
+      --bs-link-color: #0a58ca;
+      --bs-link-color-rgb: 10, 88, 202;
+      --bs-link-hover-color: #084298;
+      --bs-link-hover-color-rgb: 8, 66, 152;
+    }
+
+    /*
       Headings sit a step above body text in dark mode. Large glyphs at the
       same ink read dimmer than paragraph text does — more of each stroke is
       interior, so less of it is the edge the eye uses to judge weight.
@@ -1551,11 +1577,16 @@
               does not have to grow them.
             </p>
 
-            <bs-link ::href="/demos/router/"
-                     ::variant="primary"
-                     ::size="lg">See the router running</bs-link>
-            <bs-link ::href="/demos/std/index.html"
-                     ::variant="link">…and the datasource</bs-link>
+            <div class="d-flex flex-wrap gap-2">
+              <bs-link ::href="/demos/router/"
+                       ::button
+                       ::variant="primary"
+                       ::size="lg">See the router running</bs-link>
+
+              <bs-link ::href="/demos/std/index.html"
+                       ::button
+                       ::variant="link">…and the datasource</bs-link>
+            </div>
           </div>
 
           <div class="col-lg-7">
