@@ -134,98 +134,100 @@
       </label>
     </header>
 
-    <!---
-      The billing switch, and the shape to reach for first on a Tailwind
-      page: a ternary of LITERAL class strings, interpolated into an
-      ordinary `class` attribute.
-
-      Tailwind builds its stylesheet by reading these files for candidate
-      strings, and it is looking at raw text rather than parsing HTML -- so
-      a utility written in quotes inside `${...}` is found exactly as one
-      written in the attribute is. Measured on this page: every class below
-      was generated with nothing added to app.css.
-
-      What it will NOT find is a name assembled from pieces. `bg-brand-${n}`
-      compiles fine, runs fine, and has no CSS behind it -- which is
-      Tailwind's own rule about dynamic class names rather than anything
-      this compiler does, and it applies here unchanged.
-    -->
-    <div class="mt-12 inline-flex rounded-full bg-white p-1 ring-1 ring-slate-200">
-      <button type="button"
-              :on-click=${() => yearly = false}
-              class="rounded-full px-5 py-2 text-sm font-medium transition
-                     ${!yearly ? 'bg-brand-600 text-white' : 'text-slate-600'}">
-        Monthly
-      </button>
-      <button type="button"
-              :on-click=${() => yearly = true}
-              class="rounded-full px-5 py-2 text-sm font-medium transition
-                     ${yearly ? 'bg-brand-600 text-white' : 'text-slate-600'}">
-        Yearly
-        <span class="ml-1 text-xs opacity-80">&minus;20%</span>
-      </button>
-    </div>
-
-    <div class="mt-8 grid gap-6 md:grid-cols-3">
-
+    <main>
       <!---
-        One card, three on the page. The selected one is raised rather than
-        written twice.
+        The billing switch, and the shape to reach for first on a Tailwind
+        page: a ternary of LITERAL class strings, interpolated into an
+        ordinary `class` attribute.
 
-        These are `:class-` toggles, and they are here to show the one
-        markout shape Tailwind cannot see: the utility is spelled in the
-        attribute NAME, so what a scanner reads is `class-ring-2`, which is
-        not a utility. Nothing is generated, the page compiles clean, the
-        class goes on, and the card looks identical. The first build of this
-        demo lost all five.
+        Tailwind builds its stylesheet by reading these files for candidate
+        strings, and it is looking at raw text rather than parsing HTML -- so
+        a utility written in quotes inside `${...}` is found exactly as one
+        written in the attribute is. Measured on this page: every class below
+        was generated with nothing added to app.css.
 
-        Two ways out, and app.css takes the second so that this comment has
-        something to point at:
-
-          - write them the way the billing switch above does, which needs
-            nothing;
-          - or name them in `@source inline(...)`, which is what a page that
-            wants the toggle has to do.
+        What it will NOT find is a name assembled from pieces. `bg-brand-${n}`
+        compiles fine, runs fine, and has no CSS behind it -- which is
+        Tailwind's own rule about dynamic class names rather than anything
+        this compiler does, and it applies here unchanged.
       -->
-      <article :for-each=${plans}
-               :for-key=${data.id}
-               class="flex flex-col rounded-2xl bg-white p-6 transition"
-               :class-ring-2=${picked === data.id}
-               :class-ring-brand-500=${picked === data.id}
-               :class-shadow-lg=${picked === data.id}
-               :class-ring-1=${picked !== data.id}
-               :class-ring-slate-200=${picked !== data.id}>
-
-        <div class="flex items-baseline justify-between">
-          <h2 class="text-lg font-semibold">${data.name}</h2>
-          <span class="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700
-                       ${data.id === 'team' ? '' : 'invisible'}">Most picked</span>
-        </div>
-
-        <p class="mt-2 text-sm text-slate-600">${data.blurb}</p>
-
-        <p class="mt-6 flex items-baseline gap-1">
-          <span class="text-4xl font-bold tracking-tight tabular-nums">
-            $${yearly ? Math.round(data.price * 12 * 0.8) : data.price}
-          </span>
-          <span class="text-sm text-slate-500">${yearly ? '/year' : '/month'}</span>
-        </p>
-
-        <ul class="mt-6 space-y-2 text-sm text-slate-600">
-          <li :for-each=${data.features} class="flex gap-2">
-            <span aria-hidden="true" class="text-brand-600">&check;</span>
-            ${data}
-          </li>
-        </ul>
-
+      <div class="mt-12 inline-flex rounded-full bg-white p-1 ring-1 ring-slate-200">
         <button type="button"
-                :on-click=${() => picked = data.id}
-                class="mt-8 w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition
-                       ${picked === data.id ? 'bg-brand-50 text-brand-700' : 'bg-brand-600 text-white'}">
-          ${picked === data.id ? 'Current choice' : 'Choose ' + data.name}
+                :on-click=${() => yearly = false}
+                class="rounded-full px-5 py-2 text-sm font-medium transition
+                       ${!yearly ? 'bg-brand-600 text-white' : 'text-slate-600'}">
+          Monthly
         </button>
-      </article>
-    </div>
+        <button type="button"
+                :on-click=${() => yearly = true}
+                class="rounded-full px-5 py-2 text-sm font-medium transition
+                       ${yearly ? 'bg-brand-600 text-white' : 'text-slate-600'}">
+          Yearly
+          <span class="ml-1 text-xs opacity-80">&minus;20%</span>
+        </button>
+      </div>
+
+      <div class="mt-8 grid gap-6 md:grid-cols-3">
+
+        <!---
+          One card, three on the page. The selected one is raised rather than
+          written twice.
+
+          These are `:class-` toggles, and they are here to show the one
+          markout shape Tailwind cannot see: the utility is spelled in the
+          attribute NAME, so what a scanner reads is `class-ring-2`, which is
+          not a utility. Nothing is generated, the page compiles clean, the
+          class goes on, and the card looks identical. The first build of this
+          demo lost all five.
+
+          Two ways out, and app.css takes the second so that this comment has
+          something to point at:
+
+            - write them the way the billing switch above does, which needs
+              nothing;
+            - or name them in `@source inline(...)`, which is what a page that
+              wants the toggle has to do.
+        -->
+        <article :for-each=${plans}
+                 :for-key=${data.id}
+                 class="flex flex-col rounded-2xl bg-white p-6 transition"
+                 :class-ring-2=${picked === data.id}
+                 :class-ring-brand-500=${picked === data.id}
+                 :class-shadow-lg=${picked === data.id}
+                 :class-ring-1=${picked !== data.id}
+                 :class-ring-slate-200=${picked !== data.id}>
+
+          <div class="flex items-baseline justify-between">
+            <h2 class="text-lg font-semibold">${data.name}</h2>
+            <span class="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700
+                         ${data.id === 'team' ? '' : 'invisible'}">Most picked</span>
+          </div>
+
+          <p class="mt-2 text-sm text-slate-600">${data.blurb}</p>
+
+          <p class="mt-6 flex items-baseline gap-1">
+            <span class="text-4xl font-bold tracking-tight tabular-nums">
+              $${yearly ? Math.round(data.price * 12 * 0.8) : data.price}
+            </span>
+            <span class="text-sm text-slate-500">${yearly ? '/year' : '/month'}</span>
+          </p>
+
+          <ul class="mt-6 space-y-2 text-sm text-slate-600">
+            <li :for-each=${data.features} class="flex gap-2">
+              <span aria-hidden="true" class="text-brand-600">&check;</span>
+              ${data}
+            </li>
+          </ul>
+
+          <button type="button"
+                  :on-click=${() => picked = data.id}
+                  class="mt-8 w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition
+                         ${picked === data.id ? 'bg-brand-50 text-brand-700' : 'bg-brand-600 text-white'}">
+            ${picked === data.id ? 'Current choice' : 'Choose ' + data.name}
+          </button>
+        </article>
+      </div>
+    </main>
 
     <footer class="mt-16 border-t border-slate-200 pt-8 text-sm text-slate-500">
       <p>
