@@ -298,6 +298,32 @@ describe('CLI build', () => {
     }
   });
 
+  it('--dev stays running and rebuilds (debounced) on a docroot change', async () => {
+    const { docroot, outdir, cleanup } = await dirs();
+    try {
+      await writeFile(path.join(docroot, 'index.html'), '<html><body>v1</body></html>');
+
+      child = spawn(process.execPath, [tsx, entry, 'build', docroot, outdir, '--dev'], {
+        cwd: root,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      await waitForOutput(child, 'watching');
+      await expect(readFile(path.join(outdir, 'index.html'), 'utf8')).resolves.toContain('v1');
+
+      const rebuilt = waitForOutput(child, 'rebuilding');
+      await writeFile(path.join(docroot, 'index.html'), '<html><body>v2</body></html>');
+      await rebuilt;
+
+      // the debounced rebuild runs asynchronously after the log line above,
+      // so give it a moment to finish writing before reading the output
+      await expect
+        .poll(() => readFile(path.join(outdir, 'index.html'), 'utf8'), { timeout: 5000 })
+        .toContain('v2');
+    } finally {
+      await cleanup();
+    }
+  });
+
   it('prerender writes a rendered page and the runtime it points at', async () => {
     const { docroot, outdir, cleanup } = await dirs();
     try {

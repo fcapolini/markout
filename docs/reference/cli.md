@@ -348,6 +348,22 @@ A compile error prints as `file:line:column: message` and **exits non-zero**, so
 CI can gate on it. The pages that did compile are still written; only the ones
 that failed are missing.
 
+`-d`/`--dev` keeps the process running instead of exiting after the first
+compile, and rebuilds (debounced) whenever a file under the docroot changes —
+the same "stay and watch" idea as the served mode's `--dev`, aimed at an
+output directory instead of a live page:
+
+```sh
+markout build ./site ./dist --dev
+```
+
+It is the blunt invalidation the server's own watcher uses: any change
+anywhere under the docroot triggers a full rebuild rather than one scoped to
+the file that moved. Pair it with a CSS tool's own `--watch`, or with
+whatever is serving `./dist` for a preview, since neither `build` nor
+`prerender` reloads a browser on your behalf — that is what the served
+mode's `--dev` does, and a build has no open page to tell.
+
 ### What `prerender` adds, and what it asks for
 
 Nothing in this subsection applies to `build`, which never evaluates an

@@ -10,8 +10,17 @@ import {
   formatRuntimeError,
   type BuildResult,
 } from '@markout-lang/core';
+import { watchTree } from '@markout-lang/express';
 import { addKits, restoreKits, type InstallReport } from './kits';
 import { DEFAULT_DOCROOT, DEFAULT_OUTDIR } from './defaults';
+
+/**
+ * One save can touch several files (and fire several fs events for a single
+ * one -- see watchTree), and each would otherwise be its own rebuild. Same
+ * reasoning as the server's live-reload coalescing, just a little longer:
+ * what is being coalesced here is a full build rather than a cache clear.
+ */
+const DEV_COALESCE_MS = 150;
 
 function hasDefaultDocroot(): boolean {
   try {
@@ -172,7 +181,15 @@ async function main() {
         '--no-generator',
         'omit the <meta name="generator"> naming Markout and its version'
       )
-      .action(async (pathname: string | undefined, outdir: string | undefined, options: { page: string[]; origin?: string; classManifest?: boolean; classesOnly?: boolean; pruneKits?: boolean; generator?: boolean }) => {
+      // Named like the server's own `-d, --dev`, and reaching for the same
+      // habit: `-p` is already taken here (it restricts the pages compiled),
+      // so this is the letter someone iterating on a build already knows.
+      .option(
+        '-d, --dev',
+        'stay running and rebuild (debounced) whenever a file under the ' +
+          'docroot changes, instead of compiling once and exiting'
+      )
+      .action(async (pathname: string | undefined, outdir: string | undefined, options: { page: string[]; origin?: string; classManifest?: boolean; classesOnly?: boolean; pruneKits?: boolean; generator?: boolean; dev?: boolean }) => {
         const docroot = path.resolve(process.cwd(), pathname ?? DEFAULT_DOCROOT);
         // beside the docroot rather than inside it: these commands refuse an
         // output directory under the docroot, because the next run would
@@ -197,30 +214,81 @@ async function main() {
             return;
           }
         }
+        const runOnce = async () => {
+          try {
+            report(
+              await build({
+                docroot,
+                outdir: target,
+                // only when we chose it: see BuildProps.gitignore
+                gitignore: !outdir,
+                pages: options.page,
+                origin,
+                prerender: mode.prerender,
+                classManifest: options.classManifest,
+                classesOnly: options.classesOnly,
+                pruneKits: options.pruneKits,
+                generator: options.generator,
+              }),
+              options.page.length > 0,
+              !!options.classesOnly
+            );
+          } catch (err) {
+            // a refusal about the arguments themselves (nested directories, no
+            // runtime bundle): nothing was written, and the message says why
+            console.error(err instanceof Error ? err.message : `${err}`);
+            process.exitCode = 1;
+          }
+        };
+
+        await runOnce();
+        if (!options.dev) {
+          return;
+        }
+
+        // Dev mode: the same blunt invalidation as the server's page cache
+        // (see @markout-lang/express's watchTree) -- any change anywhere
+        // under the docroot triggers a full rebuild, debounced. `running` /
+        // `rerun` below fold a change that lands mid-build into one more
+        // pass afterwards, rather than starting a second `build()` writing
+        // into the same outdir at the same time.
+        let pending: NodeJS.Timeout | undefined;
+        let running = false;
+        let rerun = false;
+        const rebuild = () => {
+          pending && clearTimeout(pending);
+          pending = setTimeout(async () => {
+            pending = undefined;
+            if (running) {
+              rerun = true;
+              return;
+            }
+            running = true;
+            do {
+              rerun = false;
+              console.log(`\nmarkout: ${docroot} changed, rebuilding...`);
+              await runOnce();
+            } while (rerun);
+            running = false;
+          }, DEV_COALESCE_MS);
+        };
+
         try {
-          report(
-            await build({
-              docroot,
-              outdir: target,
-              // only when we chose it: see BuildProps.gitignore
-              gitignore: !outdir,
-              pages: options.page,
-              origin,
-              prerender: mode.prerender,
-              classManifest: options.classManifest,
-              classesOnly: options.classesOnly,
-              pruneKits: options.pruneKits,
-              generator: options.generator,
-            }),
-            options.page.length > 0,
-            !!options.classesOnly
+          const watcher = watchTree(docroot, rebuild);
+          console.log(
+            `markout: watching ${docroot}${
+              watcher.count > 1 ? ` (${watcher.count} directories, symlinks followed)` : ''
+            } for changes...`
           );
         } catch (err) {
-          // a refusal about the arguments themselves (nested directories, no
-          // runtime bundle): nothing was written, and the message says why
-          console.error(err instanceof Error ? err.message : `${err}`);
+          console.error(`markout: no file watcher (${err}) -- stopping`);
           process.exitCode = 1;
+          return;
         }
+        // watchTree's fs.watch handles are deliberately unref'd (a server has
+        // a listening socket to keep it open already; a build has none), so
+        // something here has to hold the process open instead.
+        setInterval(() => {}, 1 << 30);
       });
   }
 
