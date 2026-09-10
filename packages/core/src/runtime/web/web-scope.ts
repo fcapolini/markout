@@ -693,24 +693,26 @@ export class WebScope extends CoreScope {
       // `class` and `style` are the composed ones: what they resolve to is
       // the BASE the contributions sit on, not the attribute's final text.
       //
-      // Claimed before any callback runs, and nothing is applied until it has
-      // arrived. Both matter: the first keeps the base from being mistaken
-      // for whatever the markup happened to carry (see applyClasses), and the
-      // second keeps a contribution from landing in front of it
+      // Claimed before any callback runs, which is what keeps the base from
+      // being mistaken for whatever the markup happened to carry (see
+      // applyClasses). The value is held rather than a flag, because a
+      // contribution arriving before the callback has to be able to ask it
+      // what the base is -- a callback that never runs is the ordinary case,
+      // not the odd one, and waiting on it blocked the element for good
       if (name === 'class') {
-        this.classPending = true;
+        this.classPending = ret;
         ret.setCB((_, val) => {
-          this.classBase = val == null ? [] : tokens(`${val}`);
-          this.classPending = false;
+          this.classBase = classNames(val);
+          this.classPending = undefined;
           this.applyClasses(ret);
         });
         return ret;
       }
       if (name === 'style') {
-        this.stylePending = true;
+        this.stylePending = ret;
         ret.setCB((_, val) => {
-          this.styleBase = new Map(val == null ? [] : parseDeclarations(`${val}`));
-          this.stylePending = false;
+          this.styleBase = styleMap(val);
+          this.stylePending = undefined;
           this.applyStyles(ret);
         });
         return ret;
@@ -844,14 +846,14 @@ export class WebScope extends CoreScope {
   declare private classDel?: string[];
   declare private classOn?: Map<string, boolean>;
   declare private classApplied?: Set<string>;
-  /** a `class=${...}` is on its way: hold off until it lands */
-  declare private classPending?: boolean;
+  /** a `class=${...}` is on its way: the value itself, until it lands */
+  declare private classPending?: CoreValue<any>;
   declare private styleBase?: Map<string, string>;
   declare private styleAdd?: Map<string, string>;
   declare private styleDel?: string[];
   declare private styleOn?: Map<string, string | null>;
   declare private styleApplied?: Map<string, string>;
-  declare private stylePending?: boolean;
+  declare private stylePending?: CoreValue<any>;
 
   /**
    * Base, then every addition, then every removal -- in that order whatever
@@ -869,7 +871,16 @@ export class WebScope extends CoreScope {
 
   private applyClasses(value: CoreValue<any>): void {
     if (!this.dom) return this.unbound(value, 'no element to set classes on');
-    if (this.classPending) return;
+    // Asked, rather than waited for. A callback runs on a CHANGE, and
+    // `class=${extra}` whose expression answers null answers the same null
+    // it started at -- so its callback never runs, and a base claimed until
+    // it does was claimed for the life of the page: every other contribution
+    // (`class+=`, `:class-x`, a mode's paint) was dropped on the floor,
+    // server and browser alike. Whatever the value holds now IS the base
+    if (this.classPending) {
+      this.classBase = classNames(this.classPending.get());
+      this.classPending = undefined;
+    }
     // what stands on the element the first time round is the markup's own
     // class -- the stencil's, plus whatever a usage site wrote over it. It is
     // the base when no `class=${...}` claims that job, and either way it is
@@ -879,7 +890,14 @@ export class WebScope extends CoreScope {
     // Afterwards the difference is from what we last applied, which is the
     // whole point: a class this scope never put on -- Bootstrap's `show` on a
     // modal it was handed -- is in neither set and so is never touched.
-    const on = tokens(this.dom.className);
+    // Through `getAttribute`, not `className`. `className` is HTML's alone:
+    // on an SVG element it is an `SVGAnimatedString`, so `tokens()` was
+    // handed an object and threw `.split is not a function` -- reported as a
+    // [callback] failure, in the browser only, and only once something
+    // actually moved a class. An icon component whose root is `<svg>` is the
+    // everyday shape of it, and the server never saw it because a
+    // ServerElement's `className` really is a string
+    const on = tokens(this.dom.getAttribute('class') ?? '');
     const had = this.classApplied ?? new Set(this.props.mode ? [] : on);
     // A mode's base is EMPTY, where an element's own scope starts from what
     // the markup wrote. The element is borrowed: everything already on it
@@ -900,7 +918,11 @@ export class WebScope extends CoreScope {
 
   private applyStyles(value: CoreValue<any>): void {
     if (!this.dom) return this.unbound(value, 'no element to set styles on');
-    if (this.stylePending) return;
+    // the same, for the same reason `applyClasses` gives
+    if (this.stylePending) {
+      this.styleBase = styleMap(this.stylePending.get());
+      this.stylePending = undefined;
+    }
     const on = new Map(parseDeclarations(this.dom.style.cssText));
     // empty for a mode, for the reason `applyClasses` gives: the element is
     // borrowed, so everything already declared on it belongs to whoever owns
@@ -1332,4 +1354,14 @@ function describe(val: unknown): string {
 /** a space-separated attribute value, as the names it holds */
 function tokens(s: string): string[] {
   return s.split(/\s+/).filter(t => t.length > 0);
+}
+
+/** what a `class=${...}` contributes: nothing at all when it has no value */
+function classNames(val: unknown): string[] {
+  return val == null ? [] : tokens(`${val}`);
+}
+
+/** the same for a `style=${...}` */
+function styleMap(val: unknown): Map<string, string> {
+  return new Map(val == null ? [] : parseDeclarations(`${val}`));
 }

@@ -11,6 +11,7 @@
 import * as dom from '../../src/html/dom';
 
 declare const browserElement: HTMLElement;
+declare const browserSvgElement: SVGElement;
 declare const browserText: Text;
 declare const browserComment: Comment;
 declare const browserDocument: Document;
@@ -18,6 +19,21 @@ declare const browserFragment: DocumentFragment;
 declare const browserTemplate: HTMLTemplateElement;
 
 export const asElement: dom.Element = browserElement;
+/**
+ * An SVG element is an Element too, and the runtime treats it as one: an
+ * icon component is a `<:define>` whose root element is an `<svg>`.
+ *
+ * Asserted separately because it is not an `HTMLElement`. It does not catch
+ * the divergence that this suite exists to think about, and cannot: at
+ * RUNTIME an SVG element's `className` is an `SVGAnimatedString` rather than
+ * a string -- which is how the class machinery came to call `.split` on an
+ * object -- while `lib.dom` types it as the string it inherits from
+ * `Element`. What keeps the two sides substitutable is that `dom.Element` no
+ * longer names `className` at all, so nothing isomorphic can reach for it;
+ * `getAttribute('class')` is the spelling that means the same thing on both
+ * kinds of element, and on a `ServerElement`.
+ */
+export const asSvgElement: dom.Element = browserSvgElement;
 export const asText: dom.Text = browserText;
 export const asComment: dom.Comment = browserComment;
 export const asDocument: dom.Document = browserDocument;

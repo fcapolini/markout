@@ -208,6 +208,33 @@ describe('composing, rather than assigning', () => {
     expect(classes(page)).toStrictEqual(['box', 'box-green', 'mine', 'on']);
   });
 
+  it('reads a base that answers null as no base at all', async () => {
+    // `class=${extra}` with nothing to put there answers the same null it
+    // started at, and a callback runs on a CHANGE -- so this one never ran.
+    // The base it had claimed stayed claimed for the life of the page, and
+    // every other contribution was dropped on the floor: `class+=` and
+    // `:class-` alike, served page included
+    const { errors, ctx, page } = await run(
+      '<html :on=${true}><head><:define tag="my-box:div" ::extra=${null} class=${extra}>' +
+        '<:slot /></:define></head>' +
+        '<body><my-box class+="mine" :class-lit=${on}>hi</my-box></body></html>'
+    );
+    expect(errors).toStrictEqual([]);
+    expect(classes(page)).toStrictEqual(['lit', 'mine']);
+    ctx!.root.proxy.on = false;
+    expect(classes(page)).toStrictEqual(['mine']);
+  });
+
+  it('does the same for a style that answers null', async () => {
+    const { errors, page } = await run(
+      '<html><head><:define tag="my-box:div" ::s=${null} style=${s}>' +
+        '<:slot /></:define></head>' +
+        '<body><my-box style+="margin: 0">hi</my-box></body></html>'
+    );
+    expect(errors).toStrictEqual([]);
+    expect(styles(page)).toBe('margin: 0;');
+  });
+
   it('leaves a class it never put on where it was', async () => {
     const { errors, ctx, page } = await run(
       `<html :v=\${"red"}><head>${BOX}</head><body><my-box ::variant=\${v}>hi</my-box></body></html>`

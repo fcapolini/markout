@@ -96,7 +96,6 @@ export interface Element extends Node {
   tagName: string;
   childNodes: NodeList;
   classList: ClassProp;
-  className: string;
 
   get style(): StyleProp;
   set style(s: any);
