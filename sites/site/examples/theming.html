@@ -1,9 +1,9 @@
 <html lang="en" :i=${0}>
-<head :colors=${['#0d6efd', '#198754', '#6f42c1']}>
+<head :colors=${['#0d6efd', '#6f42c1', '#198754']}>
   <:import src="/npm/@markout-lang/bootstrap-kit/all.htm" />
   <bs-theme-auto />
   <style>
-    .btn-primary { --bs-btn-bg: ${colors[i]}; --bs-btn-border-color: ${colors[i]}; }
+    .btn-primary { --bs-btn-bg: ${colors[i]}; }
   </style>
 </head>
 <body class="p-3 text-center">
@@ -12,7 +12,7 @@
     Clicked ${count} time${count !== 1 ? 's' : ''}
   </button>
   <button class="btn btn-sm btn-outline-secondary ms-2"
-          :on-click=${() => i = (i + 1) % head.colors.length}>
+          :on-click=${() => i = (i + 1) % 3}>
     Change theme
   </button>
 </body>
