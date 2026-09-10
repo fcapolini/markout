@@ -437,18 +437,18 @@
           </div>
 
           <div class="col-lg-5">
-            <code-card ::title="examples/counter.html"
+            <code-card ::title="examples/theming.html"
                        ::label="HTML"
                        ::note>
 <pre class="mb-0"
-     data-lang="html"><:include src="/examples/counter.html" as="code" escaping /></pre>
+     data-lang="html"><:include src="/examples/theming.html" as="code" escaping /></pre>
               <code-preview :slot="preview"
-                            ::src="/examples/counter.html"
-                            ::height="5.5rem" />
+                            ::src="/examples/theming.html"
+                            ::height="6rem" />
               <p :slot="note"
                  class="mb-0">
-                A Bootstrap button that declares its own value and updates it.
-                Nothing else on the page has to change.
+                The stylesheet reads a value too — so the theme click rewrites
+                the CSS, and the count the button was holding survives it.
               </p>
             </code-card>
           </div>
