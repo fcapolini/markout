@@ -1,18 +1,18 @@
-<html lang="en" :accent=${'#6f42c1'}>
-<head>
+<html lang="en" :i=${0}>
+<head :colors=${['#0d6efd', '#198754', '#6f42c1']}>
   <:import src="/npm/@markout-lang/bootstrap-kit/all.htm" />
   <bs-theme-auto />
   <style>
-    .btn-primary { --bs-btn-bg: ${accent}; --bs-btn-border-color: ${accent}; }
+    .btn-primary { --bs-btn-bg: ${colors[i]}; --bs-btn-border-color: ${colors[i]}; }
   </style>
 </head>
-<body class="p-4 text-center">
+<body class="p-3 text-center">
   <button class="btn btn-primary" :count=${0}
           :on-click=${() => count++}>
     Clicked ${count} time${count !== 1 ? 's' : ''}
   </button>
   <button class="btn btn-sm btn-outline-secondary ms-2"
-          :on-click=${() => accent = accent === '#6f42c1' ? '#198754' : '#6f42c1'}>
+          :on-click=${() => i = (i + 1) % head.colors.length}>
     Change theme
   </button>
 </body>
