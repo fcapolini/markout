@@ -352,7 +352,7 @@
              ::items=${[
                { name: 'Demos', link: '/demos/' },
                { name: 'Docs', link: 'https://github.com/fcapolini/markout/blob/main/docs/reference/syntax.md' },
-               { name: 'VS Code extension', link: 'https://marketplace.visualstudio.com/items?itemName=markout.markout-vscode' },
+               { name: 'VS Code extension', link: '#editor' },
                { name: 'Motivation', link: '/about.html' },
                { name: 'Get started', link: '#start' },
              ]}>
@@ -404,8 +404,8 @@
       <div class="container py-lg-5">
         <div class="row align-items-center gy-5 gx-0 gx-sm-5">
 
-          <div class="col-lg-7">
-            <page-eyebrow class+="mb-3">Reactive HTML</page-eyebrow>
+          <div class="col-lg-6">
+            <page-eyebrow class+="mb-4">Reactive HTML</page-eyebrow>
 
             <h1 class="display-4 fw-bold lh-1 mb-4">
               Add application logic directly to your HTML&nbsp;page.
@@ -434,9 +434,16 @@
                        ::outline
                        ::size="lg">Explore the Bootstrap Kit</bs-link>
             </div>
+
+            <p class="small text-body-secondary mt-4 mb-0">
+              No Node? The
+              <bs-link ::href="#editor">VS Code extension</bs-link>
+              needs none: open a folder containing a
+              <code class="rule-code">markout/</code> docroot and&nbsp;go.
+            </p>
           </div>
 
-          <div class="col-lg-5">
+          <div class="col-lg-6">
             <code-card ::title="examples/theming.html"
                        ::label="HTML"
                        ::note>
@@ -642,7 +649,7 @@
         <div class="row align-items-center gy-5 gx-0 gx-sm-5">
 
           <div class="col-lg-6">
-            <page-eyebrow class+="mb-3">Bootstrap Kit</page-eyebrow>
+            <page-eyebrow class+="mb-4">Bootstrap Kit</page-eyebrow>
 
             <h2 class="display-6 fw-bold mb-3">
               Components that are just HTML fragments
@@ -2112,7 +2119,7 @@
         <div class="row justify-content-center text-center mb-5">
           <div class="col-lg-8">
             <h2 class="display-6 fw-bold mb-3">
-              The row above, in your&nbsp;editor
+              The Markout experience, in your&nbsp;editor
             </h2>
 
             <p class="lead text-body-secondary">
@@ -2289,9 +2296,10 @@
                      class="mb-0">
                     No Node? You don't need any. Install the
                     <bs-link ::href="https://marketplace.visualstudio.com/items?itemName=markout.markout-vscode">VS
-                    Code extension</bs-link> instead, open a folder of HTML,
-                    and tick the kit you want in the Markout view — it fetches
-                    and pins it, and Preview and Build are beside it.
+                    Code extension</bs-link> instead, open a
+                    <code class="rule-code">markout/</code> folder, and tick
+                    the kit you want in the Markout view — it fetches and pins
+                    it, and Preview and Build are beside it.
                   </p>
                 </code-card>
               </div>
