@@ -994,7 +994,16 @@ export class CoreScope {
         key.startsWith('$') ||
         key.startsWith('for$') ||
         key === RT_IF_VALUE ||
-        key === alias
+        key === alias ||
+        // An ARGUMENT, which the markup going away does not take with it: a
+        // `callSite` value resolves at the usage site (hostFor) and so can
+        // read nothing in here -- not the item a replica never got, not
+        // anything else this scope declares. What it can do is decide the
+        // arity: `<:define tag="bs-alert:div" ::msg=${null} :if=${msg}>`
+        // guards on its own parameter, and with the parameter dead while
+        // the region was away, nothing that moved it ever reached the
+        // condition. The region rendered correctly and then never came back
+        !!this.props.values?.[key]?.callSite
     );
   }
 

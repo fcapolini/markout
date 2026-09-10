@@ -674,6 +674,34 @@ where a compiled page keeps what makes it work — every stencil in the head,
 the props and the runtime in the body. Whatever you meant goes on an
 element inside.
 
+**On a `<:define>` they answer for every instance of the tag.** A definition
+renders nowhere itself, so the only thing an arity on one can say is how
+many times each *use* of it renders — which lets a component carry its own
+guard instead of asking every caller to remember one:
+
+```html
+<:define tag="my-alert:div" ::msg=${null} :if=${msg} class="alert">
+  ${msg}
+</:define>
+
+<my-alert ::msg=${error} />   <!-- nothing at all while `error` is null -->
+```
+
+The condition is the instance's, so it reads the instance's parameters, and
+each use of the tag decides for itself. `:for-as` and `:for-key` go beside
+the `:for-each` that declares the loop, wherever that is. `:else` and
+`:else-if` are the exception: they are resolved by position among siblings,
+and a definition has none where its instances stand, so both are refused
+there.
+
+The single-answer rule holds across the two sites. A tag whose definition
+declares an arity is already answered, so an `:if` at a usage site is a
+compile error naming both — keep the condition that belongs to every
+instance in the definition, and write one at a usage site only where the
+definition declares none. `:for-as` and `:for-key` at a usage site are
+refused for the same reason: the item they rename or key is the one the
+definition's body reads, and a caller has no name for it.
+
 A chain shows the first branch whose condition holds and no other:
 
 ```html
@@ -925,7 +953,11 @@ and nothing displays is state, not a mistake, and says nothing.
 
 Everything else on a usage site is unchanged, being neither: `:if`,
 `:for-each`, `:aka` and `:slot` name no value, and `:class-`, `:style-`,
-`:attr-`, `:prop-` and `:on-` apply to the instance's own element.
+`:attr-`, `:prop-` and `:on-` apply to the instance's own element. The one
+of those a definition can answer first is the arity — `:if`, `:for-each` or
+`:for-data` on the `<:define>` decides for every instance, and then a
+usage site writing one too is a compile error rather than a second answer.
+See [replication](#replication).
 
 ### `<:logic>` — a scope with no element
 

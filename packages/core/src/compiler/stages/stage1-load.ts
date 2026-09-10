@@ -1399,6 +1399,25 @@ function expandDefine(page: Page, defineEl: ServerElement): ServerElement | unde
     return undefined;
   }
 
+  // The other two branch spellings, which are not about a condition at all:
+  // what they are an alternative TO is read from where they SIT, and a
+  // definition sits nowhere near the instances it stamps out. `:if` here is
+  // per-instance and works (expandUsages makes each use a region); an
+  // "otherwise" cannot be, since each use is written after something
+  // different -- or after nothing.
+  for (const attr of [ELSE_ATTR, ELSE_IF_ATTR]) {
+    if (!hasAttr(defineEl, attr)) continue;
+    addError(
+      page,
+      `<${DEFINE_DIRECTIVE_TAG.toLowerCase()}> cannot carry ":${attr}": a branch ` +
+        `chain is resolved by position among siblings, and a definition has ` +
+        `none where its instances stand. ":${IF_ATTR}" here is per-instance and ` +
+        `does work; ":${attr}" belongs at a usage site`,
+      defineEl.loc
+    );
+    return undefined;
+  }
+
   // `tag="x:logic"`: the instances have no element, so there is nothing to
   // stamp them out of. The base element is still built -- it is what carries
   // the declarations into extractValues -- but it is never put anywhere, so
@@ -1416,6 +1435,25 @@ function expandDefine(page: Page, defineEl: ServerElement): ServerElement | unde
       defineEl,
       `<${DEFINE_DIRECTIVE_TAG.toLowerCase()} ${DEFINE_TAG_ATTR}="${customName}:${LOGIC_BASE_TAG}">`
     );
+  // and the arities `rejectElementish` cannot refuse for it, because
+  // `<:logic>` itself takes them: a definition's arity is carried by each
+  // INSTANCE (see expandUsages), and an instance of an elementless tag
+  // leaves no marker in the page -- there is nowhere to park it and nowhere
+  // to bring it back to. `:for-each` is refused above, on the arity
+  // objection every elementless scope has
+  if (elementless) {
+    for (const attr of [IF_ATTR, FOR_DATA_ATTR]) {
+      hasAttr(defineEl, attr) &&
+        addError(
+          page,
+          `<${DEFINE_DIRECTIVE_TAG.toLowerCase()} ${DEFINE_TAG_ATTR}="${customName}:` +
+            `${LOGIC_BASE_TAG}"> has no element, so ":${attr}" has nothing to take ` +
+            `away: an instance of it stands nowhere in the page. Put ":${attr}" on ` +
+            `a usage site, where there is a place for it to come back to`,
+          defineEl.loc
+        );
+    }
+  }
   const doc = defineEl.ownerDocument;
   const inner = new ServerElement(doc, baseTag, defineEl.loc);
   for (const attr of [...(defineEl.attributes as ServerAttribute[])]) {
@@ -1662,6 +1700,64 @@ function expandCustomTagUsages(page: Page): void {
     (page.tagUses.get(from) ?? page.tagUses.set(from, new Set()).get(from)!).add(tagName);
     const defScope = page.customTags.get(tagName)!;
     const loadedUsageScope = findScopeForElement(page.main, usageEl);
+    // An arity the DEFINITION declares. It reaches the instance like every
+    // other declaration -- `new Map(defScope.values)` below -- and what is
+    // left for the markup is done at the bottom of this loop
+    const definitionArity = declaredArity(defScope);
+    const usageArity = loadedUsageScope && declaredArity(loadedUsageScope);
+    // Two answers to one question. "How many times does this render" is
+    // single-valued (see the branch/replication table in syntax.md), and
+    // which of the two would win is a rule nobody could guess -- the same
+    // objection two modes declaring one attribute answer with, and answered
+    // the same way. Refused rather than composed: an AND of the two is
+    // plausible, but they resolve in different scopes -- the definition's
+    // against the instance, the usage's against the call site -- so it is a
+    // runtime feature rather than a rewrite, and a refusal can be relaxed
+    // into one later where the reverse could not
+    const conflicted = !!definitionArity && !!usageArity;
+    conflicted &&
+      addError(
+        page,
+        `<${tagName}> already decides how many times it renders -- its ` +
+          `definition carries ":${definitionArity}" -- so ":${usageArity}" here is a ` +
+          `second answer to the same question. Keep the one that belongs to ` +
+          `every instance of <${tagName}> in the definition, and this one only ` +
+          `where the definition declares none`,
+        usageEl.loc
+      );
+    // The modifiers, which say nothing about arity and everything about the
+    // loop they belong to. A definition that declares the loop compiled its
+    // body against the item name it chose, so a caller renaming it renames
+    // what that body reads -- and the body went on reading `data`, which
+    // resolved to something else entirely and rendered it. `:for-key` is
+    // the same argument from the other side: its expression is evaluated
+    // per item and reads the item, which is a name the CALL SITE does not
+    // have. Both belong beside the `:for-each` that declares the loop
+    if (definitionArity && !usageArity && loadedUsageScope) {
+      for (const [key, attr, why] of [
+        [FOR_AS_VALUE, FOR_AS_ATTR, `renames the item the definition's body reads`],
+        [FOR_KEY_VALUE, FOR_KEY_ATTR, `keys a replication the caller does not declare`],
+      ]) {
+        if (!loadedUsageScope.values.has(key)) continue;
+        addError(
+          page,
+          `<${tagName}> binds the item itself -- its definition carries ` +
+            `":${definitionArity}" -- so ":${attr}" here ${why}. Put ":${attr}" ` +
+            `beside the ":${definitionArity}" that declares it`,
+          usageEl.loc
+        );
+        // and taken off, so this says it once: left standing, `:for-key`'s
+        // own expression reads an item this site has no name for and is
+        // reported a second time as an unknown reference to `data`
+        loadedUsageScope.values.delete(key);
+      }
+    }
+    // Expanded anyway, and as though the definition declared nothing: the
+    // page is not going to be built, and a usage left standing here is a
+    // custom tag nothing expanded -- which reports its parameters as names
+    // no component takes, its slotted markup as stray, and buries the one
+    // message that is about what was actually written
+    const instanceArity = conflicted ? undefined : definitionArity;
     // reuses the definition's own values/children by reference, and sits
     // where the usage physically sits -- so a usage inside a :for-each is
     // replicated with it, and one inside a <:define> comes along with every
@@ -1787,7 +1883,51 @@ function expandCustomTagUsages(page: Page): void {
     );
     parent.insertBefore(marker, usageEl);
     parent.removeChild(usageEl);
+    // The definition said this tag is a region, so this use of it is one.
+    //
+    // Around the MARKER rather than the element, which is what a usage site
+    // writing the same attribute ends up with: the wrap happens while
+    // loading, before this loop replaces the element with its marker, so
+    // either way the stencil holds a marker and the instance is stamped out
+    // inside it (see WebScope.acquireRegionDom, and stencilScopeId, which
+    // reads a stencil's scope off exactly this). Nothing else is needed --
+    // the arity VALUE came along with the definition's others
+    if (instanceArity) {
+      const optional = instanceArity !== FOR_EACH_ATTR;
+      const template = new ServerTemplateElement(usageEl.ownerDocument, usageEl.loc);
+      template.setAttribute(REGION_STENCIL_MARKER, optional ? 'once' : 'many', usageEl.loc);
+      parent.insertBefore(template, marker);
+      parent.removeChild(marker);
+      template.appendChild(marker);
+      optional && page.optionalStencils.add(template);
+    }
   }
+}
+
+/**
+ * The arity a scope declares, as the attribute that says it -- or nothing.
+ *
+ * Written for the two places that ask it of a `<:define>` and of a usage of
+ * one, which is why it answers with the SPELLING rather than a boolean: on a
+ * definition it is what a message about a collision has to name, and the
+ * three are not interchangeable in what they leave behind (`:for-each`
+ * clones, the other two park a single element).
+ *
+ * `:else` and `:else-if` are `if$` too -- all three branch spellings are --
+ * so the name is read back off the attribute the value was made from rather
+ * than assumed, exactly as checkLogicPlacement reads it.
+ */
+function declaredArity(scope: Scope): string | undefined {
+  const branch = scope.values.get(IF_VALUE);
+  if (branch) {
+    const written = (branch.node as ServerAttribute).name;
+    return written.startsWith(SPECIAL_ATTR_PREFIX)
+      ? written.slice(SPECIAL_ATTR_PREFIX.length)
+      : IF_ATTR;
+  }
+  if (scope.values.has(FOR_EACH_VALUE)) return FOR_EACH_ATTR;
+  if (scope.values.has(FOR_DATA_VALUE)) return FOR_DATA_ATTR;
+  return undefined;
 }
 
 /**

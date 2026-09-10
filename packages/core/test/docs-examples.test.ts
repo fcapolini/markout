@@ -281,6 +281,30 @@ describe('docs/reference/syntax.md', () => {
     expect(result.body).toContain('<pre>2</pre>');
   });
 
+  it('lets a definition carry the guard, as the Replication section shows', async () => {
+    // the `my-alert` example: the component decides, and a caller with
+    // nothing to say gets nothing rendered
+    const result = await render(
+      '<html :error=${null}><head>' +
+        '<:define tag="my-alert:div" ::msg=${null} :if=${msg} class="alert">' +
+        '${msg}</:define></head>' +
+        '<body><my-alert ::msg=${error} /></body></html>'
+    );
+
+    expectClean(result);
+    expect(result.body).not.toContain('class="alert"');
+  });
+
+  it('refuses a second answer from the usage site, as it says', async () => {
+    const page = compile(
+      '<html><head><:define tag="my-alert:div" ::msg=${null} :if=${msg}>${msg}' +
+        '</:define></head><body><my-alert ::msg=${"hi"} :if=${true} /></body></html>'
+    );
+    expect(page.errors.map(e => e.msg).join(' ')).toContain(
+      'a second answer to the same question'
+    );
+  });
+
   it('ends <code> at the first close tag, so it cannot nest', () => {
     const source = parse(
       '<html><body><code>a <code>b</code> c</code></body></html>',
