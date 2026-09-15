@@ -465,7 +465,7 @@
     </header>
 
     <!---
-      The claim, before the page spends eleven sections proving it. Every
+      The claim, before the page spends fifteen sections proving it. Every
       one of them is an instance of this: the Bootstrap kit is what the
       argument looks like when it is carried out, and it reads as a feature
       list rather than as evidence unless the thing it is evidence FOR has
@@ -633,6 +633,302 @@
               boilerplate and leave your content alone — no rewriting the page
               into a template language.
             </p>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!--- The language -->
+
+    <section id="language"
+             class="py-5 bg-body-tertiary">
+      <div class="container py-lg-4">
+
+        <div class="row justify-content-center text-center mb-5">
+          <div class="col-lg-8">
+            <h2 class="display-6 fw-bold mb-3">
+              The whole language is a handful&nbsp;of&nbsp;rules
+            </h2>
+
+            <p class="lead text-body-secondary">
+              Markout doesn't replace HTML with a component framework. It shows
+              what HTML could look like if it were natively modular and reactive.
+            </p>
+          </div>
+        </div>
+
+        <div class="row g-4 justify-content-center">
+
+          <div class="col-md-6 col-lg-4">
+            <page-step ::n="01"
+                       ::heading="HTML is the syntax">
+              <p class="text-body-secondary mb-0">
+                Anything without a <code class="rule-code">${…}</code> or a
+                <code class="rule-code">:</code> is plain markup, and stays
+                plain markup.
+              </p>
+            </page-step>
+          </div>
+
+          <div class="col-md-6 col-lg-4">
+            <page-step ::n="02"
+                       ::heading="One expression syntax">
+              <p class="text-body-secondary mb-0">
+                <code class="rule-code">${…}</code> is plain JavaScript, in
+                text, attributes and CSS alike. Whatever holds one is reactive.
+              </p>
+            </page-step>
+          </div>
+
+          <div class="col-md-6 col-lg-4">
+            <page-step ::n="03"
+                       ::heading="One prefix for everything else">
+              <p class="text-body-secondary mb-0">
+                <code class="rule-code">:</code> names what HTML has no name
+                for, always as <code class="rule-code">:family-name</code> —
+                <code class="rule-code">:class-</code>,
+                <code class="rule-code">:attr-</code>,
+                <code class="rule-code">:on-</code>,
+                <code class="rule-code">:for-</code>.
+              </p>
+            </page-step>
+          </div>
+
+          <div class="col-md-6 col-lg-4">
+            <page-step ::n="04"
+                       ::heading="Scopes nest lexically">
+              <p class="text-body-secondary mb-0">
+                A value is visible to every descendant, with no separate
+                wiring. An expression resolves where it was written.
+              </p>
+            </page-step>
+          </div>
+
+          <div class="col-md-6 col-lg-4">
+            <page-step ::n="05"
+                       ::heading="A component says what it takes">
+              <p class="text-body-secondary mb-0">
+                <code class="rule-code">::</code> marks a component's interface
+                — declared on the <code class="rule-code">&lt;:define&gt;</code>,
+                passed at the usage. Everything else on that tag is a plain
+                <code class="rule-code">:</code> and stays yours.
+              </p>
+            </page-step>
+          </div>
+
+          <div class="col-md-6 col-lg-4">
+            <page-step ::n="06"
+                       ::heading="Adding is its own spelling">
+              <p class="text-body-secondary mb-0">
+                A plain <code class="rule-code">class=</code> replaces, the way
+                every attribute does. <code class="rule-code">class+=</code>
+                adds, <code class="rule-code">class-=</code> takes away, and
+                <code class="rule-code">style</code> has the same pair
+                — nothing merges behind your back.
+              </p>
+            </page-step>
+          </div>
+
+        </div>
+
+        <div class="row justify-content-center mt-5">
+          <div class="col-lg-9">
+            <bs-card class+="bg-body-secondary"
+                     ::align="center"
+                     ::bodyExtra="p-4">
+              <p class="mb-3">
+                No rule above has a convenient exception. A shortcut that saves
+                a few characters at the call site but makes every future reader
+                remember a special case isn't a simplification — it's deferred
+                complexity.
+              </p>
+              <bs-link ::href="https://github.com/fcapolini/markout/blob/main/docs/reference/syntax.md"
+                       ::button
+                       ::variant="primary"
+                       ::outline>The full syntax, on one page</bs-link>
+            </bs-card>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!--- Compared to what you'd otherwise reach for -->
+
+    <section id="compared"
+             class="py-5">
+      <div class="container py-lg-4">
+
+        <div class="row justify-content-center text-center mb-5">
+          <div class="col-lg-8">
+            <h2 class="display-6 fw-bold mb-3">
+              If you're already reaching for Alpine&nbsp;or&nbsp;htmx
+            </h2>
+
+            <p class="lead text-body-secondary">
+              These are the tools an HTML page usually picks up when it needs
+              behavior, so here is the honest comparison.
+            </p>
+          </div>
+        </div>
+
+        <div class="row justify-content-center">
+          <div class="col-lg-10">
+
+            <div class="table-responsive border rounded">
+              <table class="table table-borderless align-middle mb-0">
+                <thead>
+                  <tr class="border-bottom">
+                    <th scope="col"
+                        class="fw-normal text-body-secondary small"></th>
+                    <th scope="col">Alpine.js</th>
+                    <th scope="col">htmx</th>
+                    <th scope="col">Markout</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  <tr>
+                    <th scope="row"
+                        class="fw-normal text-body-secondary">
+                      Behavior written in HTML attributes
+                    </th>
+                    <td>Yes</td>
+                    <td>Yes</td>
+                    <td>Yes</td>
+                  </tr>
+
+                  <tr>
+                    <th scope="row"
+                        class="fw-normal text-body-secondary">
+                      What it needs to run
+                    </th>
+                    <td class="text-body-secondary">
+                      A <code class="rule-code">&lt;script&gt;</code> tag
+                    </td>
+                    <td class="text-body-secondary">
+                      A <code class="rule-code">&lt;script&gt;</code> tag
+                    </td>
+                    <td class="text-body-secondary">
+                      Node to serve, or
+                      <code class="rule-code">markout build</code> to static
+                      files
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <th scope="row"
+                        class="fw-normal text-body-secondary">
+                      Mistakes caught before the page loads
+                    </th>
+                    <td class="text-body-secondary">No, silent at runtime</td>
+                    <td class="text-body-secondary">—</td>
+                    <td class="fw-semibold">Yes, with a file and a line</td>
+                  </tr>
+
+                  <tr>
+                    <th scope="row"
+                        class="fw-normal text-body-secondary">
+                      Content present in the served HTML
+                    </th>
+                    <td class="text-body-secondary">
+                      No, <code class="rule-code">x-cloak</code> hides the gap
+                    </td>
+                    <td class="text-body-secondary">Yes, the server wrote it</td>
+                    <td class="fw-semibold">Yes, served or prerendered</td>
+                  </tr>
+
+                  <tr>
+                    <th scope="row"
+                        class="fw-normal text-body-secondary">
+                      Same source renders on the server
+                    </th>
+                    <td class="text-body-secondary">No, client only</td>
+                    <td class="text-body-secondary">The server owns the HTML</td>
+                    <td class="fw-semibold">Yes</td>
+                  </tr>
+
+                  <tr>
+                    <th scope="row"
+                        class="fw-normal text-body-secondary">
+                      Reusable components in markup
+                    </th>
+                    <td class="text-body-secondary">
+                      No &mdash; <code class="rule-code">x-data</code> reuses
+                      behavior; markup comes from the server
+                    </td>
+                    <td class="text-body-secondary">Server-side partials</td>
+                    <td class="fw-semibold">
+                      <code class="rule-code">&lt;:define&gt;</code> +
+                      <code class="rule-code">&lt;:slot&gt;</code>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <th scope="row"
+                        class="fw-normal text-body-secondary">
+                      Non-string values into a custom element
+                    </th>
+                    <td class="text-body-secondary">
+                      <code class="rule-code">x-bind</code> writes attributes;
+                      a property means reaching for
+                      <code class="rule-code">$el</code>
+                    </td>
+                    <td class="text-body-secondary">&mdash;</td>
+                    <td class="fw-semibold">
+                      <code class="rule-code">:prop-name=${…}</code>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <th scope="row"
+                        class="fw-normal text-body-secondary">
+                      Parametric CSS
+                    </th>
+                    <td class="text-body-secondary">
+                      Inline styles, or CSS variables set inline
+                    </td>
+                    <td class="text-body-secondary">Whatever the server renders</td>
+                    <td class="fw-semibold">
+                      <code class="rule-code">${…}</code> inside
+                      <code class="rule-code">&lt;style&gt;</code>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <th scope="row"
+                        class="fw-normal text-body-secondary">
+                      Interaction without a server round-trip
+                    </th>
+                    <td>Yes</td>
+                    <td class="text-body-secondary">No, by design</td>
+                    <td>Yes</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <bs-card class+="bg-body-tertiary mt-4"
+                     ::bodyExtra="p-4">
+              <p class="fw-semibold mb-3">And the honest costs.</p>
+
+              <p>
+                Alpine is mature, and its ecosystem, community and documentation
+                are far larger than Markout's. It also asks for strictly less to
+                get started — one <code class="rule-code">&lt;script&gt;</code>
+                tag, on any host, behind any backend — where Markout wants Node
+                in the request path or
+                <code class="rule-code">markout build ./my-site ./dist</code>.
+              </p>
+
+              <p class="mb-0">
+                htmx is solving a different problem — server-driven UI — and
+                composes fine with either. Markout's claim is narrower: one
+                source that is modular, reactive, and renders in both places.
+              </p>
+            </bs-card>
 
           </div>
         </div>
@@ -1234,413 +1530,6 @@
       </div>
     </section>
 
-    <!--- App-specific kits -->
-
-    <section id="design-system"
-             class="py-5">
-      <div class="container py-lg-4">
-
-        <div class="row justify-content-center text-center mb-5">
-          <div class="col-lg-8">
-            <h2 class="display-6 fw-bold mb-3">
-              Zero-cost design systems
-            </h2>
-
-            <p class="lead text-body-secondary">
-              A kit is a fragment importing other fragments. You can easily write
-              your own which pulls in the Bootstrap kit, sets what your team decided,
-              and adds whatever is specific to your app.
-            </p>
-          </div>
-        </div>
-
-        <div class="row g-4 align-items-start">
-
-          <div class="col-lg-7">
-            <code-card ::title="examples/app-kit.htm"
-                       ::label="your kit"
-                       ::variant="primary"
-                       class+="h-100"
-                       ::note>
-<pre class="mb-0"
-     data-lang="html"><:include src="/examples/app-kit.htm" as="code" escaping /></pre>
-              <p :slot="note"
-                 class="mb-0">
-                Three things at once: a value the Bootstrap kit already reads,
-                a stylesheet of your own, and a component that pins a decision
-                your app makes everywhere.
-              </p>
-            </code-card>
-          </div>
-
-          <div class="col-lg-5">
-            <code-card ::title="examples/design-system.html"
-                       ::label="every page">
-<pre class="mb-0"
-     data-lang="html"><:include src="/examples/design-system.html" as="code" escaping /></pre>
-              <code-preview :slot="preview"
-                            ::src="/examples/design-system.html"
-                            ::height="12.5rem" />
-            </code-card>
-          </div>
-
-        </div>
-
-        <div class="row justify-content-center mt-4">
-          <div class="col-lg-10">
-
-            <div class="row g-4">
-              <div class="col-md-4">
-                <h3 class="h5">Values reach the CSS</h3>
-                <p class="text-body-secondary mb-0">
-                  <code class="rule-code">${…}</code> works in a stylesheet
-                  exactly as it does in markup, so a value like
-                  <code class="rule-code">appAccent</code> is a design token
-                  without any special treatment: no build step, no
-                  preprocessor, no custom property indirection unless you want
-                  one.
-                </p>
-              </div>
-
-              <div class="col-md-4">
-                <h3 class="h5">Defaults, then overrides</h3>
-                <p class="text-body-secondary mb-0">
-                  <code class="rule-code">bsRadius</code> belongs to the
-                  Bootstrap kit, which declares its own default. Naming it again
-                  here replaces it for every page that imports your kit — and you
-                  never forked the component that reads it.
-                </p>
-              </div>
-
-              <div class="col-md-4">
-                <h3 class="h5">
-                  <code class="rule-code">:const-</code> means constant
-                </h3>
-                <p class="text-body-secondary mb-0">
-                  A token that never changes is worked out once at compile time.
-                  And the
-                  day one does have to move — a light/dark switch — the page
-                  declares that same name plainly instead, and the kit reading
-                  it doesn't change a character.
-                </p>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <div class="row justify-content-center mt-4">
-          <div class="col-lg-10">
-            <bs-card class+="bg-body-tertiary"
-                     ::align="center"
-                     ::bodyExtra="p-4">
-              <p class="mb-0">
-                Shared tokens, shared components, one place to change them —
-                and nothing to install, compile, or keep in sync. The whole
-                system is a file your team can read in a minute.
-              </p>
-            </bs-card>
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-    <!--- The language -->
-
-    <section id="language"
-             class="py-5 bg-body-tertiary">
-      <div class="container py-lg-4">
-
-        <div class="row justify-content-center text-center mb-5">
-          <div class="col-lg-8">
-            <h2 class="display-6 fw-bold mb-3">
-              The whole language is a handful&nbsp;of&nbsp;rules
-            </h2>
-
-            <p class="lead text-body-secondary">
-              Markout doesn't replace HTML with a component framework. It shows
-              what HTML could look like if it were natively modular and reactive.
-            </p>
-          </div>
-        </div>
-
-        <div class="row g-4 justify-content-center">
-
-          <div class="col-md-6 col-lg-4">
-            <page-step ::n="01"
-                       ::heading="HTML is the syntax">
-              <p class="text-body-secondary mb-0">
-                Anything without a <code class="rule-code">${…}</code> or a
-                <code class="rule-code">:</code> is plain markup, and stays
-                plain markup.
-              </p>
-            </page-step>
-          </div>
-
-          <div class="col-md-6 col-lg-4">
-            <page-step ::n="02"
-                       ::heading="One expression syntax">
-              <p class="text-body-secondary mb-0">
-                <code class="rule-code">${…}</code> is plain JavaScript, in
-                text, attributes and CSS alike. Whatever holds one is reactive.
-              </p>
-            </page-step>
-          </div>
-
-          <div class="col-md-6 col-lg-4">
-            <page-step ::n="03"
-                       ::heading="One prefix for everything else">
-              <p class="text-body-secondary mb-0">
-                <code class="rule-code">:</code> names what HTML has no name
-                for, always as <code class="rule-code">:family-name</code> —
-                <code class="rule-code">:class-</code>,
-                <code class="rule-code">:attr-</code>,
-                <code class="rule-code">:on-</code>,
-                <code class="rule-code">:for-</code>.
-              </p>
-            </page-step>
-          </div>
-
-          <div class="col-md-6 col-lg-4">
-            <page-step ::n="04"
-                       ::heading="Scopes nest lexically">
-              <p class="text-body-secondary mb-0">
-                A value is visible to every descendant, with no separate
-                wiring. An expression resolves where it was written.
-              </p>
-            </page-step>
-          </div>
-
-          <div class="col-md-6 col-lg-4">
-            <page-step ::n="05"
-                       ::heading="A component says what it takes">
-              <p class="text-body-secondary mb-0">
-                <code class="rule-code">::</code> marks a component's interface
-                — declared on the <code class="rule-code">&lt;:define&gt;</code>,
-                passed at the usage. Everything else on that tag is a plain
-                <code class="rule-code">:</code> and stays yours.
-              </p>
-            </page-step>
-          </div>
-
-          <div class="col-md-6 col-lg-4">
-            <page-step ::n="06"
-                       ::heading="Adding is its own spelling">
-              <p class="text-body-secondary mb-0">
-                A plain <code class="rule-code">class=</code> replaces, the way
-                every attribute does. <code class="rule-code">class+=</code>
-                adds, <code class="rule-code">class-=</code> takes away, and
-                <code class="rule-code">style</code> has the same pair
-                — nothing merges behind your back.
-              </p>
-            </page-step>
-          </div>
-
-        </div>
-
-        <div class="row justify-content-center mt-5">
-          <div class="col-lg-9">
-            <bs-card class+="bg-body-secondary"
-                     ::align="center"
-                     ::bodyExtra="p-4">
-              <p class="mb-3">
-                No rule above has a convenient exception. A shortcut that saves
-                a few characters at the call site but makes every future reader
-                remember a special case isn't a simplification — it's deferred
-                complexity.
-              </p>
-              <bs-link ::href="https://github.com/fcapolini/markout/blob/main/docs/reference/syntax.md"
-                       ::button
-                       ::variant="primary"
-                       ::outline>The full syntax, on one page</bs-link>
-            </bs-card>
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-    <!--- Isomorphic -->
-
-    <section id="isomorphic"
-             class="py-5">
-      <div class="container py-lg-4">
-
-        <div class="row align-items-center gy-5 gx-0 gx-sm-5">
-
-          <div class="col-lg-6">
-            <page-eyebrow ::variant="success"
-                          class+="mb-3">Isomorphic by design</page-eyebrow>
-
-            <h2 class="display-6 fw-bold mb-3">
-              The same page runs on the server and in the browser
-            </h2>
-
-            <p class="lead text-body-secondary">
-              The same scope and value model runs in both places, so
-              server-side rendering comes for free.
-            </p>
-
-            <p>
-              No separate server template. No separate client application. No
-              framework-specific hydration model to understand — it is the same
-              page, evaluated twice.
-            </p>
-
-            <p class="mb-0">
-              A page that never becomes interactive ships no runtime at&nbsp;all.
-            </p>
-          </div>
-
-          <div class="col-lg-6">
-            <bs-card class+="shadow-sm"
-                     ::bodyExtra="p-4">
-
-              <div class="border rounded p-3 text-center fw-semibold mb-3">
-                index.html
-                <div class="text-body-secondary small fw-normal mt-1">
-                  one file, one scope tree
-                </div>
-              </div>
-
-              <div class="text-center text-body-secondary mb-3"
-                   aria-hidden="true">↓</div>
-
-              <div class="row g-3 text-center">
-                <div class="col-6">
-                  <div class="border rounded p-3 h-100">
-                    <div class="fw-semibold">Server</div>
-                    <div class="text-body-secondary small mt-1">
-                      renders HTML
-                    </div>
-                  </div>
-                </div>
-
-                <div class="col-6">
-                  <div class="border rounded p-3 h-100">
-                    <div class="fw-semibold">Browser</div>
-                    <div class="text-body-secondary small mt-1">
-                      makes it reactive
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-            </bs-card>
-          </div>
-
-        </div>
-
-      </div>
-    </section>
-
-    <!--- std Kit -->
-
-    <!---
-      The other kind of kit, and the reason the positioning claim is not just
-      a slogan.
-
-      The Bootstrap section above shows a kit wrapping a design system. This
-      one shows a kit being the framework layer itself: a datasource and a
-      router, the two things every framework builds IN, written with the
-      language instead. It sits after "isomorphic by design" because both
-      parts are what that claim buys -- one fetches while rendering and ships
-      the answer, the other answers the address in the response -- and
-      neither could be written this way if the model did not run in both
-      places.
-
-      Two cards rather than a code tour: the demos are one click away and do
-      the tour properly.
-    -->
-    <section id="std-kit"
-             class="py-5 bg-body-tertiary">
-      <div class="container py-lg-4">
-
-        <div class="row gy-5 gx-0 gx-sm-5">
-
-          <div class="col-lg-5">
-            <page-eyebrow ::variant="success"
-                          class+="mb-3">std Kit</page-eyebrow>
-
-            <h2 class="display-6 fw-bold mb-3">
-              The framework layer, written in the language
-            </h2>
-
-            <p class="lead text-body-secondary">
-              Data and routing are the two things a framework is usually built
-              <em>in</em>. Here they are components, and nothing in the
-              compiler knows what a fetch or a route is.
-            </p>
-
-            <p>
-              It ships with the compiler, so a page has it already — no
-              install, and no import unless you would rather say it out loud.
-            </p>
-
-            <p class="mb-4">
-              Which is the claim the whole design rests on: if the system
-              parts of a page can be written with the language, the language
-              does not have to grow them.
-            </p>
-
-            <div class="d-flex flex-wrap gap-2">
-              <bs-link ::href="/demos/router/"
-                       ::button
-                       ::variant="primary"
-                       ::size="lg">See the router running</bs-link>
-
-              <bs-link ::href="/demos/std/index.html"
-                       ::button
-                       ::variant="link">…and the datasource</bs-link>
-            </div>
-          </div>
-
-          <div class="col-lg-7">
-
-            <div class="mb-4">
-              <code-card ::title="A datasource"
-                         ::mono=${false}
-                         ::label="std-data"
-                         ::note>
-<pre class="mb-0"><code data-lang="html">&lt;std-data :aka="people" ::url="/api/people" /&gt;
-
-&lt;li :for-each=${people.data}&gt;${data.name}&lt;/li&gt;</code></pre>
-                <p :slot="note"
-                   class="mb-0">
-                  Fetched while the page renders, and in the markup as it
-                  arrives — so the browser asks for nothing and there is no
-                  flash. <code class="rule-code">reload()</code> refetches
-                  when a page wants fresh data.
-                </p>
-              </code-card>
-            </div>
-
-            <code-card ::title="A router"
-                       ::mono=${false}
-                       ::label="std-router"
-                       ::note>
-<pre class="mb-0"><code data-lang="html">&lt;std-router&gt;
-  &lt;std-route ::page="index"&gt;…&lt;/std-route&gt;
-  &lt;std-route ::page="about"&gt;…&lt;/std-route&gt;
-&lt;/std-router&gt;</code></pre>
-              <p :slot="note"
-                 class="mb-0">
-                The query string says which screen — <code
-                class="rule-code">?about</code> — so the server sees it and
-                the response is already the right one. Routers nest, and a
-                browser without the Navigation API just reloads the same file
-                and lands in the same place.
-              </p>
-            </code-card>
-
-          </div>
-
-        </div>
-
-      </div>
-    </section>
-
     <!--- Tailwind -->
 
     <!---
@@ -1929,182 +1818,293 @@
       </div>
     </section>
 
-    <!--- Compared to what you'd otherwise reach for -->
+    <!--- App-specific kits -->
 
-    <section id="compared"
+    <section id="design-system"
              class="py-5">
       <div class="container py-lg-4">
 
         <div class="row justify-content-center text-center mb-5">
           <div class="col-lg-8">
             <h2 class="display-6 fw-bold mb-3">
-              If you're already reaching for Alpine&nbsp;or&nbsp;htmx
+              Zero-cost design systems
             </h2>
 
             <p class="lead text-body-secondary">
-              These are the tools an HTML page usually picks up when it needs
-              behavior, so here is the honest comparison.
+              A kit is a fragment importing other fragments. You can easily write
+              your own which pulls in the Bootstrap kit, sets what your team decided,
+              and adds whatever is specific to your app.
             </p>
           </div>
         </div>
 
-        <div class="row justify-content-center">
+        <div class="row g-4 align-items-start">
+
+          <div class="col-lg-7">
+            <code-card ::title="examples/app-kit.htm"
+                       ::label="your kit"
+                       ::variant="primary"
+                       class+="h-100"
+                       ::note>
+<pre class="mb-0"
+     data-lang="html"><:include src="/examples/app-kit.htm" as="code" escaping /></pre>
+              <p :slot="note"
+                 class="mb-0">
+                Three things at once: a value the Bootstrap kit already reads,
+                a stylesheet of your own, and a component that pins a decision
+                your app makes everywhere.
+              </p>
+            </code-card>
+          </div>
+
+          <div class="col-lg-5">
+            <code-card ::title="examples/design-system.html"
+                       ::label="every page">
+<pre class="mb-0"
+     data-lang="html"><:include src="/examples/design-system.html" as="code" escaping /></pre>
+              <code-preview :slot="preview"
+                            ::src="/examples/design-system.html"
+                            ::height="12.5rem" />
+            </code-card>
+          </div>
+
+        </div>
+
+        <div class="row justify-content-center mt-4">
           <div class="col-lg-10">
 
-            <div class="table-responsive border rounded">
-              <table class="table table-borderless align-middle mb-0">
-                <thead>
-                  <tr class="border-bottom">
-                    <th scope="col"
-                        class="fw-normal text-body-secondary small"></th>
-                    <th scope="col">Alpine.js</th>
-                    <th scope="col">htmx</th>
-                    <th scope="col">Markout</th>
-                  </tr>
-                </thead>
+            <div class="row g-4">
+              <div class="col-md-4">
+                <h3 class="h5">Values reach the CSS</h3>
+                <p class="text-body-secondary mb-0">
+                  <code class="rule-code">${…}</code> works in a stylesheet
+                  exactly as it does in markup, so a value like
+                  <code class="rule-code">appAccent</code> is a design token
+                  without any special treatment: no build step, no
+                  preprocessor, no custom property indirection unless you want
+                  one.
+                </p>
+              </div>
 
-                <tbody>
-                  <tr>
-                    <th scope="row"
-                        class="fw-normal text-body-secondary">
-                      Behavior written in HTML attributes
-                    </th>
-                    <td>Yes</td>
-                    <td>Yes</td>
-                    <td>Yes</td>
-                  </tr>
+              <div class="col-md-4">
+                <h3 class="h5">Defaults, then overrides</h3>
+                <p class="text-body-secondary mb-0">
+                  <code class="rule-code">bsRadius</code> belongs to the
+                  Bootstrap kit, which declares its own default. Naming it again
+                  here replaces it for every page that imports your kit — and you
+                  never forked the component that reads it.
+                </p>
+              </div>
 
-                  <tr>
-                    <th scope="row"
-                        class="fw-normal text-body-secondary">
-                      What it needs to run
-                    </th>
-                    <td class="text-body-secondary">
-                      A <code class="rule-code">&lt;script&gt;</code> tag
-                    </td>
-                    <td class="text-body-secondary">
-                      A <code class="rule-code">&lt;script&gt;</code> tag
-                    </td>
-                    <td class="text-body-secondary">
-                      Node to serve, or
-                      <code class="rule-code">markout build</code> to static
-                      files
-                    </td>
-                  </tr>
-
-                  <tr>
-                    <th scope="row"
-                        class="fw-normal text-body-secondary">
-                      Mistakes caught before the page loads
-                    </th>
-                    <td class="text-body-secondary">No, silent at runtime</td>
-                    <td class="text-body-secondary">—</td>
-                    <td class="fw-semibold">Yes, with a file and a line</td>
-                  </tr>
-
-                  <tr>
-                    <th scope="row"
-                        class="fw-normal text-body-secondary">
-                      Content present in the served HTML
-                    </th>
-                    <td class="text-body-secondary">
-                      No, <code class="rule-code">x-cloak</code> hides the gap
-                    </td>
-                    <td class="text-body-secondary">Yes, the server wrote it</td>
-                    <td class="fw-semibold">Yes, served or prerendered</td>
-                  </tr>
-
-                  <tr>
-                    <th scope="row"
-                        class="fw-normal text-body-secondary">
-                      Same source renders on the server
-                    </th>
-                    <td class="text-body-secondary">No, client only</td>
-                    <td class="text-body-secondary">The server owns the HTML</td>
-                    <td class="fw-semibold">Yes</td>
-                  </tr>
-
-                  <tr>
-                    <th scope="row"
-                        class="fw-normal text-body-secondary">
-                      Reusable components in markup
-                    </th>
-                    <td class="text-body-secondary">
-                      No &mdash; <code class="rule-code">x-data</code> reuses
-                      behavior; markup comes from the server
-                    </td>
-                    <td class="text-body-secondary">Server-side partials</td>
-                    <td class="fw-semibold">
-                      <code class="rule-code">&lt;:define&gt;</code> +
-                      <code class="rule-code">&lt;:slot&gt;</code>
-                    </td>
-                  </tr>
-
-                  <tr>
-                    <th scope="row"
-                        class="fw-normal text-body-secondary">
-                      Non-string values into a custom element
-                    </th>
-                    <td class="text-body-secondary">
-                      <code class="rule-code">x-bind</code> writes attributes;
-                      a property means reaching for
-                      <code class="rule-code">$el</code>
-                    </td>
-                    <td class="text-body-secondary">&mdash;</td>
-                    <td class="fw-semibold">
-                      <code class="rule-code">:prop-name=${…}</code>
-                    </td>
-                  </tr>
-
-                  <tr>
-                    <th scope="row"
-                        class="fw-normal text-body-secondary">
-                      Parametric CSS
-                    </th>
-                    <td class="text-body-secondary">
-                      Inline styles, or CSS variables set inline
-                    </td>
-                    <td class="text-body-secondary">Whatever the server renders</td>
-                    <td class="fw-semibold">
-                      <code class="rule-code">${…}</code> inside
-                      <code class="rule-code">&lt;style&gt;</code>
-                    </td>
-                  </tr>
-
-                  <tr>
-                    <th scope="row"
-                        class="fw-normal text-body-secondary">
-                      Interaction without a server round-trip
-                    </th>
-                    <td>Yes</td>
-                    <td class="text-body-secondary">No, by design</td>
-                    <td>Yes</td>
-                  </tr>
-                </tbody>
-              </table>
+              <div class="col-md-4">
+                <h3 class="h5">
+                  <code class="rule-code">:const-</code> means constant
+                </h3>
+                <p class="text-body-secondary mb-0">
+                  A token that never changes is worked out once at compile time.
+                  And the
+                  day one does have to move — a light/dark switch — the page
+                  declares that same name plainly instead, and the kit reading
+                  it doesn't change a character.
+                </p>
+              </div>
             </div>
 
-            <bs-card class+="bg-body-tertiary mt-4"
+          </div>
+        </div>
+
+        <div class="row justify-content-center mt-4">
+          <div class="col-lg-10">
+            <bs-card class+="bg-body-tertiary"
+                     ::align="center"
                      ::bodyExtra="p-4">
-              <p class="fw-semibold mb-3">And the honest costs.</p>
-
-              <p>
-                Alpine is mature, and its ecosystem, community and documentation
-                are far larger than Markout's. It also asks for strictly less to
-                get started — one <code class="rule-code">&lt;script&gt;</code>
-                tag, on any host, behind any backend — where Markout wants Node
-                in the request path or
-                <code class="rule-code">markout build ./my-site ./dist</code>.
-              </p>
-
               <p class="mb-0">
-                htmx is solving a different problem — server-driven UI — and
-                composes fine with either. Markout's claim is narrower: one
-                source that is modular, reactive, and renders in both places.
+                Shared tokens, shared components, one place to change them —
+                and nothing to install, compile, or keep in sync. The whole
+                system is a file your team can read in a minute.
               </p>
             </bs-card>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!--- std Kit -->
+
+    <!---
+      The other kind of kit, and the reason the positioning claim is not just
+      a slogan.
+
+      The Bootstrap section above shows a kit wrapping a design system. This
+      one shows a kit being the framework layer itself: a datasource and a
+      router, the two things every framework builds IN, written with the
+      language instead. It sits after "isomorphic by design" because both
+      parts are what that claim buys -- one fetches while rendering and ships
+      the answer, the other answers the address in the response -- and
+      neither could be written this way if the model did not run in both
+      places.
+
+      Two cards rather than a code tour: the demos are one click away and do
+      the tour properly.
+    -->
+    <section id="std-kit"
+             class="py-5 bg-body-tertiary">
+      <div class="container py-lg-4">
+
+        <div class="row gy-5 gx-0 gx-sm-5">
+
+          <div class="col-lg-5">
+            <page-eyebrow ::variant="success"
+                          class+="mb-3">std Kit</page-eyebrow>
+
+            <h2 class="display-6 fw-bold mb-3">
+              The framework layer, written in the language
+            </h2>
+
+            <p class="lead text-body-secondary">
+              Data and routing are the two things a framework is usually built
+              <em>in</em>. Here they are components, and nothing in the
+              compiler knows what a fetch or a route is.
+            </p>
+
+            <p>
+              It ships with the compiler, so a page has it already — no
+              install, and no import unless you would rather say it out loud.
+            </p>
+
+            <p class="mb-4">
+              Which is the claim the whole design rests on: if the system
+              parts of a page can be written with the language, the language
+              does not have to grow them.
+            </p>
+
+            <div class="d-flex flex-wrap gap-2">
+              <bs-link ::href="/demos/router/"
+                       ::button
+                       ::variant="primary"
+                       ::size="lg">See the router running</bs-link>
+
+              <bs-link ::href="/demos/std/index.html"
+                       ::button
+                       ::variant="link">…and the datasource</bs-link>
+            </div>
+          </div>
+
+          <div class="col-lg-7">
+
+            <div class="mb-4">
+              <code-card ::title="A datasource"
+                         ::mono=${false}
+                         ::label="std-data"
+                         ::note>
+<pre class="mb-0"><code data-lang="html">&lt;std-data :aka="people" ::url="/api/people" /&gt;
+
+&lt;li :for-each=${people.data}&gt;${data.name}&lt;/li&gt;</code></pre>
+                <p :slot="note"
+                   class="mb-0">
+                  Fetched while the page renders, and in the markup as it
+                  arrives — so the browser asks for nothing and there is no
+                  flash. <code class="rule-code">reload()</code> refetches
+                  when a page wants fresh data.
+                </p>
+              </code-card>
+            </div>
+
+            <code-card ::title="A router"
+                       ::mono=${false}
+                       ::label="std-router"
+                       ::note>
+<pre class="mb-0"><code data-lang="html">&lt;std-router&gt;
+  &lt;std-route ::page="index"&gt;…&lt;/std-route&gt;
+  &lt;std-route ::page="about"&gt;…&lt;/std-route&gt;
+&lt;/std-router&gt;</code></pre>
+              <p :slot="note"
+                 class="mb-0">
+                The query string says which screen — <code
+                class="rule-code">?about</code> — so the server sees it and
+                the response is already the right one. Routers nest, and a
+                browser without the Navigation API just reloads the same file
+                and lands in the same place.
+              </p>
+            </code-card>
 
           </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!--- Isomorphic -->
+
+    <section id="isomorphic"
+             class="py-5">
+      <div class="container py-lg-4">
+
+        <div class="row align-items-center gy-5 gx-0 gx-sm-5">
+
+          <div class="col-lg-6">
+            <page-eyebrow ::variant="success"
+                          class+="mb-3">Isomorphic by design</page-eyebrow>
+
+            <h2 class="display-6 fw-bold mb-3">
+              The same page runs on the server and in the browser
+            </h2>
+
+            <p class="lead text-body-secondary">
+              The same scope and value model runs in both places, so
+              server-side rendering comes for free.
+            </p>
+
+            <p>
+              No separate server template. No separate client application. No
+              framework-specific hydration model to understand — it is the same
+              page, evaluated twice.
+            </p>
+
+            <p class="mb-0">
+              A page that never becomes interactive ships no runtime at&nbsp;all.
+            </p>
+          </div>
+
+          <div class="col-lg-6">
+            <bs-card class+="shadow-sm"
+                     ::bodyExtra="p-4">
+
+              <div class="border rounded p-3 text-center fw-semibold mb-3">
+                index.html
+                <div class="text-body-secondary small fw-normal mt-1">
+                  one file, one scope tree
+                </div>
+              </div>
+
+              <div class="text-center text-body-secondary mb-3"
+                   aria-hidden="true">↓</div>
+
+              <div class="row g-3 text-center">
+                <div class="col-6">
+                  <div class="border rounded p-3 h-100">
+                    <div class="fw-semibold">Server</div>
+                    <div class="text-body-secondary small mt-1">
+                      renders HTML
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-6">
+                  <div class="border rounded p-3 h-100">
+                    <div class="fw-semibold">Browser</div>
+                    <div class="text-body-secondary small mt-1">
+                      makes it reactive
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </bs-card>
+          </div>
+
         </div>
 
       </div>
