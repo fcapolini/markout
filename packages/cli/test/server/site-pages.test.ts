@@ -63,7 +63,7 @@ describe('the site renders its own pages', () => {
   it('serves the page that says why any of this exists', async () => {
     const res = await get('/about.html');
     expect(res.status).toBe(200);
-    expect(res.html).toContain('Why Markout exists');
+    expect(res.html).toContain('Motivation — Markout');
     expect(res.html).toContain('the DOM is the scope chain');
     expect(res.html).not.toContain(DOM_ERRORS_ID);
   });
