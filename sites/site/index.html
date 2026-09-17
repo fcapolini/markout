@@ -478,10 +478,11 @@
           three questions the rest of the page never answers because it is
           busy answering "what does it do".
 
-          Here rather than in a section of their own: a section between the
-          hero and the claim would delay the argument and flip the alternating
-          grounds for all fifteen that follow. Inside the header they read as
-          the hero's small print, which is what they are.
+          Here rather than in a section of their own: inside the header they
+          read as the hero's small print, which is what they are. `#real`
+          below is the one block that earned a section between the hero and
+          the claim, and it takes no turn in the alternating grounds -- these
+          three would have, and they are not worth a band of their own.
 
           The last one is the honest answer to "what if this stops being
           maintained", and it is a better answer than a promise about
@@ -500,7 +501,7 @@
           </div>
 
           <div class="col-md-4">
-            <h2 class="h6">It extends HTML, rather than replacing it</h2>
+            <h2 class="h6">It extends HTML, rather than replacing&nbsp;it</h2>
             <p class="small text-body-secondary mb-0">
               Frameworks churn because they revise what they invented —
               classes then hooks, options then composition, stores then runes.
@@ -526,6 +527,109 @@
         </div>
       </div>
     </header>
+
+    <!---
+      The three doubts a reader arrives with, answered before the argument
+      starts rather than after it. Two of them the page already answers --
+      `#attributes` and `#editor` -- but ten and thirteen sections down,
+      which is no use to somebody deciding in the first screen whether to
+      keep reading. So this section argues nothing: it names each doubt and
+      points at the place the evidence already lives.
+
+      Immediately after the header because the header is what raises the
+      first one. "A reference implementation", "judge it on whether the idea
+      holds, not on the size of an ecosystem" -- read quickly, that is a
+      prototype describing itself, and the counterweight belongs next to it
+      rather than fifteen sections later.
+
+      No background, so it shares the hero's band instead of taking a turn
+      in the alternation: the fifteen sections below keep the grounds they
+      had, and this reads as the last beat of the hero, which is what it is.
+      The heading does the separating.
+
+      The Lighthouse figure is hand-measured and repeated, not something CI
+      produces -- against the deployed site rather than a local server, and
+      from far enough away that the network is in the number. It is quoted
+      here as a fact about one page, which is the only thing a composite
+      score is good for; `packages/cli/bench/README.md` declines to report
+      one for the benchmark, and for the opposite reason -- ranking runtimes
+      by a composite rewards the one that paints an empty page fastest.
+    -->
+
+    <section id="real"
+             class="py-5">
+      <div class="container py-lg-4">
+
+        <div class="row justify-content-center text-center mb-5">
+          <div class="col-lg-8">
+            <h2 class="display-6 fw-bold mb-3">
+              Three things worth settling&nbsp;first
+            </h2>
+
+            <p class="lead text-body-secondary">
+              None of these is the argument this page makes. They are the
+              three things that stop a reader from getting to&nbsp;it.
+            </p>
+          </div>
+        </div>
+
+        <div class="row g-4 justify-content-center">
+
+          <div class="col-md-4">
+            <h3 class="h5">It runs real applications</h3>
+            <p class="text-body-secondary">
+              Orbit is an operations console — filters, regions, charts, an
+              activity feed, a kit's worth of components under load. It
+              renders on the server, so every row is in the HTML before a
+              line of JavaScript runs, and Chrome's Lighthouse scores it 100
+              in all four categories — measured on the deployed site, from
+              another country, rather than on a local server. Not despite
+              being reactive and isomorphic: because of it, there is nothing
+              left to assemble once the page&nbsp;arrives.
+            </p>
+            <p class="mb-0">
+              <bs-link ::href="/demos/orbit.html">Open Orbit</bs-link>
+            </p>
+          </div>
+
+          <div class="col-md-4">
+            <h3 class="h5">The tooling is real tooling</h3>
+            <p class="text-body-secondary">
+              <code class="rule-code">markout</code> is a compiler and a dev
+              server: it reloads the browser as you save and puts expression
+              errors in the page rather than in a log. The VS Code extension
+              carries that same compiler — diagnostics across the whole
+              project, completion of what is in scope, go to definition into
+              an installed kit, and a formatter that knows the
+              <code class="rule-code">&gt;</code> in
+              <code class="rule-code">${a &gt; b}</code> closes&nbsp;nothing.
+            </p>
+            <p class="mb-0">
+              <bs-link ::href="#editor">What the editor knows</bs-link>
+            </p>
+          </div>
+
+          <div class="col-md-4">
+            <h3 class="h5">Markup is a fine place for&nbsp;logic</h3>
+            <p class="text-body-secondary">
+              A tag is a JavaScript object with reactive properties and
+              methods, and its expressions are parsed rather than scanned —
+              so they span lines, take comments, and read like a class body.
+              And because importing a fragment costs nothing, every level can
+              be written in its own nouns instead of in the markup those nouns
+              are&nbsp;made&nbsp;of.
+            </p>
+            <p class="mb-0">
+              <bs-link ::href="#attributes">Those aren't attributes</bs-link>
+              <span class="text-body-secondary mx-1">·</span>
+              <bs-link ::href="/about.html#adds-up-to">What it adds up to</bs-link>
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
 
     <!---
       The claim, before the page spends fifteen sections proving it. Every

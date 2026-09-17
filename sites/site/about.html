@@ -25,6 +25,18 @@
   <meta property="og:image" content="https://markout.dev/social-card.png">
   <meta name="twitter:card" content="summary_large_image">
 
+  <!---
+    The navbar is `sticky-top` here too, so an in-page link -- `#adds-up-to`,
+    which the homepage points at -- would otherwise land under it. Same
+    inset as index.html, and the same reason: a property of the scroller,
+    not a class on each heading.
+  -->
+  <style>
+    html {
+      scroll-padding-top: 5rem;
+    }
+  </style>
+
   <:include src="/parts/analytics.htm" />
 </head>
 
@@ -208,7 +220,7 @@
           and the decade could not give it.
         </p>
 
-        <h2 class="h3 mt-5 mb-3">What it should add up to</h2>
+        <h2 id="adds-up-to" class="h3 mt-5 mb-3">What it should add up to</h2>
 
         <p>
           What that buys, at the top of an app, is a page written in its own
