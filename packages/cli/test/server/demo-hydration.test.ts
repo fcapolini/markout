@@ -42,7 +42,46 @@ describe('the demos hydrate without disturbing what was served', () => {
   async function load(url: string, javascript: boolean) {
     const errors: string[] = [];
     const browser = new Browser({
-      settings: { enableJavaScriptEvaluation: javascript },
+      settings: {
+        enableJavaScriptEvaluation: javascript,
+        /*
+          Bootstrap's bundle is read off the filesystem rather than asked for
+          over the socket, and that is not an optimisation -- without it this
+          suite deadlocks.
+
+          The kit loads that script with neither `async` nor `defer` on
+          purpose, and `base.htm` says why: the components that wrap a
+          Bootstrap plugin build it from a `:handle-` the moment Markout
+          hydrates, so `window.bootstrap` has to exist by then. happy-dom
+          honours that the way a browser does -- a script that is neither
+          waits -- and it implements the wait with
+          `ChildProcess.execFileSync`, which blocks THIS process's event loop
+          until the child has the bytes. The server those bytes come from is
+          the `createSite` above, listening in this very process, so it can
+          never reach the request: the child waits on a server that is
+          waiting on the child.
+
+          Nothing about the test changed the day this started. The site did:
+          it stopped loading Bootstrap from jsDelivr and began serving
+          `/vendor/` itself, and a cross-origin sync fetch deadlocks nobody.
+          The same code had passed for three weeks pointing at a host that
+          was not us.
+
+          A virtual server answers the fetch from disk before a socket is
+          involved, so the page still gets the real bundle and the loop is
+          never blocked. That last part is why the failure was silent: with
+          the loop blocked, vitest's own test timeout could not fire either,
+          and the run simply stopped.
+        */
+        fetch: {
+          virtualServers: [
+            {
+              url: '/vendor/',
+              directory: path.resolve(__dirname, '../../../../sites/site/vendor'),
+            },
+          ],
+        },
+      },
       console: {
         ...console,
         error: (...args: unknown[]) => errors.push(args.join(' ')),
@@ -66,8 +105,11 @@ describe('the demos hydrate without disturbing what was served', () => {
         rows: doc.querySelectorAll('[data-markout]').length,
         props: win.__MARKOUT_PROPS as { e: unknown[]; p: unknown } | undefined,
         // a third-party script happy-dom cannot parse is not this project's
-        // business -- Bootstrap's minified CDN bundle is one
-        errors: errors.filter(e => !/cdn\.jsdelivr\.net/.test(e)),
+        // business -- Bootstrap's minified bundle is one. Matched by its
+        // filename rather than by the CDN it used to come from: the site
+        // vendors it now, and a filter naming jsDelivr went on passing by
+        // matching nothing at all
+        errors: errors.filter(e => !/bootstrap\.bundle(\.min)?\.js/.test(e)),
       };
     } finally {
       await browser.close();
