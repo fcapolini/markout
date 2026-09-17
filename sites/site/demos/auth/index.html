@@ -1,0 +1,366 @@
+<!doctype html>
+
+<!---
+  Auth — the demo about which half of a sign-in markout is.
+
+  It exists because "reactive login in HTML" is the shape people are most
+  suspicious of, and the suspicion is half right. Authentication is not a
+  presentation concern and markout has no position on it: the password check,
+  the session's lifetime, the cookie's flags and the rate limit are all in
+  `api.ts` beside this file, in ordinary Express, and would read the same
+  behind any renderer.
+
+  What is left is the part that IS presentation, and it is most of what makes
+  a sign-in form annoying to write by hand:
+
+    in flight       one value, `busy`. The button reads it for its label and
+                    its disabled state, both fields read it, and the error
+                    clears when a new attempt starts. No spinner to show and
+                    hide, because nothing here is shown or hidden by hand.
+
+    validity        `::check` on the email field, and nothing at all on the
+                    password — the kit's rule is that an empty control is
+                    neutral while `.valid` is still false, which is exactly
+                    a login's policy. The submit button reads `.valid` off
+                    both by the names this page gave them.
+
+    the server's    an error from `api.ts` is a value like any other. The
+    answer          alert exists when it is set and does not when it is not.
+
+  And one thing that is neither, which is the reason this demo is worth
+  having rather than being a paragraph:
+
+    the view        `:server-if=${me}` — so the branch that did not show is
+                    not in the page AT ALL. A signed-out visitor never
+                    receives the dashboard's markup, and a signed-in one
+                    never receives the form's. An ordinary `:if` would send
+                    both, in the stencil it builds from, which is fine for a
+                    disclosure and not fine for the half of the page behind
+                    the login.
+
+  What it removes is MARKUP and not logic, which is worth knowing before
+  reading too much into it: a page's props are a function of its source
+  rather than of the request, so the expressions written inside the dropped
+  branch still travel. `'Signing out…' : 'Sign out'` is in the props of a
+  signed-out page; the elements, the attributes and the text are not. Where
+  the logic itself is the secret, that is what a `:server-` value is for.
+
+  The cost of that, stated plainly because it is the one design decision here
+  a reader should disagree with on purpose: a `:server-if` is decided once and
+  cannot turn afterwards. So signing in RELOADS — `location.reload()` in the
+  handler — and the server renders the other branch.
+
+  Which is not a workaround. A reload after sign-in is what a careful
+  application does anyway: it is the moment to pick up a fresh session, a
+  fresh token and a page rendered for who you now are, rather than mutating a
+  client-side view into a state the server never confirmed. The alternative
+  costs a round trip nobody notices and buys the property above. Trading the
+  instant swap for it is the trade this demo is making, and `:if` is right
+  there for anyone who wants the other side of it.
+
+  What the cookie does NOT do is reach this page. It is `httpOnly`, so no
+  expression here could read it if one tried; the session id stays in
+  `api.ts`'s map, and what crosses into the markup is an email and a
+  timestamp — see `sessionUser` there, and the note in it about why a
+  `:server-` value's result is as public as the page.
+
+  What to do with it: sign in, then view source. `${me.email}` is in the HTML
+  because the cookie arrived with the page request and the render already
+  knew — no spinner, no second request, and no flash of the login screen on
+  reload. Then sign out and view source again: the dashboard's markup is
+  gone, not hidden.
+
+    npm run dev      then http://localhost:3000/demos/auth/
+
+  Needs a render, and therefore Node: `user` is a request global, so this is
+  the one demo here that a `markout build` cannot produce. The three ways to
+  deliver a page are in docs/concepts/isomorphism.md, and this page is an
+  example of the one that needs a request.
+-->
+<html lang="en"
+      :apiBase="/demos/auth/api"
+
+      /*
+        The session, resolved from the cookie by `sessionUser` in `api.ts`
+        and handed to this render by `requestGlobals` in `server.ts`.
+
+        `:server-` because `user` is a server global and the compiler
+        enforces it: reading it from an ordinary value is a build error
+        rather than a page that works in dev and is empty in production.
+      */
+      :server-me=${user}>
+
+<head :const-bsCssUrl="/vendor/bootstrap.min.css"
+      :const-bsJsUrl="/vendor/bootstrap.bundle.min.js"
+      :const-bsCssIntegrity=${null}
+      :const-bsJsIntegrity=${null}>
+  <!--- Bootstrap from this origin's own build; see index.html's <head>. -->
+  <:import src="/npm/@markout-lang/bootstrap-kit/all.htm" />
+  <bs-theme-auto />
+
+  <title>Auth — which half of a sign-in Markout is</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description"
+        content="A sign-in form whose reactive parts are Markout and whose session is an Express router: in-flight state, validation and the server's answer, over an httpOnly cookie the page cannot read.">
+  <meta name="robots" content="noindex">
+</head>
+
+<body class="bg-body-tertiary min-vh-100">
+
+  <bs-navbar ::brand="/"
+             class+="border-bottom"
+             ::expand="sm"
+             ::items=${[
+               { name: 'Demos', link: '/demos/' },
+               { name: 'Auth', link: '/demos/auth/', active: true },
+             ]}>
+    Markout
+    <bs-theme-toggle :slot="end" />
+  </bs-navbar>
+
+  <main class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-lg-5 col-md-7">
+
+        <!---
+          Signed in. `:server-if`, so this whole subtree — heading, email,
+          sign-out button — is absent from the page served to anyone who is
+          not.
+
+          Written in Bootstrap's own classes rather than in the kit's
+          components, and that is the one thing on this page that is a
+          workaround rather than a demonstration. `:server-if` drops the
+          markup of the branch it did not show, but a `<:define>` used
+          INSIDE that branch expands into a stencil of its own which is not
+          dropped with it — so a `<bs-card>` here would put the card's
+          markup back in the page of every signed-out visitor and make the
+          claim this demo is about false.
+
+          Found by writing this page. Pinned as
+          `leaves a component used inside the branch -- a KNOWN GAP` in
+          packages/core/test/render/server-if.test.ts, and listed in
+          LAST-MILE.md; when it closes, this branch can be components again
+          and that test will say so by failing.
+
+          The form below keeps the kit, because the asymmetry is real rather
+          than an oversight: only the branch holding something needs this
+          care, and a sign-in form is not a secret. The leak is of
+          structure, not of values — `${me.email}` is a `:server-` result and
+          crosses only when it exists.
+        -->
+        <div :server-if=${me}
+             class="card"
+             :leaving=${false}>
+          <div class="card-body p-4">
+            <h1 class="h4 mb-1">Signed in</h1>
+            <p class="text-body-secondary small mb-4">
+              Rendered by the server, which knew from the cookie.
+            </p>
+
+            <dl class="row mb-4 small">
+              <dt class="col-5 fw-normal text-body-secondary">Account</dt>
+              <dd class="col-7 mb-2">${me.email}</dd>
+
+              <dt class="col-5 fw-normal text-body-secondary">Session started</dt>
+              <dd class="col-7 mb-0">
+                <!---
+                  The server's clock, formatted in the browser's zone. A
+                  timestamp crosses and the formatting is ordinary, which is
+                  the rule about `:server-`: mark the source, never the
+                  derivation.
+                -->
+                ${new Date(me.since).toLocaleTimeString()}
+              </dd>
+            </dl>
+
+            <button class="btn btn-outline-secondary"
+                    type="button"
+                    :attr-disabled=${leaving}
+                    :on-click=${() => {
+                      leaving = true;
+                      fetch(`${apiBase}/session`, { method: 'DELETE' })
+                        // the cookie is gone, so the next render takes the
+                        // other branch. Nothing here has a view to put back.
+                        // `globalThis` because `location` is not one of the
+                        // globals a page expression may name -- see
+                        // GLOBAL_NAMES in core-global.ts
+                        .then(() => globalThis.location.reload())
+                        .catch(() => { leaving = false; });
+                    }}>
+              ${leaving ? 'Signing out…' : 'Sign out'}
+            </button>
+          </div>
+        </div>
+
+        <!--- Signed out: the form. -->
+        <bs-card :else
+                 ::bodyExtra="p-4">
+
+          <h1 class="h4 mb-1">Sign in</h1>
+          <p class="text-body-secondary small mb-4">
+            <code>ada@example.com</code> / <code>lovelace</code> —
+            a demo with a secret password is a demo nobody can try.
+          </p>
+
+          <!---
+            The form's own values on a wrapper INSIDE the region rather than
+            on the `:else` element itself, and the compiler is what settled
+            that: a conditional element's own attributes are outside the
+            region it opens, so `:submit` written up there reads `email` and
+            `password` across the boundary and is told to say `email?.valid`
+            — undefined whenever the branch is away. Which is correct and not
+            what this wants: these three values have exactly the lifetime of
+            the fields they are about, so they belong in here with them.
+
+            `busy` is the in-flight flag the button and both fields read;
+            `failed` is whatever `api.ts` said; `submit` is a method because
+            two things call it — the button, and Enter in either field.
+          -->
+          <div :aka="signin"
+               :busy=${false}
+               :failed=${null}
+               :submit=${() => {
+                 if (busy || !(email.valid && password.valid)) {
+                   return;
+                 }
+                 busy = true;
+                 failed = null;
+                 fetch(`${apiBase}/session`, {
+                   method: 'POST',
+                   headers: { 'content-type': 'application/json' },
+                   body: JSON.stringify({
+                     email: email.value,
+                     password: password.value,
+                   }),
+                 })
+                   .then(res => {
+                     if (res.ok) {
+                       // the reload is the point: the server renders the
+                       // signed-in branch, which this page does not have
+                       globalThis.location.reload();
+                       return;
+                     }
+                     return res.json()
+                       .catch(() => null)
+                       .then(body => {
+                         failed = body?.error ?? `${res.status} ${res.statusText}`;
+                         busy = false;
+                       });
+                   })
+                   .catch(err => {
+                     failed = `Could not reach the service: ${err.message}`;
+                     busy = false;
+                   });
+               }}>
+
+            <!---
+              The server's answer, which is a value and therefore needs no
+              showing or hiding. `:if` rather than `:server-if`: this one has
+              to be able to turn, because it turns on a click.
+            -->
+            <bs-alert :if=${failed}
+                      ::variant="danger"
+                      class+="py-2 small">
+              ${failed}
+            </bs-alert>
+
+            <form :on-submit=${ev => { ev.preventDefault(); submit(); }}>
+              <bs-input :aka="email"
+                        ::label="Email address"
+                        ::type="email"
+                        ::name="email"
+                        ::placeholder="you@example.com"
+                        ::disabled=${busy}
+                        ::check=${v => /^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(v)}
+                        ::message="That doesn't look like an email address." />
+
+              <!---
+                No `::check` and deliberately no `::required`. The kit's
+                policy is that an empty control is neutral — not shown as
+                wrong — while `.valid` is still false, and `::required` is
+                what turns empty into an error as well as a gap. Which is
+                right for a field somebody skipped and wrong here: it opens
+                the form with the password box already red, before anyone has
+                done anything.
+
+                So empty leaves the submit disabled and says nothing, which
+                is what the two together are for. And there is no length or
+                shape rule because a login has none to know — whether this
+                password is right is the server's answer, and it arrives in
+                the alert above.
+              -->
+              <bs-input :aka="password"
+                        ::label="Password"
+                        ::type="password"
+                        ::name="password"
+                        ::disabled=${busy} />
+
+              <!---
+                `type="submit"`, so Enter in either field goes through the
+                form's own handler and the button is not the only way in.
+              -->
+              <bs-button ::type="submit"
+                         class+="w-100 d-flex align-items-center justify-content-center gap-2"
+                         :attr-disabled=${busy || !(email.valid && password.valid)}>
+                <bs-spinner :if=${busy}
+                            ::small
+                            ::label="Signing in" />
+                ${busy ? 'Signing in…' : 'Sign in'}
+              </bs-button>
+            </form>
+
+            <p class="text-body-secondary small mt-4 mb-0">
+              The button is disabled until both fields are valid and while the
+              request is in flight. That is three states off one value and two
+              <code>.valid</code> reads — no listeners, and nothing keeping
+              them in step.
+            </p>
+          </div>
+        </bs-card>
+
+        <bs-card class+="mt-4 bg-body-secondary"
+                 ::bodyExtra="p-4">
+          <h2 class="h6">Where the line is</h2>
+          <dl class="small mb-0">
+            <dt class="fw-semibold">Markout</dt>
+            <dd class="text-body-secondary">
+              In-flight state, field validity, the submit button's three
+              states, the server's error message, and which of the two
+              branches is in the page.
+            </dd>
+
+            <dt class="fw-semibold">
+              <a href="https://github.com/fcapolini/markout/blob/main/sites/site/demos/auth/api.ts">api.ts</a>
+            </dt>
+            <dd class="text-body-secondary">
+              The credential check, the session and its lifetime, the
+              <code>httpOnly</code> cookie, the rate limit, and the decision
+              that a wrong password and an unknown address get the same
+              answer.
+            </dd>
+
+            <dt class="fw-semibold">Neither</dt>
+            <dd class="text-body-secondary mb-0">
+              Password hashing, a user store, a second factor, a CSRF token.
+              Real answers to questions this demo does not have —
+              <a href="https://github.com/fcapolini/markout/blob/main/docs/design/value-to-markup.md">value-to-markup.md</a>
+              says what markout does and does not guarantee, and this is the
+              part it says is not its.
+            </dd>
+          </dl>
+        </bs-card>
+
+        <p class="text-body-secondary small mt-4 mb-0">
+          View source signed in and <code>${'$'}{me.email}</code>'s result is
+          already in the HTML. Sign out and view it again: the dashboard's
+          markup is gone rather than hidden, because
+          <code>:server-if</code> decided it on the server.
+        </p>
+
+      </div>
+    </div>
+  </main>
+
+</body>
+</html>

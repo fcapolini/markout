@@ -9,11 +9,18 @@
  *
  *     npm run dev
  *
- * Exactly one demo needs a route of its own -- the desk, whose whole subject
- * is this arrangement. Orbit, much the larger of the two, needs none: its
- * data is a directory of JSON files any static host would serve. Between
- * them they are the two answers to "where does a page's data come from",
- * and markout is the same in both.
+ * Two demos need routes of their own, and both because of what they are
+ * about. The desk's subject IS this arrangement -- a page whose data comes
+ * from a service. Auth's is the line between a reactive form and a session,
+ * which cannot be drawn without something on the far side of it to be a
+ * session. Orbit, much the larger of the three, needs none: its data is a
+ * directory of JSON files any static host would serve.
+ *
+ * Between them the desk and Orbit are the two answers to "where does a
+ * page's data come from", and markout is the same in both. Auth is the one
+ * page here that also depends on WHO is asking, which is why it is the only
+ * one with a `Cache-Control` of its own and the only one a build cannot
+ * produce.
  *
  * Exported as a factory as well as run directly, so the tests drive the same
  * routes a browser gets rather than a second copy of them.
@@ -26,6 +33,7 @@ import express, { type Express } from 'express';
 import { isPageRequest, markout } from '@markout-lang/express';
 import rateLimit from 'express-rate-limit';
 import { deskApi } from './demos/desk/api';
+import { authApi, sessionUser } from './demos/auth/api';
 
 export interface SiteProps {
   docroot: string;
@@ -63,12 +71,27 @@ export function createSite(props: SiteProps): Express {
     res.type('text/plain').send('ok');
   });
 
-  // -------------------------------------------------------- the service
+  // -------------------------------------------------------- the services
   //
-  // One demo's own back end, mounted under the pages that read it. Markout
-  // knows nothing about it; it is here first because whoever answers first
-  // wins, and these paths are the application's.
+  // Two demos' own back ends, mounted under the pages that read them. Markout
+  // knows nothing about either; they are here first because whoever answers
+  // first wins, and these paths are the application's.
   app.use('/demos/desk/api', deskApi());
+  app.use('/demos/auth/api', authApi());
+
+  // ------------------------------------------------------ the private page
+  //
+  // The auth demo renders from a cookie, so its HTML is about who is asking
+  // and must not be stored by anything between here and them. Every other
+  // page on this site is the same for every visitor.
+  //
+  // Here rather than in the demo's router, because the router does not answer
+  // the PAGE -- markout does, further down, and nothing mounted after it
+  // runs. So the header has to be written on the way in.
+  app.use('/demos/auth', (_req, res, next) => {
+    res.setHeader('Cache-Control', 'private, no-store');
+    next();
+  });
 
   // ------------------------------------------------------------- the budget
   //
@@ -100,7 +123,23 @@ export function createSite(props: SiteProps): Express {
   );
 
   // ------------------------------------------------------------ the pages
-  app.use(markout({ docroot: props.docroot, dev: props.dev }));
+  //
+  // `requestGlobals` is the whole seam the auth demo is about: `sessionUser`
+  // turns this request's cookie into what a page may know, and the name
+  // `user` is then readable from a `:server-` value and nowhere else. The
+  // compiler is told the name here, which is why a page that reads it in the
+  // browser fails to build instead of shipping empty.
+  //
+  // Site-wide because the middleware is, and harmless: a global nobody reads
+  // costs a page nothing, and the one page that reads it is the only one
+  // whose render depends on who is asking.
+  app.use(
+    markout({
+      docroot: props.docroot,
+      dev: props.dev,
+      requestGlobals: { user: sessionUser },
+    })
+  );
 
   // ----------------------------------------------------------- the assets
   //

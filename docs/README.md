@@ -84,6 +84,11 @@ pages above — what was chosen, what was rejected, and why.
 - [Working without Node](design/without-node.md) - how someone
   with no Node installs a kit: `.markout/kits/` in the project, resolved by
   the compiler so the editor and the CLI agree, and the sidebar that fills it.
+- [Where a value becomes markup](design/value-to-markup.md) - whether a
+  string can stop being a string: every surface a value reaches enumerated,
+  why the guarantee comes from generating code out of a parsed AST rather
+  than from a filter, the two places it does not hold, and what is
+  deliberately not filtered.
 - [Where code runs](design/code-execution.md) - the three places markout
   evaluates JavaScript, why a kit installed by a checkbox changed the
   question, how compile-time evaluation is sandboxed, and why server-side

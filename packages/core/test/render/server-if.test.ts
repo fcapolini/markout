@@ -100,6 +100,61 @@ describe('what it does not remove', () => {
     // request, and travels whatever the branch decided
     expect(out.html).toContain('$.budget*2');
   });
+
+  /**
+   * And it leaves the markup of any COMPONENT used inside the branch, which
+   * is a gap rather than a decision.
+   *
+   * The plain markup of a dropped branch goes, as the cases above assert. A
+   * `<:define>` used in it expands into a stencil of its own, and that one
+   * is not dropped with the region -- so `<my-panel>` behind
+   * `:server-if=${user.isAdmin}` puts the panel's own markup in the page of
+   * every visitor, which is the exact failure `:server-if` was added to
+   * close, surviving one level of indirection.
+   *
+   * What travels with it is the structure -- headings, labels, links, the
+   * shape of what is behind the login -- and not a rendered value: the
+   * branch never rendered, so the component's stencil carries empty text
+   * markers where its content would be. A value that is a source LITERAL
+   * still reaches the props, but that is the case above rather than this
+   * one, and `:server-` is its answer either way.
+   *
+   * Found by building `sites/site/demos/auth/`, which is the first page to
+   * put a login behind this and therefore the first to reach for a kit
+   * component inside the branch. LAST-MILE.md predicted that a first
+   * application would find more of these than another pass over the design;
+   * this is one.
+   *
+   * Asserted as it stands so that closing it fails here rather than
+   * silently, and the pages that say "the branch is not sent" can be
+   * corrected in the same change. The expectation is the bug, not the
+   * contract.
+   */
+  it('leaves a component used inside the branch -- a KNOWN GAP', async () => {
+    const out = await served(
+      '<html><head><:define tag="my-panel:div">' +
+        '<h2>Danger zone</h2><:slot />' +
+        '</:define></head>' +
+        '<body :server-admin=${false} :secret=${"s3kr3t"}>' +
+        '<div :server-if=${admin}><my-panel>${secret}</my-panel></div>' +
+        '<p>ordinary</p></body></html>'
+    );
+
+    // the region's own markup is gone, as it should be
+    expect(out.body).not.toContain('Danger zone');
+    // and the component's expansion is not: still in the response, in a
+    // stencil of its own
+    expect(out.html).toContain('Danger zone');
+
+    // what that stencil carries is the structure and an empty text marker
+    // where the content would be -- the branch never rendered, so nothing
+    // was written into it. Scoped to the templates on purpose: `secret` is
+    // a value of `<body>`, and where ITS result travels is the question the
+    // case above and value-to-markup.md answer, not this one.
+    const stencils = out.html.match(/<template>[\s\S]*?<\/template>/g) ?? [];
+    expect(stencils.join()).toContain('Danger zone');
+    expect(stencils.join()).not.toContain('s3kr3t');
+  });
 });
 
 describe('what the browser makes of one', () => {

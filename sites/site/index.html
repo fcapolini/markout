@@ -529,12 +529,35 @@
     </header>
 
     <!---
-      The three doubts a reader arrives with, answered before the argument
-      starts rather than after it. Two of them the page already answers --
-      `#attributes` and `#editor` -- but ten and thirteen sections down,
-      which is no use to somebody deciding in the first screen whether to
-      keep reading. So this section argues nothing: it names each doubt and
-      points at the place the evidence already lives.
+      The four doubts a reader arrives with, answered before the argument
+      starts rather than after it. Three of them the page already answers --
+      `#attributes` and `#editor`, and Orbit itself -- but ten and thirteen
+      sections down, which is no use to somebody deciding in the first
+      screen whether to keep reading. So this section argues nothing: it
+      names each doubt and points at the place the evidence already lives.
+
+      The fourth is the exception, and the reason it is here rather than
+      folded into the third: escaping is the one doubt on this list that
+      nothing further down answers, because the page nowhere argues about
+      safety. It points out of the site, at `docs/design/value-to-markup.md`.
+      Worth keeping as its own column rather than a sentence inside "markup
+      is a fine place for logic", because a reader who is worried about it is
+      worried about a different thing -- the first is "can this express what
+      I need", the second "can I be careless with it" -- and a clause
+      inside someone else's paragraph is not where anybody looks for an
+      answer to the second.
+
+      The link is deliberately "what's guaranteed, and what isn't" rather
+      than a flat claim. Two surfaces in that doc are open, one of them a
+      live vector, and a homepage that promised safety full stop would be
+      the page contradicting its own design note.
+
+      Four columns, and `col-md-6 col-lg-3` rather than `col-md-3` -- the
+      only four-across grid on this page, so it is worth saying why it is
+      not `col-md-4`'s neighbour: at the md breakpoint a quarter is about
+      170px, which is too narrow for prose, so it folds to a 2x2 there and
+      only opens out at lg. The heading counts the columns, which is what
+      makes it self-checking: a fifth doubt has to rename it.
 
       Immediately after the header because the header is what raises the
       first one. "A reference implementation", "judge it on whether the idea
@@ -576,7 +599,7 @@
         <div class="row justify-content-center text-center mb-5">
           <div class="col-lg-8">
             <h2 class="display-6 fw-bold mb-3">
-              Three things worth settling&nbsp;first
+              Four things worth settling&nbsp;first
             </h2>
 
             <p class="lead text-body-secondary">
@@ -589,15 +612,15 @@
 
         <div class="row g-4 justify-content-center">
 
-          <div class="col-md-4">
-            <h3 class="h5">It runs real applications</h3>
+          <div class="col-md-6 col-lg-3">
+            <h3 class="h5">It runs real&nbsp;applications</h3>
             <p class="text-body-secondary">
               Orbit is an operations console — filters, regions, charts, an
               activity feed, a kit's worth of components under load. It
               renders on the server, so every row is in the HTML before a
-              line of JavaScript runs. Lighthouse scores it 100 in all four
-              of its categories, and the metrics under the first one say why:
-              seven tenths of a second to the largest paint, no blocking
+              line of JavaScript runs. Lighthouse scores it 100 in all
+              categories, and the metrics under the first one say why:
+              7 tenths of a second to the largest paint, no blocking
               time, no layout shift.
             </p>
             <p class="mb-0">
@@ -605,8 +628,8 @@
             </p>
           </div>
 
-          <div class="col-md-4">
-            <h3 class="h5">The tooling is real tooling</h3>
+          <div class="col-md-6 col-lg-3">
+            <h3 class="h5">The tooling is real&nbsp;tooling</h3>
             <p class="text-body-secondary">
               <code class="rule-code">markout</code> is a compiler and a dev
               server: it reloads the browser as you save and puts expression
@@ -622,7 +645,7 @@
             </p>
           </div>
 
-          <div class="col-md-4">
+          <div class="col-md-6 col-lg-3">
             <h3 class="h5">Markup is a fine place for&nbsp;logic</h3>
             <p class="text-body-secondary">
               A tag is a JavaScript object with reactive properties and
@@ -635,7 +658,22 @@
             <p class="mb-0">
               <bs-link ::href="#attributes">Those aren't attributes</bs-link>
               <span class="text-body-secondary mx-1">·</span>
-              <bs-link ::href="/about.html#adds-up-to">What it adds up to</bs-link>
+              <bs-link ::href="/about.html#adds-up-to">What it adds&nbsp;up&nbsp;to</bs-link>
+            </p>
+          </div>
+
+          <div class="col-md-6 col-lg-3">
+            <h3 class="h5">Escaping is the compiler's&nbsp;job</h3>
+            <p class="text-body-secondary">
+              An objection logic-in-markup usually meets is escaping, and
+              parsing answers that: code is generated from the syntax tree,
+              a value is never spliced into a page and re-parsed. It reaches
+              a text node or an attribute, escaped for where it landed — and
+              there is no raw-HTML escape hatch, because there is nowhere for
+              one&nbsp;to&nbsp;go.
+            </p>
+            <p class="mb-0">
+              <bs-link ::href="https://github.com/fcapolini/markout/blob/main/docs/design/value-to-markup.md">What's guaranteed, and what&nbsp;isn't</bs-link>
             </p>
           </div>
 
@@ -650,32 +688,75 @@
       argument looks like when it is carried out, and it reads as a feature
       list rather than as evidence unless the thing it is evidence FOR has
       already been said.
+
+      The two paragraphs are columns rather than a stack because they are a
+      CONTRAST and not a continuation: the left is the bind everybody is in,
+      the right is why it was never necessary. Stacked, the second reads as
+      more of the first; side by side, the turn between them is the layout.
+
+      Which is also why they are left-aligned while the heading is not.
+      Centred text is fine for one short block and unreadable as two -- both
+      edges ragged, and the eye with no column to return to. So `text-center`
+      is on the heading's own row rather than on the section, and the pair
+      below sits inside the same `col-lg-9` measure so that it, the heading
+      and the card all share one width.
+
+      Matched typography on purpose, and at BODY size rather than at the
+      1.25rem both of these used to carry. `.lead` and `.fs-5` are the same
+      size and read as a subtitle to whatever follows them, which was
+      correct while one sat above the other and is wrong once they are
+      peers -- and two columns set side by side at different sizes read as a
+      mistake rather than as a hierarchy, so the choice is both or neither.
+      Neither: the heading is doing the emphasis, and the card below is the
+      payoff.
+
+      That leaves colour as the only difference, doing the one job still
+      wanted -- secondary for the situation, body for the claim about it.
+
+      Lengths evened up to within a word, because two top-aligned columns
+      whose text stops at visibly different heights look unfinished in a way
+      three or four narrow ones do not. The left gained "a redesign becomes
+      a migration", which is the consequence the list of three was implying
+      anyway; the right lost "they need" for "only".
     -->
 
     <section id="two-choices"
              class="py-5 bg-body-tertiary">
       <div class="container py-lg-4">
 
-        <div class="row justify-content-center text-center">
+        <div class="row justify-content-center text-center mb-4">
           <div class="col-lg-9">
-
-            <h2 class="display-6 fw-bold mb-3">
+            <h2 class="display-6 fw-bold mb-0">
               Your CSS framework and your app framework are separate choices
             </h2>
+          </div>
+        </div>
 
-            <p class="lead text-body-secondary mb-4">
-              Ant Design means React. Vuetify means Vue. PrimeNG means Angular.
-              Pick a component library and you have picked a framework too — and
-              from then on neither decision can be revisited without the other.
-            </p>
+        <div class="row justify-content-center">
+          <div class="col-lg-9">
+            <div class="row g-4 g-lg-5">
 
-            <p class="fs-5">
-              Those are separable concerns. A CSS framework is a markup
-              convention; a web component library is a set of custom elements.
-              Neither needs a framework at all — they need a way to pass values
-              in, set non-string properties, and listen&nbsp;for&nbsp;events.
-            </p>
+              <div class="col-md-6">
+                <p class="mb-0">
+                  Ant Design means React. Vuetify means Vue. PrimeNG means
+                  Angular. Pick a component library and you have picked a
+                  framework too — and from then on neither decision can be
+                  revisited without the other. A redesign becomes
+                  a&nbsp;migration.
+                </p>
+              </div>
 
+              <div class="col-md-6">
+                <p class="mb-0">
+                  Those are separable concerns. A CSS framework is a markup
+                  convention; a web component library is a set of custom
+                  elements. Neither needs a framework at all — only a way to
+                  pass values in, set non-string properties, and
+                  listen&nbsp;for&nbsp;events.
+                </p>
+              </div>
+
+            </div>
           </div>
         </div>
 

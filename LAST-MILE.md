@@ -349,7 +349,7 @@ this relaxes that refusal for the one member of the family a branch is.
 
 ## What is left, honestly
 
-Four things, none of them a use case nobody can serve:
+Five things, none of them a use case nobody can serve:
 
 - **No streaming.** `:server-` values settle before serialization, so
   time-to-first-byte is bounded by the slowest one. Fine against a database,
@@ -359,6 +359,17 @@ Four things, none of them a use case nobody can serve:
   source rather than of the request, so expressions inside a branch travel
   whatever it decided. Where the logic is the secret, that is what
   `:server-` values are for.
+- **`:server-if` does not remove a COMPONENT used inside the branch.** The
+  region's own markup is dropped; a `<:define>` used in it expands into a
+  stencil of its own, and that one is not. So `<bs-card>` behind
+  `:server-if=${user}` puts the card's markup back into the page of every
+  visitor who is not one -- the failure the directive exists to close,
+  surviving one level of indirection. Structure only: the branch never
+  rendered, so no value crosses in it. Asserted as it stands in
+  `packages/core/test/render/server-if.test.ts`
+  (`leaves a component used inside the branch -- a KNOWN GAP`), and worked
+  around in `sites/site/demos/auth/` by writing the protected branch in
+  plain markup.
 - **A component cannot act on the server.** Nothing runs there but value
   evaluation, so a component's only lever is a side effect in a value
   nobody reads -- which value-transfer.md already calls dead. That gates a
@@ -367,9 +378,15 @@ Four things, none of them a use case nobody can serve:
   std-kit.
 - **Level 3 routing**, which is a stated pause rather than a hole.
 
-And the caveat that outranks all four: **nothing real has been built on
+And the caveat that outranks all five: **nothing real has been built on
 this.** Every gap closed on 2026-08-30 was found by reasoning, and the two
 most useful findings of the day -- a fragment link that did not update
 `$url`, and admin markup shipped to everyone -- came from someone asking a
 question rather than from the analysis. A first application will find more
 of those than another pass over the design will.
+
+The second item on that list is the prediction coming true, and it is worth
+recording as such: it was found by writing `sites/site/demos/auth/`, the
+first page here to put a login behind `:server-if`, on the first attempt to
+use a kit component inside the protected branch. Reasoning had produced the
+directive and a suite for it; using it once produced the hole in it.
