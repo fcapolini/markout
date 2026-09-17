@@ -1,5 +1,12 @@
 # @markout-lang/site
 
+## 0.5.5
+
+### Patch Changes
+
+- Updated dependencies [a4da31f]
+  - @markout-lang/bootstrap-kit@0.5.0
+
 ## 0.5.4
 
 ### Patch Changes
