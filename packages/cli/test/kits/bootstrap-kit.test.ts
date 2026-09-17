@@ -93,8 +93,14 @@ async function compile(docroot: string, pathname: string) {
 
 /** what a browser would act on: the live document, with stencils and comments out */
 function live(markup: string): string {
+  // `<template[^>]*>` and not `<template>`: a compiled stencil carries
+  // `data-markout-stencil`, so the bare-tag form matched none of them and
+  // every check below was reading the templates as though they were the
+  // page. A stencil holds unbound markup -- an `<a>` with no `href` yet, an
+  // id that is still a placeholder -- which is exactly what these tests
+  // exist to reject in the live document.
   return markup
-    .replace(/<template>[\s\S]*?<\/template>/g, '')
+    .replace(/<template\b[^>]*>[\s\S]*?<\/template>/g, '')
     .replace(/<!--[\s\S]*?-->/g, '');
 }
 
@@ -287,6 +293,25 @@ describe('the showcase', () => {
     expect(markup).toContain('role="progressbar"');
     expect(markup).toContain('aria-label="breadcrumb"');
     expect(markup).toContain('class="visually-hidden"');
+  });
+
+  it('gives an entry the element its behaviour calls for', () => {
+    // an `<a>` with no `href` looks right and is reachable by mouse alone:
+    // it takes no focus and reaches the accessibility tree with no role. So
+    // a dropdown item that only calls `select`, or a page number in a
+    // pagination driven by `::select`, cannot be a bare anchor. The rule the
+    // kit follows: what navigates is a link, what acts is a button, and what
+    // does neither is neither.
+    const markup = live(result.markup);
+    const anchors = [...markup.matchAll(/<a\b[^>]*>/g)].map(m => m[0]);
+    expect(anchors.length).toBeGreaterThan(10);
+    expect(anchors.filter(a => !/\shref=/.test(a))).toStrictEqual([]);
+
+    // the elements they became instead -- without these the check above
+    // passes just as well on a kit that stopped rendering the entries
+    expect(markup).toContain('<button class="dropdown-item"');
+    expect(markup).toContain('<button class="page-link"');
+    expect(markup).toContain('<div class="list-group-item');
   });
 
   it('renders each list-driven component once per entry', () => {

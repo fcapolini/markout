@@ -8,6 +8,12 @@
     Entries are `{ name, link, active, disabled, target }`. For a tabbed
     interface set `:toggle="tab"` (or `"pill"`) and give each entry the
     `target` of its pane; `bs-tab-pane` below is the other half.
+
+    Three elements come out of that, one per kind of entry: a `<button>` when
+    the nav switches panes, an `<a>` when the entry has a `link`, and a
+    `<span>` when it has neither and is a label sitting among the links. The
+    third used to be an `<a>` with no `href`, which reads as a link to
+    anything that is not looking at the screen.
   -->
   <:define tag="bs-nav:ul"
 
@@ -53,12 +59,18 @@
         aria-selected=${item.active ? 'true' : 'false'}>${item.name}</button>
 
       <a class="nav-link"
+        :else-if=${item.link}
+        :class-active=${item.active}
+        :class-disabled=${item.disabled}
+        href=${item.link}
+        aria-current=${item.active ? 'page' : null}
+        aria-disabled=${item.disabled ? 'true' : null}>${item.name}</a>
+
+      <span class="nav-link"
         :else
         :class-active=${item.active}
         :class-disabled=${item.disabled}
-        href=${item.link ?? null}
-        aria-current=${item.active ? 'page' : null}
-        aria-disabled=${item.disabled ? 'true' : null}>${item.name}</a>
+        aria-current=${item.active ? 'page' : null}>${item.name}</span>
     </li>
   </:define>
 

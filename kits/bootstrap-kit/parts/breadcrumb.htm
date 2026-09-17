@@ -7,8 +7,11 @@
     describes the entries, the component owns the markup.
 
     An entry is `{ name, link }`. The one without a `link` is the current
-    page, and gets `active` plus `aria-current` — the `<a>` stays in place
-    either way, since an anchor without an `href` renders as plain text.
+    page, and gets `active` plus `aria-current`. It is also the one entry
+    with no `<a>` around it: an anchor with no `href` renders as plain text,
+    which is why it used to be left in place, but it is still an anchor to
+    everything that reads the document rather than looks at it. Bootstrap's
+    own markup for the current crumb is the text on its own, and so is this.
   -->
   <:define tag="bs-breadcrumb:nav"
     aria-label="breadcrumb"
@@ -34,7 +37,8 @@
         :for-as="item"
         :class-active=${!item.link}
         aria-current=${item.link ? null : 'page'}>
-        <a href=${item.link ?? null}>${item.name}</a>
+        <a :if=${item.link} href=${item.link}>${item.name}</a>
+        <:group :else>${item.name}</:group>
       </li>
     </ol>
   </:define>

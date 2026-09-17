@@ -6,10 +6,17 @@
     A list group, from `{ name, link, active, disabled, variant, badge, text }`
     entries.
 
-    Every entry is an `<a>`. Bootstrap only wants `.list-group-item-action`
-    (the hover and focus treatment) on the ones that actually go somewhere, so
-    that class follows `link` rather than being always on — and an anchor with
-    no `href` is inert, which is exactly what a non-link entry should be.
+    An entry with a `link` is an `<a>`; one without is a `<div>`. Both were
+    an `<a>` once, the second with its `href` dropped, which is inert and
+    looks right and is still a link as far as anything reading the document
+    is concerned. `.list-group-item-action` — Bootstrap's hover and focus
+    treatment — goes on the first alone, as it always did, and now it goes on
+    the element that can take focus.
+
+    The body is written twice because the element is what differs and markout
+    has no way to choose a tag name from an expression. Two branches of six
+    lines is the smaller cost: the alternative is a wrapper inside every
+    entry, on every page, to save repeating them here.
   -->
   <:define tag="bs-list-group:div"
 
@@ -31,26 +38,43 @@
 
     class=${_class}
   >
-    <a :for-each=${items}
-      :for-as="item"
-      class="list-group-item d-flex justify-content-between align-items-center"
-      :class-list-group-item-action=${!!item.link}
-      :class-active=${item.active}
-      :class-disabled=${item.disabled}
-      href=${item.link ?? null}
-      aria-current=${item.active ? 'true' : null}
-      aria-disabled=${item.disabled ? 'true' : null}>
+    <:group :for-each=${items} :for-as="item">
+      <a :if=${item.link}
+        class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+        :class-active=${item.active}
+        :class-disabled=${item.disabled}
+        href=${item.link}
+        aria-current=${item.active ? 'true' : null}
+        aria-disabled=${item.disabled ? 'true' : null}>
 
-      <span>
-        <span :class-fw-bold=${!!item.text}>${item.name}</span>
-        <span class="d-block small opacity-75"
-          :if=${item.text}>${item.text}</span>
-      </span>
+        <span>
+          <span :class-fw-bold=${!!item.text}>${item.name}</span>
+          <span class="d-block small opacity-75"
+            :if=${item.text}>${item.text}</span>
+        </span>
 
-      <bs-badge ::variant=${item.badge?.variant ?? 'secondary'}
-        ::pill
-        :if=${item.badge}>${item.badge?.name ?? item.badge}</bs-badge>
-    </a>
+        <bs-badge ::variant=${item.badge?.variant ?? 'secondary'}
+          ::pill
+          :if=${item.badge}>${item.badge?.name ?? item.badge}</bs-badge>
+      </a>
+
+      <div :else
+        class="list-group-item d-flex justify-content-between align-items-center"
+        :class-active=${item.active}
+        :class-disabled=${item.disabled}
+        aria-current=${item.active ? 'true' : null}>
+
+        <span>
+          <span :class-fw-bold=${!!item.text}>${item.name}</span>
+          <span class="d-block small opacity-75"
+            :if=${item.text}>${item.text}</span>
+        </span>
+
+        <bs-badge ::variant=${item.badge?.variant ?? 'secondary'}
+          ::pill
+          :if=${item.badge}>${item.badge?.name ?? item.badge}</bs-badge>
+      </div>
+    </:group>
   </:define>
 
 </lib>

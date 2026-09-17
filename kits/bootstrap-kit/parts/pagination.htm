@@ -15,6 +15,14 @@
     called with the page number for one that stays on the page. Both are
     ordinary function parameters — a callback the component calls, not a DOM
     event, so it is a value and not an `:on-` handler.
+
+    They also decide the element. `::link` yields an href, so those entries
+    are `<a>`; with `::select` alone — the default, and the mode a page that
+    never reloads uses — there is nowhere to go, and each entry is a
+    `<button>`. Written as an `<a>` with no `href` it looks right and pages
+    for a mouse alone: an anchor without an `href` takes no focus and carries
+    no role, so the whole control is unreachable from the keyboard. Bootstrap
+    styles `.page-link` on both.
   -->
   <:define tag="bs-pagination:nav"
 
@@ -41,11 +49,27 @@
     aria-label=${label}
   >
     <ul class=${_class}>
-      <li class="page-item" :class-disabled=${current <= 1}>
+      <!---
+        `_href` is declared on the `<li>` so the two branches inside read one
+        value rather than calling `link()` twice each. The `<li>` is a scope
+        like any element, which is what makes that the obvious place for it.
+      -->
+      <li class="page-item"
+        :class-disabled=${current <= 1}
+        :_href=${link(current - 1)}>
         <a class="page-link"
-          href=${link(current - 1)}
+          :if=${_href != null}
+          href=${_href}
           aria-label="Previous"
+          aria-disabled=${current <= 1 ? 'true' : null}
           :on-click=${() => current > 1 && select(current - 1)}>${prev}</a>
+
+        <button class="page-link"
+          type="button"
+          :else
+          :attr-disabled=${current <= 1}
+          aria-label="Previous"
+          :on-click=${() => select(current - 1)}>${prev}</button>
       </li>
 
       <li class="page-item"
@@ -53,17 +77,35 @@
         :for-as="n"
         :for-key=${n}
         :class-active=${n === current}
-        aria-current=${n === current ? 'page' : null}>
+        aria-current=${n === current ? 'page' : null}
+        :_href=${link(n)}>
         <a class="page-link"
-          href=${link(n)}
+          :if=${_href != null}
+          href=${_href}
           :on-click=${() => select(n)}>${n}</a>
+
+        <button class="page-link"
+          type="button"
+          :else
+          :on-click=${() => select(n)}>${n}</button>
       </li>
 
-      <li class="page-item" :class-disabled=${current >= pages}>
+      <li class="page-item"
+        :class-disabled=${current >= pages}
+        :_href=${link(current + 1)}>
         <a class="page-link"
-          href=${link(current + 1)}
+          :if=${_href != null}
+          href=${_href}
           aria-label="Next"
+          aria-disabled=${current >= pages ? 'true' : null}
           :on-click=${() => current < pages && select(current + 1)}>${next}</a>
+
+        <button class="page-link"
+          type="button"
+          :else
+          :attr-disabled=${current >= pages}
+          aria-label="Next"
+          :on-click=${() => select(current + 1)}>${next}</button>
       </li>
     </ul>
   </:define>

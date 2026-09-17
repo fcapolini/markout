@@ -3,8 +3,17 @@
 
   <!---
     A dropdown. Entries are `{ name, link, active, disabled, header, divider,
-    select }`; the three shapes Bootstrap draws differently — a divider, a
-    header, an item — are three optional regions over the same list.
+    select }`; the shapes Bootstrap draws differently — a divider, a header,
+    an item — are optional regions over the same list.
+
+    An item comes out as an `<a>` when it has a `link` and a `<button>` when
+    it does not, which is the rule the whole kit follows: what navigates is a
+    link, what acts is a button, and what does neither is not an interactive
+    element at all. The alternative -- one `<a>` with the `href` dropped when
+    there is nowhere to go -- looks identical and is reachable only by mouse:
+    an anchor without an `href` takes no focus and reaches the accessibility
+    tree with no role, so `select` could be triggered by a click and by
+    nothing else. Bootstrap styles `.dropdown-item` on both elements.
 
     The menu is tied to its toggle by `aria-labelledby`, and the id for that
     comes from `$id`, which is unique per instance. That is the general
@@ -72,12 +81,26 @@
           :else-if=${item.header}>${item.header}</h6>
 
         <a class="dropdown-item"
-          :else
+          :else-if=${item.link}
           :class-active=${item.active}
           :class-disabled=${item.disabled}
-          href=${item.link ?? null}
+          href=${item.link}
           aria-current=${item.active ? 'true' : null}
+          aria-disabled=${item.disabled ? 'true' : null}
           :on-click=${() => item.select?.(item)}>${item.name}</a>
+
+        <!---
+          `disabled` rather than `.disabled`: on a button the attribute is
+          the real thing, and it takes the entry out of the tab order as
+          well as greying it. Bootstrap's CSS matches both.
+        -->
+        <button class="dropdown-item"
+          type="button"
+          :else
+          :class-active=${item.active}
+          :attr-disabled=${item.disabled}
+          aria-current=${item.active ? 'true' : null}
+          :on-click=${() => item.select?.(item)}>${item.name}</button>
       </li>
     </ul>
   </:define>
