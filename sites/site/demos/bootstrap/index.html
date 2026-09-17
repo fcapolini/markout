@@ -1,6 +1,10 @@
 <html lang="en">
 
-<head>
+<head :const-bsCssUrl="/vendor/bootstrap.min.css"
+      :const-bsJsUrl="/vendor/bootstrap.bundle.min.js"
+      :const-bsCssIntegrity=${null}
+      :const-bsJsIntegrity=${null}>
+  <!--- Bootstrap from this origin's own build; see index.html's <head>. -->
   <:import src="/npm/@markout-lang/bootstrap-kit/all.htm" />
   <:import src="/parts/gutters.htm" />
   <bs-theme-auto />

@@ -1,6 +1,9 @@
 <html lang="en">
 
-<head>
+<head :const-bsCssUrl="/vendor/bootstrap.min.css"
+      :const-bsJsUrl="/vendor/bootstrap.bundle.min.js"
+      :const-bsCssIntegrity=${null}
+      :const-bsJsIntegrity=${null}>
   <!---
     The kit first, then this page's own tags on top of it. Between them they
     bring the charset, the viewport, Bootstrap's CSS and JS, and the script
@@ -13,6 +16,14 @@
     `gutters.htm` is the one thing between the two that belongs to neither:
     a lateral padding the site sets on a phone, on every page that carries
     the navbar and footer rather than on this one alone.
+
+    The four `:const-` overrides above are this site's own build serving
+    Bootstrap from `/vendor` (see `npm run build:bootstrap`) instead of
+    jsDelivr: one origin, one fewer connection, no bytes this site doesn't
+    already control. Dropping the hashes with them is right rather than
+    lazy -- integrity checks a third party hasn't tampered with what it
+    hands back, and there's no third party once the file is this origin's
+    own.
   -->
   <:import src="/npm/@markout-lang/bootstrap-kit/all.htm" />
   <:import src="/parts/gutters.htm" />

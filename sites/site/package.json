@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.json --noEmit",
     "build:image": "tsc -p tsconfig.build.json",
     "build:tailwind": "markout build . ../.tw-scan -p /demos/tailwind/index.html --classes-only && tailwindcss -i demos/tailwind/app.css -o demos/tailwind/build.css --optimize",
+    "build:bootstrap": "scripts/vendor-bootstrap.sh",
     "clean": "rm -rf dist",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

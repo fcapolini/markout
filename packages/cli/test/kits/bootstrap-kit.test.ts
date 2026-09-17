@@ -680,17 +680,19 @@ describe.skipIf(!CHROMIUM)('the components at work', () => {
     // the page's prose before it appears as markup, and replacing the first
     // one rewrote a comment while the real head went on loading Bootstrap
     // from the CDN -- which the guard below did not catch, because something
-    // had indeed been replaced
+    // had indeed been replaced. The page now vendors its own copy rather
+    // than pointing at the CDN, so what is being replaced is that URL pair
+    // rather than a bare `<head>`
     const offline = demo.replace(
-      /^<head>$/m,
+      /^<head :const-bsCssUrl=[\s\S]*?>/m,
       '<head :const-bsCssUrl="/vendor/bootstrap.css"\n' +
         '      :const-bsJsUrl="/vendor/bootstrap.js"\n' +
         '      :const-bsCssIntegrity=${null}\n' +
         '      :const-bsJsIntegrity=${null}>'
     );
-    if (offline === demo || !/^<head :const-bsCssUrl=/m.test(offline)) {
+    if (offline === demo || !/^<head :const-bsCssUrl="\/vendor\/bootstrap\.css"/m.test(offline)) {
       // a silent no-op here would put the CDN back in the test run
-      throw new Error('orbit.html: no bare <head> to point at the stub');
+      throw new Error('orbit.html: no <head> pointing at Bootstrap to redirect to the stub');
     }
     fs.writeFileSync(path.join(docroot, 'orbit.html'), offline);
 

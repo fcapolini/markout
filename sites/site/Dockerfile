@@ -100,6 +100,10 @@ COPY sites/site/social-card.png ./public/
 COPY sites/site/parts ./public/parts
 COPY sites/site/examples ./public/examples
 COPY sites/site/demos ./public/demos
+# Bootstrap's built CSS and JS, committed rather than installed here -- see
+# `npm run build:bootstrap`. The same reasoning as Tailwind's build.css above:
+# this is bytes the site serves, not a dependency the running server needs.
+COPY sites/site/vendor ./public/vendor
 # The desk's service is the one piece of TypeScript inside the demos, and its
 # compiled half is up in the application. Nothing here is a source file.
 RUN find ./public -name '*.ts' -delete
