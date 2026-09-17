@@ -494,7 +494,7 @@
             <h2 class="h6">A reference implementation</h2>
             <p class="small text-body-secondary mb-0">
               What reactive HTML could be, carried out far enough to build real
-              pages with. It is production-ready, but it exists to show the
+              pages with. It is production-ready, but it exists to prove an
               idea — judge it on whether the idea holds, not on the size of an
               ecosystem it never set out to&nbsp;have.
             </p>
@@ -547,20 +547,26 @@
       had, and this reads as the last beat of the hero, which is what it is.
       The heading does the separating.
 
-      The Lighthouse figure is hand-measured and repeated, not something CI
+      The Lighthouse figures are hand-measured and repeated, not something CI
       produces -- against the deployed site rather than a local server, and
       from far enough away that the network is in the number.
 
-      It names the performance category alone, and quotes the metrics under
-      it. Not out of modesty about the other three: a composite is a weighted
-      bundle of audits that Lighthouse reweights between versions, so a
-      sentence claiming four of them is a sentence that goes stale without
-      anything about the page changing. `packages/cli/bench/README.md`
-      declines to report a composite at all, for a sharper version of the
-      same reason -- ranking runtimes by one rewards whoever paints an empty
-      page fastest. The metrics are what the claim above actually rests on,
-      and they say the thing directly: nothing was assembled after the page
-      arrived.
+      The four scores are the headline and the metrics are the evidence,
+      which is the right way round rather than a flourish. A category score
+      is a weighted bundle of audits that Lighthouse reweights between
+      versions, so four of them is a claim that can go stale without
+      anything about the page changing; a largest paint and a blocking time
+      are facts about one load. `packages/cli/bench/README.md` declines to
+      report a composite at all, for a sharper version of the same reason --
+      ranking runtimes by one rewards whoever paints an empty page fastest.
+
+      SEO was 91 until the kit stopped writing entries as anchors with no
+      `href` (see that changeset): four dropdown items, five page links, six
+      list rows and a breadcrumb, each of them a control or a label that
+      Lighthouse counted as an uncrawlable link. Worth remembering if it
+      slips again -- the audit that notices is the one nobody reads on an
+      operations console, since a real one is behind a login and indexed by
+      nothing.
     -->
 
     <section id="real"
@@ -574,8 +580,9 @@
             </h2>
 
             <p class="lead text-body-secondary">
-              None of these is the argument this page makes. They are the
-              three things that stop a reader from getting to&nbsp;it.
+              Markout is unconventional, but it isn't merely a proof
+              of concept: it's a real-world solution for real-world
+              web&nbsp;development.
             </p>
           </div>
         </div>
@@ -588,12 +595,12 @@
               Orbit is an operations console — filters, regions, charts, an
               activity feed, a kit's worth of components under load. It
               renders on the server, so every row is in the HTML before a
-              line of JavaScript runs. Lighthouse scores its performance 100
-              on the deployed site, measured from another country: seven
-              tenths of a second to the largest paint, no blocking time, no
-              layout shift. Not despite being reactive and isomorphic —
-              because of it. There is nothing left to assemble once the page
-              has&nbsp;arrived.
+              line of JavaScript runs. Lighthouse scores it 100 in all four
+              of its categories, and the metrics under the first one say why:
+              seven tenths of a second to the largest paint, no blocking
+              time, no layout shift. Not despite being reactive and
+              isomorphic — because of it. There is nothing left to assemble
+              once the page has&nbsp;arrived.
             </p>
             <p class="mb-0">
               <bs-link ::href="/demos/orbit.html">Open Orbit</bs-link>
