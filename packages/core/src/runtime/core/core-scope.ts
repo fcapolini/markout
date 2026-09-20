@@ -989,6 +989,10 @@ export class CoreScope {
     const keys = Object.keys(this.values);
     if (!this.isStencil()) return keys;
     const alias = this.aliasName();
+    // the alias lives at the usage site exactly when the directive was
+    // written there -- `aliasValue()` looks in that order for the same
+    // reason -- and that is what tells the two shapes apart below
+    const aliasAtUsage = this.replicates() && !!this.usageSite?.values[alias];
     return keys.filter(
       (key) =>
         key.startsWith('$') ||
@@ -1003,7 +1007,16 @@ export class CoreScope {
         // guards on its own parameter, and with the parameter dead while
         // the region was away, nothing that moved it ever reached the
         // condition. The region rendered correctly and then never came back
-        !!this.props.values?.[key]?.callSite
+        //
+        // Unless the alias is the usage site's, which is the one shape where
+        // "can read nothing in here" is false: `<my-shot :for-data=${shot}
+        // ::name=${data.name} />` writes the argument beside the directive,
+        // so it reads the very item the region is about to let go of. It
+        // cannot be what brings the region back either -- that is the
+        // directive's own value, and it resolves wholly at the call site --
+        // so there is nothing to keep it live for, and keeping it live means
+        // evaluating `data.name` against the `undefined` that hiding assigns
+        (!aliasAtUsage && !!this.props.values?.[key]?.callSite)
     );
   }
 

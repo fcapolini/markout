@@ -136,6 +136,35 @@ describe('a replicated usage', () => {
     expect(p.body()).toContain('none:a');
     expect(p.body()).toContain('none:b');
   });
+
+  it('drops an argument that reads the alias when the region goes away', () => {
+    // the everyday lightbox: one region, its item passed to the tag it is
+    // written on. An argument is normally kept live while a region is away,
+    // because a component guarding on its own parameter needs it to be --
+    // but this one reads the item, and hiding sets that to nothing. Kept
+    // live, `data.name` is asked for a name on an item already let go
+    const p = render(
+      '<html :shot=${{ name: "first" }}><body>' +
+      '<:define tag="x-shot:span" ::name=${null}>${name}</:define>' +
+      '<x-shot :for-data=${shot} ::name=${data.name} />' +
+      '</body></html>'
+    );
+    expect(p.errors).toStrictEqual([]);
+    expect(p.body()).toContain('>first</span>');
+
+    p.root.shot = null;
+    // parked in the template it arrived in, and empty: the body evaluated
+    // nothing on the way out
+    expect(p.body()).toContain('<template><span');
+    expect(p.body()).not.toContain('first');
+    expect(p.rt).toStrictEqual([]);
+
+    // and it comes back: the directive's own value is what wakes the region,
+    // and returning relinks the argument and asks it again
+    p.root.shot = { name: 'second' };
+    expect(p.body()).toContain('>second</span>');
+    expect(p.rt).toStrictEqual([]);
+  });
 });
 
 describe('the shapes that used to be "Unknown reference"', () => {
