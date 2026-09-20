@@ -77,9 +77,9 @@
     "@markout-lang/core": "^0.11.1",
     "@markout-lang/express": "^0.8.4",
     "commander": "^15.0.0",
-    "compression": "^1.8.1",
+    "compression": "^1.8.2",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.6.2"
+    "express-rate-limit": "^8.7.0"
   },
   "publishConfig": {
     "access": "public"
