@@ -64,12 +64,12 @@
   "devDependencies": {
     "@types/compression": "^1.8.1",
     "@types/express": "^5.0.6",
-    "@types/node": "^26.4.0",
+    "@types/node": "^26.6.2",
     "@types/supertest": "^7.2.1",
-    "happy-dom": "^20.12.0",
-    "playwright": "^1.62.1",
-    "supertest": "^7.2.2",
-    "tsx": "^4.23.13",
+    "happy-dom": "^20.14.5",
+    "playwright": "^1.63.0",
+    "supertest": "^7.3.0",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   },
