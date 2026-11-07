@@ -16,12 +16,12 @@
   "author": "Fabrizio Capolini",
   "license": "MIT",
   "devDependencies": {
-    "@tailwindcss/cli": "^4.3.3",
+    "@tailwindcss/cli": "^4.3.4",
     "@types/compression": "^1.8.1",
     "@types/express": "^5.0.6",
-    "@types/node": "^26.4.0",
+    "@types/node": "^26.6.6",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.23.13",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   },
   "dependencies": {
